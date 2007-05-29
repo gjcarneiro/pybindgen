@@ -1,0 +1,46 @@
+## -*- python -*-
+
+import sys
+import os.path
+import os
+from Params import fatal
+import pproc as subprocess
+
+def set_options(opt):
+    opt.tool_options('python')
+    opt.tool_options('compiler_cxx')
+
+def configure(conf):
+    conf.check_tool('misc')
+    if not conf.check_tool('compiler_cxx'):
+        fatal("Error: no C compiler was found in PATH.")
+    if not (conf.check_tool('python')
+            and conf.check_python_version((2,4,2))
+            and conf.check_python_headers()):
+        fatal("Error: missing Python development environment.\n"
+              "(Hint: if you do not have a debugging Python library installed"
+              " try using the configure option '--debug-level release')")
+
+def build(bld):
+    gen = bld.create_obj('command-output')
+    gen.command = 'test-generation.py'
+    gen.stdout = 'test.cc'
+    gen.stdin = 'test-generation.py'
+    top_srcdir = bld.m_srcnode.abspath()
+    gen.argv = [top_srcdir]
+    gen.priority = 5
+    
+    obj = bld.create_obj('cpp', 'objects', 'pyext')
+    obj.source = 'test.cc'
+    obj.env.append_value('CXXFLAGS', ['-Wall', '-Werror', '-Wno-unused'])
+
+    cwd = os.getcwd()
+    env = dict(os.environ)
+    env['PYTHONPATH'] = top_srcdir
+    os.chdir(top_srcdir)
+    try:
+        if subprocess.Popen(['python', 'tests/test.py'], env=env).wait():
+            raise SystemExit(1)
+    finally:
+        os.chdir(cwd)
+
