@@ -18,6 +18,7 @@ class MyReverseWrapper(typehandlers.base.ReverseWrapperBase):
         params.extend(self.build_params.get_parameters())
         self.before_call.write_code('py_retval = PyObject_CallFunction(%s);' % (', '.join(params),))
         self.before_call.write_error_check('py_retval == NULL')
+        self.before_call.add_cleanup_code('Py_DECREF(py_retval);')
 
 class MyForwardWrapper(typehandlers.base.ForwardWrapperBase):
 

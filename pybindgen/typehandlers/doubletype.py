@@ -1,43 +1,80 @@
+# docstrings not neede here (the type handler doubleerfaces are fully
+# documented in base.py) pylint: disable-msg=C0111
+
+from base import ReturnValue, Parameter, \
+     ReverseWrapperBase, ForwardWrapperBase
+
 
 class DoubleParam(Parameter):
-    def get_c_type(self):
-        return self.props.get('c_type', 'gdouble')
-    def convert_c2py(self):
-        self.wrapper.add_declaration("PyObject *py_%s;" % self.name)
-        self.wrapper.write_code(code=("py_%s = PyFloat_FromDouble(%s);" %
-                                      (self.name, self.name)),
-                                cleanup=("Py_DECREF(py_%s);" % self.name))
-        self.wrapper.add_pyargv_item("py_%s" % self.name)
+
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['double']
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        wrapper.build_params.add_parameter('d', [self.name])
+
+    def convert_python_to_c(self, wrapper):
+        assert isinstance(wrapper, ForwardWrapperBase)
+        name = wrapper.declarations.declare_variable(self.ctype, self.name)
+        wrapper.parse_params.add_parameter('d', ['&'+name])
+        wrapper.call_params.append(name)
+
+
+class DoubleReturn(ReturnValue):
+
+    CTYPES = ['double']
+
+    def get_c_error_return(self):
+        return "return 0;"
+    
+    def convert_python_to_c(self, wrapper):
+        wrapper.parse_params.add_parameter("d", ["&retval"], prepend=True)
+
+    def convert_c_to_python(self, wrapper):
+        wrapper.build_params.add_parameter("d", ["retval"], prepend=True)
+
 
 class DoublePtrParam(Parameter):
-    def __init__(self, wrapper, name, **props):
-        if "direction" not in props:
-            raise argtypes.ArgTypeConfigurationError(
-                "cannot use double* parameter without direction")
-        if props["direction"] not in ("out", ): # inout not yet implemented
-            raise argtypes.ArgTypeConfigurationError(
-                "cannot use double* parameter with direction '%s'"
-                % (props["direction"],))
-        Parameter.__init__(self, wrapper, name, **props)
-    def get_c_type(self):
-        return self.props.get('c_type', 'double*')
-    def convert_c2py(self):
-        self.wrapper.add_pyret_parse_item("d", self.name)
-for argtype in ('double*', 'gdouble*'):
-    type_matcher.register(argtype, DoublePtrParam)
 
-class DoubleReturn(ReturnType):
-    def get_c_type(self):
-        return self.props.get('c_type', 'gdouble')
-    def write_decl(self):
-        self.wrapper.add_declaration("%s retval;" % self.get_c_type())
-    def write_error_return(self):
-        self.wrapper.write_code("return -G_MAXFLOAT;")
-    def write_conversion(self):
-        self.wrapper.add_pyret_parse_item("d", "&retval", prepend=True)
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
+                  Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
+    CTYPES = ['double*']
+    
+    def convert_c_to_python(self, wrapper):
+        if self.direction & self.DIRECTION_IN:
+            wrapper.build_params.add_parameter('d', ['*'+self.name])
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.parse_params.add_parameter("d", [self.name])
 
-for argtype in ('float', 'double', 'gfloat', 'gdouble'):
-    type_matcher.register(argtype, DoubleParam)
-    type_matcher.register_ret(argtype, DoubleReturn)
+    def convert_python_to_c(self, wrapper):
+        assert self.ctype == 'double*'
+        name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
+        wrapper.call_params.append('&'+name)
+        if self.direction & self.DIRECTION_IN:
+            wrapper.parse_params.add_parameter('d', ['&'+name])
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.build_params.add_parameter("d", [name])
+        
 
 
+class DoubleRefParam(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
+                  Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
+    CTYPES = ['double&']
+    
+    def convert_c_to_python(self, wrapper):
+        if self.direction & self.DIRECTION_IN:
+            wrapper.build_params.add_parameter('d', [self.name])
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.parse_params.add_parameter("d", [self.name])
+
+    def convert_python_to_c(self, wrapper):
+        assert self.ctype == 'double&'
+        name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
+        wrapper.call_params.append(name)
+        if self.direction & self.DIRECTION_IN:
+            wrapper.parse_params.add_parameter('d', ['&'+name])
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.build_params.add_parameter("d", [name])
