@@ -11,7 +11,7 @@ sys.path.insert(0, path)
 from pybindgen import typehandlers
 from pybindgen.typehandlers import codesink
 from pybindgen.typehandlers.base import Parameter, ReturnValue
-from pybindgen.functionwrapper import FunctionWrapper
+from pybindgen.function import Function
 from pybindgen.module import Module
 
 
@@ -69,8 +69,8 @@ def test():
                     param_name = 'param_inout'
                 elif direction == (Parameter.DIRECTION_OUT):
                     param_name = 'param_out'
-                wrapper = FunctionWrapper(return_handler(return_type), function_name,
-                                          [param_handler(param_type, param_name, direction)])
+                wrapper = Function(return_handler(return_type), function_name,
+                                   [param_handler(param_type, param_name, direction)])
 
                 module.add_function(wrapper)
 

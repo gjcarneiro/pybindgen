@@ -5,7 +5,7 @@ from typehandlers.base import ForwardWrapperBase
 from typehandlers import codesink
 
 
-class FunctionWrapper(ForwardWrapperBase):
+class Function(ForwardWrapperBase):
     """
     Class that generates a wrapper to a C function.
     """
@@ -16,7 +16,7 @@ class FunctionWrapper(ForwardWrapperBase):
         function_name -- name of the C function
         parameters -- the function parameters
         """
-        super(FunctionWrapper, self).__init__(
+        super(Function, self).__init__(
             return_value, parameters,
             parse_error_return="return NULL;",
             error_return="return NULL;")

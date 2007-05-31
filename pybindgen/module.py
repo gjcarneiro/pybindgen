@@ -2,7 +2,7 @@
 Code to generate code for a C/C++ Python extension module.
 """
 
-from functionwrapper import FunctionWrapper
+from function import Function
 from typehandlers.base import CodeBlock
 
 class Module(object):
@@ -48,14 +48,14 @@ class Module(object):
         """
         Add a function to the module.
 
-        wrapper -- a FunctionWrapper instance that can generate the wrapper
+        wrapper -- a Function instance that can generate the wrapper
         name -- name of the module function as it will appear from
                 Python side; if not given, the
                 c_function_name_transformer callback, or strip_prefix,
                 will be used to guess the Python name.
         """
         assert name is None or isinstance(name, str)
-        assert isinstance(wrapper, FunctionWrapper)
+        assert isinstance(wrapper, Function)
         if name is None:
             name = self.c_function_name_transformer(wrapper.function_name)
         self.functions.append((name, wrapper))
