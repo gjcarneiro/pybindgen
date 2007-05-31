@@ -691,6 +691,21 @@ class ReturnValue(object):
     ## list of C type names it can handle
     CTYPES = []
 
+    def __new__(cls, *args, **kwargs):
+        """
+        >>> import inttype
+        >>> isinstance(ReturnValue('int'), inttype.IntReturn)
+        True
+        """
+        if cls is ReturnValue:
+            # support calling ReturnValue("typename", ...)
+            ctype = args[0]
+            type_handler_class = return_type_matcher.lookup(ctype)
+            assert type_handler_class is not None
+            return super(ReturnValue, cls).__new__(type_handler_class, *args, **kwargs)
+        else:
+            return super(ReturnValue, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self, ctype):
         '''
         Creates a return value object
@@ -747,7 +762,23 @@ class Parameter(object):
 
     ## list of C type names it can handle
     CTYPES = []
-    
+
+    def __new__(cls, *args, **kwargs):
+        """
+        >>> import inttype
+        >>> isinstance(Parameter('int', 'name'), inttype.IntParam)
+        True
+        """
+        if cls is Parameter:
+            # support calling Parameter("typename", ...)
+            ctype = args[0]
+            type_handler_class = param_type_matcher.lookup(ctype)
+            assert type_handler_class is not None
+            return super(Parameter, cls).__new__(type_handler_class, *args, **kwargs)
+        else:
+            return super(Parameter, cls).__new__(cls, *args, **kwargs)
+
+
     def __init__(self, ctype, name, direction=DIRECTION_IN):
         '''
         Creates a parameter object
