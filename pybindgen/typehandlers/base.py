@@ -194,6 +194,11 @@ class ParseTupleParameters(object):
         ['"si"', '&bar', '&foo']
         >>> tuple_params.get_keywords()
         ['bar', 'foo']
+
+        >>> tuple_params = ParseTupleParameters()
+        >>> tuple_params.add_parameter('i', ['&foo'])
+        >>> tuple_params.get_keywords()
+        []
         """
         self._parse_tuple_items = [] # (template, param_values, param_name, optional)
         
@@ -242,7 +247,8 @@ class ParseTupleParameters(object):
     def get_keywords(self):
         """returns list of keywords (parameter names); should only be
         called if names were given for all parameters."""
-        return [name for (dummy, dummy, name, dummy) in self._parse_tuple_items]
+        return [name for (dummy, dummy, name, dummy) in self._parse_tuple_items
+                if name is not None]
 
 
 class BuildValueParameters(object):
