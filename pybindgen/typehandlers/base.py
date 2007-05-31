@@ -1,4 +1,5 @@
 ## -*- python -*-
+## pylint: disable-msg=W0142,R0921
 
 """
 Base classes for all parameter/return type handlers,

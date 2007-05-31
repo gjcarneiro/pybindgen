@@ -10,11 +10,11 @@ class FunctionWrapper(ForwardWrapperBase):
     Class that generates a wrapper to a C function.
     """
 
-    def __init__(self, return_value, parameters, function_name):
+    def __init__(self, return_value, function_name, parameters):
         """
         return_value -- the function return value
-        parameters -- the function parameters
         function_name -- name of the C function
+        parameters -- the function parameters
         """
         super(FunctionWrapper, self).__init__(
             return_value, parameters,
