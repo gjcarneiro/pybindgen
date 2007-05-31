@@ -61,6 +61,7 @@ def build(bld):
     bindgen = bld.create_obj('pybindgen')
     bindgen.target = 'foomodule.cc'
     bindgen.function = my_module_gen
+    bindgen.prio = 1
 
     obj = bld.create_obj('cpp', 'shlib', 'pyext')
     obj.source = [
@@ -68,5 +69,7 @@ def build(bld):
         'foomodule.cc'
         ]
     obj.target = 'foo'
-    obj.post()
+
+    ## Workaround a WAF bug (http://code.google.com/p/waf/issues/detail?id=37)
+    obj.env.append_value("CPPPATH", bld.m_curdirnode.srcpath(obj.env))
 
