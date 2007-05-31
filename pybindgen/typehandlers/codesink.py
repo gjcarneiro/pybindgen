@@ -35,7 +35,7 @@ class CodeSink(object):
             l.append('')
         return '\n'.join(l)
 
-    def writeln(self, line=''):
+    def writeln(self, line='\n'):
         """Write one or more lines of code"""
         raise NotImplementedError
 
@@ -60,7 +60,7 @@ class FileCodeSink(CodeSink):
         CodeSink.__init__(self)
         self.file = file_
 
-    def writeln(self, line=''):
+    def writeln(self, line='\n'):
         """Write one or more lines of code"""
         self.file.write(self._format_code(line))
 
@@ -72,7 +72,7 @@ class MemoryCodeSink(CodeSink):
         CodeSink.__init__(self)
         self.lines = []
 
-    def writeln(self, line=''):
+    def writeln(self, line='\n'):
         """Write one or more lines of code"""
         self.lines.append(self._format_code(line))
 
