@@ -11,6 +11,7 @@ sys.path.insert(0, path)
 from pybindgen import typehandlers
 from pybindgen.typehandlers import codesink
 from pybindgen.typehandlers.base import Parameter
+from pybindgen.functionwrapper import FunctionWrapper
 
 class MyReverseWrapper(typehandlers.base.ReverseWrapperBase):
     def generate_python_call(self):
@@ -19,34 +20,6 @@ class MyReverseWrapper(typehandlers.base.ReverseWrapperBase):
         self.before_call.write_code('py_retval = PyObject_CallFunction(%s);' % (', '.join(params),))
         self.before_call.write_error_check('py_retval == NULL')
         self.before_call.add_cleanup_code('Py_DECREF(py_retval);')
-
-class MyForwardWrapper(typehandlers.base.ForwardWrapperBase):
-
-    def __init__(self, return_value, parameters, function_name):
-        super(MyForwardWrapper, self).__init__(
-            return_value, parameters,
-            parse_error_return="return NULL;",
-            error_return="return NULL;")
-        self.function_name = function_name
-    
-    def generate_call(self):
-        if self.return_value.ctype == 'void':
-            self.before_call.write_code(
-                '%s(%s);' % (self.function_name, ", ".join(self.call_params)))
-        else:
-            self.before_call.write_code(
-                'retval = %s(%s);' % (self.function_name, ", ".join(self.call_params)))
-
-    def generate(self, code_sink):
-        tmp_sink = codesink.MemoryCodeSink()
-        self.generate_body(tmp_sink)
-        code_sink.writeln("static PyObject *")
-        code_sink.writeln("_wrap_%s(PyObject *args, PyObject *kwargs)" % (self.function_name,))
-        code_sink.writeln('{')
-        code_sink.indent()
-        tmp_sink.flush_to(code_sink)
-        code_sink.unindent()
-        code_sink.writeln('}')
 
         
 
@@ -92,9 +65,9 @@ def test():
                     param_name = 'param_inout'
                 elif direction == (Parameter.DIRECTION_OUT):
                     param_name = 'param_out'
-                wrapper = MyForwardWrapper(return_handler(return_type),
-                                           [param_handler(param_type, param_name, direction)],
-                                           function_name)
+                wrapper = FunctionWrapper(return_handler(return_type),
+                                          [param_handler(param_type, param_name, direction)],
+                                          function_name)
                 try:
                     wrapper.generate(code_out)
                 except typehandlers.base.CodeGenerationError, ex:
