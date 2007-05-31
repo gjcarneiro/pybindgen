@@ -40,7 +40,7 @@ class Function(ForwardWrapperBase):
         tmp_sink = codesink.MemoryCodeSink()
         self.generate_body(tmp_sink)
         code_sink.writeln("static PyObject *")
-        code_sink.writeln("_wrap_%s(PyObject *args, PyObject *kwargs)"
+        code_sink.writeln("_wrap_%s(PyObject *dummy, PyObject *args, PyObject *kwargs)"
                           % (self.function_name,))
         code_sink.writeln('{')
         code_sink.indent()
