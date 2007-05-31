@@ -50,6 +50,7 @@ def test():
                 print
     
     ## test generic forward wrappers
+    function_defs = []
     for return_type, return_handler in typehandlers.base.return_type_matcher.items():
         for param_type, param_handler in typehandlers.base.param_type_matcher.items():
             for direction in param_handler.DIRECTIONS:
@@ -73,8 +74,19 @@ def test():
                 except typehandlers.base.CodeGenerationError, ex:
                     print >> sys.stderr, "SKIPPING %s %s(%s): %s" % \
                           (return_type, function_name, param_type, str(ex))
+                    continue
                 print
-    
+                function_defs.append(wrapper.get_py_method_def(function_name))
+
+    code_out.writeln("static PyMethodDef foo_functions[] = {")
+    code_out.indent()
+    for funcdef in function_defs:
+        code_out.writeln(funcdef)
+    code_out.writeln("{NULL, NULL, 0, NULL}")
+    code_out.unindent()
+    code_out.writeln("};")
+
+
 
 if __name__ == '__main__':
     test()

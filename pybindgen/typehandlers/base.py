@@ -658,6 +658,18 @@ class ForwardWrapperBase(object):
         self.before_call.sink.flush_to(code_sink)
         self.after_call.sink.flush_to(code_sink)
 
+    def get_py_method_def_flags(self):
+        """
+        Get a list of PyMethodDef flags that should be used for this wrapper.
+        """
+        if self.parameters:
+            if self.parse_params.get_keywords() is None:
+                return ["METH_VARARGS"]
+            else:
+                return ["METH_VARARGS", "METH_KEYWORDS"]
+        else:
+            return  ["METH_NOARGS"]
+
 
 class ReturnValue(object):
     '''Abstract base class for all classes dedicated to handle
