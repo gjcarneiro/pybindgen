@@ -1,0 +1,10 @@
+#!/bin/sh
+
+## Requires the GNU ChangeLog formatter plugin:
+##   http://telecom.inescporto.pt/~gjc/gnulog.py
+
+ChangeLog=$(dirname $0)/ChangeLog
+	
+chmod u+w $ChangeLog 2> /dev/null
+bzr log -v --log-format 'gnu' > $ChangeLog
+chmod a-w $ChangeLog
