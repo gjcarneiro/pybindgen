@@ -18,7 +18,7 @@ class BoolParam(Parameter):
         assert isinstance(wrapper, ForwardWrapperBase)
         name = wrapper.declarations.declare_variable(self.ctype, self.name)
         py_name = wrapper.declarations.declare_variable('PyObject *', 'py_'+self.name)
-        wrapper.parse_params.add_parameter('O', ['&'+py_name])
+        wrapper.parse_params.add_parameter('O', ['&'+py_name], self.name)
         wrapper.before_call.write_code("%s = PyObject_IsTrue(%s);" % (name, py_name))
         wrapper.call_params.append(name)
 
@@ -54,7 +54,7 @@ class BoolPtrParam(Parameter):
         if self.direction & self.DIRECTION_OUT:
             py_name = wrapper.declarations.declare_variable(
                 'PyObject *', 'py_'+self.name)
-            wrapper.parse_params.add_parameter("O", ["&"+py_name])
+            wrapper.parse_params.add_parameter("O", ["&"+py_name], self.name)
             wrapper.after_call.write_code(
                 "*%s = PyObject_IsTrue(%s);" % (self.name, py_name,))
 
@@ -64,7 +64,7 @@ class BoolPtrParam(Parameter):
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
             py_name = wrapper.declarations.declare_variable("PyObject*", 'py_'+self.name)
-            wrapper.parse_params.add_parameter("O", ["&"+py_name])
+            wrapper.parse_params.add_parameter("O", ["&"+py_name], self.name)
             wrapper.before_call.write_code(
                 "%s = PyObject_IsTrue(%s);" % (self.name, py_name,))
         if self.direction & self.DIRECTION_OUT:
@@ -85,7 +85,7 @@ class BoolRefParam(Parameter):
         if self.direction & self.DIRECTION_OUT:
             py_name = wrapper.declarations.declare_variable(
                 'PyObject *', 'py_'+self.name)
-            wrapper.parse_params.add_parameter("O", ["&"+py_name])
+            wrapper.parse_params.add_parameter("O", ["&"+py_name], self.name)
             wrapper.after_call.write_code(
                 "%s = PyObject_IsTrue(%s);" % (self.name, py_name,))
 
@@ -95,7 +95,7 @@ class BoolRefParam(Parameter):
         wrapper.call_params.append(name)
         if self.direction & self.DIRECTION_IN:
             py_name = wrapper.declarations.declare_variable("PyObject*", 'py_'+self.name)
-            wrapper.parse_params.add_parameter("O", ["&"+py_name])
+            wrapper.parse_params.add_parameter("O", ["&"+py_name], self.name)
             wrapper.before_call.write_code(
                 "%s = PyObject_IsTrue(%s);" % (self.name, py_name,))
         if self.direction & self.DIRECTION_OUT:

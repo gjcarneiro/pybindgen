@@ -45,14 +45,14 @@ class DoublePtrParam(Parameter):
         if self.direction & self.DIRECTION_IN:
             wrapper.build_params.add_parameter('d', ['*'+self.name])
         if self.direction & self.DIRECTION_OUT:
-            wrapper.parse_params.add_parameter("d", [self.name])
+            wrapper.parse_params.add_parameter("d", [self.name], self.name)
 
     def convert_python_to_c(self, wrapper):
         assert self.ctype == 'double*'
         name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
-            wrapper.parse_params.add_parameter('d', ['&'+name])
+            wrapper.parse_params.add_parameter('d', ['&'+name], self.name)
         if self.direction & self.DIRECTION_OUT:
             wrapper.build_params.add_parameter("d", [name])
         
@@ -68,13 +68,13 @@ class DoubleRefParam(Parameter):
         if self.direction & self.DIRECTION_IN:
             wrapper.build_params.add_parameter('d', [self.name])
         if self.direction & self.DIRECTION_OUT:
-            wrapper.parse_params.add_parameter("d", [self.name])
+            wrapper.parse_params.add_parameter("d", [self.name], self.name)
 
     def convert_python_to_c(self, wrapper):
         assert self.ctype == 'double&'
         name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
         wrapper.call_params.append(name)
         if self.direction & self.DIRECTION_IN:
-            wrapper.parse_params.add_parameter('d', ['&'+name])
+            wrapper.parse_params.add_parameter('d', ['&'+name], self.name)
         if self.direction & self.DIRECTION_OUT:
             wrapper.build_params.add_parameter("d", [name])

@@ -16,7 +16,7 @@ class StringParam(Parameter):
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
         name = wrapper.declarations.declare_variable(self.ctype, self.name)
-        wrapper.parse_params.add_parameter('s', ['&'+name])
+        wrapper.parse_params.add_parameter('s', ['&'+name], self.name)
         wrapper.call_params.append(name)
 
 
@@ -39,7 +39,7 @@ class StdStringParam(Parameter):
         assert isinstance(wrapper, ForwardWrapperBase)
         name = wrapper.declarations.declare_variable("const char *", self.name)
         name_len = wrapper.declarations.declare_variable("Py_ssize_t", self.name+'_len')
-        wrapper.parse_params.add_parameter('s#', ['&'+name, '&'+name_len])
+        wrapper.parse_params.add_parameter('s#', ['&'+name, '&'+name_len], self.name)
         wrapper.call_params.append('std::string(%s, %s)' % (name, name_len))
 
 
@@ -67,7 +67,7 @@ class StdStringRefParam(Parameter):
             if ptr is None:
                 ptr = wrapper.declarations.declare_variable("const char *", self.name + "_ptr")
                 len_ = wrapper.declarations.declare_variable("Py_ssize_t", self.name + "_len")
-            wrapper.parse_params.add_parameter("s#", ['&'+ptr, '&'+len_])
+            wrapper.parse_params.add_parameter("s#", ['&'+ptr, '&'+len_], self.name)
             wrapper.after_call.write_code(
                 "%s = std::string(%s, %s);" % (self.name, ptr, len_))
 
@@ -79,7 +79,7 @@ class StdStringRefParam(Parameter):
         wrapper.call_params.append(name_std)
 
         if self.direction & Parameter.DIRECTION_IN:
-            wrapper.parse_params.add_parameter('s#', ['&'+name, '&'+name_len])
+            wrapper.parse_params.add_parameter('s#', ['&'+name, '&'+name_len], self.name)
             wrapper.before_call.write_code('%s = std::string(%s, %s);' %
                                            (name_std, name, name_len))
 

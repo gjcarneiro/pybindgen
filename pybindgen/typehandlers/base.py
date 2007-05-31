@@ -197,8 +197,8 @@ class ParseTupleParameters(object):
 
         >>> tuple_params = ParseTupleParameters()
         >>> tuple_params.add_parameter('i', ['&foo'])
-        >>> tuple_params.get_keywords()
-        []
+        >>> print tuple_params.get_keywords()
+        None
         """
         self._parse_tuple_items = [] # (template, param_values, param_name, optional)
         
@@ -225,9 +225,11 @@ class ParseTupleParameters(object):
             self._parse_tuple_items.append(item)
 
     def get_parameters(self):
-        """returns a list of parameters to pass into a
+        """
+        returns a list of parameters to pass into a
         PyArg_ParseTuple-style function call, the first paramter in
-        the list being the template string."""
+        the list being the template string.
+        """
         template = ['"']
         last_was_optional = False
         for (param_template, dummy,
@@ -245,10 +247,22 @@ class ParseTupleParameters(object):
         return params
         
     def get_keywords(self):
-        """returns list of keywords (parameter names); should only be
-        called if names were given for all parameters."""
-        return [name for (dummy, dummy, name, dummy) in self._parse_tuple_items
-                if name is not None]
+        """
+        returns list of keywords (parameter names), or None if none of
+        the parameters had a name; should only be called if names were
+        given for all parameters or none of them.
+        """
+        keywords = []
+        for (dummy, dummy, name, dummy) in self._parse_tuple_items:
+            if name is None:
+                if keywords:
+                    raise ValueError("mixing parameters with and without keywords")
+            else:
+                keywords.append(name)
+        if keywords:
+            return keywords
+        else:
+            return None
 
 
 class BuildValueParameters(object):
@@ -604,17 +618,18 @@ class ForwardWrapperBase(object):
                     % (param.ctype,))
         params = self.parse_params.get_parameters()
         keywords = self.parse_params.get_keywords()
-        if keywords:
+
+        if keywords is None:
+            param_list = ['args'] + params
+            self.before_parse.write_error_check('!PyArg_ParseTuple(%s)' %
+                                                (', '.join(param_list),))
+        else:
             keywords_var = self.declarations.declare_variable(
                 'char *', 'keywords',
                 '{' + ', '.join(['"%s"' % kw for kw in keywords] + ['NULL']) + '}',
                  '[]')
             param_list = ['args', 'kwargs', params[0], keywords_var] + params[1:]
             self.before_parse.write_error_check('!PyArg_ParseTupleAndKeywords(%s)' %
-                                                (', '.join(param_list),))
-        else:
-            param_list = ['args'] + params
-            self.before_parse.write_error_check('!PyArg_ParseTuple(%s)' %
                                                 (', '.join(param_list),))
         
         self.generate_call()
