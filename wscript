@@ -7,7 +7,31 @@ import os
 import pproc as subprocess
 import shutil
 
-VERSION='0.1.1'
+def get_version_from_bzr():
+    import bzrlib.tag, bzrlib.branch
+    branch = bzrlib.branch.Branch.open('file://' + os.getcwd())
+    #print [branch.revision_id_to_revno(revid) for revid in branch.revision_history()]
+    tags = bzrlib.tag.BasicTags(branch)
+    
+    #def looks_like_version(s):
+    #    import re
+    #    return (re.match(r'\d+\.\d+\.\d+', s) is not None)
+    #versions = [tag.split('.') for tag in tags.get_tag_dict().iterkeys()
+    #            if looks_like_version(tag)]
+    #versions.sort()
+    #return str('.'.join(versions[-1])) # return last version tag
+
+    current_rev = branch.revision_history()[-1]
+    for tag, revid in tags.get_tag_dict().iteritems():
+        if revid == current_rev:
+            return str(tag)
+    return str("bzr-r%i" % (branch.revno(),))
+    
+
+try:
+    VERSION = get_version_from_bzr()
+except ImportError:
+    VERSION = 'unknown'
 
 APPNAME='pybindgen'
 srcdir = '.'
@@ -43,5 +67,4 @@ def build(bld):
         bld.add_subdirs('tests')
     bld.add_subdirs('examples')
     bld.add_subdirs('pybindgen')
-
 
