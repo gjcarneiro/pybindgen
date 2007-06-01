@@ -8,6 +8,7 @@ import os, sys
 sys.path.insert(0, os.getcwd()) # to work with uninstalled pybindgen
 
 from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
+from pybindgen import (CppMethod, CppConstructor, CppClass)
 
 
 def _pybindgen_action(task):
@@ -50,8 +51,16 @@ def my_module_gen(out_file):
     mod.add_function(Function(ReturnValue('int'), 'print_something_else',
                               [Parameter('const char*', 'message2')]))
 
-    mod.generate(FileCodeSink(out_file))
 
+    SomeObject = CppClass('SomeObject')
+    SomeObject.add_method(CppMethod(ReturnValue('int'), 'add_prefix',
+                                    [Parameter('std::string&', 'message')]))
+    SomeObject.add_constructor(
+        CppConstructor([Parameter('std::string', 'prefix')]))
+
+    mod.add_class(SomeObject)
+
+    mod.generate(FileCodeSink(out_file))
 
 
 def build(bld):

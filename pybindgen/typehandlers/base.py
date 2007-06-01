@@ -578,7 +578,7 @@ class ForwardWrapperBase(object):
         error_return -- statement to return an error after parameter parsing
 
         '''
-        assert isinstance(return_value, ReturnValue)
+        assert isinstance(return_value, ReturnValue) or return_value is None
         assert isinstance(parameters, list)
         assert all([isinstance(param, Parameter) for param in parameters])
 
@@ -593,7 +593,7 @@ class ForwardWrapperBase(object):
         self.call_params = []
         
         self.declarations.declare_variable('PyObject*', 'py_retval')
-        if return_value.ctype != 'void':
+        if return_value is not None and return_value.ctype != 'void':
             self.declarations.declare_variable(return_value.ctype, 'retval')
         
 
@@ -636,21 +636,26 @@ class ForwardWrapperBase(object):
         self.generate_call()
 
         ## convert the return value(s)
-        try:
-            self.return_value.convert_c_to_python(self)
-        except NotImplementedError:
-            raise CodeGenerationError(
-                'python_to_c method of return value %s not implemented'
-                % (self.return_value.ctype,))
+        if self.return_value is None:
+            assert self.build_params.get_parameters() == ['""'], \
+                   "this wrapper is not supposed to return values"
+            self.after_call.write_cleanup()
+        else:
+            try:
+                self.return_value.convert_c_to_python(self)
+            except NotImplementedError:
+                raise CodeGenerationError(
+                    'python_to_c method of return value %s not implemented'
+                    % (self.return_value.ctype,))
 
-        params = self.build_params.get_parameters()
-        if params:
-            self.after_call.write_code('py_retval = Py_BuildValue(%s);' %
-                                       (', '.join(params),))
+            params = self.build_params.get_parameters()
+            if params:
+                self.after_call.write_code('py_retval = Py_BuildValue(%s);' %
+                                           (', '.join(params),))
 
-        ## cleanup and return
-        self.after_call.write_cleanup()
-        self.after_call.write_code('return py_retval;')
+            ## cleanup and return
+            self.after_call.write_cleanup()
+            self.after_call.write_code('return py_retval;')
 
         ## now write out the wrapper function body itself
         self.declarations.get_code_sink().flush_to(code_sink)
