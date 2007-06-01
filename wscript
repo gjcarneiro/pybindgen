@@ -42,5 +42,6 @@ def build(bld):
     if Params.g_commands['check']:
         bld.add_subdirs('tests')
     bld.add_subdirs('examples')
+    bld.add_subdirs('pybindgen')
 
 

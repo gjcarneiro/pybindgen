@@ -1,0 +1,12 @@
+## -*- python -*-
+
+def build(bld):
+    
+    obj = bld.create_obj('py')
+    obj.find_sources_in_dirs('.')
+    obj.inst_dir = 'pybindgen'
+
+    obj = bld.create_obj('py')
+    obj.find_sources_in_dirs('typehandlers')
+    obj.inst_dir = 'pybindgen/typehandlers'
+
