@@ -13,18 +13,16 @@ def build(bld):
     gen.stdin = 'test-generation.py'
     top_srcdir = bld.m_srcnode.abspath()
     gen.argv = [top_srcdir]
-    gen.priority = 5
+    gen.prio = 5
     
     obj = bld.create_obj('cpp', 'objects', 'pyext')
     obj.source = 'test.cc'
     obj.env.append_value('CXXFLAGS', ['-Wall', '-Werror', '-Wno-unused'])
 
     cwd = os.getcwd()
-    env = dict(os.environ)
-    env['PYTHONPATH'] = top_srcdir
     os.chdir(top_srcdir)
     try:
-        if subprocess.Popen(['python', 'tests/test.py'], env=env).wait():
+        if subprocess.Popen(['python', 'tests/test.py']).wait():
             raise SystemExit(1)
     finally:
         os.chdir(cwd)

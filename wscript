@@ -8,6 +8,10 @@ import os
 import pproc as subprocess
 import shutil
 
+
+os.environ['PYTHONPATH'] = os.path.join(os.getcwd(), 'build', 'default')
+
+
 def get_version_from_bzr():
     import bzrlib.tag, bzrlib.branch
     branch = bzrlib.branch.Branch.open('file://' + os.getcwd())

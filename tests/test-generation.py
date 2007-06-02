@@ -2,11 +2,6 @@
 
 import sys
 
-try:
-    path = sys.argv[1]
-except IndexError:
-    path = '..'
-sys.path.insert(0, path)
 
 from pybindgen import typehandlers
 from pybindgen.typehandlers import codesink

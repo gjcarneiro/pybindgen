@@ -4,73 +4,13 @@ import Object
 import Params
 import Task
 
-import os, sys
-sys.path.insert(0, os.getcwd()) # to work with uninstalled pybindgen
-
-from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
-from pybindgen import (CppMethod, CppConstructor, CppClass)
-
-
-def _pybindgen_action(task):
-    target, = task.m_outputs
-    out_file = file(target.bldpath(task.m_env), "w")
-    task.function(out_file)
-    out_file.close()
-
-class PyBindGen(Object.genobj):
-    def __init__(self, env=None):
-        Object.genobj.__init__(self, 'other')
-        self.install_var = 0
-        self.env = env
-        if not self.env:
-            self.env = Params.g_build.m_allenvs['default'].copy()
-        self.function = None
-        self.target = None
-        self.prio = 5
-    def apply(self):
-        function = self.function
-        task = self.create_task('pybindgen', self.env, self.prio)
-        task.function = self.function
-        target = self.path.find_build(self.target)
-        task.set_outputs([target])
-        task.set_inputs([self.path.find_source('wscript')])
-    def install(self):
-        pass
-
-
-    
-def my_module_gen(out_file):
-    print >> out_file, "#include <Python.h>"
-    print >> out_file, "#include \"foo.h\""
-
-    mod = Module('foo')
-
-    mod.add_function(Function(ReturnValue('int'), 'print_something',
-                              [Parameter('const char*', 'message')]))
-
-    mod.add_function(Function(ReturnValue('int'), 'print_something_else',
-                              [Parameter('const char*', 'message2')]))
-
-
-    SomeObject = CppClass('SomeObject')
-    SomeObject.add_method(CppMethod(ReturnValue('int'), 'add_prefix',
-                                    [Parameter('std::string&', 'message')]))
-    SomeObject.add_constructor(
-        CppConstructor([Parameter('std::string', 'prefix')]))
-
-    mod.add_class(SomeObject)
-
-    mod.generate(FileCodeSink(out_file))
-
 
 def build(bld):
-    Object.register('pybindgen', PyBindGen)
-    Action.Action('pybindgen', func=_pybindgen_action, color='BLUE')
-
-    bindgen = bld.create_obj('pybindgen')
-    bindgen.target = 'foomodule.cc'
-    bindgen.function = my_module_gen
-    bindgen.prio = 1
+    bindgen = bld.create_obj('command-output')
+    bindgen.stdout = 'foomodule.cc'
+    bindgen.stdin = 'foomodulegen.py'
+    bindgen.command = 'foomodulegen.py'
+    bindgen.prio = 3 # must run after the 'py' objects in ../pybindgen
 
     obj = bld.create_obj('cpp', 'shlib', 'pyext')
     obj.source = [
