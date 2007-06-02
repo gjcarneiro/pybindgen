@@ -18,6 +18,7 @@ def build(bld):
         'foomodule.cc'
         ]
     obj.target = 'foo'
+    obj.install_var = 0 # do not install
 
     ## Workaround a WAF bug (http://code.google.com/p/waf/issues/detail?id=37)
     obj.env.append_value("CPPPATH", bld.m_curdirnode.srcpath(obj.env))
