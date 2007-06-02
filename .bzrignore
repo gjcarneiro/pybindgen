@@ -4,3 +4,4 @@ ChangeLog
 waf
 waf.bat
 pybindgen*.tar.bz2
+pybindgen/version.py

@@ -1,0 +1,35 @@
+
+PyBindGen is (surprise!) a python bindings generator.  The main features are:
+
+ * Is written in clean, PEP 8 compliant, and pylint checked, Python code;
+
+ * Generates clean C or C++ code, nearly as readable as code written
+manually by a developer;
+
+ * Generated code does not require any external libraries or macros;
+
+ * Does not require Boost.Python (no C++ template magic, also works in C);
+
+ * The main interface for code generation is a simple Python API, not
+some obscure interface definition language.  Other frontends, such as
+parsing header files with gccxml, are easy to add as an additional
+layer;
+
+ * Can be easily extended with new type handlers;
+
+ * Type handlers can allocate memory and register cleanup code to free;
+
+ * Supports in, out, and inout parameters (e.g. with pointers or C++ references);
+
+ * Supports multiple return values (e.g. due to out/inout parameters);
+
+ * Supports wrapping of simple C++ classes;
+
+Planned:
+
+ * Support virtual methods in classes;
+
+ * Support reference counted classes;
+
+ * Callbacks;
+
