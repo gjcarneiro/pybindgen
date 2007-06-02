@@ -11,20 +11,27 @@ import sys
 os.environ['PYTHONPATH'] = os.path.join(os.getcwd(), 'build', 'default')
 
 
+_version = None
 def get_version_from_bzr(path=None):
+    global _version
+    if _version is not None:
+        return _version
     import bzrlib.tag, bzrlib.branch
     if path is None:
         path = os.getcwd()
     branch = bzrlib.branch.Branch.open('file://' + os.path.abspath(path))
     tags = bzrlib.tag.BasicTags(branch)
+    #print "Getting version information from bzr branch..."
     history = branch.revision_history()
     history.reverse()
     ## find closest tag
     version = None
     extra_version = []
     for revid in history:
+        print revid
         for tag_name, tag_revid in tags.get_tag_dict().iteritems():
             if tag_revid == revid:
+                #print "%s matches tag %s" % (revid, tag_name)
                 version = [int(s) for s in tag_name.split('.')]
                 if tag_revid != branch.last_revision():
                     extra_version = [branch.revision_id_to_revno(revid)]
@@ -32,7 +39,8 @@ def get_version_from_bzr(path=None):
         if version:
             break
     assert version is not None
-    return version + extra_version
+    _version = version + extra_version
+    return _version
 
 
 def get_version():
