@@ -12,9 +12,11 @@ import shutil
 os.environ['PYTHONPATH'] = os.path.join(os.getcwd(), 'build', 'default')
 
 
-def get_version_from_bzr():
+def get_version_from_bzr(path=None):
     import bzrlib.tag, bzrlib.branch
-    branch = bzrlib.branch.Branch.open('file://' + os.getcwd())
+    if path is None:
+        path = os.getcwd()
+    branch = bzrlib.branch.Branch.open('file://' + os.path.abspath(path))
     tags = bzrlib.tag.BasicTags(branch)
     current_rev = branch.last_revision()
     for tag, revid in tags.get_tag_dict().iteritems():
@@ -41,6 +43,19 @@ def dist_hook(srcdir, blddir):
         pass
     shutil.copy(os.path.join(srcdir, "ChangeLog"), blddir)
 
+    ## Write a pybindgen/version.py file containing the project version
+    version = get_version_from_bzr(srcdir)
+    version_lst = version.split('.')
+    dest = open(os.path.join('pybindgen', 'version.py'), 'w')
+    if len(version_lst) > 1:
+        dest.write('__version__ = (%s)\n' % (', '.join(version.split('.')),))
+    else:
+        dest.write('__version__ = "%s"\n' % (version,))
+    dest.close()
+
+    ## Copy it to the source dir
+    shutil.copy(os.path.join('pybindgen', 'version.py'), os.path.join(srcdir, "pybindgen"))
+
 
 def set_options(opt):
     opt.tool_options('python')
@@ -57,26 +72,6 @@ def configure(conf):
         fatal("Error: missing Python development environment.\n"
               "(Hint: if you do not have a debugging Python library installed"
               " try using the configure option '--debug-level release')")
-
-
-    ## Write a pybindgen/version.py file containing the project version
-    version = get_version()
-    version_lst = version.split('.')
-    configfile = 'pybindgen/version.py'
-    lst = Utils.split_path(configfile)
-    base = [conf.m_blddir, conf.env.variant()] + lst[:-1]
-    dir_ = Utils.join_path(*base)
-    try:
-            os.makedirs(dir_)
-    except OSError:
-        pass
-    fname = Utils.join_path(dir_, lst[-1])
-    dest = open(fname, 'w')
-    if len(version_lst) > 1:
-        dest.write('__version__ = (%s)\n' % (', '.join(version.split('.')),))
-    else:
-        dest.write('__version__ = "%s"\n' % (version,))
-    dest.close()
 
 
 def build(bld):
