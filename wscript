@@ -28,7 +28,7 @@ def get_version_from_bzr(path=None):
     version = None
     extra_version = []
     for revid in history:
-        print revid
+        #print revid
         for tag_name, tag_revid in tags.get_tag_dict().iteritems():
             if tag_revid == revid:
                 #print "%s matches tag %s" % (revid, tag_name)
