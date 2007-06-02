@@ -15,7 +15,10 @@ public:
     SomeObject (std::string const prefix)
         : m_prefix (prefix) {}
 
-    int add_prefix (std::string& message);
+    int add_prefix (std::string& message) {
+        message = m_prefix + message;
+        return message.size();
+    }
 
 };
 
