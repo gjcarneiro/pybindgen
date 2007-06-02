@@ -3,7 +3,6 @@
 
 import Params
 from Params import fatal
-import Utils
 import os
 import pproc as subprocess
 import shutil
@@ -22,7 +21,7 @@ def get_version_from_bzr(path=None):
     history.reverse()
     ## find closest tag
     version = None
-    extra_vesion = []
+    extra_version = []
     for revid in history:
         for tag_name, tag_revid in tags.get_tag_dict().iteritems():
             if tag_revid == revid:
