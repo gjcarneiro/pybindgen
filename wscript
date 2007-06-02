@@ -18,16 +18,27 @@ def get_version_from_bzr(path=None):
         path = os.getcwd()
     branch = bzrlib.branch.Branch.open('file://' + os.path.abspath(path))
     tags = bzrlib.tag.BasicTags(branch)
-    current_rev = branch.last_revision()
-    for tag, revid in tags.get_tag_dict().iteritems():
-        if revid == current_rev:
-            return str(tag)
-    return str("bzr_r%i" % (branch.revno(),))
+    history = branch.revision_history()
+    history.reverse()
+    ## find closest tag
+    version = None
+    extra_vesion = []
+    for revid in history:
+        for tag_name, tag_revid in tags.get_tag_dict().iteritems():
+            if tag_revid == revid:
+                version = [int(s) for s in tag_name.split('.')]
+                if tag_revid != branch.last_revision():
+                    extra_version = [branch.revision_id_to_revno(revid)]
+                break
+        if version:
+            break
+    assert version is not None
+    return version + extra_version
 
 
 def get_version():
     try:
-        return get_version_from_bzr()
+        return '.'.join([str(x) for x in get_version_from_bzr()])
     except ImportError:
         return 'unknown'
 
@@ -45,10 +56,11 @@ def dist_hook(srcdir, blddir):
 
     ## Write a pybindgen/version.py file containing the project version
     version = get_version_from_bzr(srcdir)
-    version_lst = version.split('.')
     dest = open(os.path.join('pybindgen', 'version.py'), 'w')
-    if len(version_lst) > 1:
-        dest.write('__version__ = (%s)\n' % (', '.join(version.split('.')),))
+    if isinstance(version, list):
+        dest.write('# [major, minor, micro, revno], '
+                   'revno omitted in official releases\n')
+        dest.write('__version__ = %r\n' % (version,))
     else:
         dest.write('__version__ = "%s"\n' % (version,))
     dest.close()
