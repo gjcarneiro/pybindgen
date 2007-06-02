@@ -762,6 +762,7 @@ class Parameter(object):
     ## bit mask values
     DIRECTION_IN = 1
     DIRECTION_OUT = 2
+    DIRECTION_INOUT = DIRECTION_IN|DIRECTION_OUT
 
     ## list of possible directions for this type
     DIRECTIONS = NotImplemented
