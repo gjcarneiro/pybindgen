@@ -7,7 +7,7 @@ import Utils
 import os
 import pproc as subprocess
 import shutil
-
+import sys
 
 os.environ['PYTHONPATH'] = os.path.join(os.getcwd(), 'build', 'default')
 
@@ -55,6 +55,10 @@ def dist_hook(srcdir, blddir):
 
     ## Copy it to the source dir
     shutil.copy(os.path.join('pybindgen', 'version.py'), os.path.join(srcdir, "pybindgen"))
+
+    ## Copy WAF to the distdir
+    assert os.path.basename(sys.argv[0]) == 'waf'
+    shutil.copy(sys.argv[0], '.')
 
 
 def set_options(opt):
