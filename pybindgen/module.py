@@ -86,11 +86,22 @@ class Module(object):
                docstring and '"'+docstring+'"' or 'NULL'))
         self.before_init.write_error_check("m == NULL")
 
+        ## generate forward declarations for types
+        if self.classes:
+            code_sink.writeln('/* --- forward declarations --- */')
+            code_sink.writeln()
+            for class_ in self.classes:
+                class_.generate_forward_declarations(code_sink)
+
+
         ## generate the function wrappers
-        for func_name, func_wrapper in self.functions:
+        if self.functions:
+            code_sink.writeln('/* --- module functions --- */')
             code_sink.writeln()
-            func_wrapper.generate(code_sink)
-            code_sink.writeln()
+            for func_name, func_wrapper in self.functions:
+                code_sink.writeln()
+                func_wrapper.generate(code_sink)
+                code_sink.writeln()
 
         ## generate the function table
         code_sink.writeln("static PyMethodDef %s_functions[] = {"
@@ -103,19 +114,26 @@ class Module(object):
         code_sink.writeln("};")
 
         ## generate the classes
-        for class_ in self.classes:
+        if self.classes:
+            code_sink.writeln('/* --- classes --- */')
             code_sink.writeln()
-            class_.generate(code_sink)
-            code_sink.writeln()
+            for class_ in self.classes:
+                code_sink.writeln()
+                class_.generate(code_sink)
+                code_sink.writeln()
 
-            ## register the class type
-            self.after_init.write_error_check('PyType_Ready(&%s)'
-                                              % (class_.pytypestruct,))
-            ## add to the module dict
-            self.after_init.write_code(
-                'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
-                class_.name, class_.pytypestruct))
-        
+                ## register the class type
+                self.after_init.write_code("/* Register the '%s' class */" % class_.name)
+                if class_.parent is not None:
+                    assert isinstance(class_.parent, CppClass)
+                    self.after_init.write_code('%s.tp_base = &%s;' %
+                                               (class_.pytypestruct, class_.parent.pytypestruct))
+                self.after_init.write_error_check('PyType_Ready(&%s)'
+                                                  % (class_.pytypestruct,))
+                ## add to the module dict
+                self.after_init.write_code(
+                    'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
+                    class_.name, class_.pytypestruct))
         
         ## now generate the module init function itself
         code_sink.writeln()

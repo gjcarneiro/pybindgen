@@ -2,8 +2,24 @@
 Wrap C++ classes and methods
 """
 
-from typehandlers.base import ForwardWrapperBase
+from typehandlers.base import ForwardWrapperBase, Parameter, ReturnValue
 from typehandlers import codesink
+
+
+class CppClassParameter(Parameter):
+    CTYPES = []
+    cpp_class = None # instance of CppClass
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    
+    def convert_python_to_c(self, wrapper):
+        assert isinstance(wrapper, ForwardWrapperBase)
+        assert isinstance(self.cpp_class, CppClass)
+        name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', self.name)
+        wrapper.parse_params.add_parameter(
+            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
+        wrapper.call_params.append(
+            '*((%s *) %s)->obj' % (self.cpp_class.pystruct, name))
 
 
 class CppMethodBase(ForwardWrapperBase):
@@ -206,7 +222,7 @@ class CppClass(object):
         '};\n\n'
         )
 
-    def __init__(self, name):
+    def __init__(self, name, parent=None):
         """Constructor
         name -- class name
         """
@@ -216,6 +232,13 @@ class CppClass(object):
         self.slots = dict()
         self.pystruct = "Py%s" % (self.name,)
         self.pytypestruct = "Py%s_Type" % (self.name,)
+        self.parent = parent
+        assert parent is None or isinstance(parent, CppClass)
+
+        ## register type handlers
+        class ThisClassParameter(CppClassParameter):
+            CTYPES = [name]
+            cpp_class = self
 
 
     def add_method(self, wrapper, name=None):
@@ -248,10 +271,9 @@ class CppClass(object):
             raise NotImplementedError(
                 'multiple constructors not yet supported')
         self.constructors.append(wrapper)
-        
 
-    def generate(self, code_sink, docstring=None):
-        """Generates the class to a code sink"""
+    def generate_forward_declarations(self, code_sink):
+        """Generates forward declarations for the instance and type structures"""
 
         code_sink.writeln('''
 typedef struct {
@@ -259,6 +281,14 @@ typedef struct {
     %s *obj;
 } %s;
 ''' % (self.name, self.pystruct))
+
+        code_sink.writeln()
+        code_sink.writeln('extern PyTypeObject %s;' % (self.pytypestruct,))
+        code_sink.writeln()
+        
+
+    def generate(self, code_sink, docstring=None):
+        """Generates the class to a code sink"""
 
         ## generate the constructor, if any
         if self.constructors:
@@ -283,7 +313,6 @@ typedef struct {
         code_sink.writeln("{NULL, NULL, 0, NULL}")
         code_sink.unindent()
         code_sink.writeln("};")
-        
 
         self.slots.setdefault("tp_basicsize",
                               "sizeof(%s)" % (self.pystruct,))

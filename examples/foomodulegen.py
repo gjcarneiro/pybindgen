@@ -12,6 +12,16 @@ def my_module_gen(out_file):
 
     mod = Module('foo')
 
+    Foo = CppClass('Foo')
+    mod.add_class(Foo)
+    Foo.add_constructor(
+        CppConstructor([Parameter('std::string', 'datum')]))
+    Foo.add_method(CppMethod(ReturnValue('std::string'), 'get_datum', []))
+    
+    Bar = CppClass('Bar', parent=Foo)
+    mod.add_class(Bar)
+    
+
     mod.add_function(Function(ReturnValue('int'), 'print_something',
                               [Parameter('const char*', 'message')]))
 
@@ -26,6 +36,10 @@ def my_module_gen(out_file):
     SomeObject.add_constructor(
         CppConstructor([Parameter('std::string', 'prefix')]))
 
+    SomeObject.add_method(CppMethod(ReturnValue('void'),
+                                    'set_foo_value',
+                                    [Parameter('Foo', 'foo')]))
+    
     mod.add_class(SomeObject)
 
     mod.generate(FileCodeSink(out_file))
