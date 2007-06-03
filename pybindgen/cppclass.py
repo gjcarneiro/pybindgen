@@ -238,6 +238,9 @@ class CppClass(object):
             class ThisClassParameter(CppClassParameter):
                 CTYPES = [name]
                 cpp_class = self
+            class ThisClassRefParameter(CppClassRefParameter):
+                CTYPES = [name+'&']
+                cpp_class = self
             class ThisClassReturn(CppClassReturnValue):
                 CTYPES = [name]
                 cpp_class = self
@@ -380,6 +383,7 @@ static void
 
 
 class CppClassParameter(Parameter):
+    "Class handlers"
     CTYPES = []
     cpp_class = CppClass('dummy') # CppClass instance
     DIRECTIONS = [Parameter.DIRECTION_IN]
@@ -396,7 +400,46 @@ class CppClassParameter(Parameter):
             '*((%s *) %s)->obj' % (self.cpp_class.pystruct, name))
 
 
+class CppClassRefParameter(Parameter):
+    "Class& handlers"
+    CTYPES = []
+    cpp_class = CppClass('dummy') # CppClass instance
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT, Parameter.DIRECTION_INOUT]
+    
+    def convert_python_to_c(self, wrapper):
+        "parses python args to get C++ value"
+        assert isinstance(wrapper, ForwardWrapperBase)
+        assert isinstance(self.cpp_class, CppClass)
+
+        name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', self.name)
+
+        if self.direction == Parameter.DIRECTION_IN:
+            wrapper.parse_params.add_parameter(
+                'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
+            wrapper.call_params.append('*%s->obj' % (name,))
+
+        elif self.direction == Parameter.DIRECTION_OUT:
+            wrapper.before_call.write_code(
+                "%s = PyObject_New(%s, %s);" %
+                (name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+            wrapper.before_call.write_code(
+                "%s->obj = new %s;" % (name, self.cpp_class.name))
+            wrapper.call_params.append('*%s->obj' % (name,))
+            wrapper.build_params.add_parameter("N", [name])
+
+        ## well, personally I think inout here doesn't make much sense
+        ## (it's just plain confusing), but might as well support it..
+        elif self.direction == Parameter.DIRECTION_INOUT:
+            wrapper.parse_params.add_parameter(
+                'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
+            wrapper.call_params.append(
+                '*%s->obj' % (self.cpp_class.pystruct, name))
+            wrapper.build_params.add_parameter("O", [name])
+
+
 class CppClassReturnValue(ReturnValue):
+    "Class return handlers"
     CTYPES = []
     cpp_class = CppClass('dummy') # CppClass instance
 
@@ -415,6 +458,7 @@ class CppClassReturnValue(ReturnValue):
 
 
 class CppClassPtrParameter(Parameter):
+    "Class* handlers"
     CTYPES = []
     cpp_class = CppClass('dummy') # CppClass instance
     DIRECTIONS = [Parameter.DIRECTION_IN]
@@ -438,6 +482,7 @@ class CppClassPtrParameter(Parameter):
 
 
 class CppClassPtrReturnValue(ReturnValue):
+    "Class* return handler"
     CTYPES = []
     cpp_class = CppClass('dummy') # CppClass instance
 

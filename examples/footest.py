@@ -42,6 +42,14 @@ class TestFoo(unittest.TestCase):
         f2 = obj.get_foo_shared_ptr()
         self.assertEqual(f2.get_datum(), "hello")
     
+    def test_pass_by_reference(self):
+        obj = foo.SomeObject("")
+        f = foo.Foo("hello")
+        obj.set_foo_by_ref(f)
+        self.assertEqual(f.get_datum(), "hello")
+        f2 = obj.get_foo_by_ref()
+        self.assertEqual(f2.get_datum(), "hello")
+        
         
         
 if __name__ == '__main__':

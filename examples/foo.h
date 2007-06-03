@@ -52,12 +52,12 @@ public:
     }
 
     // pass by reference, direction=in
-    void set_foo_ref (Foo& foo) {
+    void set_foo_by_ref (Foo& foo) {
         m_foo_value = foo;
     }
 
     // pass by reference, direction=out
-    void peek_foo_ref (Foo& foo) {
+    void get_foo_by_ref (Foo& foo) {
         foo = m_foo_value;
     }
 

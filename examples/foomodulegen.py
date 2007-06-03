@@ -54,6 +54,12 @@ def my_module_gen(out_file):
     SomeObject.add_method(CppMethod(
         ReturnValue('Foo*', caller_owns_return=True), 'get_foo_ptr', []))
 
+    SomeObject.add_method(CppMethod(
+        ReturnValue('void'), 'set_foo_by_ref', [Parameter('Foo&', 'foo', direction=Parameter.DIRECTION_IN)]))
+    SomeObject.add_method(CppMethod(
+        ReturnValue('void'), 'get_foo_by_ref', [Parameter('Foo&', 'foo', direction=Parameter.DIRECTION_OUT)]))
+
+
     mod.add_class(SomeObject)
 
     mod.generate(FileCodeSink(out_file))
