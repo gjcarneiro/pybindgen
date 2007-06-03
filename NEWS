@@ -1,0 +1,16 @@
+=== pybindgen 0.3 ===
+        - Supports methods and functions with parameters of a class
+type (for classes being wrapped).  Pass by pointer, value, or ref
+supported, with in/out/inout directions, and transfer of ownership, as
+well as value/pointer class return type.  Reference counted classes
+not yet supported.
+
+
+=== pybindgen 0.2 ===
+        - Supports wrapping classes, but not yet functions/methods
+with class parameters;
+
+
+=== pybindgen 0.1 ===
+        - Supports basic types, modules, and functions;
+
