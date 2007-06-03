@@ -15,4 +15,4 @@ class VoidReturn(ReturnValue):
         wrapper.parse_params.add_parameter("", [], prepend=True)
 
     def convert_c_to_python(self, wrapper):
-        wrapper.build_params.add_parameter("O", ['Py_None'], prepend=True)
+        pass
