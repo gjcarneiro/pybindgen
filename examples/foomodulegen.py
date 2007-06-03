@@ -2,12 +2,14 @@
 
 import sys
 
+import pybindgen
 from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
 from pybindgen import (CppMethod, CppConstructor, CppClass)
 
     
 def my_module_gen(out_file):
-    print >> out_file, "#include <Python.h>"
+    pybindgen.write_preamble(FileCodeSink(out_file))
+
     print >> out_file, "#include \"foo.h\""
 
     mod = Module('foo')

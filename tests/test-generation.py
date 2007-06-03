@@ -2,7 +2,7 @@
 
 import sys
 
-
+import pybindgen
 from pybindgen import typehandlers
 from pybindgen.typehandlers import codesink
 from pybindgen.typehandlers.base import Parameter, ReturnValue
@@ -21,7 +21,8 @@ class MyReverseWrapper(typehandlers.base.ReverseWrapperBase):
         
 
 def test():
-    print "#include <Python.h>"
+    pybindgen.write_preamble(codesink.FileCodeSink(sys.stdout))
+    print
     print "#include <string>"
     print
     
