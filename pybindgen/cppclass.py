@@ -8,10 +8,11 @@ from typehandlers import codesink
 
 class CppClassParameter(Parameter):
     CTYPES = []
-    cpp_class = None # instance of CppClass
+    cpp_class = None # CppClass instance
     DIRECTIONS = [Parameter.DIRECTION_IN]
     
     def convert_python_to_c(self, wrapper):
+        "parses python args to get C++ value"
         assert isinstance(wrapper, ForwardWrapperBase)
         assert isinstance(self.cpp_class, CppClass)
         name = wrapper.declarations.declare_variable(
@@ -22,49 +23,7 @@ class CppClassParameter(Parameter):
             '*((%s *) %s)->obj' % (self.cpp_class.pystruct, name))
 
 
-class CppMethodBase(ForwardWrapperBase):
-    """
-    Base class for methods and constructors
-    """
-    def __init__(self, parse_error_return, error_return,
-                 return_value, method_name, parameters):
-        """
-        parse_error_return, error_return -- see ForwardWrapperBase docs
-        return_value -- the method return value
-        method_name -- name of the method
-        parameters -- the method parameters
-        """
-        super(CppMethodBase, self).__init__(
-            return_value, parameters,
-            parse_error_return=parse_error_return,
-            error_return=error_return)
-        self.method_name = method_name
-        self.was_generated = False
-        self.wrapper_function_name = None
-        
-
-    def generate(self, code_sink):
-        """
-        Generates the wrapper code
-        code_sink -- a CodeSink instance that will receive the generated code
-        """
-        raise NotImplementedError
-
-    def get_py_method_def(self, name, docstring=None):
-        """Returns an array element to use in a PyMethodDef table.
-        Should only be called after code generation.
-
-        name -- python method/method name
-        docstring -- documentation string, or None
-        """
-        assert self.was_generated
-        flags = self.get_py_method_def_flags()
-        return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
-               (name, self.wrapper_function_name, '|'.join(flags),
-                (docstring is None and "NULL" or ('"'+docstring+'"')))
-
-
-class CppMethod(CppMethodBase):
+class CppMethod(ForwardWrapperBase):
     """
     Class that generates a wrapper to a C++ class method
     """
@@ -76,8 +35,9 @@ class CppMethod(CppMethodBase):
         parameters -- the method parameters
         """
         super(CppMethod, self).__init__(
-            "return NULL;", "return NULL;",
-            return_value, method_name, parameters)
+            return_value, parameters,
+            "return NULL;", "return NULL;")
+        self.method_name = method_name
 
     
     def generate_call(self, class_):
@@ -93,36 +53,44 @@ class CppMethod(CppMethodBase):
                 (self.method_name, ", ".join(self.call_params)))
 
 
-    def generate(self, code_sink, class_):
+    def generate(self, code_sink, class_, method_name, docstring=None):
         """
         Generates the wrapper code
         code_sink -- a CodeSink instance that will receive the generated code
         class_ -- the c++ class wrapper the method belongs to
+        method_name -- actual name the method will get
+        docstring -- optional documentation string
+
+        Returns the corresponding PyMethodDef entry string.
         """
         assert isinstance(class_, CppClass)
         tmp_sink = codesink.MemoryCodeSink()
 
         self.generate_body(tmp_sink, gen_call_params=[class_])
 
-        self.wrapper_function_name = "_wrap_%s_%s" % (
+        wrapper_function_name = "_wrap_%s_%s" % (
             class_.name, self.method_name)
 
         code_sink.writeln("static PyObject *")
         code_sink.writeln(
             "%s(%s *self, PyObject *args, PyObject *kwargs)"
-            % (self.wrapper_function_name, class_.pystruct))
+            % (wrapper_function_name, class_.pystruct))
         code_sink.writeln('{')
         code_sink.indent()
         tmp_sink.flush_to(code_sink)
         code_sink.unindent()
         code_sink.writeln('}')
-        self.was_generated = True
+
+        flags = self.get_py_method_def_flags()
+        return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
+               (method_name, wrapper_function_name, '|'.join(flags),
+                (docstring is None and "NULL" or ('"'+docstring+'"')))
 
 
-class CppConstructor(CppMethodBase):
+class CppConstructor(ForwardWrapperBase):
     """
     Class that generates a wrapper to a C++ class constructor.  Such
-    wrapper is automatically used as the python class __init__ method.
+    wrapper is used as the python class __init__ method.
     """
 
     def __init__(self, parameters):
@@ -130,9 +98,8 @@ class CppConstructor(CppMethodBase):
         parameters -- the constructor parameters
         """
         super(CppConstructor, self).__init__(
-            "return -1;", "return -1;",
-            None, None, parameters)
-        
+            None, parameters,
+            "return -1;", "return -1;")
     
     def generate_call(self, class_):
         "virtual method implementation; do not call"
@@ -146,25 +113,28 @@ class CppConstructor(CppMethodBase):
         Generates the wrapper code
         code_sink -- a CodeSink instance that will receive the generated code
         class_ -- the c++ class wrapper the method belongs to
+
+        Returns the wrapper function name.
         """
         assert isinstance(class_, CppClass)
         tmp_sink = codesink.MemoryCodeSink()
 
         self.generate_body(tmp_sink, gen_call_params=[class_])
 
-        self.wrapper_function_name = "_wrap_%s__tp_init" % (
+        wrapper_function_name = "_wrap_%s__tp_init" % (
             class_.name,)
         code_sink.writeln("static int")
         code_sink.writeln(
             "%s(%s *self, PyObject *args, PyObject *kwargs)"
-            % (self.wrapper_function_name, class_.pystruct))
+            % (wrapper_function_name, class_.pystruct))
         code_sink.writeln('{')
         code_sink.indent()
         tmp_sink.flush_to(code_sink)
         code_sink.writeln('return 0;')
         code_sink.unindent()
         code_sink.writeln('}')
-        self.was_generated = True
+
+        return wrapper_function_name
 
 
 class CppClass(object):
@@ -216,7 +186,7 @@ class CppClass(object):
         '    (newfunc)%(tp_new)s,               /* tp_new */\n'
         '    (freefunc)%(tp_free)s,             /* tp_free */\n'
         '    (inquiry)%(tp_is_gc)s              /* tp_is_gc */\n'
-        '};\n\n'
+        '};\n'
         )
 
     def __init__(self, name, parent=None):
@@ -287,24 +257,24 @@ typedef struct {
 
         ## generate the constructor, if any
         if self.constructors:
-            constructor = self.constructors[0]
             code_sink.writeln()
-            constructor.generate(code_sink, self)
+            constructor = self.constructors[0].generate(code_sink, self)
             code_sink.writeln()
         else:
             constructor = None
 
         ## generate the method wrappers
+        method_defs = []
         for meth_name, meth_wrapper in self.methods:
             code_sink.writeln()
-            meth_wrapper.generate(code_sink, self)
+            method_defs.append(meth_wrapper.generate(code_sink, self, meth_name))
             code_sink.writeln()
 
         ## generate the method table
         code_sink.writeln("static PyMethodDef %s_methods[] = {" % (self.name,))
         code_sink.indent()
-        for meth_name, meth_wrapper in self.methods:
-            code_sink.writeln(meth_wrapper.get_py_method_def(meth_name))
+        for methdef in method_defs:
+            code_sink.writeln(methdef)
         code_sink.writeln("{NULL, NULL, 0, NULL}")
         code_sink.unindent()
         code_sink.writeln("};")
@@ -341,7 +311,7 @@ typedef struct {
         self.slots.setdefault("tp_descr_set", "NULL")
         self.slots.setdefault("tp_dictoffset", "0")
         self.slots.setdefault("tp_init", (constructor is None and "NULL"
-                                          or constructor.wrapper_function_name))
+                                          or constructor))
         self.slots.setdefault("tp_alloc", "PyType_GenericAlloc")
         self.slots.setdefault("tp_new", "PyType_GenericNew")
         self.slots.setdefault("tp_free", "_PyObject_Del")
