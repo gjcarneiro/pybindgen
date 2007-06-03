@@ -137,6 +137,52 @@ class CppConstructor(ForwardWrapperBase):
         return wrapper_function_name
 
 
+class CppNoConstructor(ForwardWrapperBase):
+    """
+
+    Class that generates a constructor that raises an exception saying
+    that the class has no constructor.
+
+    """
+
+    def __init__(self):
+        """
+        """
+        super(CppNoConstructor, self).__init__(
+            None, [],
+            "return -1;", "return -1;")
+
+    def generate_call(self, code_sink):
+        "dummy method, not really called"
+        pass
+    
+    def generate(self, code_sink, class_):
+        """
+        Generates the wrapper code
+        code_sink -- a CodeSink instance that will receive the generated code
+        class_ -- the c++ class wrapper the method belongs to
+
+        Returns the wrapper function name.
+        """
+        assert isinstance(class_, CppClass)
+
+        wrapper_function_name = "_wrap_%s__tp_init" % (
+            class_.name,)
+        code_sink.writeln("static int")
+        code_sink.writeln(
+            "%s(%s *self, PyObject *args, PyObject *kwargs)"
+            % (wrapper_function_name, class_.pystruct))
+        code_sink.writeln('{')
+        code_sink.indent()
+        code_sink.writeln('PyErr_SetString(PyExc_TypeError, "class \'%s\' '
+                          'cannot be constructed");' % class_.name)
+        code_sink.writeln('return -1;')
+        code_sink.unindent()
+        code_sink.writeln('}')
+
+        return wrapper_function_name
+
+
 class CppClass(object):
     """
     A CppClass object takes care of generating the code for wrapping a C++ class
@@ -261,7 +307,24 @@ typedef struct {
             constructor = self.constructors[0].generate(code_sink, self)
             code_sink.writeln()
         else:
-            constructor = None
+            ## if there is a parent constructor with no arguments,
+            ## a similar constructor should be added to this class
+            if (self.parent is not None and self.parent.constructors
+                and not self.parent.constructors[0].parameters):
+                cons = CppConstructor([])
+                code_sink.writeln()
+                constructor = cons.generate(code_sink, self)
+                code_sink.writeln()
+            else:
+                ## In C++, and unlike Python, constructors with
+                ## parameters are not automatically inheritted by
+                ## subclasses.  We must generate a 'no constructor'
+                ## tp_init to prevent this type from inheriring a
+                ## tp_init that will allocate an instance of the
+                ## parent class instead of this class.
+                code_sink.writeln()
+                constructor = CppNoConstructor().generate(code_sink, self)
+                code_sink.writeln()
 
         ## generate the method wrappers
         method_defs = []
