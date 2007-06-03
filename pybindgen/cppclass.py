@@ -40,13 +40,8 @@ class CppMethodBase(ForwardWrapperBase):
             error_return=error_return)
         self.method_name = method_name
         self.was_generated = False
-        self.class_ = None
         self.wrapper_function_name = None
         
-    def set_class(self, class_):
-        assert isinstance(class_, CppClass)
-        assert self.class_ is None
-        self.class_ = class_
 
     def generate(self, code_sink):
         """
@@ -85,9 +80,9 @@ class CppMethod(CppMethodBase):
             return_value, method_name, parameters)
 
     
-    def generate_call(self):
+    def generate_call(self, class_):
         "virtual method implementation; do not call"
-        assert self.class_ is not None
+        assert isinstance(class_, CppClass)
         if self.return_value.ctype == 'void':
             self.before_call.write_code(
                 'self->obj->%s(%s);' %
@@ -98,23 +93,24 @@ class CppMethod(CppMethodBase):
                 (self.method_name, ", ".join(self.call_params)))
 
 
-    def generate(self, code_sink):
+    def generate(self, code_sink, class_):
         """
         Generates the wrapper code
         code_sink -- a CodeSink instance that will receive the generated code
+        class_ -- the c++ class wrapper the method belongs to
         """
-        assert self.class_ is not None
+        assert isinstance(class_, CppClass)
         tmp_sink = codesink.MemoryCodeSink()
 
-        self.generate_body(tmp_sink)
+        self.generate_body(tmp_sink, gen_call_params=[class_])
 
         self.wrapper_function_name = "_wrap_%s_%s" % (
-            self.class_.name, self.method_name)
+            class_.name, self.method_name)
 
         code_sink.writeln("static PyObject *")
         code_sink.writeln(
             "%s(%s *self, PyObject *args, PyObject *kwargs)"
-            % (self.wrapper_function_name, self.class_.pystruct))
+            % (self.wrapper_function_name, class_.pystruct))
         code_sink.writeln('{')
         code_sink.indent()
         tmp_sink.flush_to(code_sink)
@@ -138,29 +134,30 @@ class CppConstructor(CppMethodBase):
             None, None, parameters)
         
     
-    def generate_call(self):
+    def generate_call(self, class_):
         "virtual method implementation; do not call"
-        assert self.class_ is not None
+        assert isinstance(class_, CppClass)
         self.before_call.write_code(
             'self->obj = new %s(%s);' %
-            (self.class_.name, ", ".join(self.call_params)))
+            (class_.name, ", ".join(self.call_params)))
 
-    def generate(self, code_sink):
+    def generate(self, code_sink, class_):
         """
         Generates the wrapper code
         code_sink -- a CodeSink instance that will receive the generated code
+        class_ -- the c++ class wrapper the method belongs to
         """
-        assert self.class_ is not None
+        assert isinstance(class_, CppClass)
         tmp_sink = codesink.MemoryCodeSink()
 
-        self.generate_body(tmp_sink)
+        self.generate_body(tmp_sink, gen_call_params=[class_])
 
         self.wrapper_function_name = "_wrap_%s__tp_init" % (
-            self.class_.name,)
+            class_.name,)
         code_sink.writeln("static int")
         code_sink.writeln(
             "%s(%s *self, PyObject *args, PyObject *kwargs)"
-            % (self.wrapper_function_name, self.class_.pystruct))
+            % (self.wrapper_function_name, class_.pystruct))
         code_sink.writeln('{')
         code_sink.indent()
         tmp_sink.flush_to(code_sink)
@@ -253,7 +250,6 @@ class CppClass(object):
         assert isinstance(wrapper, CppMethod)
         if name is None:
             name = wrapper.method_name
-        wrapper.set_class(self)
         self.methods.append((name, wrapper))
 
 
@@ -266,7 +262,6 @@ class CppClass(object):
         wrapper -- a CppConstructor instance
         """
         assert isinstance(wrapper, CppConstructor)
-        wrapper.set_class(self)
         if self.constructors:
             raise NotImplementedError(
                 'multiple constructors not yet supported')
@@ -294,7 +289,7 @@ typedef struct {
         if self.constructors:
             constructor = self.constructors[0]
             code_sink.writeln()
-            constructor.generate(code_sink)
+            constructor.generate(code_sink, self)
             code_sink.writeln()
         else:
             constructor = None
@@ -302,7 +297,7 @@ typedef struct {
         ## generate the method wrappers
         for meth_name, meth_wrapper in self.methods:
             code_sink.writeln()
-            meth_wrapper.generate(code_sink)
+            meth_wrapper.generate(code_sink, self)
             code_sink.writeln()
 
         ## generate the method table

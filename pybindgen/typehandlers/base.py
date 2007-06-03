@@ -459,7 +459,7 @@ class ReverseWrapperBase(object):
         """
         raise NotImplementedError
 
-    def generate(self, code_sink, wrapper_name, decl_modifiers=['static']):
+    def generate(self, code_sink, wrapper_name, decl_modifiers=('static',)):
         """Generate the wrapper
         code_sink -- a CodeSink object that will receive the code
         wrapper_name -- C/C++ identifier of the function/method to generate
@@ -604,7 +604,7 @@ class ForwardWrapperBase(object):
         """
         raise NotImplementedError
 
-    def generate_body(self, code_sink):
+    def generate_body(self, code_sink, gen_call_params=()):
         """Generate the wrapper function body
         code_sink -- a CodeSink object that will receive the code
         """
@@ -633,7 +633,7 @@ class ForwardWrapperBase(object):
             self.before_parse.write_error_check('!PyArg_ParseTupleAndKeywords(%s)' %
                                                 (', '.join(param_list),))
         
-        self.generate_call()
+        self.generate_call(*gen_call_params)
 
         ## convert the return value(s)
         if self.return_value is None:
