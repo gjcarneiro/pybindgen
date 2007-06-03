@@ -39,7 +39,21 @@ def my_module_gen(out_file):
     SomeObject.add_method(CppMethod(ReturnValue('void'),
                                     'set_foo_value',
                                     [Parameter('Foo', 'foo')]))
-    
+    SomeObject.add_method(CppMethod(
+        ReturnValue('Foo'), 'get_foo_value', []))
+
+    SomeObject.add_method(CppMethod(ReturnValue('void'),
+                                    'set_foo_ptr',
+                                    [Parameter('Foo*', 'foo', transfer_ownership=True)]))
+    SomeObject.add_method(CppMethod(ReturnValue('void'),
+                                    'set_foo_shared_ptr',
+                                    [Parameter('Foo*', 'foo', transfer_ownership=False)]))
+
+    SomeObject.add_method(CppMethod(
+        ReturnValue('Foo*', caller_owns_return=False), 'get_foo_shared_ptr', []))
+    SomeObject.add_method(CppMethod(
+        ReturnValue('Foo*', caller_owns_return=True), 'get_foo_ptr', []))
+
     mod.add_class(SomeObject)
 
     mod.generate(FileCodeSink(out_file))

@@ -23,6 +23,72 @@ class CppClassParameter(Parameter):
             '*((%s *) %s)->obj' % (self.cpp_class.pystruct, name))
 
 
+class CppClassReturnValue(ReturnValue):
+    CTYPES = []
+    cpp_class = None # CppClass instance
+
+    def get_c_error_return(self): # only used in reverse wrappers
+        return "return %s();" % (self.cpp_class.name,)
+
+    def convert_c_to_python(self, wrapper):
+        py_name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
+        wrapper.after_call.write_code(
+            "%s = PyObject_New(%s, %s);" %
+            (py_name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+        wrapper.after_call.write_code(
+            "%s->obj = new %s(retval);" % (py_name, self.cpp_class.name))
+        wrapper.build_params.add_parameter("N", [py_name], prepend=True)
+
+
+class CppClassPtrParameter(Parameter):
+    CTYPES = []
+    cpp_class = None # CppClass instance
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+
+    def __init__(self, ctype, name, transfer_ownership):
+        super(CppClassPtrParameter, self).__init__(ctype, name, direction=Parameter.DIRECTION_IN)
+        self.transfer_ownership = transfer_ownership
+        
+    def convert_python_to_c(self, wrapper):
+        "parses python args to get C++ value"
+        assert isinstance(wrapper, ForwardWrapperBase)
+        assert isinstance(self.cpp_class, CppClass)
+        name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', self.name)
+        wrapper.parse_params.add_parameter(
+            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
+        wrapper.call_params.append('%s->obj' % (name,))
+        if self.transfer_ownership:
+            wrapper.after_call.write_code('%s->obj = NULL;' % (name,))
+
+
+class CppClassPtrReturnValue(ReturnValue):
+    CTYPES = []
+    cpp_class = None # CppClass instance
+
+    def __init__(self, ctype, caller_owns_return):
+        super(CppClassPtrReturnValue, self).__init__(ctype)
+        self.caller_owns_return = caller_owns_return
+
+    def get_c_error_return(self): # only used in reverse wrappers
+        return "return %s();" % (self.cpp_class.name,)
+
+    def convert_c_to_python(self, wrapper):
+        py_name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
+        wrapper.after_call.write_code(
+            "%s = PyObject_New(%s, %s);" %
+            (py_name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+        if self.caller_owns_return:
+            wrapper.after_call.write_code(
+                "%s->obj = retval;" % (py_name,))
+        else:
+            wrapper.after_call.write_code(
+                "%s->obj = new %s(*retval);" % (py_name, self.cpp_class.name))
+        wrapper.build_params.add_parameter("N", [py_name], prepend=True)
+
+
 class CppMethod(ForwardWrapperBase):
     """
     Class that generates a wrapper to a C++ class method
@@ -251,6 +317,15 @@ class CppClass(object):
         ## register type handlers
         class ThisClassParameter(CppClassParameter):
             CTYPES = [name]
+            cpp_class = self
+        class ThisClassReturn(CppClassReturnValue):
+            CTYPES = [name]
+            cpp_class = self
+        class ThisClassPtrParameter(CppClassPtrParameter):
+            CTYPES = [name+'*']
+            cpp_class = self
+        class ThisClassPtrReturn(CppClassPtrReturnValue):
+            CTYPES = [name+'*']
             cpp_class = self
 
 
