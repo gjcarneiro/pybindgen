@@ -620,18 +620,19 @@ class ForwardWrapperBase(object):
         params = self.parse_params.get_parameters()
         keywords = self.parse_params.get_keywords()
 
-        if keywords is None:
-            param_list = ['args'] + params
-            self.before_parse.write_error_check('!PyArg_ParseTuple(%s)' %
-                                                (', '.join(param_list),))
-        else:
-            keywords_var = self.declarations.declare_variable(
-                'char *', 'keywords',
-                '{' + ', '.join(['"%s"' % kw for kw in keywords] + ['NULL']) + '}',
-                 '[]')
-            param_list = ['args', 'kwargs', params[0], keywords_var] + params[1:]
-            self.before_parse.write_error_check('!PyArg_ParseTupleAndKeywords(%s)' %
-                                                (', '.join(param_list),))
+        if self.parameters:
+            if keywords is None:
+                param_list = ['args'] + params
+                self.before_parse.write_error_check('!PyArg_ParseTuple(%s)' %
+                                                    (', '.join(param_list),))
+            else:
+                keywords_var = self.declarations.declare_variable(
+                    'char *', 'keywords',
+                    '{' + ', '.join(['"%s"' % kw for kw in keywords] + ['NULL']) + '}',
+                     '[]')
+                param_list = ['args', 'kwargs', params[0], keywords_var] + params[1:]
+                self.before_parse.write_error_check('!PyArg_ParseTupleAndKeywords(%s)' %
+                                                    (', '.join(param_list),))
         
         self.generate_call(*gen_call_params)
 
