@@ -33,8 +33,10 @@ def get_version_from_bzr(path=None):
             if tag_revid == revid:
                 #print "%s matches tag %s" % (revid, tag_name)
                 version = [int(s) for s in tag_name.split('.')]
+                ## if the current revision does not match the last
+                ## tag, we append current revno to the version
                 if tag_revid != branch.last_revision():
-                    extra_version = [branch.revision_id_to_revno(revid)]
+                    extra_version = [branch.revno()]
                 break
         if version:
             break
