@@ -6,87 +6,6 @@ from typehandlers.base import ForwardWrapperBase, Parameter, ReturnValue
 from typehandlers import codesink
 
 
-class CppClassParameter(Parameter):
-    CTYPES = []
-    cpp_class = None # CppClass instance
-    DIRECTIONS = [Parameter.DIRECTION_IN]
-    
-    def convert_python_to_c(self, wrapper):
-        "parses python args to get C++ value"
-        assert isinstance(wrapper, ForwardWrapperBase)
-        assert isinstance(self.cpp_class, CppClass)
-        name = wrapper.declarations.declare_variable(
-            self.cpp_class.pystruct+'*', self.name)
-        wrapper.parse_params.add_parameter(
-            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
-        wrapper.call_params.append(
-            '*((%s *) %s)->obj' % (self.cpp_class.pystruct, name))
-
-
-class CppClassReturnValue(ReturnValue):
-    CTYPES = []
-    cpp_class = None # CppClass instance
-
-    def get_c_error_return(self): # only used in reverse wrappers
-        return "return %s();" % (self.cpp_class.name,)
-
-    def convert_c_to_python(self, wrapper):
-        py_name = wrapper.declarations.declare_variable(
-            self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
-        wrapper.after_call.write_code(
-            "%s = PyObject_New(%s, %s);" %
-            (py_name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
-        wrapper.after_call.write_code(
-            "%s->obj = new %s(retval);" % (py_name, self.cpp_class.name))
-        wrapper.build_params.add_parameter("N", [py_name], prepend=True)
-
-
-class CppClassPtrParameter(Parameter):
-    CTYPES = []
-    cpp_class = None # CppClass instance
-    DIRECTIONS = [Parameter.DIRECTION_IN]
-
-    def __init__(self, ctype, name, transfer_ownership):
-        super(CppClassPtrParameter, self).__init__(ctype, name, direction=Parameter.DIRECTION_IN)
-        self.transfer_ownership = transfer_ownership
-        
-    def convert_python_to_c(self, wrapper):
-        "parses python args to get C++ value"
-        assert isinstance(wrapper, ForwardWrapperBase)
-        assert isinstance(self.cpp_class, CppClass)
-        name = wrapper.declarations.declare_variable(
-            self.cpp_class.pystruct+'*', self.name)
-        wrapper.parse_params.add_parameter(
-            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
-        wrapper.call_params.append('%s->obj' % (name,))
-        if self.transfer_ownership:
-            wrapper.after_call.write_code('%s->obj = NULL;' % (name,))
-
-
-class CppClassPtrReturnValue(ReturnValue):
-    CTYPES = []
-    cpp_class = None # CppClass instance
-
-    def __init__(self, ctype, caller_owns_return):
-        super(CppClassPtrReturnValue, self).__init__(ctype)
-        self.caller_owns_return = caller_owns_return
-
-    def get_c_error_return(self): # only used in reverse wrappers
-        return "return %s();" % (self.cpp_class.name,)
-
-    def convert_c_to_python(self, wrapper):
-        py_name = wrapper.declarations.declare_variable(
-            self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
-        wrapper.after_call.write_code(
-            "%s = PyObject_New(%s, %s);" %
-            (py_name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
-        if self.caller_owns_return:
-            wrapper.after_call.write_code(
-                "%s->obj = retval;" % (py_name,))
-        else:
-            wrapper.after_call.write_code(
-                "%s->obj = new %s(*retval);" % (py_name, self.cpp_class.name))
-        wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
 
 class CppMethod(ForwardWrapperBase):
@@ -314,19 +233,20 @@ class CppClass(object):
         self.parent = parent
         assert parent is None or isinstance(parent, CppClass)
 
-        ## register type handlers
-        class ThisClassParameter(CppClassParameter):
-            CTYPES = [name]
-            cpp_class = self
-        class ThisClassReturn(CppClassReturnValue):
-            CTYPES = [name]
-            cpp_class = self
-        class ThisClassPtrParameter(CppClassPtrParameter):
-            CTYPES = [name+'*']
-            cpp_class = self
-        class ThisClassPtrReturn(CppClassPtrReturnValue):
-            CTYPES = [name+'*']
-            cpp_class = self
+        if name != 'dummy':
+            ## register type handlers
+            class ThisClassParameter(CppClassParameter):
+                CTYPES = [name]
+                cpp_class = self
+            class ThisClassReturn(CppClassReturnValue):
+                CTYPES = [name]
+                cpp_class = self
+            class ThisClassPtrParameter(CppClassPtrParameter):
+                CTYPES = [name+'*']
+                cpp_class = self
+            class ThisClassPtrReturn(CppClassPtrReturnValue):
+                CTYPES = [name+'*']
+                cpp_class = self
 
 
     def add_method(self, wrapper, name=None):
@@ -421,39 +341,25 @@ typedef struct {
                               "sizeof(%s)" % (self.pystruct,))
         self.slots.setdefault("tp_dealloc",
                               "_wrap_%s__tp_dealloc" % (self.name,))
-        self.slots.setdefault("tp_getattr", "NULL")
-        self.slots.setdefault("tp_setattr", "NULL")
-        self.slots.setdefault("tp_compare", "NULL")
-        self.slots.setdefault("tp_repr", "NULL")
-        self.slots.setdefault("tp_as_number", "NULL")
-        self.slots.setdefault("tp_as_sequence", "NULL")
-        self.slots.setdefault("tp_as_mapping", "NULL")
-        self.slots.setdefault("tp_hash", "NULL")
-        self.slots.setdefault("tp_call", "NULL")
-        self.slots.setdefault("tp_str", "NULL")
-        self.slots.setdefault("tp_getattro", "NULL")
-        self.slots.setdefault("tp_setattro", "NULL")
-        self.slots.setdefault("tp_as_buffer", "NULL")
-        self.slots.setdefault("tp_flags", "Py_TPFLAGS_DEFAULT")
-        self.slots.setdefault("tp_doc", (docstring is None and 'NULL'
-                                         or "\"%s\"" % (docstring,)))
-        self.slots.setdefault("tp_traverse", "NULL")
-        self.slots.setdefault("tp_clear", "NULL")
-        self.slots.setdefault("tp_richcompare", "NULL")
-        self.slots.setdefault("tp_weaklistoffset", "0")
-        self.slots.setdefault("tp_iter", "NULL")
-        self.slots.setdefault("tp_iternext", "NULL")
-        self.slots.setdefault("tp_methods", "%s_methods" % (self.name,))
-        self.slots.setdefault("tp_getset", "NULL")
-        self.slots.setdefault("tp_descr_get", "NULL")
-        self.slots.setdefault("tp_descr_set", "NULL")
+        for slot in ["tp_getattr", "tp_setattr", "tp_compare", "tp_repr",
+                     "tp_as_number", "tp_as_sequence", "tp_as_mapping",
+                     "tp_hash", "tp_call", "tp_str", "tp_getattro", "tp_setattro",
+                     "tp_as_buffer", "tp_traverse", "tp_clear", "tp_richcompare",
+                     "tp_iter", "tp_iternext", "tp_getset", "tp_descr_get",
+                     "tp_descr_set", "tp_is_gc"]:
+            self.slots.setdefault(slot, "NULL")
+
         self.slots.setdefault("tp_dictoffset", "0")
         self.slots.setdefault("tp_init", (constructor is None and "NULL"
                                           or constructor))
         self.slots.setdefault("tp_alloc", "PyType_GenericAlloc")
         self.slots.setdefault("tp_new", "PyType_GenericNew")
         self.slots.setdefault("tp_free", "_PyObject_Del")
-        self.slots.setdefault("tp_is_gc", "NULL")
+        self.slots.setdefault("tp_methods", "%s_methods" % (self.name,))
+        self.slots.setdefault("tp_weaklistoffset", "0")
+        self.slots.setdefault("tp_flags", "Py_TPFLAGS_DEFAULT")
+        self.slots.setdefault("tp_doc", (docstring is None and 'NULL'
+                                         or "\"%s\"" % (docstring,)))
 
         dict_ = dict(self.slots)
         dict_.setdefault("typename", self.name)
@@ -471,3 +377,87 @@ static void
         code_sink.writeln()
         code_sink.writeln(self.TYPE_TMPL % dict_)
 
+
+
+class CppClassParameter(Parameter):
+    CTYPES = []
+    cpp_class = CppClass('dummy') # CppClass instance
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    
+    def convert_python_to_c(self, wrapper):
+        "parses python args to get C++ value"
+        assert isinstance(wrapper, ForwardWrapperBase)
+        assert isinstance(self.cpp_class, CppClass)
+        name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', self.name)
+        wrapper.parse_params.add_parameter(
+            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
+        wrapper.call_params.append(
+            '*((%s *) %s)->obj' % (self.cpp_class.pystruct, name))
+
+
+class CppClassReturnValue(ReturnValue):
+    CTYPES = []
+    cpp_class = CppClass('dummy') # CppClass instance
+
+    def get_c_error_return(self): # only used in reverse wrappers
+        return "return %s();" % (self.cpp_class.name,)
+
+    def convert_c_to_python(self, wrapper):
+        py_name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
+        wrapper.after_call.write_code(
+            "%s = PyObject_New(%s, %s);" %
+            (py_name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+        wrapper.after_call.write_code(
+            "%s->obj = new %s(retval);" % (py_name, self.cpp_class.name))
+        wrapper.build_params.add_parameter("N", [py_name], prepend=True)
+
+
+class CppClassPtrParameter(Parameter):
+    CTYPES = []
+    cpp_class = CppClass('dummy') # CppClass instance
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+
+    def __init__(self, ctype, name, transfer_ownership):
+        super(CppClassPtrParameter, self).__init__(
+            ctype, name, direction=Parameter.DIRECTION_IN)
+        self.transfer_ownership = transfer_ownership
+        
+    def convert_python_to_c(self, wrapper):
+        "parses python args to get C++ value"
+        assert isinstance(wrapper, ForwardWrapperBase)
+        assert isinstance(self.cpp_class, CppClass)
+        name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', self.name)
+        wrapper.parse_params.add_parameter(
+            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
+        wrapper.call_params.append('%s->obj' % (name,))
+        if self.transfer_ownership:
+            wrapper.after_call.write_code('%s->obj = NULL;' % (name,))
+
+
+class CppClassPtrReturnValue(ReturnValue):
+    CTYPES = []
+    cpp_class = CppClass('dummy') # CppClass instance
+
+    def __init__(self, ctype, caller_owns_return):
+        super(CppClassPtrReturnValue, self).__init__(ctype)
+        self.caller_owns_return = caller_owns_return
+
+    def get_c_error_return(self): # only used in reverse wrappers
+        return "return %s();" % (self.cpp_class.name,)
+
+    def convert_c_to_python(self, wrapper):
+        py_name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
+        wrapper.after_call.write_code(
+            "%s = PyObject_New(%s, %s);" %
+            (py_name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+        if self.caller_owns_return:
+            wrapper.after_call.write_code(
+                "%s->obj = retval;" % (py_name,))
+        else:
+            wrapper.after_call.write_code(
+                "%s->obj = new %s(*retval);" % (py_name, self.cpp_class.name))
+        wrapper.build_params.add_parameter("N", [py_name], prepend=True)
