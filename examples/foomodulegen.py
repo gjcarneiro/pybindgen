@@ -17,8 +17,8 @@ def my_module_gen(out_file):
     Foo = CppClass('Foo')
     mod.add_class(Foo)
     Foo.add_constructor(
-        CppConstructor([Parameter('std::string', 'datum')]))
-    Foo.add_method(CppMethod(ReturnValue('std::string'), 'get_datum', []))
+        CppConstructor([Parameter.new('std::string', 'datum')]))
+    Foo.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
     
 
     Bar = CppClass('Bar', parent=Foo)
@@ -29,61 +29,61 @@ def my_module_gen(out_file):
     Zbr = CppClass('Zbr', incref_method='Ref', decref_method='Unref')
     mod.add_class(Zbr)
     Zbr.add_constructor(
-        CppConstructor([Parameter('std::string', 'datum')]))
-    Zbr.add_method(CppMethod(ReturnValue('std::string'), 'get_datum', []))
+        CppConstructor([Parameter.new('std::string', 'datum')]))
+    Zbr.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
     
     
 
-    mod.add_function(Function(ReturnValue('int'), 'print_something',
-                              [Parameter('const char*', 'message')]))
-    mod.add_function(Function(ReturnValue('int'), 'print_something_else',
-                              [Parameter('const char*', 'message2')]))
+    mod.add_function(Function(ReturnValue.new('int'), 'print_something',
+                              [Parameter.new('const char*', 'message')]))
+    mod.add_function(Function(ReturnValue.new('int'), 'print_something_else',
+                              [Parameter.new('const char*', 'message2')]))
 
 
 
     SomeObject = CppClass('SomeObject')
-    SomeObject.add_method(CppMethod(ReturnValue('int'), 'add_prefix',
-                                    [Parameter('std::string&', 'message',
+    SomeObject.add_method(CppMethod(ReturnValue.new('int'), 'add_prefix',
+                                    [Parameter.new('std::string&', 'message',
                                                direction=Parameter.DIRECTION_INOUT)]))
     SomeObject.add_constructor(
-        CppConstructor([Parameter('std::string', 'prefix')]))
+        CppConstructor([Parameter.new('std::string', 'prefix')]))
 
-    SomeObject.add_method(CppMethod(ReturnValue('void'),
+    SomeObject.add_method(CppMethod(ReturnValue.new('void'),
                                     'set_foo_value',
-                                    [Parameter('Foo', 'foo')]))
+                                    [Parameter.new('Foo', 'foo')]))
     SomeObject.add_method(CppMethod(
-        ReturnValue('Foo'), 'get_foo_value', []))
+        ReturnValue.new('Foo'), 'get_foo_value', []))
 
-    SomeObject.add_method(CppMethod(ReturnValue('void'),
+    SomeObject.add_method(CppMethod(ReturnValue.new('void'),
                                     'set_foo_ptr',
-                                    [Parameter('Foo*', 'foo', transfer_ownership=True)]))
-    SomeObject.add_method(CppMethod(ReturnValue('void'),
+                                    [Parameter.new('Foo*', 'foo', transfer_ownership=True)]))
+    SomeObject.add_method(CppMethod(ReturnValue.new('void'),
                                     'set_foo_shared_ptr',
-                                    [Parameter('Foo*', 'foo', transfer_ownership=False)]))
+                                    [Parameter.new('Foo*', 'foo', transfer_ownership=False)]))
 
     SomeObject.add_method(CppMethod(
-        ReturnValue('Foo*', caller_owns_return=False), 'get_foo_shared_ptr', []))
+        ReturnValue.new('Foo*', caller_owns_return=False), 'get_foo_shared_ptr', []))
     SomeObject.add_method(CppMethod(
-        ReturnValue('Foo*', caller_owns_return=True), 'get_foo_ptr', []))
+        ReturnValue.new('Foo*', caller_owns_return=True), 'get_foo_ptr', []))
 
     SomeObject.add_method(CppMethod(
-        ReturnValue('void'), 'set_foo_by_ref',
-        [Parameter('Foo&', 'foo', direction=Parameter.DIRECTION_IN)]))
+        ReturnValue.new('void'), 'set_foo_by_ref',
+        [Parameter.new('Foo&', 'foo', direction=Parameter.DIRECTION_IN)]))
     SomeObject.add_method(CppMethod(
-        ReturnValue('void'), 'get_foo_by_ref',
-        [Parameter('Foo&', 'foo', direction=Parameter.DIRECTION_OUT)]))
+        ReturnValue.new('void'), 'get_foo_by_ref',
+        [Parameter.new('Foo&', 'foo', direction=Parameter.DIRECTION_OUT)]))
 
     ## get/set recfcounted object Zbr
     SomeObject.add_method(CppMethod(
-        ReturnValue('Zbr*', caller_owns_return=True), 'get_zbr', []))
+        ReturnValue.new('Zbr*', caller_owns_return=True), 'get_zbr', []))
     SomeObject.add_method(CppMethod(
-        ReturnValue('Zbr*', caller_owns_return=False), 'peek_zbr', []))
+        ReturnValue.new('Zbr*', caller_owns_return=False), 'peek_zbr', []))
     SomeObject.add_method(CppMethod(
-        ReturnValue('void'), 'set_zbr_transfer',
-        [Parameter('Zbr*', 'zbr', transfer_ownership=True)]))
+        ReturnValue.new('void'), 'set_zbr_transfer',
+        [Parameter.new('Zbr*', 'zbr', transfer_ownership=True)]))
     SomeObject.add_method(CppMethod(
-        ReturnValue('void'), 'set_zbr_shared',
-        [Parameter('Zbr*', 'zbr', transfer_ownership=False)]))
+        ReturnValue.new('void'), 'set_zbr_shared',
+        [Parameter.new('Zbr*', 'zbr', transfer_ownership=False)]))
 
     mod.add_class(SomeObject)
 

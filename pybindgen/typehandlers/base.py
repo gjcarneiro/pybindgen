@@ -698,10 +698,11 @@ class ReturnValue(object):
     ## list of C type names it can handle
     CTYPES = []
 
-    def __new__(cls, *args, **kwargs):
+    @classmethod
+    def new(cls, *args, **kwargs):
         """
         >>> import inttype
-        >>> isinstance(ReturnValue('int'), inttype.IntReturn)
+        >>> isinstance(ReturnValue.new('int'), inttype.IntReturn)
         True
         """
         if cls is ReturnValue:
@@ -709,9 +710,9 @@ class ReturnValue(object):
             ctype = args[0]
             type_handler_class = return_type_matcher.lookup(ctype)
             assert type_handler_class is not None
-            return super(ReturnValue, cls).__new__(type_handler_class)
+            return type_handler_class(*args, **kwargs)
         else:
-            return super(ReturnValue, cls).__new__(cls)
+            return cls(*args, **kwargs)
 
     def __init__(self, ctype):
         '''
@@ -721,6 +722,8 @@ class ReturnValue(object):
 
         ctype -- actual C/C++ type being used
         '''
+        if type(self) is ReturnValue:
+            raise TypeError('ReturnValue is an abstract class; use ReturnValue.new(...)')
         self.ctype = ctype
 
     def get_c_error_return(self):
@@ -771,10 +774,11 @@ class Parameter(object):
     ## list of C type names it can handle
     CTYPES = []
 
-    def __new__(cls, *args, **kwargs):
+    @classmethod
+    def new(cls, *args, **kwargs):
         """
         >>> import inttype
-        >>> isinstance(Parameter('int', 'name'), inttype.IntParam)
+        >>> isinstance(Parameter.new('int', 'name'), inttype.IntParam)
         True
         """
         if cls is Parameter:
@@ -782,9 +786,9 @@ class Parameter(object):
             ctype = args[0]
             type_handler_class = param_type_matcher.lookup(ctype)
             assert type_handler_class is not None
-            return super(Parameter, cls).__new__(type_handler_class)
+            return type_handler_class(*args, **kwargs)
         else:
-            return super(Parameter, cls).__new__(cls)
+            return cls(*args, **kwargs)
 
 
     def __init__(self, ctype, name, direction=DIRECTION_IN):
@@ -799,6 +803,8 @@ class Parameter(object):
                      are DIRECTION_IN, DIRECTION_OUT, and
                      DIRECTION_IN|DIRECTION_OUT
         '''
+        if type(self) is Parameter:
+            raise TypeError('Parameter is an abstract class; use Parameter.new(...)')
         self.ctype = ctype
         self.name = name
         assert direction in self.DIRECTIONS
