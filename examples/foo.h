@@ -10,6 +10,16 @@
 int print_something(const char *message);
 int print_something_else(const char *message2);
 
+// In this example PointerHolder<T> automatically implies
+// caller_owns_return=True when used as ReturnValue, and
+// transfer_ownership=False when used as parameter.
+template <typename T>
+struct PointerHolder
+{
+    T *thePointer;
+};
+
+
 class Foo
 {
     std::string m_datum;
@@ -155,6 +165,22 @@ public:
             m_zbr->Unref ();
         zbr->Ref ();
         m_zbr = zbr;
+    }
+
+
+    // return reference counted object, caller does not own return
+    PointerHolder<Zbr> get_zbr_pholder () {
+        PointerHolder<Zbr> foo = { m_zbr };
+        m_zbr->Ref ();
+        return foo;
+    }
+
+    // pass reference counted object, transfer ownership
+    void set_zbr_pholder (PointerHolder<Zbr> zbr) {
+        if (m_zbr)
+            m_zbr->Unref ();
+        m_zbr = zbr.thePointer;
+        m_zbr->Ref ();
     }
 
 };

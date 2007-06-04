@@ -10,13 +10,15 @@ import re
 class SmartPointerTransformation(typehandlers.TypeTransformation):
     def __init__(self):
         self.rx = re.compile(r'MySmartPointer<(\w+)>')
+
     def get_untransformed_name(self, name):
         m = self.rx.match(name)
         if m is None:
             return None
         else:
             return m.group(1)+'*'
-    def transform(self, type_handler, *args, **kwargs):
+
+    def create_type_handler(self, type_handler, *args, **kwargs):
         ctype = self.get_untransformed_name(args[0])
         handler = type_handler(ctype, *args[1:], **kwargs)
         handler.has_been_transformed = True

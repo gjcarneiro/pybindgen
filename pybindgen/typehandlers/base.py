@@ -678,9 +678,92 @@ class ForwardWrapperBase(object):
             return  ["METH_NOARGS"]
 
 
+
+class TypeTransformation(object):
+    """
+    Type transformations are used to register handling of special
+    types that are simple transformation over another type that is
+    already registered.  This way, only the original type is
+    registered, and the type transformation only does the necessary
+    adjustments over the original type handler to make it handle the
+    transformed type as well.
+
+    This is typically used to get smart pointer templated types
+    working.
+
+    """
+
+    def get_untransformed_name(self, name):
+        """
+        Given a transformed named, get the original C type name.
+        E.g., given a smart pointer transformation, MySmartPointer:
+
+        get_untransformed_name('MySmartPointer<Foo>') -> 'Foo*'
+        """
+        raise NotImplementedError
+
+    def create_type_handler(self, type_handler_class, *args, **kwargs):
+        """
+        Given a type_handler class, create an instance with proper customization.
+
+        type_handler_class -- type handler class
+        args -- arguments
+        kwargs -- keywords arguments
+        """
+        raise NotImplementedError
+
+    def transform(self, type_handler, declarations, code_block, value):
+        """
+        Transforms a value expression of the original type to an
+        equivalent value expression in the transformed type.
+
+        Example, with the transformation: 'T*' -> 'boost::shared_ptr<T>'
+        Then: transform(wrapper, 'foo') ->
+                  'boost::shared_ptr<%s>(foo)' % type_handler.untransformed_ctype
+        """
+        raise NotImplementedError
+
+    def untransform(self, type_handler, declarations, code_block, value):
+        """
+        Transforms a value expression of the transformed type to an
+        equivalent value expression in the original type.
+
+        Example, with the transformation: 'T*' -> 'boost::shared_ptr<T>'
+        Then: untransform(wrapper, 'foo') ->
+                  'foo->get_pointer()'
+        """
+        raise NotImplementedError
+
+
+class NullTypeTransformation(object):
+    """
+    Null type transformation, returns everything unchanged.
+    """
+    def get_untransformed_name(self, name):
+        "identity transformation"
+        return name
+    def create_type_handler(self, type_handler_class, *args, **kwargs):
+        "identity transformation"
+        return type_handler_class(*args, **kwargs)
+    def transform(self, type_handler, declarations, code_block, value):
+        "identity transformation"
+        return value
+    def untransform(self, type_handler, declarations, code_block, value):
+        "identity transformation"
+        return value
+
+
+
 class ReturnValue(object):
     '''Abstract base class for all classes dedicated to handle
     specific return value types'''
+
+    ## list of C type names it can handle
+    CTYPES = []
+
+    ## whether it supports type transformations
+    SUPPORTS_TRANSFORMATIONS = False
+
 
     class __metaclass__(type):
         "Metaclass for automatically registering parameter type handlers"
@@ -694,9 +777,6 @@ class ReturnValue(object):
                     print "ERROR: missing CTYPES on class ", mcs
             for ctype in mcs.CTYPES:
                 return_type_matcher.register(ctype, mcs)
-
-    ## list of C type names it can handle
-    CTYPES = []
 
     @classmethod
     def new(cls, *args, **kwargs):
@@ -714,7 +794,7 @@ class ReturnValue(object):
             if transformation is None:
                 return type_handler_class(*args, **kwargs)
             else:
-                return transformation.transform(type_handler_class, *args, **kwargs)
+                return transformation.create_type_handler(type_handler_class, *args, **kwargs)
         else:
             return cls(*args, **kwargs)
 
@@ -729,6 +809,20 @@ class ReturnValue(object):
         if type(self) is ReturnValue:
             raise TypeError('ReturnValue is an abstract class; use ReturnValue.new(...)')
         self.ctype = ctype
+        self.untransformed_ctype = ctype
+        self.transformation = NullTypeTransformation()
+
+    def set_tranformation(self, transformation, untransformed_ctype):
+        "Set the type transformation to use in this type handler"
+
+        assert isinstance(transformation, TypeTransformation)
+        assert untransformed_ctype != self.ctype
+        assert isinstance(self.transformation, NullTypeTransformation)
+        assert self.SUPPORTS_TRANSFORMATIONS
+
+        self.transformation = transformation
+        self.untransformed_ctype = untransformed_ctype
+        
 
     def get_c_error_return(self):
         '''Return a "return <value>" code string, for use in case of error'''
@@ -751,8 +845,24 @@ class ReturnValue(object):
 ReturnValue.CTYPES = NotImplemented
 
 
+
+
+
 class Parameter(object):
     '''Abstract base class for all classes dedicated to handle specific parameter types'''
+
+    ## bit mask values
+    DIRECTION_IN = 1
+    DIRECTION_OUT = 2
+    DIRECTION_INOUT = DIRECTION_IN|DIRECTION_OUT
+
+    ## list of possible directions for this type
+    DIRECTIONS = NotImplemented
+    ## whether it supports type transformations
+    SUPPORTS_TRANSFORMATIONS = False
+    ## list of C type names it can handle
+    CTYPES = []
+
 
     class __metaclass__(type):
         "Metaclass for automatically registering parameter type handlers"
@@ -767,16 +877,6 @@ class Parameter(object):
             for ctype in mcs.CTYPES:
                 param_type_matcher.register(ctype, mcs)
 
-    ## bit mask values
-    DIRECTION_IN = 1
-    DIRECTION_OUT = 2
-    DIRECTION_INOUT = DIRECTION_IN|DIRECTION_OUT
-
-    ## list of possible directions for this type
-    DIRECTIONS = NotImplemented
-
-    ## list of C type names it can handle
-    CTYPES = []
 
     @classmethod
     def new(cls, *args, **kwargs):
@@ -794,7 +894,7 @@ class Parameter(object):
             if transformation is None:
                 return type_handler_class(*args, **kwargs)
             else:
-                return transformation.transform(type_handler_class, *args, **kwargs)
+                return transformation.create_type_handler(type_handler_class, *args, **kwargs)
         else:
             return cls(*args, **kwargs)
 
@@ -814,9 +914,22 @@ class Parameter(object):
         if type(self) is Parameter:
             raise TypeError('Parameter is an abstract class; use Parameter.new(...)')
         self.ctype = ctype
+        self.untransformed_ctype = ctype
         self.name = name
         assert direction in self.DIRECTIONS
         self.direction = direction
+        self.transformation = NullTypeTransformation()
+
+    def set_tranformation(self, transformation, untransformed_ctype):
+        "Set the type transformation to use in this type handler"
+
+        assert isinstance(transformation, TypeTransformation)
+        assert untransformed_ctype != self.ctype
+        assert isinstance(self.transformation, NullTypeTransformation)
+        assert self.SUPPORTS_TRANSFORMATIONS
+
+        self.transformation = transformation
+        self.untransformed_ctype = untransformed_ctype
 
     def convert_c_to_python(self, wrapper):
         '''Write some code before calling the Python method.'''
@@ -831,38 +944,8 @@ class Parameter(object):
 Parameter.CTYPES = NotImplemented
 
 
-class TypeTransformation(object):
-    """
-    Type transformations are used to register handling of special
-    types that are simple transformation over another type that is
-    already registered.  This way, only the original type is
-    registered, and the type transformation only does the necessary
-    adjustments over the original type handler to make it handle the
-    transformed type as well.
 
-    This is typically used to get smart pointer templated types
-    working.
-    """
-
-    def get_untransformed_name(self, name):
-        """
-        Given a transformed named, get the original C type name.
-        E.g., given a smart pointer transformation, MySmartPointer:
-
-        get_untransformed_name('MySmartPointer<Foo>') -> 'Foo*'
-        """
-        raise NotImplementedError
-
-    def transform(self, type_handler, *args, **kwargs):
-        """
-        Given a type_handler class, create an instance with proper customization.
-
-        type_handler -- type handler class
-        args -- arguments
-        kwargs -- keywords arguments
-        """
-        raise NotImplementedError
-
+    
 
 
 class TypeMatcher(object):
@@ -878,6 +961,7 @@ class TypeMatcher(object):
 
 
     def register_transformation(self, transformation):
+        "Register a type transformation object"
         assert isinstance(transformation, TypeTransformation)
         self._transformations.append(transformation)
 
@@ -910,7 +994,7 @@ class TypeMatcher(object):
                 try:
                     return self._types[untransformed_name], transf
                 except KeyError:
-                    pass
+                    continue
             else:
                 raise KeyError
     

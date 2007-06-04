@@ -491,6 +491,7 @@ class CppClassPtrParameter(Parameter):
     CTYPES = []
     cpp_class = CppClass('dummy') # CppClass instance
     DIRECTIONS = [Parameter.DIRECTION_IN]
+    SUPPORTS_TRANSFORMATIONS = True
 
     def __init__(self, ctype, name, transfer_ownership):
         super(CppClassPtrParameter, self).__init__(
@@ -505,7 +506,11 @@ class CppClassPtrParameter(Parameter):
             self.cpp_class.pystruct+'*', self.name)
         wrapper.parse_params.add_parameter(
             'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
-        wrapper.call_params.append('%s->obj' % (name,))
+
+        value = self.transformation.transform(
+            self, wrapper.declarations, wrapper.before_call, '%s->obj' % name)
+        wrapper.call_params.append(value)
+        
         if self.transfer_ownership:
             if self.cpp_class.incref_method is None:
                 wrapper.after_call.write_code('%s->obj = NULL;' % (name,))
@@ -517,6 +522,7 @@ class CppClassPtrParameter(Parameter):
 class CppClassPtrReturnValue(ReturnValue):
     "Class* return handler"
     CTYPES = []
+    SUPPORTS_TRANSFORMATIONS = True
     cpp_class = CppClass('dummy') # CppClass instance
 
     def __init__(self, ctype, caller_owns_return):
@@ -532,19 +538,22 @@ class CppClassPtrReturnValue(ReturnValue):
         wrapper.after_call.write_code(
             "%s = PyObject_New(%s, %s);" %
             (py_name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+        
+        value = self.transformation.untransform(
+            self, wrapper.declarations, wrapper.after_call, 'retval')
+        
         if self.caller_owns_return:
-            wrapper.after_call.write_code(
-                "%s->obj = retval;" % (py_name,))
+            wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
         else:
             if self.cpp_class.incref_method is None:
                 ## The PyObject creates its own copy
                 wrapper.after_call.write_code(
-                    "%s->obj = new %s(*retval);" % (py_name, self.cpp_class.name))
+                    "%s->obj = new %s(*%s);"
+                    % (py_name, self.cpp_class.name, value))
             else:
                 ## The PyObject gets a new reference to the same obj
                 wrapper.after_call.write_code(
-                    "retval->%s();" % (self.cpp_class.incref_method,))
-                wrapper.after_call.write_code(
-                    "%s->obj = retval;" % (py_name,))
+                    "%s->%s();" % (value, self.cpp_class.incref_method))
+                wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
                 
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
