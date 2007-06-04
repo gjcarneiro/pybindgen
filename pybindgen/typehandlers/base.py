@@ -708,9 +708,13 @@ class ReturnValue(object):
         if cls is ReturnValue:
             # support calling ReturnValue("typename", ...)
             ctype = args[0]
-            type_handler_class = return_type_matcher.lookup(ctype)
+            type_handler_class, transformation = \
+                return_type_matcher.lookup(ctype)
             assert type_handler_class is not None
-            return type_handler_class(*args, **kwargs)
+            if transformation is None:
+                return type_handler_class(*args, **kwargs)
+            else:
+                return transformation.transform(type_handler_class, *args, **kwargs)
         else:
             return cls(*args, **kwargs)
 
@@ -784,9 +788,13 @@ class Parameter(object):
         if cls is Parameter:
             # support calling Parameter("typename", ...)
             ctype = args[0]
-            type_handler_class = param_type_matcher.lookup(ctype)
+            type_handler_class, transformation = \
+                param_type_matcher.lookup(ctype)
             assert type_handler_class is not None
-            return type_handler_class(*args, **kwargs)
+            if transformation is None:
+                return type_handler_class(*args, **kwargs)
+            else:
+                return transformation.transform(type_handler_class, *args, **kwargs)
         else:
             return cls(*args, **kwargs)
 
@@ -823,12 +831,56 @@ class Parameter(object):
 Parameter.CTYPES = NotImplemented
 
 
+class TypeTransformation(object):
+    """
+    Type transformations are used to register handling of special
+    types that are simple transformation over another type that is
+    already registered.  This way, only the original type is
+    registered, and the type transformation only does the necessary
+    adjustments over the original type handler to make it handle the
+    transformed type as well.
+
+    This is typically used to get smart pointer templated types
+    working.
+    """
+
+    def get_untransformed_name(self, name):
+        """
+        Given a transformed named, get the original C type name.
+        E.g., given a smart pointer transformation, MySmartPointer:
+
+        get_untransformed_name('MySmartPointer<Foo>') -> 'Foo*'
+        """
+        raise NotImplementedError
+
+    def transform(self, type_handler, *args, **kwargs):
+        """
+        Given a type_handler class, create an instance with proper customization.
+
+        type_handler -- type handler class
+        args -- arguments
+        kwargs -- keywords arguments
+        """
+        raise NotImplementedError
+
+
+
 class TypeMatcher(object):
-    """Type matcher object: maps C type names to classes that handle those types"""
+    """
+    Type matcher object: maps C type names to classes that handle
+    those types.
+    """
     
     def __init__(self):
         """Constructor"""
         self._types = {}
+        self._transformations = []
+
+
+    def register_transformation(self, transformation):
+        assert isinstance(transformation, TypeTransformation)
+        self._transformations.append(transformation)
+
 
     def register(self, name, type_handler):
         """Register a new handler class for a given C type
@@ -838,10 +890,30 @@ class TypeMatcher(object):
         if name in self._types:
             raise ValueError("return type %s already registered" % (name,))
         self._types[name] = type_handler
+            
         
     def lookup(self, name):
-        "Returns a handler with the given ctype name, or raises KeyError"
-        return self._types[name]
+        """
+        lookup(name) -> type_handler, type_transformation
+
+        Returns a handler with the given ctype name, or raises KeyError.
+        Supports type transformations.
+
+        name -- C type name, possibly transformed (e.g. MySmartPointer<Foo> looks up Foo*)
+        """
+        try:
+            return self._types[name], None
+        except KeyError:
+            ## Now try all the type transformations
+            for transf in self._transformations:
+                untransformed_name = transf.get_untransformed_name(name)
+                try:
+                    return self._types[untransformed_name], transf
+                except KeyError:
+                    pass
+            else:
+                raise KeyError
+    
 
     def items(self):
         "Returns an iterator over all registered items"
