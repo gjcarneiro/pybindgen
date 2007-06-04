@@ -3,6 +3,7 @@
 # define   	FOO_H_
 
 #include <string>
+#include <iostream>
 
 // Yes, this code is stupid, I know; it is only meant as an example!
 
@@ -46,8 +47,15 @@ public:
         m_datum (other.get_datum ()), m_refcount (1)
         {}
 
-    void Ref () { ++m_refcount; }
-    void Unref () { if (!--m_refcount) delete this; }
+    void Ref () {
+        // std::cerr << "Ref Zbr " << this << " from " << m_refcount << std::endl;
+        ++m_refcount;
+    }
+    void Unref () {
+        // std::cerr << "Unref Zbr " << this << " from " << m_refcount << std::endl;
+        if (--m_refcount == 0)
+            delete this;
+    }
 };
 
 
@@ -60,6 +68,13 @@ class SomeObject
     Zbr *m_zbr;
 
 public:
+
+    ~SomeObject () {
+        delete m_foo_ptr;
+        if (m_zbr)
+            m_zbr->Unref ();
+    }
+
     SomeObject (std::string const prefix)
         : m_prefix (prefix), m_foo_ptr (0),
           m_foo_shared_ptr (0), m_zbr (0)
@@ -124,7 +139,7 @@ public:
             return NULL;
     }
 
-    // return reference counted object, caller owns return
+    // return reference counted object, caller does not own return
     Zbr* peek_zbr () { return m_zbr; }
 
     // pass reference counted object, transfer ownership
