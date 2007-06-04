@@ -709,9 +709,9 @@ class ReturnValue(object):
             ctype = args[0]
             type_handler_class = return_type_matcher.lookup(ctype)
             assert type_handler_class is not None
-            return super(ReturnValue, cls).__new__(type_handler_class, *args, **kwargs)
+            return super(ReturnValue, cls).__new__(type_handler_class)
         else:
-            return super(ReturnValue, cls).__new__(cls, *args, **kwargs)
+            return super(ReturnValue, cls).__new__(cls)
 
     def __init__(self, ctype):
         '''
@@ -782,9 +782,9 @@ class Parameter(object):
             ctype = args[0]
             type_handler_class = param_type_matcher.lookup(ctype)
             assert type_handler_class is not None
-            return super(Parameter, cls).__new__(type_handler_class, *args, **kwargs)
+            return super(Parameter, cls).__new__(type_handler_class)
         else:
-            return super(Parameter, cls).__new__(cls, *args, **kwargs)
+            return super(Parameter, cls).__new__(cls)
 
 
     def __init__(self, ctype, name, direction=DIRECTION_IN):
