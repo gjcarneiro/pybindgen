@@ -50,7 +50,33 @@ class TestFoo(unittest.TestCase):
         f2 = obj.get_foo_by_ref()
         self.assertEqual(f2.get_datum(), "hello")
         
+    def test_refcounting(self):
+        obj = foo.SomeObject("")
+        z = foo.Zbr("hello")
+        obj.set_zbr_transfer(z)
+
+        self.assertEqual(z.get_datum(), "hello")
+        z2 = obj.get_zbr()
+        self.assertEqual(z2.get_datum(), "hello")
+        z3 = obj.get_zbr()
+        self.assertEqual(z3.get_datum(), "hello")
+
+        zz = foo.Zbr("world")
+        self.assertEqual(zz.get_datum(), "world")
+        obj.set_zbr_shared(zz)
+
+        ## previous z's should not have been changed
+        self.assertEqual(z.get_datum(), "hello")
+        self.assertEqual(z2.get_datum(), "hello")
+        self.assertEqual(z3.get_datum(), "hello")
+
+        self.assertEqual(zz.get_datum(), "world")
+        zz2 = obj.get_zbr()
+        self.assertEqual(zz2.get_datum(), "world")
+        zz3 = obj.peek_zbr()
+        self.assertEqual(zz3.get_datum(), "world")
         
+
         
 if __name__ == '__main__':
     unittest.main()

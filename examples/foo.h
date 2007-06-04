@@ -23,10 +23,31 @@ public:
         {}
 };
 
+
 class Bar : public Foo
 {
 
 };
+
+
+class Zbr
+{
+    int m_refcount;
+    std::string m_datum;
+public:
+    Zbr () : m_datum ("")
+        {}
+    Zbr (std::string datum) : m_datum (datum)
+        {}
+    std::string get_datum () const { return m_datum; }
+
+    Zbr (Zbr const & other) : m_datum (other.get_datum ())
+        {}
+
+    void Ref () { ++m_refcount; }
+    void Unref () { if (!--m_refcount) delete this; }
+};
+
 
 class SomeObject
 {
@@ -34,11 +55,12 @@ class SomeObject
     Foo m_foo_value;
     Foo *m_foo_ptr;
     Foo *m_foo_shared_ptr;
+    Zbr *m_zbr;
 
 public:
     SomeObject (std::string const prefix)
         : m_prefix (prefix), m_foo_ptr (0),
-          m_foo_shared_ptr (0)
+          m_foo_shared_ptr (0), m_zbr (0)
         {}
 
     int add_prefix (std::string& message) {
@@ -88,6 +110,34 @@ public:
         Foo *foo = m_foo_ptr;
         m_foo_ptr = NULL;
         return foo;
+    }
+
+    // return reference counted object, caller owns return
+    Zbr* get_zbr () {
+        if (m_zbr)
+        {
+            m_zbr->Ref ();
+            return m_zbr;
+        } else
+            return NULL;
+    }
+
+    // return reference counted object, caller owns return
+    Zbr* peek_zbr () { return m_zbr; }
+
+    // pass reference counted object, transfer ownership
+    void set_zbr_transfer (Zbr *zbr) {
+        if (m_zbr)
+            m_zbr->Unref ();
+        m_zbr = zbr;
+    }
+
+    // pass reference counted object, does not transfer ownership
+    void set_zbr_shared (Zbr *zbr) {
+        if (m_zbr)
+            m_zbr->Unref ();
+        zbr->Ref ();
+        m_zbr = zbr;
     }
 
 };

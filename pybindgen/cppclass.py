@@ -220,9 +220,18 @@ class CppClass(object):
         '};\n'
         )
 
-    def __init__(self, name, parent=None):
+    def __init__(self, name, parent=None, incref_method=None, decref_method=None):
         """Constructor
         name -- class name
+        parent -- optional parent class wrapper
+        incref_method -- if the class supports reference counting, the
+                         name of the method that increments the
+                         reference count (may be inherited from parent
+                         if not given)
+        decref_method -- if the class supports reference counting, the
+                         name of the method that decrements the
+                         reference count (may be inherited from parent
+                         if not given)
         """
         self.name = name
         self.methods = [] # (name, wrapper) pairs
@@ -232,6 +241,14 @@ class CppClass(object):
         self.pytypestruct = "Py%s_Type" % (self.name,)
         self.parent = parent
         assert parent is None or isinstance(parent, CppClass)
+        assert (incref_method is None and decref_method is None) \
+               or (incref_method is not None and decref_method is not None)
+        if incref_method is None and parent is not None:
+            self.incref_method = parent.incref_method
+            self.decref_method = parent.decref_method
+        else:
+            self.incref_method = incref_method
+            self.decref_method = decref_method
 
         if name != 'dummy':
             ## register type handlers
@@ -282,7 +299,8 @@ class CppClass(object):
         self.constructors.append(wrapper)
 
     def generate_forward_declarations(self, code_sink):
-        """Generates forward declarations for the instance and type structures"""
+        """Generates forward declarations for the instance and type
+        structures"""
 
         code_sink.writeln('''
 typedef struct {
@@ -328,7 +346,8 @@ typedef struct {
         method_defs = []
         for meth_name, meth_wrapper in self.methods:
             code_sink.writeln()
-            method_defs.append(meth_wrapper.generate(code_sink, self, meth_name))
+            method_defs.append(meth_wrapper.generate(
+                code_sink, self, meth_name))
             code_sink.writeln()
 
         ## generate the method table
@@ -368,14 +387,19 @@ typedef struct {
         dict_.setdefault("typename", self.name)
         dict_.setdefault("classname", self.name)
 
+        if self.decref_method is None:
+            delete_code = "delete self->obj"
+        else:
+            delete_code = "self->obj->%s()" % (self.decref_method,)
+
         code_sink.writeln('''
 static void
 %s(%s *self)
 {
-    delete self->obj;
+    %s;
     PyObject_DEL(self);
 }
-''' % (dict_['tp_dealloc'], self.pystruct))
+''' % (dict_['tp_dealloc'], self.pystruct, delete_code))
 
         code_sink.writeln()
         code_sink.writeln(self.TYPE_TMPL % dict_)
@@ -404,7 +428,9 @@ class CppClassRefParameter(Parameter):
     "Class& handlers"
     CTYPES = []
     cpp_class = CppClass('dummy') # CppClass instance
-    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT, Parameter.DIRECTION_INOUT]
+    DIRECTIONS = [Parameter.DIRECTION_IN,
+                  Parameter.DIRECTION_OUT,
+                  Parameter.DIRECTION_INOUT]
     
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
@@ -478,7 +504,11 @@ class CppClassPtrParameter(Parameter):
             'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
         wrapper.call_params.append('%s->obj' % (name,))
         if self.transfer_ownership:
-            wrapper.after_call.write_code('%s->obj = NULL;' % (name,))
+            if self.cpp_class.incref_method is None:
+                wrapper.after_call.write_code('%s->obj = NULL;' % (name,))
+            else:
+                wrapper.before_call.write_code('%s->obj->%s();' % (
+                    name, self.cpp_class.incref_method,))
 
 
 class CppClassPtrReturnValue(ReturnValue):
@@ -503,6 +533,15 @@ class CppClassPtrReturnValue(ReturnValue):
             wrapper.after_call.write_code(
                 "%s->obj = retval;" % (py_name,))
         else:
-            wrapper.after_call.write_code(
-                "%s->obj = new %s(*retval);" % (py_name, self.cpp_class.name))
+            if self.cpp_class.incref_method is None:
+                ## The PyObject creates its own copy
+                wrapper.after_call.write_code(
+                    "%s->obj = new %s(*retval);" % (py_name, self.cpp_class.name))
+            else:
+                ## The PyObject gets a new reference to the same obj
+                wrapper.after_call.write_code(
+                    "retval->%s();" % (self.cpp_class.incref_method,))
+                wrapper.after_call.write_code(
+                    "%s->obj = retval;" % (py_name,))
+                
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
