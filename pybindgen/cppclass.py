@@ -388,18 +388,21 @@ typedef struct {
         dict_.setdefault("classname", self.name)
 
         if self.decref_method is None:
-            delete_code = "delete self->obj"
+            delete_code = "delete tmp;"
         else:
-            delete_code = "self->obj->%s()" % (self.decref_method,)
+            delete_code = ("if (tmp)\n        tmp->%s()"
+                           % (self.decref_method,))
 
         code_sink.writeln('''
 static void
 %s(%s *self)
 {
+    %s *tmp = self->obj;
+    self->obj = NULL;
     %s;
     PyObject_DEL(self);
 }
-''' % (dict_['tp_dealloc'], self.pystruct, delete_code))
+''' % (dict_['tp_dealloc'], self.pystruct, self.name, delete_code))
 
         code_sink.writeln()
         code_sink.writeln(self.TYPE_TMPL % dict_)
