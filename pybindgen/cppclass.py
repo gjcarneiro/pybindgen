@@ -4,7 +4,7 @@ Wrap C++ classes and methods
 
 from typehandlers.base import ForwardWrapperBase, Parameter, ReturnValue
 from typehandlers import codesink
-
+import settings
 
 
 
@@ -237,8 +237,9 @@ class CppClass(object):
         self.methods = [] # (name, wrapper) pairs
         self.constructors = [] # (name, wrapper) pairs
         self.slots = dict()
-        self.pystruct = "Py%s" % (self.name,)
-        self.pytypestruct = "Py%s_Type" % (self.name,)
+        prefix = settings.name_prefix.capitalize()
+        self.pystruct = "Py%s%s" % (prefix, self.name)
+        self.pytypestruct = "Py%s%s_Type" % (prefix, self.name)
         self.parent = parent
         assert parent is None or isinstance(parent, CppClass)
         assert (incref_method is None and decref_method is None) \
@@ -362,7 +363,7 @@ typedef struct {
         self.slots.setdefault("tp_basicsize",
                               "sizeof(%s)" % (self.pystruct,))
         self.slots.setdefault("tp_dealloc",
-                              "_wrap_%s__tp_dealloc" % (self.name,))
+                              "_wrap_%s__tp_dealloc" % (self.pystruct,))
         for slot in ["tp_getattr", "tp_setattr", "tp_compare", "tp_repr",
                      "tp_as_number", "tp_as_sequence", "tp_as_mapping",
                      "tp_hash", "tp_call", "tp_str", "tp_getattro", "tp_setattro",
