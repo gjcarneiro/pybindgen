@@ -13,29 +13,35 @@ class CppMethod(ForwardWrapperBase):
     Class that generates a wrapper to a C++ class method
     """
 
-    def __init__(self, return_value, method_name, parameters):
+    def __init__(self, return_value, method_name, parameters, is_static=False):
         """
         return_value -- the method return value
         method_name -- name of the method
         parameters -- the method parameters
+        is_static -- whether it is a static method
         """
         super(CppMethod, self).__init__(
             return_value, parameters,
             "return NULL;", "return NULL;")
         self.method_name = method_name
+        self.is_static = is_static
 
     
     def generate_call(self, class_):
         "virtual method implementation; do not call"
         assert isinstance(class_, CppClass)
+        if self.is_static:
+            method = '%s::%s' % (class_.name, self.method_name)
+        else:
+            method = 'self->obj->%s' % self.method_name
         if self.return_value.ctype == 'void':
             self.before_call.write_code(
-                'self->obj->%s(%s);' %
-                (self.method_name, ", ".join(self.call_params)))
+                '%s(%s);' %
+                (method, ", ".join(self.call_params)))
         else:
             self.before_call.write_code(
-                'retval = self->obj->%s(%s);' %
-                (self.method_name, ", ".join(self.call_params)))
+                'retval = %s(%s);' %
+                (method, ", ".join(self.call_params)))
 
 
     def generate(self, code_sink, class_, method_name, docstring=None):
@@ -67,6 +73,8 @@ class CppMethod(ForwardWrapperBase):
         code_sink.writeln('}')
 
         flags = self.get_py_method_def_flags()
+        if self.is_static:
+            flags.append('METH_STATIC')
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
                (method_name, wrapper_function_name, '|'.join(flags),
                 (docstring is None and "NULL" or ('"'+docstring+'"')))

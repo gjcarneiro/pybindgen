@@ -37,7 +37,10 @@ public:
 
 class Bar : public Foo
 {
-
+public:
+    static std::string Hooray () {
+        return std::string ("Hooray!");
+    }
 };
 
 
