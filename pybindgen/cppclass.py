@@ -174,7 +174,7 @@ class CppClass(object):
     """
 
     TYPE_TMPL = (
-        'PyTypeObject Py%(typename)s_Type = {\n'
+        'PyTypeObject %(typestruct)s = {\n'
         '    PyObject_HEAD_INIT(NULL)\n'
         '    0,                                 /* ob_size */\n'
         '    "%(classname)s",                   /* tp_name */\n'
@@ -385,7 +385,7 @@ typedef struct {
                                          or "\"%s\"" % (docstring,)))
 
         dict_ = dict(self.slots)
-        dict_.setdefault("typename", self.name)
+        dict_.setdefault("typestruct", self.pytypestruct)
         dict_.setdefault("classname", self.name)
 
         if self.decref_method is None:
