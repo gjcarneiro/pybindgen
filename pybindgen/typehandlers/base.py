@@ -622,10 +622,12 @@ class ForwardWrapperBase(object):
                 raise CodeGenerationError(
                     'convert_python_to_c method of parameter %s not implemented'
                     % (param.ctype,))
+
+        self.generate_call(*gen_call_params)
+
         params = self.parse_params.get_parameters()
         keywords = self.parse_params.get_keywords()
-
-        if self.parameters or self.force_parse != None:
+        if params != ['""'] or self.force_parse != None:
             if (keywords is None
                 and self.force_parse != self.PARSE_TUPLE_AND_KEYWORDS):
                 param_list = ['args'] + params
@@ -642,8 +644,6 @@ class ForwardWrapperBase(object):
                 self.before_parse.write_error_check('!PyArg_ParseTupleAndKeywords(%s)' %
                                                     (', '.join(param_list),))
         
-        self.generate_call(*gen_call_params)
-
         ## convert the return value(s)
         if self.return_value is None:
             assert self.build_params.get_parameters() == ['""'], \
