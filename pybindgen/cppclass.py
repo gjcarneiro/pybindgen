@@ -92,7 +92,8 @@ class CppConstructor(ForwardWrapperBase):
         """
         super(CppConstructor, self).__init__(
             None, parameters,
-            "return -1;", "return -1;")
+            "return -1;", "return -1;",
+            force_parse=ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS)
     
     def generate_call(self, class_):
         "virtual method implementation; do not call"
@@ -113,6 +114,13 @@ class CppConstructor(ForwardWrapperBase):
         tmp_sink = codesink.MemoryCodeSink()
 
         self.generate_body(tmp_sink, gen_call_params=[class_])
+
+        assert ((self.parse_params.get_parameters() == ['""'])
+                or self.parse_params.get_keywords() is not None), \
+               ("something went wrong with the type handlers;"
+                " constructors need parameter names, "
+                "yet no names were given for the class %s constructor"
+                % class_.name)
 
         wrapper_function_name = "_wrap_%s__tp_init" % (
             class_.name,)

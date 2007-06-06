@@ -567,8 +567,12 @@ class ForwardWrapperBase(object):
 
     """
 
+    PARSE_TUPLE = 1
+    PARSE_TUPLE_AND_KEYWORDS = 2
+
     def __init__(self, return_value, parameters,
-                 parse_error_return, error_return):
+                 parse_error_return, error_return,
+                 force_parse=None):
         '''
         Base constructor
 
@@ -591,6 +595,7 @@ class ForwardWrapperBase(object):
         self.build_params = BuildValueParameters()
         self.parse_params = ParseTupleParameters()
         self.call_params = []
+        self.force_parse = force_parse
         
         self.declarations.declare_variable('PyObject*', 'py_retval')
         if return_value is not None and return_value.ctype != 'void':
@@ -620,12 +625,15 @@ class ForwardWrapperBase(object):
         params = self.parse_params.get_parameters()
         keywords = self.parse_params.get_keywords()
 
-        if self.parameters:
-            if keywords is None:
+        if self.parameters or self.force_parse != None:
+            if (keywords is None
+                and self.force_parse != self.PARSE_TUPLE_AND_KEYWORDS):
                 param_list = ['args'] + params
                 self.before_parse.write_error_check('!PyArg_ParseTuple(%s)' %
                                                     (', '.join(param_list),))
             else:
+                if keywords is None:
+                    keywords = []
                 keywords_var = self.declarations.declare_variable(
                     'char *', 'keywords',
                     '{' + ', '.join(['"%s"' % kw for kw in keywords] + ['NULL']) + '}',
