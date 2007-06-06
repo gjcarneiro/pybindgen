@@ -17,7 +17,7 @@ class DoubleParam(Parameter):
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
         name = wrapper.declarations.declare_variable(self.ctype, self.name)
-        wrapper.parse_params.add_parameter('d', ['&'+name])
+        wrapper.parse_params.add_parameter('d', ['&'+name], self.name)
         wrapper.call_params.append(name)
 
 
