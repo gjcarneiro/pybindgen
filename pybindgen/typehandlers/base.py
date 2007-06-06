@@ -596,6 +596,7 @@ class ForwardWrapperBase(object):
         self.parse_params = ParseTupleParameters()
         self.call_params = []
         self.force_parse = force_parse
+        self.meth_flags = []
         
         self.declarations.declare_variable('PyObject*', 'py_retval')
         if return_value is not None and return_value.ctype != 'void':
@@ -628,6 +629,7 @@ class ForwardWrapperBase(object):
         params = self.parse_params.get_parameters()
         keywords = self.parse_params.get_keywords()
         if params != ['""'] or self.force_parse != None:
+            self.meth_flags.append("METH_VARARGS")
             if (keywords is None
                 and self.force_parse != self.PARSE_TUPLE_AND_KEYWORDS):
                 param_list = ['args'] + params
@@ -643,6 +645,9 @@ class ForwardWrapperBase(object):
                 param_list = ['args', 'kwargs', params[0], keywords_var] + params[1:]
                 self.before_parse.write_error_check('!PyArg_ParseTupleAndKeywords(%s)' %
                                                     (', '.join(param_list),))
+                self.meth_flags.append("METH_KEYWORDS")
+        else:
+            self.meth_flags.append("METH_NOARGS")
         
         ## convert the return value(s)
         if self.return_value is None:
@@ -677,13 +682,7 @@ class ForwardWrapperBase(object):
         """
         Get a list of PyMethodDef flags that should be used for this wrapper.
         """
-        if self.parameters:
-            if self.parse_params.get_keywords() is None:
-                return ["METH_VARARGS"]
-            else:
-                return ["METH_VARARGS", "METH_KEYWORDS"]
-        else:
-            return  ["METH_NOARGS"]
+        return self.meth_flags
 
 
 
