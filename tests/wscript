@@ -7,17 +7,20 @@ import pproc as subprocess
 
 
 def build(bld):
+    top_srcdir = bld.m_srcnode.abspath()
+
     gen = bld.create_obj('command-output')
     gen.command = 'test-generation.py'
     gen.stdout = 'test.cc'
-    gen.stdin = 'test-generation.py'
-    top_srcdir = bld.m_srcnode.abspath()
-    gen.argv = [top_srcdir]
+    gen.argv = [gen.input_file('test-generation.py'), top_srcdir]
+    gen.command = 'python'
+    gen.command_is_external = True
     gen.prio = 5
     
     obj = bld.create_obj('cpp', 'objects', 'pyext')
     obj.source = 'test.cc'
-    obj.env.append_value('CXXFLAGS', ['-Wall', '-Werror', '-Wno-unused'])
+    if os.path.basename(obj.env['CXX']).startswith("g++"):
+        obj.env.append_value('CXXFLAGS', ['-Wall', '-Werror', '-Wno-unused'])
 
     cwd = os.getcwd()
     os.chdir(top_srcdir)

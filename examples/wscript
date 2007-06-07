@@ -8,8 +8,9 @@ import Task
 def build(bld):
     bindgen = bld.create_obj('command-output')
     bindgen.stdout = 'foomodule.cc'
-    bindgen.stdin = 'foomodulegen.py'
-    bindgen.command = 'foomodulegen.py'
+    bindgen.argv = [bindgen.input_file('foomodulegen.py')]
+    bindgen.command = 'python'
+    bindgen.command_is_external = True
     bindgen.prio = 3 # must run after the 'py' objects in ../pybindgen
 
     obj = bld.create_obj('cpp', 'shlib', 'pyext')
