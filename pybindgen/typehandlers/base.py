@@ -598,7 +598,8 @@ class ForwardWrapperBase(object):
         self.force_parse = force_parse
         self.meth_flags = []
         
-        self.declarations.declare_variable('PyObject*', 'py_retval')
+        if return_value is not None:
+            self.declarations.declare_variable('PyObject*', 'py_retval')
         if return_value is not None and return_value.ctype != 'void':
             self.declarations.declare_variable(return_value.ctype, 'retval')
         

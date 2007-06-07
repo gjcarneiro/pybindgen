@@ -62,19 +62,39 @@ class CppMethod(ForwardWrapperBase):
         wrapper_function_name = "_wrap_%s_%s" % (
             class_.name, self.method_name)
 
+        flags = self.get_py_method_def_flags()
+        if self.is_static:
+            flags.append('METH_STATIC')
+
         code_sink.writeln("static PyObject *")
-        code_sink.writeln(
-            "%s(%s *self, PyObject *args, PyObject *kwargs)"
-            % (wrapper_function_name, class_.pystruct))
+        if 'METH_STATIC' in flags:
+            _self_name = 'dummy PYBINDGEN_UNUSED'
+        else:
+            _self_name = 'self'
+
+        if 'METH_VARARGS' in flags:
+            if 'METH_KEYWORDS' in flags:
+                code_sink.writeln(
+                    "%s(%s *%s, PyObject *args, PyObject *kwargs)"
+                    % (wrapper_function_name, class_.pystruct, _self_name))
+            else:
+                code_sink.writeln(
+                    "%s(%s *%s, PyObject *args)"
+                    % (wrapper_function_name, class_.pystruct, _self_name))
+        else:
+            if 'METH_STATIC' in flags:
+                code_sink.writeln("%s(void)" % (wrapper_function_name,))
+            else:
+                code_sink.writeln(
+                    "%s(%s *%s)"
+                    % (wrapper_function_name, class_.pystruct, _self_name))
+                
         code_sink.writeln('{')
         code_sink.indent()
         tmp_sink.flush_to(code_sink)
         code_sink.unindent()
         code_sink.writeln('}')
 
-        flags = self.get_py_method_def_flags()
-        if self.is_static:
-            flags.append('METH_STATIC')
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
                (method_name, wrapper_function_name, '|'.join(flags),
                 (docstring is None and "NULL" or ('"'+docstring+'"')))
@@ -170,9 +190,7 @@ class CppNoConstructor(ForwardWrapperBase):
         wrapper_function_name = "_wrap_%s__tp_init" % (
             class_.name,)
         code_sink.writeln("static int")
-        code_sink.writeln(
-            "%s(%s *self, PyObject *args, PyObject *kwargs)"
-            % (wrapper_function_name, class_.pystruct))
+        code_sink.writeln("%s(void)" % wrapper_function_name)
         code_sink.writeln('{')
         code_sink.indent()
         code_sink.writeln('PyErr_SetString(PyExc_TypeError, "class \'%s\' '
@@ -232,7 +250,13 @@ class CppClass(object):
         '    (allocfunc)%(tp_alloc)s,           /* tp_alloc */\n'
         '    (newfunc)%(tp_new)s,               /* tp_new */\n'
         '    (freefunc)%(tp_free)s,             /* tp_free */\n'
-        '    (inquiry)%(tp_is_gc)s              /* tp_is_gc */\n'
+        '    (inquiry)%(tp_is_gc)s,             /* tp_is_gc */\n'
+        '    NULL,                              /* tp_bases */\n'
+        '    NULL,                              /* tp_mro */\n'
+        '    NULL,                              /* tp_cache */\n'
+        '    NULL,                              /* tp_subclasses */\n'
+        '    NULL,                              /* tp_weaklist */\n'
+        '    (destructor) NULL                  /* tp_del */\n'
         '};\n'
         )
 

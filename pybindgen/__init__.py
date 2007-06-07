@@ -21,7 +21,7 @@ def write_preamble(code_sink, min_python_version=(2, 3)):
 ''')
 
     if min_python_version < (2, 5):
-        code_sink.writeln('''
+        code_sink.writeln(r'''
 
 #if PY_VERSION_HEX < 0x02050000
 typedef int Py_ssize_t;
@@ -31,6 +31,12 @@ typedef inquiry lenfunc;
 typedef intargfunc ssizeargfunc;
 typedef intobjargproc ssizeobjargproc;
 #endif
+
+#if     __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ > 4)
+# define PYBINDGEN_UNUSED __attribute__((__unused__))
+#else
+# define PYBINDGEN_UNUSED
+#endif  /* !__GNUC__ */
 
 ''')
     
