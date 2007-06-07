@@ -20,7 +20,7 @@ def build(bld):
     obj = bld.create_obj('cpp', 'objects', 'pyext')
     obj.source = 'test.cc'
     if os.path.basename(obj.env['CXX']).startswith("g++"):
-        obj.env.append_value('CXXFLAGS', ['-Wall', '-Werror', '-Wno-unused'])
+        obj.env.append_value('CXXFLAGS', ['-Werror', '-Wno-unused'])
 
     cwd = os.getcwd()
     os.chdir(top_srcdir)
