@@ -49,15 +49,15 @@ class Zbr
     int m_refcount;
     std::string m_datum;
 public:
-    Zbr () : m_datum (""), m_refcount (1)
+    Zbr () : m_refcount (1), m_datum ("")
         {}
-    Zbr (std::string datum) : m_datum (datum), m_refcount (1)
+    Zbr (std::string datum) :  m_refcount (1), m_datum (datum)
         {}
 
     std::string get_datum () const { return m_datum; }
 
     Zbr (Zbr const & other) :
-        m_datum (other.get_datum ()), m_refcount (1)
+        m_refcount (1), m_datum (other.get_datum ())
         {}
 
     void Ref () {
