@@ -24,3 +24,5 @@ int print_something_else(const char *message2)
     return strlen(message2);
 }
 
+std::string SomeObject::staticData = std::string("Hello Static World!");
+

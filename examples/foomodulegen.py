@@ -85,6 +85,9 @@ def my_module_gen(out_file):
 
 
     SomeObject = CppClass('SomeObject')
+    SomeObject.add_instance_attribute(ReturnValue.new('std::string'), 'm_prefix')
+    SomeObject.add_static_attribute(ReturnValue.new('std::string'), 'staticData') ## not working correctly
+    
     SomeObject.add_method(CppMethod(ReturnValue.new('int'), 'add_prefix',
                                     [Parameter.new('std::string&', 'message',
                                                direction=Parameter.DIRECTION_INOUT)]))

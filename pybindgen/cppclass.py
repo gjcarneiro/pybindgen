@@ -201,6 +201,73 @@ class CppNoConstructor(ForwardWrapperBase):
 
         return wrapper_function_name
 
+class CppInstanceAttributeGetter(ForwardWrapperBase):
+    '''
+    A getter for a C++ instance attribute.
+    '''
+    def __init__(self, value_type, class_, attribute_name):
+        """
+        value_type -- a ReturnValue object handling the value type;
+        class_ -- the class (CppClass object)
+        attribute_name -- name of attribute
+        """
+        super(CppInstanceAttributeGetter, self).__init__(
+            value_type, [], "return NULL;", "return NULL;")
+        self.class_ = class_
+        self.attribute_name = attribute_name
+        self.c_function_name = "_wrap_%s__get_%s" % (self.class_.pystruct,
+                                                     self.attribute_name)
+    def generate_call(self):
+        "virtual method implementation; do not call"
+        self.before_call.write_code(
+            "retval = self->obj->%s;" % (self.attribute_name))
+    def generate(self, code_sink):
+        """
+        code_sink -- a CodeSink instance that will receive the generated code
+        """
+        tmp_sink = codesink.MemoryCodeSink()
+        self.generate_body(tmp_sink)
+        code_sink.writeln("static PyObject* %s(%s *self)" % (self.c_function_name,
+                                                             self.class_.pystruct))
+        code_sink.writeln('{')
+        code_sink.indent()
+        tmp_sink.flush_to(code_sink)
+        code_sink.unindent()
+        code_sink.writeln('}')
+
+class CppStaticAttributeGetter(ForwardWrapperBase):
+    '''
+    A getter for a C++ class static attribute.
+    '''
+    def __init__(self, value_type, class_, attribute_name):
+        """
+        value_type -- a ReturnValue object handling the value type;
+        c_value_expression -- C value expression
+        """
+        super(CppStaticAttributeGetter, self).__init__(
+            value_type, [], "return NULL;", "return NULL;")
+        self.class_ = class_
+        self.attribute_name = attribute_name
+        self.c_function_name = "_wrap_%s__get_%s" % (self.class_.pystruct,
+                                                     self.attribute_name)
+    def generate_call(self):
+        "virtual method implementation; do not call"
+        self.before_call.write_code(
+            "retval = %s::%s;" % (self.class_.name, self.attribute_name))
+    def generate(self, code_sink):
+        """
+        code_sink -- a CodeSink instance that will receive the generated code
+        """
+        tmp_sink = codesink.MemoryCodeSink()
+        self.generate_body(tmp_sink)
+        code_sink.writeln("static PyObject* %s(void)" % self.c_function_name)
+        code_sink.writeln('{')
+        code_sink.indent()
+        tmp_sink.flush_to(code_sink)
+        code_sink.unindent()
+        code_sink.writeln('}')
+
+
 
 class CppClass(object):
     """
@@ -276,6 +343,7 @@ class CppClass(object):
         self.name = name
         self.methods = [] # (name, wrapper) pairs
         self.constructors = [] # (name, wrapper) pairs
+        self.attributes = [] # (name, getter, setter) pairs
         self.slots = dict()
         prefix = settings.name_prefix.capitalize()
         self.pystruct = "Py%s%s" % (prefix, self.name)
@@ -339,6 +407,27 @@ class CppClass(object):
                 'multiple constructors not yet supported')
         self.constructors.append(wrapper)
 
+    def add_static_attribute(self, value_type, name):
+        """
+        XXX: not working correctly: 1. getter only works from
+        instances, not classes. 2. setter not yet implemented.
+
+        value_type -- a ReturnValue object
+        """
+        assert isinstance(value_type, ReturnValue)
+        getter = CppStaticAttributeGetter(value_type, self, name)
+        self.attributes.append((name, getter, None))
+
+    def add_instance_attribute(self, value_type, name):
+        """
+        XXX: not working correctly: setter not yet implemented.
+
+        value_type -- a ReturnValue object
+        """
+        assert isinstance(value_type, ReturnValue)
+        getter = CppInstanceAttributeGetter(value_type, self, name)
+        self.attributes.append((name, getter, None))
+
     def generate_forward_declarations(self, code_sink):
         """Generates forward declarations for the instance and type
         structures"""
@@ -400,6 +489,43 @@ typedef struct {
         code_sink.unindent()
         code_sink.writeln("};")
 
+        ## generate descriptor table (for tp_getset)
+        if self.attributes:
+            for name, getter, setter in self.attributes:
+                if getter is not None:
+                    getter.generate(code_sink)
+
+            getset_table_name = "_%s__getsets" % self.pystruct
+            self.slots.setdefault("tp_getset", getset_table_name)
+            code_sink.writeln("static PyGetSetDef %s[] = {" % getset_table_name)
+            code_sink.indent()
+            for name, getter, setter in self.attributes:
+                code_sink.writeln('{')
+                code_sink.indent()
+                code_sink.writeln('"%s", /* attribute name */' % name)
+                if getter is not None:
+                    getter_c_name = getter.c_function_name
+                else:
+                    getter_c_name = "NULL"
+                code_sink.writeln(
+                    '(getter) %s, /* C function to get the attribute */'
+                    % getter_c_name)
+                setter_c_name = "NULL"
+                code_sink.writeln(
+                    '(setter) %s, /* C function to set the attribute */'
+                    % setter_c_name)
+                code_sink.writeln('NULL, /* optional doc string */')
+                code_sink.writeln('NULL /* optional additional data '
+                                  'for getter and setter */')
+                code_sink.unindent()
+                code_sink.writeln('},')
+            code_sink.writeln('{ NULL, NULL, NULL, NULL, NULL }')
+            code_sink.unindent()
+            code_sink.writeln('};')
+        else:
+            self.slots.setdefault("tp_getset", 'NULL')
+
+        ## generate the type structure
         self.slots.setdefault("tp_basicsize",
                               "sizeof(%s)" % (self.pystruct,))
         self.slots.setdefault("tp_dealloc",
@@ -408,7 +534,7 @@ typedef struct {
                      "tp_as_number", "tp_as_sequence", "tp_as_mapping",
                      "tp_hash", "tp_call", "tp_str", "tp_getattro", "tp_setattro",
                      "tp_as_buffer", "tp_traverse", "tp_clear", "tp_richcompare",
-                     "tp_iter", "tp_iternext", "tp_getset", "tp_descr_get",
+                     "tp_iter", "tp_iternext", "tp_descr_get",
                      "tp_descr_set", "tp_is_gc"]:
             self.slots.setdefault(slot, "NULL")
 
@@ -598,3 +724,5 @@ class CppClassPtrReturnValue(ReturnValue):
                 wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
                 
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
+
+

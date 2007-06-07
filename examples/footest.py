@@ -76,6 +76,9 @@ class TestFoo(unittest.TestCase):
         zz3 = obj.peek_zbr()
         self.assertEqual(zz3.get_datum(), "world")
         
+    def test_instance_attribute(self):
+        obj = foo.SomeObject("Hello")
+        self.assertEqual(obj.m_prefix, "Hello")
 
         
 if __name__ == '__main__':

@@ -74,13 +74,18 @@ public:
 
 class SomeObject
 {
+public:
     std::string m_prefix;
+
+private:
     Foo m_foo_value;
     Foo *m_foo_ptr;
     Foo *m_foo_shared_ptr;
     Zbr *m_zbr;
 
 public:
+
+    static std::string staticData;
 
     ~SomeObject () {
         delete m_foo_ptr;
