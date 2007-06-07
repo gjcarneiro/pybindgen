@@ -528,6 +528,7 @@ typedef struct {
 
 
         ## generate the constructor, if any
+        have_constructor = True
         if self.constructors:
             code_sink.writeln()
             constructor = self.constructors[0].generate(code_sink, self)
@@ -550,6 +551,7 @@ typedef struct {
                 ## parent class instead of this class.
                 code_sink.writeln()
                 constructor = CppNoConstructor().generate(code_sink, self)
+                have_constructor = False
                 code_sink.writeln()
 
 
@@ -636,12 +638,14 @@ typedef struct {
 
         ## generate the destructor
         tp_dealloc_function_name = "_wrap_%s__tp_dealloc" % (self.pystruct,)
-        if self.decref_method is None:
-            delete_code = "delete tmp;"
-        else:
-            delete_code = ("if (tmp)\n        tmp->%s()"
-                           % (self.decref_method,))
-        code_sink.writeln('''
+        if have_constructor:
+            if self.decref_method is None:
+                delete_code = "delete tmp;"
+            else:
+                delete_code = ("if (tmp)\n        tmp->%s()"
+                               % (self.decref_method,))
+
+            code_sink.writeln('''
 static void
 %s(%s *self)
 {
@@ -650,9 +654,19 @@ static void
     %s;
     PyObject_DEL(self);
 }
-''' % (tp_dealloc_function_name, self.pystruct, self.name, delete_code))
-        code_sink.writeln()
+    ''' % (tp_dealloc_function_name, self.pystruct, self.name, delete_code))
 
+        else:
+            
+            code_sink.writeln('''
+static void
+%s(%s *self)
+{
+    PyObject_DEL(self);
+}
+    ''' % (tp_dealloc_function_name, self.pystruct))
+            
+        code_sink.writeln()
 
         ## generate the type structure
         self.slots.setdefault("tp_basicsize",
