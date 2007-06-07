@@ -80,6 +80,8 @@ class TestFoo(unittest.TestCase):
         obj = foo.SomeObject("Hello")
         self.assertEqual(obj.m_prefix, "Hello")
 
-        
+    def test_static_attribute(self):
+        self.assertEqual(foo.SomeObject.staticData, "Hello Static World!")
+
 if __name__ == '__main__':
     unittest.main()

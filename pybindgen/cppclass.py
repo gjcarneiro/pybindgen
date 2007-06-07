@@ -268,6 +268,70 @@ class CppStaticAttributeGetter(ForwardWrapperBase):
         code_sink.writeln('}')
 
 
+class PyDescrGenerator(object):
+    def __init__(self, name, descr_get, descr_set):
+        self.name = name
+        self.descr_get = descr_get
+        self.descr_set = descr_set
+        prefix = settings.name_prefix.capitalize()
+        self.pytypestruct = "Py%s%s_Type" % (prefix, self.name)
+
+    def generate(self, code_sink):
+        code_sink.writeln('''
+PyTypeObject %(pytypestruct)s = {
+	PyObject_HEAD_INIT(NULL)
+	0,					/* ob_size */
+	"%(name)s",			        /* tp_name */
+	0,					/* tp_basicsize */
+	0,					/* tp_itemsize */
+	0,	 				/* tp_dealloc */
+	0,					/* tp_print */
+	0,					/* tp_getattr */
+	0,					/* tp_setattr */
+	0,					/* tp_compare */
+	0,					/* tp_repr */
+	0,					/* tp_as_number */
+	0,					/* tp_as_sequence */
+	0,		       			/* tp_as_mapping */
+	0,					/* tp_hash */
+	0,					/* tp_call */
+	0,					/* tp_str */
+	0,					/* tp_getattro */
+	0,					/* tp_setattro */
+	0,					/* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT,			/* tp_flags */
+ 	0,					/* tp_doc */
+	0,					/* tp_traverse */
+ 	0,					/* tp_clear */
+	0,					/* tp_richcompare */
+	0,					/* tp_weaklistoffset */
+	0,					/* tp_iter */
+	0,					/* tp_iternext */
+	0,					/* tp_methods */
+	0,					/* tp_members */
+	0,					/* tp_getset */
+	0,					/* tp_base */
+	0,					/* tp_dict */
+	(descrgetfunc) %(descr_get)s,	        /* tp_descr_get */
+	(descrsetfunc) %(descr_set)s,  		/* tp_descr_set */
+	0,					/* tp_dictoffset */
+	0,					/* tp_init */
+	0,					/* tp_alloc */
+	0,					/* tp_new */
+	0,               			/* tp_free */
+        0,                                      /* tp_is_gc */
+        0,                                      /* tp_bases */
+        0,                                      /* tp_mro */
+        0,                                      /* tp_cache */
+        0,                                      /* tp_subclasses */
+        0,                                      /* tp_weaklist */
+        0                                       /* tp_del */
+};
+''' % dict(pytypestruct=self.pytypestruct, name=self.name,
+           descr_get=(self.descr_get or '0'),
+           descr_set=(self.descr_set or '0')))
+        
+
 
 class CppClass(object):
     """
@@ -444,8 +508,21 @@ typedef struct {
         code_sink.writeln()
         
 
-    def generate(self, code_sink, docstring=None):
+    def generate(self, code_sink, module, docstring=None):
         """Generates the class to a code sink"""
+
+        ## --- register the class type in the module ---
+        module.after_init.write_code("/* Register the '%s' class */" % self.name)
+        if self.parent is not None:
+            assert isinstance(self.parent, CppClass)
+            module.after_init.write_code('%s.tp_base = &%s;' %
+                                         (self.pytypestruct, self.parent.pytypestruct))
+        module.after_init.write_error_check('PyType_Ready(&%s)'
+                                          % (self.pytypestruct,))
+        module.after_init.write_code(
+            'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
+            self.name, self.pytypestruct))
+
 
         ## generate the constructor, if any
         if self.constructors:
@@ -472,6 +549,7 @@ typedef struct {
                 constructor = CppNoConstructor().generate(code_sink, self)
                 code_sink.writeln()
 
+
         ## generate the method wrappers
         method_defs = []
         for meth_name, meth_wrapper in self.methods:
@@ -479,7 +557,6 @@ typedef struct {
             method_defs.append(meth_wrapper.generate(
                 code_sink, self, meth_name))
             code_sink.writeln()
-
         ## generate the method table
         code_sink.writeln("static PyMethodDef %s_methods[] = {" % (self.name,))
         code_sink.indent()
@@ -489,47 +566,95 @@ typedef struct {
         code_sink.unindent()
         code_sink.writeln("};")
 
-        ## generate descriptor table (for tp_getset)
-        if self.attributes:
-            for name, getter, setter in self.attributes:
-                if getter is not None:
-                    getter.generate(code_sink)
 
-            getset_table_name = "_%s__getsets" % self.pystruct
-            self.slots.setdefault("tp_getset", getset_table_name)
-            code_sink.writeln("static PyGetSetDef %s[] = {" % getset_table_name)
-            code_sink.indent()
+        ## generate descriptor table for instance attributes
+        if self.attributes:
+            have_instance_attributes = False
             for name, getter, setter in self.attributes:
-                code_sink.writeln('{')
+
+                if isinstance(getter, CppInstanceAttributeGetter):
+                    have_instance_attributes = True
+                    getter.generate(code_sink)
+                    ## getter.c_function_name is then added to the
+                    ## tp_getset table, further below.
+
+                elif isinstance(getter, CppStaticAttributeGetter):
+                    ## static attributes are a bit more tricky.. :-/
+                    ## mainly because PyDecr_NewGetSet generates a
+                    ## descriptor that disables itself when called
+                    ## from a class; it only handles instances.
+                    getter.generate(code_sink)
+                    descriptor = PyDescrGenerator(
+                        '%s_%sDescr' % (self.pystruct, name),
+                        getter.c_function_name, None)
+                    descriptor.generate(code_sink)
+                    module.after_init.write_error_check(
+                        'PyType_Ready(&%s)' % (descriptor.pytypestruct))
+                    module.after_init.write_code(
+                        'PyDict_SetItemString(%s.tp_dict, "%s", PyObject_New(PyObject, &%s));'
+                        % (self.pytypestruct, name, descriptor.pytypestruct))
+                    
+            if have_instance_attributes:
+                getset_table_name = "_%s__getsets" % self.pystruct
+                self.slots.setdefault("tp_getset", getset_table_name)
+                code_sink.writeln("static PyGetSetDef %s[] = {" % getset_table_name)
                 code_sink.indent()
-                code_sink.writeln('"%s", /* attribute name */' % name)
-                if getter is not None:
-                    getter_c_name = getter.c_function_name
-                else:
-                    getter_c_name = "NULL"
-                code_sink.writeln(
-                    '(getter) %s, /* C function to get the attribute */'
-                    % getter_c_name)
-                setter_c_name = "NULL"
-                code_sink.writeln(
-                    '(setter) %s, /* C function to set the attribute */'
-                    % setter_c_name)
-                code_sink.writeln('NULL, /* optional doc string */')
-                code_sink.writeln('NULL /* optional additional data '
-                                  'for getter and setter */')
+                for name, getter, setter in self.attributes:
+                    if isinstance(getter, CppStaticAttributeGetter) \
+                       or isinstance(setter, CppStaticAttributeGetter):
+                        continue # static attributes do not use tp_getset
+                    code_sink.writeln('{')
+                    code_sink.indent()
+                    code_sink.writeln('"%s", /* attribute name */' % name)
+                    if isinstance(getter, CppInstanceAttributeGetter):
+                        getter_c_name = getter.c_function_name
+                    else:
+                        getter_c_name = "NULL"
+                    code_sink.writeln(
+                        '(getter) %s, /* C function to get the attribute */'
+                        % getter_c_name)
+                    setter_c_name = "NULL"
+                    code_sink.writeln(
+                        '(setter) %s, /* C function to set the attribute */'
+                        % setter_c_name)
+                    code_sink.writeln('NULL, /* optional doc string */')
+                    code_sink.writeln('NULL /* optional additional data '
+                                      'for getter and setter */')
+                    code_sink.unindent()
+                    code_sink.writeln('},')
+                code_sink.writeln('{ NULL, NULL, NULL, NULL, NULL }')
                 code_sink.unindent()
-                code_sink.writeln('},')
-            code_sink.writeln('{ NULL, NULL, NULL, NULL, NULL }')
-            code_sink.unindent()
-            code_sink.writeln('};')
+                code_sink.writeln('};')
+            else:
+                self.slots.setdefault("tp_getset", 'NULL')
         else:
             self.slots.setdefault("tp_getset", 'NULL')
+
+
+        ## generate the destructor
+        tp_dealloc_function_name = "_wrap_%s__tp_dealloc" % (self.pystruct,)
+        if self.decref_method is None:
+            delete_code = "delete tmp;"
+        else:
+            delete_code = ("if (tmp)\n        tmp->%s()"
+                           % (self.decref_method,))
+        code_sink.writeln('''
+static void
+%s(%s *self)
+{
+    %s *tmp = self->obj;
+    self->obj = NULL;
+    %s;
+    PyObject_DEL(self);
+}
+''' % (tp_dealloc_function_name, self.pystruct, self.name, delete_code))
+        code_sink.writeln()
+
 
         ## generate the type structure
         self.slots.setdefault("tp_basicsize",
                               "sizeof(%s)" % (self.pystruct,))
-        self.slots.setdefault("tp_dealloc",
-                              "_wrap_%s__tp_dealloc" % (self.pystruct,))
+        self.slots.setdefault("tp_dealloc", tp_dealloc_function_name )
         for slot in ["tp_getattr", "tp_setattr", "tp_compare", "tp_repr",
                      "tp_as_number", "tp_as_sequence", "tp_as_mapping",
                      "tp_hash", "tp_call", "tp_str", "tp_getattro", "tp_setattro",
@@ -549,29 +674,10 @@ typedef struct {
         self.slots.setdefault("tp_flags", "Py_TPFLAGS_DEFAULT")
         self.slots.setdefault("tp_doc", (docstring is None and 'NULL'
                                          or "\"%s\"" % (docstring,)))
-
         dict_ = dict(self.slots)
         dict_.setdefault("typestruct", self.pytypestruct)
         dict_.setdefault("classname", self.name)
-
-        if self.decref_method is None:
-            delete_code = "delete tmp;"
-        else:
-            delete_code = ("if (tmp)\n        tmp->%s()"
-                           % (self.decref_method,))
-
-        code_sink.writeln('''
-static void
-%s(%s *self)
-{
-    %s *tmp = self->obj;
-    self->obj = NULL;
-    %s;
-    PyObject_DEL(self);
-}
-''' % (dict_['tp_dealloc'], self.pystruct, self.name, delete_code))
-
-        code_sink.writeln()
+        
         code_sink.writeln(self.TYPE_TMPL % dict_)
 
 

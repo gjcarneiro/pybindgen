@@ -119,22 +119,9 @@ class Module(object):
             code_sink.writeln()
             for class_ in self.classes:
                 code_sink.writeln()
-                class_.generate(code_sink)
+                class_.generate(code_sink, self)
                 code_sink.writeln()
 
-                ## register the class type
-                self.after_init.write_code("/* Register the '%s' class */" % class_.name)
-                if class_.parent is not None:
-                    assert isinstance(class_.parent, CppClass)
-                    self.after_init.write_code('%s.tp_base = &%s;' %
-                                               (class_.pytypestruct, class_.parent.pytypestruct))
-                self.after_init.write_error_check('PyType_Ready(&%s)'
-                                                  % (class_.pytypestruct,))
-                ## add to the module dict
-                self.after_init.write_code(
-                    'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
-                    class_.name, class_.pytypestruct))
-        
         ## now generate the module init function itself
         code_sink.writeln()
         code_sink.writeln("PyMODINIT_FUNC")
