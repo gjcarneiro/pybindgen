@@ -1,3 +1,16 @@
+=== pybindgen 0.4 ===
+        - Support reference counted C++ classes
+        - Generated code compiles with Python >= 2.3
+          (though Python >= 2.4 required for pybindgen itself)
+        - Memory leak fixes
+        - Add support for type transformations (for smart pointers)
+        - New option to prefix global declarations with a name
+        - Fix compilation warnings
+        - Add support for read-only access to C++ class attributes
+          (both instance and static attributes supported)
+        - Win32 build fixes
+        - Other bug fixes
+
 === pybindgen 0.3 ===
         - Supports methods and functions with parameters of a class
 type (for classes being wrapped).  Pass by pointer, value, or ref
