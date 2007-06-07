@@ -572,7 +572,7 @@ class ForwardWrapperBase(object):
 
     def __init__(self, return_value, parameters,
                  parse_error_return, error_return,
-                 force_parse=None):
+                 force_parse=None, no_c_retval=False):
         '''
         Base constructor
 
@@ -600,7 +600,8 @@ class ForwardWrapperBase(object):
         
         if return_value is not None:
             self.declarations.declare_variable('PyObject*', 'py_retval')
-        if return_value is not None and return_value.ctype != 'void':
+        if (not no_c_retval and return_value is not None
+            and return_value.ctype != 'void'):
             self.declarations.declare_variable(return_value.ctype, 'retval')
         
 

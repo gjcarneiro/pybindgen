@@ -212,7 +212,7 @@ class CppInstanceAttributeGetter(ForwardWrapperBase):
         attribute_name -- name of attribute
         """
         super(CppInstanceAttributeGetter, self).__init__(
-            value_type, [], "return NULL;", "return NULL;")
+            value_type, [], "return NULL;", "return NULL;", no_c_retval=True)
         self.class_ = class_
         self.attribute_name = attribute_name
         self.c_function_name = "_wrap_%s__get_%s" % (self.class_.pystruct,
@@ -220,7 +220,8 @@ class CppInstanceAttributeGetter(ForwardWrapperBase):
     def generate_call(self):
         "virtual method implementation; do not call"
         self.before_call.write_code(
-            "retval = self->obj->%s;" % (self.attribute_name))
+            "#define retval self->obj->%s" % (self.attribute_name))
+        self.before_call.add_cleanup_code('#undef retval')
     def generate(self, code_sink):
         """
         code_sink -- a CodeSink instance that will receive the generated code
@@ -245,7 +246,7 @@ class CppStaticAttributeGetter(ForwardWrapperBase):
         c_value_expression -- C value expression
         """
         super(CppStaticAttributeGetter, self).__init__(
-            value_type, [], "return NULL;", "return NULL;")
+            value_type, [], "return NULL;", "return NULL;", no_c_retval=True)
         self.class_ = class_
         self.attribute_name = attribute_name
         self.c_function_name = "_wrap_%s__get_%s" % (self.class_.pystruct,
@@ -253,7 +254,9 @@ class CppStaticAttributeGetter(ForwardWrapperBase):
     def generate_call(self):
         "virtual method implementation; do not call"
         self.before_call.write_code(
-            "retval = %s::%s;" % (self.class_.name, self.attribute_name))
+            "#define retval %s::%s" % (self.class_.name, self.attribute_name))
+        self.before_call.add_cleanup_code('#undef retval')
+        
     def generate(self, code_sink):
         """
         code_sink -- a CodeSink instance that will receive the generated code
