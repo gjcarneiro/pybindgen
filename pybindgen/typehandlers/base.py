@@ -117,6 +117,15 @@ class CodeBlock(object):
         '''Write out some simple code'''
         self.sink.writeln(code)
 
+    def indent(self, level=4):
+        '''Add a certain ammount of indentation to all lines written
+        from now on and until unindent() is called'''
+        self.sink.indent(level)
+
+    def unindent(self):
+        '''Revert indentation level to the value before last indent() call'''
+        self.sink.unindent()
+
     def add_cleanup_code(self, cleanup_code):
         '''Add a chunk of code used to cleanup previously allocated resources
 
