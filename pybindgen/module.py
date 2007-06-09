@@ -20,8 +20,8 @@ class Module(object):
         self.name = name
         self.functions = [] # (name, wrapper) pairs
         self.classes = []
-        self.before_init = CodeBlock('PyErr_Print();\nreturn;')
-        self.after_init = CodeBlock('PyErr_Print();\nreturn;',
+        self.before_init = CodeBlock('PyErr_Print();\nreturn;', self.declarations)
+        self.after_init = CodeBlock('PyErr_Print();\nreturn;', self.declarations,
                                     predecessor=self.before_init)
         self.c_function_name_transformer = None
         self.set_strip_prefix(name + '_')

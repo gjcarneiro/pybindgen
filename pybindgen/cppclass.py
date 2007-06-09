@@ -98,7 +98,7 @@ class CppMethod(ForwardWrapperBase):
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
                (method_name, wrapper_function_name, '|'.join(flags),
                 (docstring is None and "NULL" or ('"'+docstring+'"')))
-
+    
 
 class CppConstructor(ForwardWrapperBase):
     """

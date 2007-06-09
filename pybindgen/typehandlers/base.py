@@ -76,7 +76,7 @@ class CodeBlock(object):
             return self.position
 
     
-    def __init__(self, error_return, predecessor=None):
+    def __init__(self, error_return, declarations, predecessor=None):
         '''
            error_return -- code that is generated on error conditions
                            (detected by write_error_check()); normally
@@ -86,7 +86,7 @@ class CodeBlock(object):
                           predecessor is used to search for additional
                           cleanup actions.
 
-        >>> block = CodeBlock('return NULL;')
+        >>> block = CodeBlock('return NULL;', DeclarationsScope())
         >>> block.write_code("foo();")
         >>> cleanup1 = block.add_cleanup_code("clean1();")
         >>> cleanup2 = block.add_cleanup_code("clean2();")
@@ -107,11 +107,19 @@ class CodeBlock(object):
         clean3();
         clean1();
         '''
+        assert isinstance(declarations, DeclarationsScope)
+        assert predecessor is None or isinstance(predecessor, CodeBlock)
         self.sink = codesink.MemoryCodeSink()
         self.predecessor = predecessor
         self._cleanup_actions = {}
         self._last_cleanup_position = 0
         self.error_return = error_return
+
+    def declare_variable(self, type_, name, initializer=None, array=None):
+        """
+        Calls declare_variable() on the associated DeclarationsScope object.
+        """
+        return self.declarations.declare_variable(type_, name, initializer, array)
         
     def write_code(self, code):
         '''Write out some simple code'''
@@ -452,8 +460,9 @@ class ReverseWrapperBase(object):
 
         error_return = return_value.get_c_error_return()
         self.declarations = DeclarationsScope()
-        self.before_call = CodeBlock(error_return)
-        self.after_call = CodeBlock(error_return, predecessor=self.before_call)
+        self.before_call = CodeBlock(error_return, self.declarations)
+        self.after_call = CodeBlock(error_return, self.declarations,
+                                    predecessor=self.before_call)
         self.build_params = BuildValueParameters()
         self.parse_params = ParseTupleParameters()
 
@@ -598,9 +607,11 @@ class ForwardWrapperBase(object):
         self.return_value = return_value
         self.parameters = parameters
         self.declarations = DeclarationsScope()
-        self.before_parse = CodeBlock(parse_error_return)
-        self.before_call = CodeBlock(parse_error_return, predecessor=self.before_parse)
-        self.after_call = CodeBlock(error_return, predecessor=self.before_call)
+        self.before_parse = CodeBlock(parse_error_return, self.declarations)
+        self.before_call = CodeBlock(parse_error_return, self.declarations,
+                                     predecessor=self.before_parse)
+        self.after_call = CodeBlock(error_return, self.declarations,
+                                    predecessor=self.before_call)
         self.build_params = BuildValueParameters()
         self.parse_params = ParseTupleParameters()
         self.call_params = []
@@ -937,6 +948,46 @@ class Parameter(object):
         assert direction in self.DIRECTIONS
         self.direction = direction
         self.transformation = NullTypeTransformation()
+        self._lvalue = name
+        self.value = name
+
+    def set_value(self, value):
+        """
+        Set the C expression to be used as value, assuming it is *not*
+        an lvalue.  By default (if this method isn't called), the
+        parameter name is used as value/lvalue.  If the expression is
+        an lvalue (i.e. it can be assigned, or an address to it
+        taken), set_lvalue() should be called instead.
+        """
+        self._value = value
+        self._lvalue = None
+
+    def set_lvalue(self, lvalue):
+        """
+        Set the C expression to be used as value, assuming it is an
+        lvalue (i.e. it can be assigned, or an address to it taken).
+        If the expression is not lvalue, set_value() should be called
+        instead.
+        """
+        self._value = lvalue
+        self._lvalue = lvalue
+    def get_value(self):
+        """
+        Get the C value expression.  The returned expression is not
+        guaranteed to be lvalue.
+        """
+        return self._value
+    value = property(get_value, set_value)
+
+    def get_lvalue(self, code_block):
+        """
+        Get the C lvalue expression for the parameter.
+        """
+        if self._lvalue is None:
+            self._lvalue = code_block.declare_variable(self.ctype, self.name)
+            code_block.write_code("%s = %s;" % (self._lvalue, self._value))
+        return self._lvalue
+
 
     def set_tranformation(self, transformation, untransformed_ctype):
         "Set the type transformation to use in this type handler"
