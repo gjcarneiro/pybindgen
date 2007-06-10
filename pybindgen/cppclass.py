@@ -217,11 +217,12 @@ class CppInstanceAttributeGetter(ForwardWrapperBase):
         self.attribute_name = attribute_name
         self.c_function_name = "_wrap_%s__get_%s" % (self.class_.pystruct,
                                                      self.attribute_name)
+        value_type.value = "self->obj->%s" % self.attribute_name
+
     def generate_call(self):
         "virtual method implementation; do not call"
-        self.before_call.write_code(
-            "#define retval self->obj->%s" % (self.attribute_name))
-        self.before_call.add_cleanup_code('#undef retval')
+        pass
+
     def generate(self, code_sink):
         """
         code_sink -- a CodeSink instance that will receive the generated code
