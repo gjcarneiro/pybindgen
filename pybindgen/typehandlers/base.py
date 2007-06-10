@@ -840,6 +840,7 @@ class ReturnValue(object):
         self.ctype = ctype
         self.untransformed_ctype = ctype
         self.transformation = NullTypeTransformation()
+        self.value = 'retval'
 
     def set_tranformation(self, transformation, untransformed_ctype):
         "Set the type transformation to use in this type handler"

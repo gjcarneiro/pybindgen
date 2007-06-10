@@ -99,7 +99,9 @@ class StdStringReturn(ReturnValue):
         len_ = wrapper.declarations.declare_variable("Py_ssize_t", "retval_len")
         wrapper.parse_params.add_parameter("s#", ['&'+ptr, '&'+len_])
         wrapper.after_call.write_code(
-            "retval = std::string(%s, %s);" % (ptr, len_))
+            "%s = std::string(%s, %s);" % (self.value, ptr, len_))
 
     def convert_c_to_python(self, wrapper):
-        wrapper.build_params.add_parameter("s#", ['retval.c_str()', 'retval.size()'], prepend=True)
+        wrapper.build_params.add_parameter("s#", ['%s.c_str()' % self.value,
+                                                  '%s.size()' % self.value],
+                                           prepend=True)

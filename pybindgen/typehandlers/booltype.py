@@ -12,13 +12,13 @@ class BoolParam(Parameter):
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
-        wrapper.build_params.add_parameter('N', ["PyBool_FromLong(%s)" % (self.name,)])
+        wrapper.build_params.add_parameter('N', ["PyBool_FromLong(%s)" % (self.value,)])
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
         name = wrapper.declarations.declare_variable(self.ctype, self.name)
         py_name = wrapper.declarations.declare_variable('PyObject *', 'py_'+self.name)
-        wrapper.parse_params.add_parameter('O', ['&'+py_name], self.name)
+        wrapper.parse_params.add_parameter('O', ['&'+py_name], self.value)
         wrapper.before_call.write_code("%s = PyObject_IsTrue(%s);" % (name, py_name))
         wrapper.call_params.append(name)
 
@@ -34,11 +34,11 @@ class BoolReturn(ReturnValue):
         py_name = wrapper.declarations.declare_variable('PyObject *', 'py_boolretval')
         wrapper.parse_params.add_parameter("O", ["&"+py_name], prepend=True)
         wrapper.after_call.write_code(
-            "retval = PyObject_IsTrue(%s);" % (py_name,))
+            "%s = PyObject_IsTrue(%s);" % (self.value, py_name))
 
     def convert_c_to_python(self, wrapper):
         wrapper.build_params.add_parameter(
-            "N", ["PyBool_FromLong(retval)"], prepend=True)
+            "N", ["PyBool_FromLong(%s)" % self.value], prepend=True)
 
 
 class BoolPtrParam(Parameter):
@@ -50,13 +50,13 @@ class BoolPtrParam(Parameter):
     def convert_c_to_python(self, wrapper):
         if self.direction & self.DIRECTION_IN:
             wrapper.build_params.add_parameter(
-                'N', ["PyBool_FromLong(*%s)" % (self.name,)])
+                'N', ["PyBool_FromLong(*%s)" % (self.value,)])
         if self.direction & self.DIRECTION_OUT:
             py_name = wrapper.declarations.declare_variable(
                 'PyObject *', 'py_'+self.name)
-            wrapper.parse_params.add_parameter("O", ["&"+py_name], self.name)
+            wrapper.parse_params.add_parameter("O", ["&"+py_name], self.value)
             wrapper.after_call.write_code(
-                "*%s = PyObject_IsTrue(%s);" % (self.name, py_name,))
+                "*%s = PyObject_IsTrue(%s);" % (self.value, py_name,))
 
     def convert_python_to_c(self, wrapper):
         assert self.ctype == 'bool*'
@@ -64,12 +64,12 @@ class BoolPtrParam(Parameter):
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
             py_name = wrapper.declarations.declare_variable("PyObject*", 'py_'+self.name)
-            wrapper.parse_params.add_parameter("O", ["&"+py_name], self.name)
+            wrapper.parse_params.add_parameter("O", ["&"+py_name], self.value)
             wrapper.before_call.write_code(
-                "%s = PyObject_IsTrue(%s);" % (self.name, py_name,))
+                "%s = PyObject_IsTrue(%s);" % (self.value, py_name,))
         if self.direction & self.DIRECTION_OUT:
             wrapper.build_params.add_parameter(
-                'N', ["PyBool_FromLong(%s)" % (self.name,)])
+                'N', ["PyBool_FromLong(%s)" % (self.value,)])
         
 
 class BoolRefParam(Parameter):
@@ -81,13 +81,13 @@ class BoolRefParam(Parameter):
     def convert_c_to_python(self, wrapper):
         if self.direction & self.DIRECTION_IN:
             wrapper.build_params.add_parameter(
-                'N', ["PyBool_FromLong(%s)" % (self.name,)])
+                'N', ["PyBool_FromLong(%s)" % (self.value,)])
         if self.direction & self.DIRECTION_OUT:
             py_name = wrapper.declarations.declare_variable(
                 'PyObject *', 'py_'+self.name)
             wrapper.parse_params.add_parameter("O", ["&"+py_name], self.name)
             wrapper.after_call.write_code(
-                "%s = PyObject_IsTrue(%s);" % (self.name, py_name,))
+                "%s = PyObject_IsTrue(%s);" % (self.value, py_name,))
 
     def convert_python_to_c(self, wrapper):
         assert self.ctype == 'bool&'
@@ -95,9 +95,9 @@ class BoolRefParam(Parameter):
         wrapper.call_params.append(name)
         if self.direction & self.DIRECTION_IN:
             py_name = wrapper.declarations.declare_variable("PyObject*", 'py_'+self.name)
-            wrapper.parse_params.add_parameter("O", ["&"+py_name], self.name)
+            wrapper.parse_params.add_parameter("O", ["&"+py_name], self.value)
             wrapper.before_call.write_code(
-                "%s = PyObject_IsTrue(%s);" % (self.name, py_name,))
+                "%s = PyObject_IsTrue(%s);" % (self.value, py_name,))
         if self.direction & self.DIRECTION_OUT:
             wrapper.build_params.add_parameter(
-                'N', ["PyBool_FromLong(%s)" % (self.name,)])
+                'N', ["PyBool_FromLong(%s)" % (self.value,)])

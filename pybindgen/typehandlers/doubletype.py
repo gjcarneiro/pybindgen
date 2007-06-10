@@ -29,10 +29,10 @@ class DoubleReturn(ReturnValue):
         return "return 0;"
     
     def convert_python_to_c(self, wrapper):
-        wrapper.parse_params.add_parameter("d", ["&retval"], prepend=True)
+        wrapper.parse_params.add_parameter("d", ["&"+self.value], prepend=True)
 
     def convert_c_to_python(self, wrapper):
-        wrapper.build_params.add_parameter("d", ["retval"], prepend=True)
+        wrapper.build_params.add_parameter("d", [self.value], prepend=True)
 
 
 class DoublePtrParam(Parameter):
