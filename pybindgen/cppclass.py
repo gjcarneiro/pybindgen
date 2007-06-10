@@ -773,7 +773,7 @@ class CppClassReturnValue(ReturnValue):
             "%s = PyObject_New(%s, %s);" %
             (py_name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
         wrapper.after_call.write_code(
-            "%s->obj = new %s(retval);" % (py_name, self.cpp_class.name))
+            "%s->obj = new %s(%s);" % (py_name, self.cpp_class.name, self.value))
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
 
@@ -831,7 +831,7 @@ class CppClassPtrReturnValue(ReturnValue):
             (py_name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
         
         value = self.transformation.untransform(
-            self, wrapper.declarations, wrapper.after_call, 'retval')
+            self, wrapper.declarations, wrapper.after_call, self.value)
         
         if self.caller_owns_return:
             wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
