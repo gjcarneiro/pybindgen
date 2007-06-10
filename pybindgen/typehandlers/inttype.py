@@ -12,7 +12,7 @@ class IntParam(Parameter):
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
-        wrapper.build_params.add_parameter('i', [self.name])
+        wrapper.build_params.add_parameter('i', [self.value])
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
@@ -43,9 +43,9 @@ class IntPtrParam(Parameter):
     
     def convert_c_to_python(self, wrapper):
         if self.direction & self.DIRECTION_IN:
-            wrapper.build_params.add_parameter('i', ['*'+self.name])
+            wrapper.build_params.add_parameter('i', ['*'+self.value])
         if self.direction & self.DIRECTION_OUT:
-            wrapper.parse_params.add_parameter("i", [self.name], self.name)
+            wrapper.parse_params.add_parameter("i", [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
         assert self.ctype == 'int*'
@@ -66,9 +66,9 @@ class IntRefParam(Parameter):
     
     def convert_c_to_python(self, wrapper):
         if self.direction & self.DIRECTION_IN:
-            wrapper.build_params.add_parameter('i', [self.name])
+            wrapper.build_params.add_parameter('i', [self.value])
         if self.direction & self.DIRECTION_OUT:
-            wrapper.parse_params.add_parameter("i", [self.name], self.name)
+            wrapper.parse_params.add_parameter("i", [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
         assert self.ctype == 'int&'

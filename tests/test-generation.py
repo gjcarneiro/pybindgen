@@ -39,8 +39,9 @@ def test():
                     param_name = 'param_inout'
                 elif direction == (Parameter.DIRECTION_OUT):
                     param_name = 'param_out'
-                wrapper = MyReverseWrapper(return_handler(return_type),
-                                           [param_handler(param_type, param_name, direction)])
+                param = param_handler(param_type, param_name, direction)
+                wrapper = MyReverseWrapper(
+                    return_handler(return_type), [param])
                 wrapper_number += 1
                 wrapper.generate(code_out,
                                  '_test_wrapper_number_%i' % (wrapper_number,),
@@ -65,8 +66,11 @@ def test():
                     param_name = 'param_inout'
                 elif direction == (Parameter.DIRECTION_OUT):
                     param_name = 'param_out'
+                param = param_handler(param_type, param_name, direction)
+                param.value = param_name
+                param.name += '_name'
                 wrapper = Function(return_handler(return_type), function_name,
-                                   [param_handler(param_type, param_name, direction)])
+                                   [param])
 
                 module.add_function(wrapper)
 
