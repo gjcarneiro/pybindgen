@@ -60,12 +60,12 @@ class CppStaticAttributeGetter(ForwardWrapperBase):
         self.attribute_name = attribute_name
         self.c_function_name = "_wrap_%s__get_%s" % (self.class_.pystruct,
                                                      self.attribute_name)
+        value_type.value = "%s::%s" % (self.class_.name, self.attribute_name)
+
     def generate_call(self):
         "virtual method implementation; do not call"
-        self.before_call.write_code(
-            "#define retval %s::%s" % (self.class_.name, self.attribute_name))
-        self.before_call.add_cleanup_code('#undef retval')
-        
+        pass
+
     def generate(self, code_sink):
         """
         code_sink -- a CodeSink instance that will receive the generated code
@@ -118,6 +118,58 @@ class CppInstanceAttributeSetter(ReverseWrapperBase):
 
         ## now generate the function itself
         code_sink.writeln("static int %s(%s *self, PyObject *value)"
+                          % (self.c_function_name, self.class_.pystruct))
+        code_sink.writeln('{')
+        code_sink.indent()
+
+        self.declarations.get_code_sink().flush_to(code_sink)
+        code_sink.writeln()
+        self.before_call.sink.flush_to(code_sink)
+        self.after_call.sink.flush_to(code_sink)
+
+        code_sink.unindent()
+        code_sink.writeln('}')
+
+
+class CppStaticAttributeSetter(ReverseWrapperBase):
+    '''
+    A setter for a C++ class static attribute.
+    '''
+    def __init__(self, value_type, class_, attribute_name):
+        """
+        value_type -- a ReturnValue object handling the value type;
+        class_ -- the class (CppClass object)
+        attribute_name -- name of attribute
+        """
+        super(CppStaticAttributeSetter, self).__init__(
+            value_type, [], "return -1;")
+        self.class_ = class_
+        self.attribute_name = attribute_name
+        self.c_function_name = "_wrap_%s__set_%s" % (self.class_.pystruct,
+                                                     self.attribute_name)
+        value_type.value =  "%s::%s" % (self.class_.name, self.attribute_name)
+
+    def generate(self, code_sink):
+        """
+        code_sink -- a CodeSink instance that will receive the generated code
+        """
+
+        self.declarations.declare_variable('PyObject*', 'py_retval')
+        self.before_call.write_code(
+            'py_retval = Py_BuildValue("(O)", value);')
+        self.before_call.add_cleanup_code('Py_DECREF(py_retval);')
+        self.return_value.convert_python_to_c(self)
+        parse_tuple_params = ['py_retval']
+        parse_tuple_params.extend(self.parse_params.get_parameters())
+        self.before_call.write_error_check('!PyArg_ParseTuple(%s)' %
+                                           (', '.join(parse_tuple_params),))
+        ## cleanup and return
+        self.after_call.write_cleanup()
+        self.after_call.write_code('return 0;')
+
+        ## now generate the function itself
+        code_sink.writeln(("static int %s(%s *self PYBINDGEN_UNUSED, "
+                           "PyObject *obj PYBINDGEN_UNUSED, PyObject *value)")
                           % (self.c_function_name, self.class_.pystruct))
         code_sink.writeln('{')
         code_sink.indent()

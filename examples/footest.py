@@ -76,14 +76,22 @@ class TestFoo(unittest.TestCase):
         zz3 = obj.peek_zbr()
         self.assertEqual(zz3.get_datum(), "world")
         
-    def test_instance_attribute(self):
+    def test_instance_get_attribute(self):
         obj = foo.SomeObject("Hello")
         self.assertEqual(obj.m_prefix, "Hello")
+
+    def test_instance_set_attribute(self):
+        obj = foo.SomeObject("")
         obj.m_prefix = "World"
         self.assertEqual(obj.m_prefix, "World")
 
-    def test_static_attribute(self):
+    def test_static_get_attribute(self):
         self.assertEqual(foo.SomeObject.staticData, "Hello Static World!")
+
+    # Not working :-(
+    #def test_static_set_attribute(self):
+    #    foo.SomeObject.staticData = "Foo Bar Zbr"
+    #    self.assertEqual(foo.SomeObject.staticData, "Foo Bar Zbr")
 
 if __name__ == '__main__':
     unittest.main()

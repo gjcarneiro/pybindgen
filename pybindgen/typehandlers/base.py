@@ -485,8 +485,8 @@ class ReverseWrapperBase(object):
         assert all([isinstance(mod, str) for mod in decl_modifiers])
 
         self.declarations.declare_variable('PyObject*', 'py_retval')
-        if return_value.ctype != 'void':
-            self.declarations.declare_variable(return_value.ctype, 'retval')
+        if self.return_value.ctype != 'void':
+            self.declarations.declare_variable(self.return_value.ctype, 'retval')
 
         ## convert the input parameters
         for param in self.parameters:

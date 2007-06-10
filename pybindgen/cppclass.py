@@ -6,7 +6,7 @@ from typehandlers.base import ForwardWrapperBase, Parameter, ReturnValue
 
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor
 from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter,
-                          CppStaticAttributeGetter,
+                          CppStaticAttributeGetter, CppStaticAttributeSetter,
                           PyDescrGenerator)
 
 
@@ -154,19 +154,22 @@ class CppClass(object):
 
     def add_static_attribute(self, value_type, name):
         """
-        XXX: setter not yet implemented.
-
+        Caveat: static attributes cannot be changed from Python; not implemented.
         value_type -- a ReturnValue object
+        name -- attribute name (i.e. the name of the class member variable)
         """
         assert isinstance(value_type, ReturnValue)
         getter = CppStaticAttributeGetter(value_type, self, name)
-        self.attributes.append((name, getter, None))
+        ## it is hopeless, descriptor setters are not even invoked
+        ## when accessed through a class, only from instances. :(
+        #setter = CppStaticAttributeSetter(value_type, self, name)
+        setter = None
+        self.attributes.append((name, getter, setter))
 
     def add_instance_attribute(self, value_type, name):
         """
-        XXX: not working correctly: setter not yet implemented.
-
         value_type -- a ReturnValue object
+        name -- attribute name (i.e. the name of the class member variable)
         """
         assert isinstance(value_type, ReturnValue)
         getter = CppInstanceAttributeGetter(value_type, self, name)
@@ -261,15 +264,29 @@ typedef struct {
                     ## getter.c_function_name is then added to the
                     ## tp_getset table, further below.
 
-                elif isinstance(getter, CppStaticAttributeGetter):
-                    ## static attributes are a bit more tricky.. :-/
+                elif (isinstance(getter, CppStaticAttributeGetter)
+                      or isinstance(setter, CppStaticAttributeSetter)):
+                    ## Static attributes are a bit more tricky.. :-/
                     ## mainly because PyDecr_NewGetSet generates a
                     ## descriptor that disables itself when called
                     ## from a class; it only handles instances.
-                    getter.generate(code_sink)
+                    ## Therefore, we need to create our own descriptor
+                    ## python type...
+                    if getter is None:
+                        getter_c_name = None
+                    else:
+                        getter_c_name = getter.c_function_name
+                        getter.generate(code_sink)
+
+                    if setter is None:
+                        setter_c_name = None
+                    else:
+                        setter_c_name = setter.c_function_name
+                        setter.generate(code_sink)
+                        
                     descriptor = PyDescrGenerator(
                         '%s_%sDescr' % (self.pystruct, name),
-                        getter.c_function_name, None)
+                        getter_c_name, setter_c_name)
                     descriptor.generate(code_sink)
                     module.after_init.write_error_check(
                         'PyType_Ready(&%s)' % (descriptor.pytypestruct))
