@@ -5,7 +5,8 @@ Wrap C++ classes and methods
 from typehandlers.base import ForwardWrapperBase, Parameter, ReturnValue
 
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor
-from cppattribute import (CppInstanceAttributeGetter, CppStaticAttributeGetter,
+from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter,
+                          CppStaticAttributeGetter,
                           PyDescrGenerator)
 
 
@@ -169,7 +170,8 @@ class CppClass(object):
         """
         assert isinstance(value_type, ReturnValue)
         getter = CppInstanceAttributeGetter(value_type, self, name)
-        self.attributes.append((name, getter, None))
+        setter = CppInstanceAttributeSetter(value_type, self, name)
+        self.attributes.append((name, getter, setter))
 
     def generate_forward_declarations(self, code_sink):
         """Generates forward declarations for the instance and type
@@ -274,6 +276,11 @@ typedef struct {
                     module.after_init.write_code(
                         'PyDict_SetItemString(%s.tp_dict, "%s", PyObject_New(PyObject, &%s));'
                         % (self.pytypestruct, name, descriptor.pytypestruct))
+
+                ## generate setter wrapper function body
+                if isinstance(setter, CppInstanceAttributeSetter):
+                    have_instance_attributes = True
+                    setter.generate(code_sink)
                     
             if have_instance_attributes:
                 getset_table_name = "_%s__getsets" % self.pystruct
@@ -287,6 +294,8 @@ typedef struct {
                     code_sink.writeln('{')
                     code_sink.indent()
                     code_sink.writeln('"%s", /* attribute name */' % name)
+
+                    ## getter
                     if isinstance(getter, CppInstanceAttributeGetter):
                         getter_c_name = getter.c_function_name
                     else:
@@ -294,10 +303,16 @@ typedef struct {
                     code_sink.writeln(
                         '(getter) %s, /* C function to get the attribute */'
                         % getter_c_name)
-                    setter_c_name = "NULL"
+
+                    ## setter
+                    if isinstance(setter, CppInstanceAttributeSetter):
+                        setter_c_name = setter.c_function_name
+                    else:
+                        setter_c_name = "NULL"
                     code_sink.writeln(
                         '(setter) %s, /* C function to set the attribute */'
                         % setter_c_name)
+
                     code_sink.writeln('NULL, /* optional doc string */')
                     code_sink.writeln('NULL /* optional additional data '
                                       'for getter and setter */')

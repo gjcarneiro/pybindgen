@@ -443,7 +443,7 @@ class ReverseWrapperBase(object):
 
     """
 
-    def __init__(self, return_value, parameters):
+    def __init__(self, return_value, parameters, error_return=None):
         '''
         Base constructor
 
@@ -459,17 +459,14 @@ class ReverseWrapperBase(object):
         self.return_value = return_value
         self.parameters = parameters
 
-        error_return = return_value.get_c_error_return()
+        if error_return is None:
+            error_return = return_value.get_c_error_return()
         self.declarations = DeclarationsScope()
         self.before_call = CodeBlock(error_return, self.declarations)
         self.after_call = CodeBlock(error_return, self.declarations,
                                     predecessor=self.before_call)
         self.build_params = BuildValueParameters()
         self.parse_params = ParseTupleParameters()
-
-        self.declarations.declare_variable('PyObject*', 'py_retval')
-        if return_value.ctype != 'void':
-            self.declarations.declare_variable(return_value.ctype, 'retval')
 
     def generate_python_call(self):
         """Generates the code (into self.before_call) to call into
@@ -486,6 +483,10 @@ class ReverseWrapperBase(object):
         """
         assert isinstance(decl_modifiers, list)
         assert all([isinstance(mod, str) for mod in decl_modifiers])
+
+        self.declarations.declare_variable('PyObject*', 'py_retval')
+        if return_value.ctype != 'void':
+            self.declarations.declare_variable(return_value.ctype, 'retval')
 
         ## convert the input parameters
         for param in self.parameters:

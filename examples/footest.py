@@ -79,6 +79,8 @@ class TestFoo(unittest.TestCase):
     def test_instance_attribute(self):
         obj = foo.SomeObject("Hello")
         self.assertEqual(obj.m_prefix, "Hello")
+        obj.m_prefix = "World"
+        self.assertEqual(obj.m_prefix, "World")
 
     def test_static_attribute(self):
         self.assertEqual(foo.SomeObject.staticData, "Hello Static World!")
