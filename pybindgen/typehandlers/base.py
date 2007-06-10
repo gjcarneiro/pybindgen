@@ -815,7 +815,6 @@ class ReturnValue(object):
         True
         """
         if cls is ReturnValue:
-            # support calling ReturnValue("typename", ...)
             ctype = args[0]
             type_handler_class, transformation = \
                 return_type_matcher.lookup(ctype)
@@ -948,46 +947,7 @@ class Parameter(object):
         assert direction in self.DIRECTIONS
         self.direction = direction
         self.transformation = NullTypeTransformation()
-        self._lvalue = name
         self.value = name
-
-    def set_value(self, value):
-        """
-        Set the C expression to be used as value, assuming it is *not*
-        an lvalue.  By default (if this method isn't called), the
-        parameter name is used as value/lvalue.  If the expression is
-        an lvalue (i.e. it can be assigned, or an address to it
-        taken), set_lvalue() should be called instead.
-        """
-        self._value = value
-        self._lvalue = None
-
-    def set_lvalue(self, lvalue):
-        """
-        Set the C expression to be used as value, assuming it is an
-        lvalue (i.e. it can be assigned, or an address to it taken).
-        If the expression is not lvalue, set_value() should be called
-        instead.
-        """
-        self._value = lvalue
-        self._lvalue = lvalue
-    def get_value(self):
-        """
-        Get the C value expression.  The returned expression is not
-        guaranteed to be lvalue.
-        """
-        return self._value
-    value = property(get_value, set_value)
-
-    def get_lvalue(self, code_block):
-        """
-        Get the C lvalue expression for the parameter.
-        """
-        if self._lvalue is None:
-            self._lvalue = code_block.declare_variable(self.ctype, self.name)
-            code_block.write_code("%s = %s;" % (self._lvalue, self._value))
-        return self._lvalue
-
 
     def set_tranformation(self, transformation, untransformed_ctype):
         "Set the type transformation to use in this type handler"
