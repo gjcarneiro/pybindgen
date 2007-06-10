@@ -56,20 +56,33 @@ public:
     ## test return type handlers of reverse wrappers
     for return_type, return_handler in typehandlers.base.return_type_matcher.items():
         if issubclass(return_handler, cppclass.CppClassPtrReturnValue):
-            retval = return_handler(return_type, caller_owns_return=True)
+            for caller_owns_return in True, False:
+                retval = return_handler(return_type, caller_owns_return=caller_owns_return)
+                wrapper = MyReverseWrapper(retval, [])
+                wrapper_number += 1
+                try:
+                    wrapper.generate(code_out,
+                                     '_test_wrapper_number_%i' % (wrapper_number,),
+                                     ['static'])
+                except NotImplementedError:
+                    print >> sys.stderr, \
+                        ("ReverseWrapper %s(void) (caller_owns_return=%r)"
+                         " could not be generated: not implemented"
+                         % (retval.ctype, caller_owns_return))
+                print
         else:
             retval = return_handler(return_type)
+            wrapper = MyReverseWrapper(retval, [])
+            wrapper_number += 1
+            try:
+                wrapper.generate(code_out,
+                                 '_test_wrapper_number_%i' % (wrapper_number,),
+                                 ['static'])
+            except NotImplementedError:
+                print >> sys.stderr, ("ReverseWrapper %s(void) could not be generated: not implemented"
+                                      % (retval.ctype,))
+            print
 
-        wrapper = MyReverseWrapper(retval, [])
-        wrapper_number += 1
-        try:
-            wrapper.generate(code_out,
-                             '_test_wrapper_number_%i' % (wrapper_number,),
-                             ['static'])
-        except NotImplementedError:
-            print >> sys.stderr, ("ReverseWrapper %s(void) could not be generated: not implemented"
-                                  % (retval.ctype,))
-        print
 
     ## test parameter type handlers of reverse wrappers
     for param_type, param_handler in typehandlers.base.param_type_matcher.items():
@@ -112,11 +125,6 @@ public:
     
     for param_type, param_handler in typehandlers.base.param_type_matcher.items():
         for direction in param_handler.DIRECTIONS:
-            wrapper_number += 1
-            function_name = 'foo_function_%i' % (wrapper_number,)
-            ## declare a fake prototype
-            print "void %s(%s);" % (function_name, param_type)
-            print
             if direction == (Parameter.DIRECTION_IN):
                 param_name = 'param'
             elif direction == (Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT):
@@ -125,15 +133,25 @@ public:
                 param_name = 'param_out'
 
             if issubclass(param_handler, cppclass.CppClassPtrParameter):
-                param = param_handler(param_type, param_name, transfer_ownership=False)
+                for transfer_ownership in True, False:
+                    name = param_name + (transfer_ownership and '_transfer' or '_notransfer')
+                    param = param_handler(param_type, name , transfer_ownership=transfer_ownership)
+                    wrapper_number += 1
+                    function_name = 'foo_function_%i' % (wrapper_number,)
+                    ## declare a fake prototype
+                    print "void %s(%s %s);" % (function_name, param_type, name)
+                    print
+                    wrapper = Function(ReturnValue.new('void'), function_name, [param])
+                    module.add_function(wrapper)
             else:
                 param = param_handler(param_type, param_name, direction)
-
-            param.value = param_name
-            #param.name += '_name'
-
-            wrapper = Function(ReturnValue.new('void'), function_name, [param])
-            module.add_function(wrapper)
+                wrapper_number += 1
+                function_name = 'foo_function_%i' % (wrapper_number,)
+                ## declare a fake prototype
+                print "void %s(%s);" % (function_name, param_type)
+                print
+                wrapper = Function(ReturnValue.new('void'), function_name, [param])
+                module.add_function(wrapper)
 
     module.generate(code_out)
 
