@@ -754,7 +754,7 @@ class CppClassRefParameter(Parameter):
             wrapper.parse_params.add_parameter(
                 'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
             wrapper.call_params.append(
-                '*%s->obj' % (self.cpp_class.pystruct, name))
+                '*%s->obj' % (name))
             wrapper.build_params.add_parameter("O", [name])
 
 
