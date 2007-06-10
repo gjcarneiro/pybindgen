@@ -114,6 +114,7 @@ class CodeBlock(object):
         self._cleanup_actions = {}
         self._last_cleanup_position = 0
         self.error_return = error_return
+        self.declarations = declarations
 
     def declare_variable(self, type_, name, initializer=None, array=None):
         """
