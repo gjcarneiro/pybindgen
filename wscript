@@ -109,3 +109,7 @@ def build(bld):
     bld.add_subdirs('examples')
     bld.add_subdirs('pybindgen')
 
+def shutdown():
+    if Params.g_commands['check']:
+        if subprocess.Popen(['python', 'examples/footest.py']).wait():
+            raise SystemExit(1)
