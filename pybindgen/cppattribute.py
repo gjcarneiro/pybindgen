@@ -188,8 +188,8 @@ class CppStaticAttributeSetter(PySetter):
         self.after_call.write_code('return 0;')
 
         ## now generate the function itself
-        code_sink.writeln(("static int %s(%s *self PYBINDGEN_UNUSED, "
-                           "PyObject *obj PYBINDGEN_UNUSED, PyObject *value)")
+        code_sink.writeln(("static int %s(%s *dummy PYBINDGEN_UNUSED, "
+                           "PyObject *value)")
                           % (self.c_function_name, self.class_.pystruct))
         code_sink.writeln('{')
         code_sink.indent()
@@ -289,6 +289,8 @@ PyTypeObject %(pytypestruct)s = {
 %(pytypestruct)s.tp_traverse = %(parent_metaclass)s->tp_traverse;
 %(pytypestruct)s.tp_clear = %(parent_metaclass)s->tp_clear;
 %(pytypestruct)s.tp_is_gc = %(parent_metaclass)s->tp_is_gc;
+/* PyType tp_setattro is too restrictive */
+%(pytypestruct)s.tp_setattro = PyObject_GenericSetAttr;
 PyType_Ready(&%(pytypestruct)s);
 """ % dict(pytypestruct=self.pytypestruct, parent_metaclass=self.parent_metaclass_expr))
         
