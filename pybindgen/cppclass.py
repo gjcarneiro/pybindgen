@@ -2,14 +2,14 @@
 Wrap C++ classes and methods
 """
 
+import warnings
+
 from typehandlers.base import ForwardWrapperBase, Parameter, ReturnValue
 
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor
 from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter,
                           CppStaticAttributeGetter, CppStaticAttributeSetter,
                           PyGetSetDef, PyMetaclass)
-
-
 import settings
      
 
@@ -415,6 +415,14 @@ class CppClassReturnValue(ReturnValue):
             "%s->obj = new %s(%s);" % (py_name, self.cpp_class.name, self.value))
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
+    def convert_python_to_c(self, wrapper):
+        name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
+        wrapper.parse_params.add_parameter(
+            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name])
+        wrapper.after_call.write_code('%s = *%s->obj;' % (self.value, name))
+    
+
 
 class CppClassPtrParameter(Parameter):
     "Class* handlers"
@@ -460,7 +468,7 @@ class CppClassPtrReturnValue(ReturnValue):
         self.caller_owns_return = caller_owns_return
 
     def get_c_error_return(self): # only used in reverse wrappers
-        return "return %s();" % (self.cpp_class.name,)
+        return "return NULL;"
 
     def convert_c_to_python(self, wrapper):
         py_name = wrapper.declarations.declare_variable(
@@ -489,3 +497,34 @@ class CppClassPtrReturnValue(ReturnValue):
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
 
+    def convert_python_to_c(self, wrapper):
+        name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
+        wrapper.parse_params.add_parameter(
+            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name])
+
+        value = self.transformation.untransform(
+            self, wrapper.declarations, wrapper.after_call, "%s->obj" % name)
+
+        ## now the hairy part :)
+        if self.caller_owns_return:
+            if self.cpp_class.incref_method is None:
+                ## the caller receives a copy
+                wrapper.after_call.write_code(
+                    "%s = new %s(*%s);"
+                    % (self.value, self.cpp_class.name, value))
+            else:
+                ## the caller gets a new reference to the same obj
+                wrapper.after_call.write_code(
+                    "%s->%s();" % (value, self.cpp_class.incref_method))
+                wrapper.after_call.write_code(
+                    "%s = %s;" % (self.value, value))
+        else:
+            ## caller gets a shared pointer
+            ## but this is dangerous, avoid at all cost!!!
+            wrapper.after_call.write_code(
+                "// dangerous!\n%s = %s;" % (self.value, value))
+            warnings.warn("Returning shared pointers is dangerous!"
+                          "  The C++ API should be redesigned "
+                          "to avoid this situation.")
+            
