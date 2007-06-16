@@ -1,3 +1,7 @@
+=== pybindgen 0.5 ===
+	- Support C++ class instance/static attribute setters (only
+          getters supported before).
+
 === pybindgen 0.4 ===
         - Support reference counted C++ classes
         - Generated code compiles with Python >= 2.3
