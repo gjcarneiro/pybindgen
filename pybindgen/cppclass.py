@@ -157,25 +157,33 @@ class CppClass(object):
                 'multiple constructors not yet supported')
         self.constructors.append(wrapper)
 
-    def add_static_attribute(self, value_type, name):
+    def add_static_attribute(self, value_type, name, is_const=False):
         """
         Caveat: static attributes cannot be changed from Python; not implemented.
         value_type -- a ReturnValue object
         name -- attribute name (i.e. the name of the class member variable)
+        is_const -- True if the attribute is const, i.e. cannot be modified
         """
         assert isinstance(value_type, ReturnValue)
         getter = CppStaticAttributeGetter(value_type, self, name)
-        setter = CppStaticAttributeSetter(value_type, self, name)
+        if is_const:
+            setter = None
+        else:
+            setter = CppStaticAttributeSetter(value_type, self, name)
         self.static_attributes.add_attribute(name, getter, setter)
 
-    def add_instance_attribute(self, value_type, name):
+    def add_instance_attribute(self, value_type, name, is_const=False):
         """
         value_type -- a ReturnValue object
         name -- attribute name (i.e. the name of the class member variable)
+        is_const -- True if the attribute is const, i.e. cannot be modified
         """
         assert isinstance(value_type, ReturnValue)
         getter = CppInstanceAttributeGetter(value_type, self, name)
-        setter = CppInstanceAttributeSetter(value_type, self, name)
+        if is_const:
+            setter = None
+        else:
+            setter = CppInstanceAttributeSetter(value_type, self, name)
         self.instance_attributes.add_attribute(name, getter, setter)
 
     def generate_forward_declarations(self, code_sink):
