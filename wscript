@@ -92,7 +92,7 @@ def configure(conf):
     if not conf.check_tool('compiler_cxx'):
         fatal("Error: no C compiler was found in PATH.")
     if os.path.basename(conf.env['CXX']).startswith("g++"):
-        conf.env.append_value('CXXFLAGS', ['-Wall'])
+        conf.env.append_value('CXXFLAGS', ['-Wall', '-fno-strict-aliasing'])
         if Params.g_options.debug_level == 'ultradebug':
             conf.env.append_value('CXXFLAGS', ['-Wextra'])
     if not (conf.check_tool('python')
