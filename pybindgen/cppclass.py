@@ -7,7 +7,7 @@ from typehandlers.base import ForwardWrapperBase, Parameter, ReturnValue
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor
 from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter,
                           CppStaticAttributeGetter, CppStaticAttributeSetter,
-                          PyDescrGenerator)
+                          PyGetSetDef, PyMetaclass)
 
 
 import settings
@@ -52,7 +52,7 @@ class CppClass(object):
         '    (iternextfunc)%(tp_iternext)s,     /* tp_iternext */\n'
         '    (struct PyMethodDef*)%(tp_methods)s, /* tp_methods */\n'
         '    (struct PyMemberDef*)0,              /* tp_members */\n'
-        '    (struct PyGetSetDef*)%(tp_getset)s,  /* tp_getset */\n'
+        '    %(tp_getset)s,                     /* tp_getset */\n'
         '    NULL,                              /* tp_base */\n'
         '    NULL,                              /* tp_dict */\n'
         '    (descrgetfunc)%(tp_descr_get)s,    /* tp_descr_get */\n'
@@ -88,11 +88,16 @@ class CppClass(object):
         self.name = name
         self.methods = [] # (name, wrapper) pairs
         self.constructors = [] # (name, wrapper) pairs
-        self.attributes = [] # (name, getter, setter) pairs
         self.slots = dict()
+
         prefix = settings.name_prefix.capitalize()
         self.pystruct = "Py%s%s" % (prefix, self.name)
+        self.metaclass_name = "%sMeta" % self.pystruct
         self.pytypestruct = "Py%s%s_Type" % (prefix, self.name)
+
+        self.instance_attributes = PyGetSetDef("%s__getsets" % self.pystruct)
+        self.static_attributes = PyGetSetDef("%s__getsets" % self.metaclass_name)
+
         self.parent = parent
         assert parent is None or isinstance(parent, CppClass)
         assert (incref_method is None and decref_method is None) \
@@ -160,11 +165,8 @@ class CppClass(object):
         """
         assert isinstance(value_type, ReturnValue)
         getter = CppStaticAttributeGetter(value_type, self, name)
-        ## it is hopeless, descriptor setters are not even invoked
-        ## when accessed through a class, only from instances. :(
-        #setter = CppStaticAttributeSetter(value_type, self, name)
-        setter = None
-        self.attributes.append((name, getter, setter))
+        setter = CppStaticAttributeSetter(value_type, self, name)
+        self.static_attributes.add_attribute(name, getter, setter)
 
     def add_instance_attribute(self, value_type, name):
         """
@@ -174,7 +176,7 @@ class CppClass(object):
         assert isinstance(value_type, ReturnValue)
         getter = CppInstanceAttributeGetter(value_type, self, name)
         setter = CppInstanceAttributeSetter(value_type, self, name)
-        self.attributes.append((name, getter, setter))
+        self.instance_attributes.add_attribute(name, getter, setter)
 
     def generate_forward_declarations(self, code_sink):
         """Generates forward declarations for the instance and type
@@ -195,12 +197,36 @@ typedef struct {
     def generate(self, code_sink, module, docstring=None):
         """Generates the class to a code sink"""
 
+        ## generate getsets
+        instance_getsets = self.instance_attributes.generate(code_sink)
+        self.slots.setdefault("tp_getset", instance_getsets)
+        static_getsets = self.static_attributes.generate(code_sink)
+
         ## --- register the class type in the module ---
         module.after_init.write_code("/* Register the '%s' class */" % self.name)
+
+        ## generate a metaclass if needed
+        if static_getsets == '0':
+            metaclass = None
+        else:
+            if self.parent is None:
+                parent_typestruct = 'PyBaseObject_Type'
+            else:
+                parent_typestruct = self.parent.pytypestruct
+            metaclass = PyMetaclass(self.metaclass_name,
+                                    "%s.ob_type" % parent_typestruct,
+                                    self.static_attributes)
+            metaclass.generate(code_sink, module)
+
         if self.parent is not None:
             assert isinstance(self.parent, CppClass)
             module.after_init.write_code('%s.tp_base = &%s;' %
                                          (self.pytypestruct, self.parent.pytypestruct))
+
+        if metaclass is not None:
+            module.after_init.write_code('%s.ob_type = &%s;' %
+                                         (self.pytypestruct, metaclass.pytypestruct))
+
         module.after_init.write_error_check('PyType_Ready(&%s)'
                                           % (self.pytypestruct,))
         module.after_init.write_code(
@@ -235,7 +261,6 @@ typedef struct {
                 have_constructor = False
                 code_sink.writeln()
 
-
         ## generate the method wrappers
         method_defs = []
         for meth_name, meth_wrapper in self.methods:
@@ -251,98 +276,6 @@ typedef struct {
         code_sink.writeln("{NULL, NULL, 0, NULL}")
         code_sink.unindent()
         code_sink.writeln("};")
-
-
-        ## generate descriptor table for instance attributes
-        if self.attributes:
-            have_instance_attributes = False
-            for name, getter, setter in self.attributes:
-
-                if isinstance(getter, CppInstanceAttributeGetter):
-                    have_instance_attributes = True
-                    getter.generate(code_sink)
-                    ## getter.c_function_name is then added to the
-                    ## tp_getset table, further below.
-
-                elif (isinstance(getter, CppStaticAttributeGetter)
-                      or isinstance(setter, CppStaticAttributeSetter)):
-                    ## Static attributes are a bit more tricky.. :-/
-                    ## mainly because PyDecr_NewGetSet generates a
-                    ## descriptor that disables itself when called
-                    ## from a class; it only handles instances.
-                    ## Therefore, we need to create our own descriptor
-                    ## python type...
-                    if getter is None:
-                        getter_c_name = None
-                    else:
-                        getter_c_name = getter.c_function_name
-                        getter.generate(code_sink)
-
-                    if setter is None:
-                        setter_c_name = None
-                    else:
-                        setter_c_name = setter.c_function_name
-                        setter.generate(code_sink)
-                        
-                    descriptor = PyDescrGenerator(
-                        '%s_%sDescr' % (self.pystruct, name),
-                        getter_c_name, setter_c_name)
-                    descriptor.generate(code_sink)
-                    module.after_init.write_error_check(
-                        'PyType_Ready(&%s)' % (descriptor.pytypestruct))
-                    module.after_init.write_code(
-                        'PyDict_SetItemString(%s.tp_dict, "%s", PyObject_New(PyObject, &%s));'
-                        % (self.pytypestruct, name, descriptor.pytypestruct))
-
-                ## generate setter wrapper function body
-                if isinstance(setter, CppInstanceAttributeSetter):
-                    have_instance_attributes = True
-                    setter.generate(code_sink)
-                    
-            if have_instance_attributes:
-                getset_table_name = "_%s__getsets" % self.pystruct
-                self.slots.setdefault("tp_getset", getset_table_name)
-                code_sink.writeln("static PyGetSetDef %s[] = {" % getset_table_name)
-                code_sink.indent()
-                for name, getter, setter in self.attributes:
-                    if isinstance(getter, CppStaticAttributeGetter) \
-                       or isinstance(setter, CppStaticAttributeGetter):
-                        continue # static attributes do not use tp_getset
-                    code_sink.writeln('{')
-                    code_sink.indent()
-                    code_sink.writeln('"%s", /* attribute name */' % name)
-
-                    ## getter
-                    if isinstance(getter, CppInstanceAttributeGetter):
-                        getter_c_name = getter.c_function_name
-                    else:
-                        getter_c_name = "NULL"
-                    code_sink.writeln(
-                        '(getter) %s, /* C function to get the attribute */'
-                        % getter_c_name)
-
-                    ## setter
-                    if isinstance(setter, CppInstanceAttributeSetter):
-                        setter_c_name = setter.c_function_name
-                    else:
-                        setter_c_name = "NULL"
-                    code_sink.writeln(
-                        '(setter) %s, /* C function to set the attribute */'
-                        % setter_c_name)
-
-                    code_sink.writeln('NULL, /* optional doc string */')
-                    code_sink.writeln('NULL /* optional additional data '
-                                      'for getter and setter */')
-                    code_sink.unindent()
-                    code_sink.writeln('},')
-                code_sink.writeln('{ NULL, NULL, NULL, NULL, NULL }')
-                code_sink.unindent()
-                code_sink.writeln('};')
-            else:
-                self.slots.setdefault("tp_getset", 'NULL')
-        else:
-            self.slots.setdefault("tp_getset", 'NULL')
-
 
         ## generate the destructor
         tp_dealloc_function_name = "_wrap_%s__tp_dealloc" % (self.pystruct,)

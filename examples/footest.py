@@ -88,7 +88,6 @@ class TestFoo(unittest.TestCase):
     def test_static_get_attribute(self):
         self.assertEqual(foo.SomeObject.staticData, "Hello Static World!")
 
-    # Not working :-(
     #def test_static_set_attribute(self):
     #    foo.SomeObject.staticData = "Foo Bar Zbr"
     #    self.assertEqual(foo.SomeObject.staticData, "Foo Bar Zbr")

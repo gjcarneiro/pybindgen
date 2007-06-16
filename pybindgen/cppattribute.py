@@ -7,8 +7,26 @@ from typehandlers import codesink
 import settings
 
 
+class PyGetter(ForwardWrapperBase):
+    """generates a getter, for use in a PyGetSetDef table"""
+    def generate(self, code_sink):
+        """Generate the code of the getter to the given code sink"""
+        raise NotImplementedError
+    def generate_call(self):
+        """(not actually called)"""
+        raise AssertionError
 
-class CppInstanceAttributeGetter(ForwardWrapperBase):
+class PySetter(ReverseWrapperBase):
+    """generates a setter, for use in a PyGetSetDef table"""
+    def generate(self, code_sink):
+        """Generate the code of the setter to the given code sink"""
+        raise NotImplementedError
+    def generate_python_call(self):
+        """(not actually called)"""
+        raise AssertionError
+
+
+class CppInstanceAttributeGetter(PyGetter):
     '''
     A getter for a C++ instance attribute.
     '''
@@ -45,7 +63,7 @@ class CppInstanceAttributeGetter(ForwardWrapperBase):
         code_sink.writeln('}')
 
 
-class CppStaticAttributeGetter(ForwardWrapperBase):
+class CppStaticAttributeGetter(PyGetter):
     '''
     A getter for a C++ class static attribute.
     '''
@@ -80,7 +98,9 @@ class CppStaticAttributeGetter(ForwardWrapperBase):
         code_sink.writeln('}')
 
 
-class CppInstanceAttributeSetter(ReverseWrapperBase):
+
+
+class CppInstanceAttributeSetter(PySetter):
     '''
     A setter for a C++ instance attribute.
     '''
@@ -131,7 +151,7 @@ class CppInstanceAttributeSetter(ReverseWrapperBase):
         code_sink.writeln('}')
 
 
-class CppStaticAttributeSetter(ReverseWrapperBase):
+class CppStaticAttributeSetter(PySetter):
     '''
     A setter for a C++ class static attribute.
     '''
@@ -183,18 +203,33 @@ class CppStaticAttributeSetter(ReverseWrapperBase):
         code_sink.writeln('}')
 
 
-class PyDescrGenerator(object):
+class PyMetaclass(object):
     """
-    Class that generates a Python descriptor type.
+    Class that generates a Python metaclass
     """
-    def __init__(self, name, descr_get, descr_set):
+    def __init__(self, name, parent_metaclass_expr, getsets=None):
+        """
+        name -- name of the metaclass (should normally end with Meta)
+        parent_metaclass_expr -- C expression that should give a
+                                 pointer to the parent metaclass
+                                 (should have a C type of
+                                 PyTypeObject*)
+        getsets -- name of a PyGetSetDef C array variable, or None
+        """
+        assert getsets is None or isinstance(getsets, PyGetSetDef)
+        assert isinstance(name, str)
+        assert isinstance(parent_metaclass_expr, str)
+
         self.name = name
-        self.descr_get = descr_get
-        self.descr_set = descr_set
         prefix = settings.name_prefix.capitalize()
         self.pytypestruct = "Py%s%s_Type" % (prefix, self.name)
+        self.parent_metaclass_expr = parent_metaclass_expr
+        self.getsets = getsets
 
-    def generate(self, code_sink):
+    def generate(self, code_sink, module):
+        """
+        Generate the metaclass to code_sink and register it in the module.
+        """
         code_sink.writeln('''
 PyTypeObject %(pytypestruct)s = {
 	PyObject_HEAD_INIT(NULL)
@@ -217,7 +252,7 @@ PyTypeObject %(pytypestruct)s = {
 	0,					/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,			/* tp_flags */
+	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_GC|Py_TPFLAGS_BASETYPE, /* tp_flags */
  	0,					/* tp_doc */
 	0,					/* tp_traverse */
  	0,					/* tp_clear */
@@ -227,11 +262,11 @@ PyTypeObject %(pytypestruct)s = {
 	0,					/* tp_iternext */
 	0,					/* tp_methods */
 	0,					/* tp_members */
-	0,					/* tp_getset */
+	%(getset)s,				/* tp_getset */
 	0,					/* tp_base */
 	0,					/* tp_dict */
-	(descrgetfunc) %(descr_get)s,	        /* tp_descr_get */
-	(descrsetfunc) %(descr_set)s,  		/* tp_descr_set */
+	0,	                                /* tp_descr_get */
+	0,  		                        /* tp_descr_set */
 	0,					/* tp_dictoffset */
 	0,					/* tp_init */
 	0,					/* tp_alloc */
@@ -246,6 +281,82 @@ PyTypeObject %(pytypestruct)s = {
         0                                       /* tp_del */
 };
 ''' % dict(pytypestruct=self.pytypestruct, name=self.name,
-           descr_get=(self.descr_get or '0'),
-           descr_set=(self.descr_set or '0')))
+           getset=(self.getsets and self.getsets.cname or '0')))
 
+        module.after_init.write_code("""
+%(pytypestruct)s.tp_base = %(parent_metaclass)s;
+/* Some fields need to be manually inheritted from the parent metaclass */
+%(pytypestruct)s.tp_traverse = %(parent_metaclass)s->tp_traverse;
+%(pytypestruct)s.tp_clear = %(parent_metaclass)s->tp_clear;
+%(pytypestruct)s.tp_is_gc = %(parent_metaclass)s->tp_is_gc;
+PyType_Ready(&%(pytypestruct)s);
+""" % dict(pytypestruct=self.pytypestruct, parent_metaclass=self.parent_metaclass_expr))
+        
+
+
+class PyGetSetDef(object):
+    """
+    Class that generates a PyGetSet table
+    """
+    def __init__(self, cname):
+        """
+        cname -- C name of the getset table
+        """
+        self.cname = cname
+        self.attributes = [] # (name, getter, setter)
+
+    def add_attribute(self, name, getter, setter):
+        """
+        Add a new attribute
+        name -- attribute name
+        getter -- a PyGetter object, or None
+        setter -- a PySetter object, or None
+        """
+        assert getter is None or isinstance(getter, PyGetter)
+        assert setter is None or isinstance(setter, PySetter)
+        self.attributes.append((name, getter, setter))
+
+    def generate(self, code_sink):
+        """
+        Generate the getset table, return the table C name or '0' if
+        the table is empty
+        """
+        if not self.attributes:
+            return '0'
+
+        for name, getter, setter in self.attributes:
+            if getter is not None:
+                getter.generate(code_sink)
+            if setter is not None:
+                setter.generate(code_sink)
+        
+        code_sink.writeln("static PyGetSetDef %s[] = {" % self.cname)
+        code_sink.indent()
+        for name, getter, setter in self.attributes:
+            code_sink.writeln('{')
+            code_sink.indent()
+            code_sink.writeln('"%s", /* attribute name */' % name)
+
+            ## getter
+            getter_c_name = (getter and getter.c_function_name or "NULL")
+            code_sink.writeln(
+                '(getter) %s, /* C function to get the attribute */'
+                % getter_c_name)
+
+            ## setter
+            setter_c_name = setter and setter.c_function_name or "NULL"
+            code_sink.writeln(
+                '(setter) %s, /* C function to set the attribute */'
+                % setter_c_name)
+
+            code_sink.writeln('NULL, /* optional doc string */')
+            code_sink.writeln('NULL /* optional additional data '
+                              'for getter and setter */')
+            code_sink.unindent()
+            code_sink.writeln('},')
+        code_sink.writeln('{ NULL, NULL, NULL, NULL, NULL }')
+        code_sink.unindent()
+        code_sink.writeln('};')
+
+        return self.cname
+        
