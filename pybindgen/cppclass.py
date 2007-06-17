@@ -112,18 +112,23 @@ class CppClass(object):
         if name != 'dummy':
             ## register type handlers
             class ThisClassParameter(CppClassParameter):
+                """Register this C++ class as pass-by-value parameter"""
                 CTYPES = [name]
                 cpp_class = self
             class ThisClassRefParameter(CppClassRefParameter):
+                """Register this C++ class as pass-by-reference parameter"""
                 CTYPES = [name+'&']
                 cpp_class = self
             class ThisClassReturn(CppClassReturnValue):
+                """Register this C++ class as value return"""
                 CTYPES = [name]
                 cpp_class = self
             class ThisClassPtrParameter(CppClassPtrParameter):
+                """Register this C++ class as pass-by-pointer parameter"""
                 CTYPES = [name+'*']
                 cpp_class = self
             class ThisClassPtrReturn(CppClassPtrReturnValue):
+                """Register this C++ class as pointer return"""
                 CTYPES = [name+'*']
                 cpp_class = self
 
@@ -241,8 +246,41 @@ typedef struct {
             'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
             self.name, self.pytypestruct))
 
+        have_constructor = self._generate_constructor(code_sink)
+        self._generate_methods(code_sink)
+        self._generate_destructor(code_sink, have_constructor)
+        self._generate_type_structure(code_sink, docstring)
 
-        ## generate the constructor, if any
+        
+    def _generate_type_structure(self, code_sink, docstring):
+        """generate the type structure"""
+        self.slots.setdefault("tp_basicsize",
+                              "sizeof(%s)" % (self.pystruct,))
+        for slot in ["tp_getattr", "tp_setattr", "tp_compare", "tp_repr",
+                     "tp_as_number", "tp_as_sequence", "tp_as_mapping",
+                     "tp_hash", "tp_call", "tp_str", "tp_getattro", "tp_setattro",
+                     "tp_as_buffer", "tp_traverse", "tp_clear", "tp_richcompare",
+                     "tp_iter", "tp_iternext", "tp_descr_get",
+                     "tp_descr_set", "tp_is_gc"]:
+            self.slots.setdefault(slot, "NULL")
+
+        self.slots.setdefault("tp_dictoffset", "0")
+        self.slots.setdefault("tp_alloc", "PyType_GenericAlloc")
+        self.slots.setdefault("tp_new", "PyType_GenericNew")
+        self.slots.setdefault("tp_free", "_PyObject_Del")
+        self.slots.setdefault("tp_weaklistoffset", "0")
+        self.slots.setdefault("tp_flags", "Py_TPFLAGS_DEFAULT")
+        self.slots.setdefault("tp_doc", (docstring is None and 'NULL'
+                                         or "\"%s\"" % (docstring,)))
+        dict_ = dict(self.slots)
+        dict_.setdefault("typestruct", self.pytypestruct)
+        dict_.setdefault("classname", self.name)
+        
+        code_sink.writeln(self.TYPE_TMPL % dict_)
+
+
+    def _generate_constructor(self, code_sink):
+        """generate the constructor, if any"""
         have_constructor = True
         if self.constructors:
             code_sink.writeln()
@@ -268,8 +306,13 @@ typedef struct {
                 constructor = CppNoConstructor().generate(code_sink, self)
                 have_constructor = False
                 code_sink.writeln()
+        self.slots.setdefault("tp_init", (constructor is None and "NULL"
+                                          or constructor))
+        return have_constructor
 
-        ## generate the method wrappers
+
+    def _generate_methods(self, code_sink):
+        """generate the method wrappers"""
         method_defs = []
         for meth_name, meth_wrapper in self.methods:
             code_sink.writeln()
@@ -284,8 +327,16 @@ typedef struct {
         code_sink.writeln("{NULL, NULL, 0, NULL}")
         code_sink.unindent()
         code_sink.writeln("};")
+        self.slots.setdefault("tp_methods", "%s_methods" % (self.name,))
 
-        ## generate the destructor
+
+    def _generate_destructor(self, code_sink, have_constructor):
+        """Generate a tp_dealloc function and register it in the type"""
+
+        ## don't generate destructor if overridden by user
+        if "tp_dealloc" in self.slots:
+            return
+
         tp_dealloc_function_name = "_wrap_%s__tp_dealloc" % (self.pystruct,)
         if have_constructor:
             if self.decref_method is None:
@@ -293,7 +344,6 @@ typedef struct {
             else:
                 delete_code = ("if (tmp)\n        tmp->%s()"
                                % (self.decref_method,))
-
             code_sink.writeln('''
 static void
 %s(%s *self)
@@ -305,8 +355,8 @@ static void
 }
     ''' % (tp_dealloc_function_name, self.pystruct, self.name, delete_code))
 
-        else:
-            
+        else: # don't have constructor
+
             code_sink.writeln('''
 static void
 %s(%s *self)
@@ -314,37 +364,8 @@ static void
     PyObject_DEL(self);
 }
     ''' % (tp_dealloc_function_name, self.pystruct))
-            
         code_sink.writeln()
-
-        ## generate the type structure
-        self.slots.setdefault("tp_basicsize",
-                              "sizeof(%s)" % (self.pystruct,))
         self.slots.setdefault("tp_dealloc", tp_dealloc_function_name )
-        for slot in ["tp_getattr", "tp_setattr", "tp_compare", "tp_repr",
-                     "tp_as_number", "tp_as_sequence", "tp_as_mapping",
-                     "tp_hash", "tp_call", "tp_str", "tp_getattro", "tp_setattro",
-                     "tp_as_buffer", "tp_traverse", "tp_clear", "tp_richcompare",
-                     "tp_iter", "tp_iternext", "tp_descr_get",
-                     "tp_descr_set", "tp_is_gc"]:
-            self.slots.setdefault(slot, "NULL")
-
-        self.slots.setdefault("tp_dictoffset", "0")
-        self.slots.setdefault("tp_init", (constructor is None and "NULL"
-                                          or constructor))
-        self.slots.setdefault("tp_alloc", "PyType_GenericAlloc")
-        self.slots.setdefault("tp_new", "PyType_GenericNew")
-        self.slots.setdefault("tp_free", "_PyObject_Del")
-        self.slots.setdefault("tp_methods", "%s_methods" % (self.name,))
-        self.slots.setdefault("tp_weaklistoffset", "0")
-        self.slots.setdefault("tp_flags", "Py_TPFLAGS_DEFAULT")
-        self.slots.setdefault("tp_doc", (docstring is None and 'NULL'
-                                         or "\"%s\"" % (docstring,)))
-        dict_ = dict(self.slots)
-        dict_.setdefault("typestruct", self.pytypestruct)
-        dict_.setdefault("classname", self.name)
-        
-        code_sink.writeln(self.TYPE_TMPL % dict_)
 
 
 class CppClassParameter(Parameter):
@@ -411,9 +432,11 @@ class CppClassReturnValue(ReturnValue):
     cpp_class = CppClass('dummy') # CppClass instance
 
     def get_c_error_return(self): # only used in reverse wrappers
+        """See ReturnValue.get_c_error_return"""
         return "return %s();" % (self.cpp_class.name,)
 
     def convert_c_to_python(self, wrapper):
+        """see ReturnValue.convert_c_to_python"""
         py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
         wrapper.after_call.write_code(
@@ -424,6 +447,7 @@ class CppClassReturnValue(ReturnValue):
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
     def convert_python_to_c(self, wrapper):
+        """see ReturnValue.convert_python_to_c"""
         name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
         wrapper.parse_params.add_parameter(
@@ -440,6 +464,12 @@ class CppClassPtrParameter(Parameter):
     SUPPORTS_TRANSFORMATIONS = True
 
     def __init__(self, ctype, name, transfer_ownership):
+        """
+        ctype -- C type, normally 'MyClass*'
+        name -- parameter name
+        transfer_ownership -- this parameter transfer the ownership of
+                              the pointed-to object to the called function
+        """
         super(CppClassPtrParameter, self).__init__(
             ctype, name, direction=Parameter.DIRECTION_IN)
         self.transfer_ownership = transfer_ownership
@@ -472,13 +502,20 @@ class CppClassPtrReturnValue(ReturnValue):
     cpp_class = CppClass('dummy') # CppClass instance
 
     def __init__(self, ctype, caller_owns_return):
+        """
+        ctype -- C type, normally 'MyClass*'
+        caller_owns_return -- if true, ownership of the object pointer
+                              is transfered to the caller
+        """
         super(CppClassPtrReturnValue, self).__init__(ctype)
         self.caller_owns_return = caller_owns_return
 
     def get_c_error_return(self): # only used in reverse wrappers
+        """See ReturnValue.get_c_error_return"""
         return "return NULL;"
 
     def convert_c_to_python(self, wrapper):
+        """See ReturnValue.convert_c_to_python"""
         py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
         wrapper.after_call.write_code(
@@ -506,6 +543,7 @@ class CppClassPtrReturnValue(ReturnValue):
 
 
     def convert_python_to_c(self, wrapper):
+        """See ReturnValue.convert_python_to_c"""
         name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
         wrapper.parse_params.add_parameter(
