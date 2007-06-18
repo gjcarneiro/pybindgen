@@ -33,7 +33,7 @@ class Function(ForwardWrapperBase):
             self.before_call.write_code(
                 'retval = %s(%s);' % (self.function_name, ", ".join(self.call_params)))
 
-    def generate(self, code_sink, wrapper_name=None):
+    def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """
         Generates the wrapper code
         code_sink -- a CodeSink instance that will receive the generated code
@@ -45,9 +45,12 @@ class Function(ForwardWrapperBase):
         tmp_sink = codesink.MemoryCodeSink()
         self.generate_body(tmp_sink)
         code_sink.writeln("static PyObject *")
-        code_sink.writeln("%s(PyObject *dummy PYBINDGEN_UNUSED, "
-                          "PyObject *args, PyObject *kwargs)"
-                          % (wrapper_name,))
+        prototype_line = ("%s(PyObject *dummy PYBINDGEN_UNUSED, "
+                          "PyObject *args, PyObject *kwargs") % (wrapper_name,)
+        if extra_wrapper_params:
+            prototype_line += ", " + ", ".join(extra_wrapper_params)
+        prototype_line += ')'
+        code_sink.writeln(prototype_line)
         code_sink.writeln('{')
         code_sink.indent()
         tmp_sink.flush_to(code_sink)
@@ -105,9 +108,17 @@ class OverloadedFunction(object):
             for number, function in enumerate(self.functions):
                 ## enforce uniform method flags
                 function.force_parse = Function.PARSE_TUPLE_AND_KEYWORDS
-                function.set_parse_error_return('PyErr_Clear();\nreturn (PyObject *) 1;')
+                error_return = """{
+    PyObject *exc_type, *traceback;
+    PyErr_Fetch(&exc_type, return_exception, &traceback);
+    Py_XDECREF(exc_type);
+    Py_XDECREF(traceback);
+}
+return NULL;"""
+                function.set_parse_error_return(error_return)
                 wrapper_name = "%s__%i" % (self.wrapper_name, number)
-                function.generate(code_sink, wrapper_name)
+                function.generate(code_sink, wrapper_name,
+                                  extra_wrapper_params=["PyObject **return_exception"])
                 delegate_wrappers.append(wrapper_name)
 
             code_sink.writeln("static PyObject *")
@@ -116,16 +127,26 @@ class OverloadedFunction(object):
                               % (self.wrapper_name,))
             code_sink.writeln('{')
             code_sink.indent()
-            code_sink.writeln('PyObject *retval;')
-            for delegate_wrapper in delegate_wrappers:
-                code_sink.writeln("retval = %s(dummy, args, kwargs);" % delegate_wrapper)
-                code_sink.writeln("if (retval != (PyObject *) 1)")
+            code_sink.writeln('PyObject *retval, *error_list;')
+            code_sink.writeln('PyObject *exceptions[%i] = {0,};' % len(delegate_wrappers))
+            for number, delegate_wrapper in enumerate(delegate_wrappers):
+                code_sink.writeln("retval = %s(dummy, args, kwargs, &exceptions[%i]);"
+                                  % (delegate_wrapper, number))
+                code_sink.writeln("if (!exceptions[%i]) {" % number)
                 code_sink.indent()
+                for i in xrange(number):
+                    code_sink.writeln("Py_DECREF(exceptions[%i]);" % i)
                 code_sink.writeln("return retval;")
                 code_sink.unindent()
-            code_sink.writeln(
-                'PyErr_SetString(PyExc_TypeError, '
-                '"overloaded function parameter parsing failed");')
+                code_sink.writeln("}")
+
+            code_sink.writeln('error_list = PyList_New(%i);' % len(delegate_wrappers))
+            for i in xrange(len(delegate_wrappers)):
+                code_sink.writeln('PyList_SET_ITEM(error_list, %i, PyObject_Str(exceptions[%i]));'
+                                  % (i, i))
+                code_sink.writeln("Py_DECREF(exceptions[%i]);" % i)
+            code_sink.writeln('PyErr_SetObject(PyExc_TypeError, error_list);')
+            code_sink.writeln("Py_DECREF(error_list);")
             code_sink.writeln('return NULL;')
             code_sink.unindent()
             code_sink.writeln('}')

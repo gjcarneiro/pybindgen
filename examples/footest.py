@@ -99,6 +99,7 @@ class TestFoo(unittest.TestCase):
         v2 = foo.get_int("123")
         self.assertEqual(v2, 123)
 
+        self.assertRaises(TypeError, foo.get_int, [123])
         
 
 if __name__ == '__main__':
