@@ -625,7 +625,10 @@ class ForwardWrapperBase(object):
         if (not no_c_retval and return_value is not None
             and return_value.ctype != 'void'):
             self.declarations.declare_variable(return_value.ctype, 'retval')
-        
+
+    def set_parse_error_return(self, parse_error_return):
+        self.before_parse.error_return = parse_error_return
+        self.before_call.error_return = parse_error_return
 
     def generate_call(self):
         """Generates the code (into self.before_call) to call into

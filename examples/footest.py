@@ -92,5 +92,14 @@ class TestFoo(unittest.TestCase):
         foo.SomeObject.staticData = "Foo Bar Zbr"
         self.assertEqual(foo.SomeObject.staticData, "Foo Bar Zbr")
 
+    def test_overloaded_functions(self):
+        v1 = foo.get_int(123.0)
+        self.assertEqual(v1, 123)
+
+        v2 = foo.get_int("123")
+        self.assertEqual(v2, 123)
+
+        
+
 if __name__ == '__main__':
     unittest.main()

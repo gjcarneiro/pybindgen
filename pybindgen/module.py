@@ -2,7 +2,7 @@
 Code to generate code for a C/C++ Python extension module.
 """
 
-from function import Function
+from function import Function, OverloadedFunction
 from typehandlers.base import CodeBlock, DeclarationsScope
 from cppclass import CppClass
 
@@ -18,7 +18,7 @@ class Module(object):
         """
         self.declarations = DeclarationsScope()
         self.name = name
-        self.functions = [] # (name, wrapper) pairs
+        self.functions = {} # name => OverloadedFunction
         self.classes = []
         self.before_init = CodeBlock('PyErr_Print();\nreturn;', self.declarations)
         self.after_init = CodeBlock('PyErr_Print();\nreturn;', self.declarations,
@@ -63,7 +63,12 @@ class Module(object):
         assert isinstance(wrapper, Function)
         if name is None:
             name = self.c_function_name_transformer(wrapper.function_name)
-        self.functions.append((name, wrapper))
+        try:
+            overload = self.functions[name]
+        except KeyError:
+            overload = OverloadedFunction(name) # FIXME: name should be C function name
+            self.functions[name] = overload
+        overload.add_function(wrapper)
 
 
     def add_class(self, class_):
@@ -98,17 +103,17 @@ class Module(object):
         if self.functions:
             code_sink.writeln('/* --- module functions --- */')
             code_sink.writeln()
-            for func_name, func_wrapper in self.functions:
+            for func_name, overload in self.functions.iteritems():
                 code_sink.writeln()
-                func_wrapper.generate(code_sink)
+                overload.generate(code_sink)
                 code_sink.writeln()
 
         ## generate the function table
         code_sink.writeln("static PyMethodDef %s_functions[] = {"
                           % (self.name,))
         code_sink.indent()
-        for func_name, func_wrapper in self.functions:
-            code_sink.writeln(func_wrapper.get_py_method_def(func_name))
+        for func_name, overload in self.functions.iteritems():
+            code_sink.writeln(overload.get_py_method_def(func_name))
         code_sink.writeln("{NULL, NULL, 0, NULL}")
         code_sink.unindent()
         code_sink.writeln("};")

@@ -82,6 +82,14 @@ def my_module_gen(out_file):
     mod.add_function(Function(ReturnValue.new('int'), 'print_something_else',
                               [Parameter.new('const char*', 'message2')]))
 
+    ## test overloaded functions
+    mod.add_function(Function(ReturnValue.new('int'), 'get_int_from_string',
+                              [Parameter.new('const char*', 'from_string')]),
+                     name="get_int")
+    mod.add_function(Function(ReturnValue.new('int'), 'get_int_from_float',
+                              [Parameter.new('double', 'from_float')]),
+                     name="get_int")
+
 
 
     SomeObject = CppClass('SomeObject')

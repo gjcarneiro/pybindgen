@@ -1,16 +1,7 @@
-//
-// foo.cc
-//  
-// Made by Gustavo J. A. M. Carneiro
-// Login   <gjc@localhost.localdomain>
-// 
-// Started on  Thu May 31 17:36:21 2007 Gustavo J. A. M. Carneiro
-// Started on  Thu May 31 17:36:21 2007 Gustavo J. A. M. Carneiro
-//
-
 #include "foo.h"
 #include <iostream>
 #include <string.h>
+#include <stdlib.h>
 
 int print_something(const char *message)
 {
@@ -23,6 +14,17 @@ int print_something_else(const char *message2)
     std::cout << "MESSAGE2: " << message2 << std::endl;
     return strlen(message2);
 }
+
+int get_int_from_string(const char *from_string)
+{
+    return atoi(from_string);
+}
+
+int get_int_from_float(double from_float)
+{
+    return (int) from_float;
+}
+
 
 std::string SomeObject::staticData = std::string("Hello Static World!");
 

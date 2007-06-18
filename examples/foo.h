@@ -10,6 +10,9 @@
 int print_something(const char *message);
 int print_something_else(const char *message2);
 
+int get_int_from_string(const char *from_string);
+int get_int_from_float(double from_float);
+
 // In this example PointerHolder<T> automatically implies
 // caller_owns_return=True when used as ReturnValue, and
 // transfer_ownership=False when used as parameter.
