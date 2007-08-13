@@ -4,8 +4,7 @@ def build(bld):
     
     obj = bld.create_obj('py')
     obj.find_sources_in_dirs('.')
-    # commented, triggers a WAF bug (Issue #40)
-    #obj.source.append('version.py')
+    obj.source.append('version.py')
     obj.inst_dir = 'pybindgen'
     obj.prio = 2
 

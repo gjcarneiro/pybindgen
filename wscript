@@ -55,6 +55,22 @@ APPNAME='pybindgen'
 srcdir = '.'
 blddir = 'build'
 
+def generate_version_py():
+    """generates pybindgen/version.py, unless it already exists"""
+    version = get_version_from_bzr(srcdir)
+    filename = os.path.join('pybindgen', 'version.py')
+    if os.path.exists(filename):
+        return
+    dest = open(filename, 'w')
+    if isinstance(version, list):
+        dest.write('# [major, minor, micro, revno], '
+                   'revno omitted in official releases\n')
+        dest.write('__version__ = %r\n' % (version,))
+    else:
+        dest.write('__version__ = "%s"\n' % (version,))
+    dest.close()
+    
+
 def dist_hook(srcdir, blddir):
     subprocess.Popen([os.path.join(srcdir, "generate-ChangeLog")],  shell=True).wait()
     try:
@@ -64,15 +80,7 @@ def dist_hook(srcdir, blddir):
     shutil.copy(os.path.join(srcdir, "ChangeLog"), blddir)
 
     ## Write a pybindgen/version.py file containing the project version
-    version = get_version_from_bzr(srcdir)
-    dest = open(os.path.join('pybindgen', 'version.py'), 'w')
-    if isinstance(version, list):
-        dest.write('# [major, minor, micro, revno], '
-                   'revno omitted in official releases\n')
-        dest.write('__version__ = %r\n' % (version,))
-    else:
-        dest.write('__version__ = "%s"\n' % (version,))
-    dest.close()
+    generate_version_py()
 
     ## Copy it to the source dir
     shutil.copy(os.path.join('pybindgen', 'version.py'), os.path.join(srcdir, "pybindgen"))
@@ -88,6 +96,9 @@ def set_options(opt):
 
 
 def configure(conf):
+    ## Write a pybindgen/version.py file containing the project version
+    generate_version_py()
+
     conf.check_tool('misc')
     if not conf.check_tool('compiler_cxx'):
         fatal("Error: no C compiler was found in PATH.")
