@@ -101,13 +101,20 @@ class OverloadedFunction(object):
         Generate all the wrappers plus the 'aggregator' wrapper to a code sink.
         """
         if len(self.functions) == 1:
+            ## special case when there's only one function; keep
+            ## simple things simple
             self.wrapper_name = self.functions[0].generate(code_sink)
         else:
+            ## multiple overloaded functions case..
+
+            ## Generate the individual "low level" wrappers that handle a single prototype
             self.wrapper_name = "_wrap_%s" % (self.function_name,)
             delegate_wrappers = []
             for number, function in enumerate(self.functions):
                 ## enforce uniform method flags
                 function.force_parse = Function.PARSE_TUPLE_AND_KEYWORDS
+                ## an extra parameter 'return_exception' is used to
+                ## return parse error exceptions to the 'main wrapper'
                 error_return = """{
     PyObject *exc_type, *traceback;
     PyErr_Fetch(&exc_type, return_exception, &traceback);
@@ -116,11 +123,13 @@ class OverloadedFunction(object):
 }
 return NULL;"""
                 function.set_parse_error_return(error_return)
-                wrapper_name = "%s__%i" % (self.wrapper_name, number)
                 function.generate(code_sink, wrapper_name,
                                   extra_wrapper_params=["PyObject **return_exception"])
-                delegate_wrappers.append(wrapper_name)
 
+                wrapper_name = "%s__%i" % (self.wrapper_name, number)
+                delegate_wrappers.append(wrapper_name)
+            
+            ## Generate the 'main wrapper' that calls the other ones
             code_sink.writeln("static PyObject *")
             code_sink.writeln("%s(PyObject *dummy PYBINDGEN_UNUSED,"
                               " PyObject *args, PyObject *kwargs)"
@@ -130,8 +139,11 @@ return NULL;"""
             code_sink.writeln('PyObject *retval, *error_list;')
             code_sink.writeln('PyObject *exceptions[%i] = {0,};' % len(delegate_wrappers))
             for number, delegate_wrapper in enumerate(delegate_wrappers):
+                ## call the delegate wrapper
                 code_sink.writeln("retval = %s(dummy, args, kwargs, &exceptions[%i]);"
                                   % (delegate_wrapper, number))
+                ## if no parse exception, call was successful:
+                ## free previous exceptions and return the result
                 code_sink.writeln("if (!exceptions[%i]) {" % number)
                 code_sink.indent()
                 for i in xrange(number):
@@ -140,10 +152,15 @@ return NULL;"""
                 code_sink.unindent()
                 code_sink.writeln("}")
 
+            ## If the following generated code is reached it means
+            ## that all of our delegate wrappers had parsing errors:
+            ## raise an appropriate exception, free the previous
+            ## exceptions, and return NULL
             code_sink.writeln('error_list = PyList_New(%i);' % len(delegate_wrappers))
             for i in xrange(len(delegate_wrappers)):
-                code_sink.writeln('PyList_SET_ITEM(error_list, %i, PyObject_Str(exceptions[%i]));'
-                                  % (i, i))
+                code_sink.writeln(
+                    'PyList_SET_ITEM(error_list, %i, PyObject_Str(exceptions[%i]));'
+                    % (i, i))
                 code_sink.writeln("Py_DECREF(exceptions[%i]);" % i)
             code_sink.writeln('PyErr_SetObject(PyExc_TypeError, error_list);')
             code_sink.writeln("Py_DECREF(error_list);")
