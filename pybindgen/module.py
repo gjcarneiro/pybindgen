@@ -68,7 +68,7 @@ class Module(object):
         except KeyError:
             overload = OverloadedFunction(name) # FIXME: name should be C function name
             self.functions[name] = overload
-        overload.add_function(wrapper)
+        overload.add(wrapper)
 
 
     def add_class(self, class_):
