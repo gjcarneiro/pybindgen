@@ -6,7 +6,8 @@ import warnings
 
 from typehandlers.base import ForwardWrapperBase, Parameter, ReturnValue
 
-from cppmethod import CppMethod, CppConstructor, CppNoConstructor, CppOverloadedMethod
+from cppmethod import CppMethod, CppConstructor, CppNoConstructor, \
+    CppOverloadedMethod, CppOverloadedConstructor
 from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter,
                           CppStaticAttributeGetter, CppStaticAttributeSetter,
                           PyGetSetDef, PyMetaclass)
@@ -161,14 +162,10 @@ class CppClass(object):
         """
         Add a constructor to the class.
 
-        Caveat: multiple constructors not yet supported
-
         wrapper -- a CppConstructor instance
         """
         assert isinstance(wrapper, CppConstructor)
-        if self.constructors:
-            raise NotImplementedError(
-                'multiple constructors not yet supported')
+        wrapper.class_ = self
         self.constructors.append(wrapper)
 
     def add_static_attribute(self, value_type, name, is_const=False):
@@ -293,16 +290,25 @@ typedef struct {
         have_constructor = True
         if self.constructors:
             code_sink.writeln()
-            constructor = self.constructors[0].generate(code_sink, self)
+            overload = CppOverloadedConstructor(None)
+            overload.pystruct = self.pystruct
+            for constructor in self.constructors:
+                overload.add(constructor)
+            overload.generate(code_sink)
+            constructor = overload.wrapper_function_name
             code_sink.writeln()
         else:
             ## if there is a parent constructor with no arguments,
             ## a similar constructor should be added to this class
-            if (self.parent is not None and self.parent.constructors
-                and not self.parent.constructors[0].parameters):
+            if self.parent is None:
+                parent_default_constructor = None
+            else:
+                parent_default_constructor = self.parent.get_default_constructor()
+            if parent_default_constructor is not None:
                 cons = CppConstructor([])
                 code_sink.writeln()
-                constructor = cons.generate(code_sink, self)
+                cons.generate(code_sink)
+                constructor = cons.wrapper_actual_name
                 code_sink.writeln()
             else:
                 ## In C++, and unlike Python, constructors with
@@ -319,6 +325,13 @@ typedef struct {
                                           or constructor))
         return have_constructor
 
+    def get_default_constructor(self):
+        for cons in self.constructors:
+            if len(cons.parameters) == 0:
+                return cons
+        if self.parent is not None:
+            return self.parent.get_default_constructor
+        return None
 
     def _generate_methods(self, code_sink):
         """generate the method wrappers"""

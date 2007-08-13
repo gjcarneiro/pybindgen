@@ -113,5 +113,12 @@ class TestFoo(unittest.TestCase):
         self.assertRaises(TypeError, obj.get_int, [123])
         
 
+    def test_overloaded_constructors(self):
+        obj1 = foo.SomeObject("zbr")
+        self.assertEqual(obj1.get_prefix(), "zbr")
+        obj2 = foo.SomeObject(5)
+        self.assertEqual(obj2.get_prefix(), "XXXXX")
+        self.assertRaises(TypeError, foo.SomeObject, [123])
+
 if __name__ == '__main__':
     unittest.main()

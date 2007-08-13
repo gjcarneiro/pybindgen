@@ -101,9 +101,18 @@ public:
           m_foo_shared_ptr (0), m_zbr (0)
         {}
 
+    SomeObject (int prefix_len)
+        : m_prefix (prefix_len, 'X'), m_foo_ptr (0),
+          m_foo_shared_ptr (0), m_zbr (0)
+        {}
+
     int add_prefix (std::string& message) {
         message = m_prefix + message;
         return message.size ();
+    }
+
+    std::string get_prefix () const {
+        return m_prefix;
     }
 
     // pass by value, direction=in

@@ -101,6 +101,11 @@ def my_module_gen(out_file):
                                                direction=Parameter.DIRECTION_INOUT)]))
     SomeObject.add_constructor(
         CppConstructor([Parameter.new('std::string', 'prefix')]))
+    SomeObject.add_constructor(
+        CppConstructor([Parameter.new('int', 'prefix_len')]))
+
+    SomeObject.add_method(CppMethod(
+        ReturnValue.new('std::string'), 'get_prefix', []))
 
     SomeObject.add_method(CppMethod(ReturnValue.new('void'),
                                     'set_foo_value',

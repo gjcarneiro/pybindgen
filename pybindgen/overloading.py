@@ -61,7 +61,7 @@ class OverloadedWrapper(object):
     Py_XDECREF(exc_type);
     Py_XDECREF(traceback);
 }
-return NULL;"""
+%s""" % (self.ERROR_RETURN,)
                 wrapper_name = "%s__%i" % (self.wrapper_function_name, number)
                 wrapper.set_parse_error_return(error_return)
                 wrapper.generate(code_sink, wrapper_name,
