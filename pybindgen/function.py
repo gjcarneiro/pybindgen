@@ -22,7 +22,8 @@ class Function(ForwardWrapperBase):
             parse_error_return="return NULL;",
             error_return="return NULL;")
         self.function_name = function_name
-        self.wrapper_name = None
+        self.wrapper_base_name = "_wrap_%s" % (self.function_name,)
+        self.wrapper_actual_name = None
         self.docstring = docstring
     
     def generate_call(self):
@@ -41,13 +42,14 @@ class Function(ForwardWrapperBase):
         wrapper_name -- name of wrapper function
         """
         if wrapper_name is None:
-            wrapper_name = "_wrap_%s" % (self.function_name,)
-        self.wrapper_name = wrapper_name
+            self.wrapper_actual_name = self.wrapper_base_name
+        else:
+            self.wrapper_actual_name = wrapper_name
         tmp_sink = codesink.MemoryCodeSink()
         self.generate_body(tmp_sink)
         code_sink.writeln("static PyObject *")
         prototype_line = ("%s(PyObject *dummy PYBINDGEN_UNUSED, "
-                          "PyObject *args, PyObject *kwargs") % (wrapper_name,)
+                          "PyObject *args, PyObject *kwargs") % (self.wrapper_actual_name,)
         if extra_wrapper_params:
             prototype_line += ", " + ", ".join(extra_wrapper_params)
         prototype_line += ')'
@@ -57,7 +59,6 @@ class Function(ForwardWrapperBase):
         tmp_sink.flush_to(code_sink)
         code_sink.unindent()
         code_sink.writeln('}')
-        return wrapper_name
         
 
     def get_py_method_def(self, name):
@@ -68,7 +69,7 @@ class Function(ForwardWrapperBase):
         """
         flags = self.get_py_method_def_flags()
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
-               (name, self.wrapper_name, '|'.join(flags),
+               (name, self.wrapper_actual_name, '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
 
 

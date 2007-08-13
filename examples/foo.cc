@@ -28,3 +28,12 @@ int get_int_from_float(double from_float)
 
 std::string SomeObject::staticData = std::string("Hello Static World!");
 
+int SomeObject::get_int (const char *from_string)
+{
+    return atoi(from_string);
+}
+
+int SomeObject::get_int (double from_float)
+{
+    return (int) from_float;
+}

@@ -146,6 +146,15 @@ def my_module_gen(out_file):
     SomeObject.add_method(CppMethod(
         ReturnValue.new('PointerHolder<Zbr>'), 'get_zbr_pholder', []))
 
+    ## test overloaded methods
+    SomeObject.add_method(CppMethod(ReturnValue.new('int'), 'get_int',
+                                    [Parameter.new('const char*', 'from_string')]),
+                          name="get_int")
+    SomeObject.add_method(CppMethod(ReturnValue.new('int'), 'get_int',
+                                    [Parameter.new('double', 'from_float')]),
+                          name="get_int")
+
+
     mod.add_class(SomeObject)
 
     mod.generate(FileCodeSink(out_file))

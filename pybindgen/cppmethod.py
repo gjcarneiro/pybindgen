@@ -4,7 +4,7 @@ Wrap C++ class methods and constructods.
 
 from typehandlers.base import ForwardWrapperBase
 from typehandlers import codesink
-#from cppclass import CppClass 
+import overloading
 
 
 
@@ -25,6 +25,19 @@ class CppMethod(ForwardWrapperBase):
             "return NULL;", "return NULL;")
         self.method_name = method_name
         self.is_static = is_static
+        self._class = None
+        self.docstring = None
+        self.wrapper_base_name = None
+        self.wrapper_actual_name = None
+
+
+    def set_class(self, class_):
+        self._class = class_
+        self.wrapper_base_name = "_wrap_%s_%s" % (
+            class_.name, self.method_name)
+    def get_class(self):
+        return self._class
+    class_ = property(get_class, set_class)
 
     
     def generate_call(self, class_):
@@ -44,27 +57,27 @@ class CppMethod(ForwardWrapperBase):
                 (method, ", ".join(self.call_params)))
 
 
-    def generate(self, code_sink, class_, method_name, docstring=None):
+    def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """
         Generates the wrapper code
         code_sink -- a CodeSink instance that will receive the generated code
-        class_ -- the c++ class wrapper the method belongs to
         method_name -- actual name the method will get
-        docstring -- optional documentation string
+        extra_wrapper_params -- extra parameters the wrapper function should receive
 
         Returns the corresponding PyMethodDef entry string.
         """
+        class_ = self.class_
         #assert isinstance(class_, CppClass)
         tmp_sink = codesink.MemoryCodeSink()
 
         self.generate_body(tmp_sink, gen_call_params=[class_])
 
-        wrapper_function_name = "_wrap_%s_%s" % (
-            class_.name, self.method_name)
+        if wrapper_name is None:
+            self.wrapper_actual_name = self.wrapper_base_name
+        else:
+            self.wrapper_actual_name = wrapper_name
 
         flags = self.get_py_method_def_flags()
-        if self.is_static:
-            flags.append('METH_STATIC')
 
         code_sink.writeln("static PyObject *")
         if 'METH_STATIC' in flags:
@@ -72,22 +85,30 @@ class CppMethod(ForwardWrapperBase):
         else:
             _self_name = 'self'
 
+        if extra_wrapper_params:
+            extra = ', '.join([''] + list(extra_wrapper_params))
+        else:
+            extra = ''
         if 'METH_VARARGS' in flags:
             if 'METH_KEYWORDS' in flags:
                 code_sink.writeln(
-                    "%s(%s *%s, PyObject *args, PyObject *kwargs)"
-                    % (wrapper_function_name, class_.pystruct, _self_name))
+                    "%s(%s *%s, PyObject *args, PyObject *kwargs%s)"
+                    % (self.wrapper_actual_name, class_.pystruct, _self_name, extra))
             else:
+                assert not extra_wrapper_params, \
+                    "extra_wrapper_params can only be used with full varargs/kwargs wrappers"
                 code_sink.writeln(
                     "%s(%s *%s, PyObject *args)"
-                    % (wrapper_function_name, class_.pystruct, _self_name))
+                    % (self.wrapper_actual_name, class_.pystruct, _self_name))
         else:
+            assert not extra_wrapper_params, \
+                "extra_wrapper_params can only be used with full varargs/kwargs wrappers"
             if 'METH_STATIC' in flags:
-                code_sink.writeln("%s(void)" % (wrapper_function_name,))
+                code_sink.writeln("%s(void)" % (self.wrapper_actual_name,))
             else:
                 code_sink.writeln(
                     "%s(%s *%s)"
-                    % (wrapper_function_name, class_.pystruct, _self_name))
+                    % (self.wrapper_actual_name, class_.pystruct, _self_name))
                 
         code_sink.writeln('{')
         code_sink.indent()
@@ -95,10 +116,23 @@ class CppMethod(ForwardWrapperBase):
         code_sink.unindent()
         code_sink.writeln('}')
 
+    def get_py_method_def_flags(self):
+        flags = super(CppMethod, self).get_py_method_def_flags()
+        if self.is_static:
+            flags.append('METH_STATIC')
+        return flags
+
+    def get_py_method_def(self, method_name):
+        flags = self.get_py_method_def_flags()
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
-               (method_name, wrapper_function_name, '|'.join(flags),
-                (docstring is None and "NULL" or ('"'+docstring+'"')))
+               (method_name, self.wrapper_actual_name, '|'.join(flags),
+                (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
     
+
+class CppOverloadedMethod(overloading.OverloadedWrapper):
+    RETURN_TYPE = 'PyObject *'
+    ERROR_RETURN = 'return NULL;'
+
 
 class CppConstructor(ForwardWrapperBase):
     """

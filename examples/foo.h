@@ -194,6 +194,9 @@ public:
         m_zbr->Ref ();
     }
 
+    int get_int (const char *from_string);
+    int get_int (double from_float);
+
 };
 
 

@@ -24,6 +24,7 @@ class OverloadedWrapper(object):
         self.wrappers = []
         self.wrapper_name = wrapper_name
         self.wrapper_function_name = None
+        self.pystruct = 'PyObject'
         
     def add(self, wrapper):
         """
@@ -40,12 +41,14 @@ class OverloadedWrapper(object):
         if len(self.wrappers) == 1:
             ## special case when there's only one wrapper; keep
             ## simple things simple
-            self.wrapper_function_name = self.wrappers[0].generate(code_sink)
+            self.wrappers[0].generate(code_sink)
+            self.wrapper_function_name = self.wrappers[0].wrapper_actual_name
+            assert self.wrapper_function_name is not None
         else:
             ## multiple overloaded wrappers case..
 
             ## Generate the individual "low level" wrappers that handle a single prototype
-            self.wrapper_function_name = "_wrap_%s" % (self.wrapper_name,)
+            self.wrapper_function_name = self.wrappers[0].wrapper_base_name
             delegate_wrappers = []
             for number, wrapper in enumerate(self.wrappers):
                 ## enforce uniform method flags
@@ -62,14 +65,14 @@ return NULL;"""
                 wrapper_name = "%s__%i" % (self.wrapper_function_name, number)
                 wrapper.set_parse_error_return(error_return)
                 wrapper.generate(code_sink, wrapper_name,
-                                  extra_wrapper_params=["PyObject **return_exception"])
+                                 extra_wrapper_params=["PyObject **return_exception"])
                 delegate_wrappers.append(wrapper_name)
             
             ## Generate the 'main wrapper' that calls the other ones
             code_sink.writeln("static " + self.RETURN_TYPE)
-            code_sink.writeln("%s(PyObject *self,"
+            code_sink.writeln("%s(%s *self,"
                               " PyObject *args, PyObject *kwargs)"
-                              % (self.wrapper_function_name,))
+                              % (self.wrapper_function_name, self.pystruct))
             code_sink.writeln('{')
             code_sink.indent()
             code_sink.writeln(self.RETURN_TYPE + ' retval;')

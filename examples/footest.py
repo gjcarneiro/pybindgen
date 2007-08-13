@@ -100,6 +100,17 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(v2, 123)
 
         self.assertRaises(TypeError, foo.get_int, [123])
+
+    def test_overloaded_methods(self):
+        obj = foo.SomeObject("zbr")
+        
+        v1 = obj.get_int(123.0)
+        self.assertEqual(v1, 123)
+
+        v2 = obj.get_int("123")
+        self.assertEqual(v2, 123)
+
+        self.assertRaises(TypeError, obj.get_int, [123])
         
 
 if __name__ == '__main__':

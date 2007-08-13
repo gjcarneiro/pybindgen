@@ -6,7 +6,7 @@ import warnings
 
 from typehandlers.base import ForwardWrapperBase, Parameter, ReturnValue
 
-from cppmethod import CppMethod, CppConstructor, CppNoConstructor
+from cppmethod import CppMethod, CppConstructor, CppNoConstructor, CppOverloadedMethod
 from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter,
                           CppStaticAttributeGetter, CppStaticAttributeSetter,
                           PyGetSetDef, PyMetaclass)
@@ -86,7 +86,7 @@ class CppClass(object):
                          if not given)
         """
         self.name = name
-        self.methods = [] # (name, wrapper) pairs
+        self.methods = {} # name => OverloadedMethod
         self.constructors = [] # (name, wrapper) pairs
         self.slots = dict()
 
@@ -145,7 +145,16 @@ class CppClass(object):
         assert isinstance(wrapper, CppMethod)
         if name is None:
             name = wrapper.method_name
-        self.methods.append((name, wrapper))
+            
+        try:
+            overload = self.methods[name]
+        except KeyError:
+            overload = CppOverloadedMethod(name)
+            overload.pystruct = self.pystruct
+            self.methods[name] = overload
+
+        wrapper.class_ = self
+        overload.add(wrapper)
 
 
     def add_constructor(self, wrapper):
@@ -314,10 +323,10 @@ typedef struct {
     def _generate_methods(self, code_sink):
         """generate the method wrappers"""
         method_defs = []
-        for meth_name, meth_wrapper in self.methods:
+        for meth_name, overload in self.methods.iteritems():
             code_sink.writeln()
-            method_defs.append(meth_wrapper.generate(
-                code_sink, self, meth_name))
+            overload.generate(code_sink)
+            method_defs.append(overload.get_py_method_def(meth_name))
             code_sink.writeln()
         ## generate the method table
         code_sink.writeln("static PyMethodDef %s_methods[] = {" % (self.name,))
