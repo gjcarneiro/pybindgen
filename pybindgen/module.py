@@ -4,6 +4,7 @@ Code to generate code for a C/C++ Python extension module.
 
 from function import Function, OverloadedFunction
 from typehandlers.base import CodeBlock, DeclarationsScope
+from typehandlers.codesink import MemoryCodeSink
 from cppclass import CppClass
 
 
@@ -20,6 +21,8 @@ class Module(object):
         self.name = name
         self.functions = {} # name => OverloadedFunction
         self.classes = []
+        self.header = MemoryCodeSink()
+        self.includes = []
         self.before_init = CodeBlock('PyErr_Print();\nreturn;', self.declarations)
         self.after_init = CodeBlock('PyErr_Print();\nreturn;', self.declarations,
                                     predecessor=self.before_init)
@@ -48,6 +51,19 @@ class Module(object):
         python_name = transformer(c_name)
         """
         self.c_function_name_transformer = transformer
+
+    def add_include(self, include):
+        """
+        Adds an additional include directive, needed to compile this python module
+
+        include -- the name of the header file to include, including
+                   surrounding "" or <>.
+        """
+        assert isinstance(include, str)
+        assert include.startswith('"') or include.startswith('<')
+        assert include.endswith('"') or include.endswith('>')
+        if include not in self.includes:
+            self.includes.append(include)
 
     def add_function(self, wrapper, name=None):
         """
@@ -83,6 +99,10 @@ class Module(object):
 
     def generate(self, code_sink, docstring=None):
         """Generates the module to a code sink"""
+
+        outer_code_sink = code_sink
+        code_sink = MemoryCodeSink()
+
         m = self.declarations.declare_variable('PyObject*', 'm')
         assert m == 'm'
         self.before_init.write_code(
@@ -140,4 +160,11 @@ class Module(object):
         code_sink.unindent()
         code_sink.writeln('}')
 
+        ## generate the include directives
+        for include in self.includes:
+            outer_code_sink.writeln("#include %s" % include)
+
+        ## now assemble the codesink pieces
+        self.header.flush_to(outer_code_sink)
+        code_sink.flush_to(outer_code_sink)
         
