@@ -12,7 +12,6 @@ from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter
                           CppStaticAttributeGetter, CppStaticAttributeSetter,
                           PyGetSetDef, PyMetaclass)
 import settings
-     
 
 
 class CppClass(object):
@@ -73,7 +72,8 @@ class CppClass(object):
         '};\n'
         )
 
-    def __init__(self, name, parent=None, incref_method=None, decref_method=None):
+    def __init__(self, name, parent=None, incref_method=None, decref_method=None,
+                 automatic_type_narrowing=None):
         """Constructor
         name -- class name
         parent -- optional parent class wrapper
@@ -85,6 +85,11 @@ class CppClass(object):
                          name of the method that decrements the
                          reference count (may be inherited from parent
                          if not given)
+        automatic_type_narrowing -- if True, automatic return type
+                                    narrowing will be done on objects
+                                    of this class and its descendents
+                                    when returned by pointer from a
+                                    function or method.
         """
         self.name = name
         self.methods = {} # name => OverloadedMethod
@@ -110,6 +115,19 @@ class CppClass(object):
             self.incref_method = incref_method
             self.decref_method = decref_method
 
+        if automatic_type_narrowing is None:
+            if parent is None:
+                self.automatic_type_narrowing = settings.automatic_type_narrowing
+            else:
+                self.automatic_type_narrowing = parent.automatic_type_narrowing
+        else:
+            self.automatic_type_narrowing = automatic_type_narrowing
+
+        self.typeid_map = None
+        self.typeid_map_name = None # name of C++ variable
+        if self.automatic_type_narrowing:
+            self._register_typeid()
+
         if name != 'dummy':
             ## register type handlers
             class ThisClassParameter(CppClassParameter):
@@ -133,6 +151,37 @@ class CppClass(object):
                 CTYPES = [name+'*']
                 cpp_class = self
 
+    
+    def get_type_narrowing_root(self):
+        """Find the root CppClass along the subtree of all parent classes that
+        have automatic_type_narrowing=True Note: multiple inheritance
+        not implemented"""
+        root = self
+        while (root.parent is not None
+               and root.parent.automatic_type_narrowing):
+            root = root.parent
+        return root
+
+    def _register_typeid(self):
+        """register this class with the typeid map root class"""
+        root = self.get_type_narrowing_root()
+        if root is self:
+            ## since we are the root, we are responsible for creating
+            ## and managing the typeid table
+            self.typeid_map = [self] # list of registered subclasses
+            self.typeid_map_name = "%s__typeid_map" % self.pystruct
+        else:
+            root.typeid_map.append(self)
+
+    def _generate_typeid_map(self, code_sink, module):
+        """generate the typeid map and fill it with values"""
+        module.add_include("<map>")
+        code_sink.writeln("\nstd::map<const char *, PyTypeObject *> %s;\n\n"
+                          % self.typeid_map_name)
+        for subclass in self.typeid_map:
+            module.after_init.write_code("%s[typeid(%s).name()] = &%s;"
+                                         % (self.typeid_map_name, subclass.name,
+                                            subclass.pytypestruct))
 
     def add_method(self, wrapper, name=None):
         """
@@ -165,7 +214,7 @@ class CppClass(object):
         wrapper -- a CppConstructor instance
         """
         assert isinstance(wrapper, CppConstructor)
-        wrapper.class_ = self
+        wrapper.set_class(self)
         self.constructors.append(wrapper)
 
     def add_static_attribute(self, value_type, name, is_const=False):
@@ -256,6 +305,8 @@ typedef struct {
         self._generate_methods(code_sink)
         self._generate_destructor(code_sink, have_constructor)
         self._generate_type_structure(code_sink, docstring)
+        if self.typeid_map is not None:
+            self._generate_typeid_map(code_sink, module)
 
         
     def _generate_type_structure(self, code_sink, docstring):
@@ -306,6 +357,7 @@ typedef struct {
                 parent_default_constructor = self.parent.get_default_constructor()
             if parent_default_constructor is not None:
                 cons = CppConstructor([])
+                cons.set_class(self)
                 code_sink.writeln()
                 cons.generate(code_sink)
                 constructor = cons.wrapper_actual_name
@@ -326,6 +378,8 @@ typedef struct {
         return have_constructor
 
     def get_default_constructor(self):
+        """get the default constructor for this class according to C++
+        language rules"""
         for cons in self.constructors:
             if len(cons.parameters) == 0:
                 return cons
@@ -538,15 +592,41 @@ class CppClassPtrReturnValue(ReturnValue):
 
     def convert_c_to_python(self, wrapper):
         """See ReturnValue.convert_c_to_python"""
+
+        ## Value transformations
+        value = self.transformation.untransform(
+            self, wrapper.declarations, wrapper.after_call, self.value)
+
+        ## Find out what Python wrapper to use, in case
+        ## automatic_type_narrowing is active and we are not forced to
+        ## make a copy of the object
+        if (self.cpp_class.automatic_type_narrowing
+            and (self.caller_owns_return or self.cpp_class.incref_method is not None)):
+            wrapper_type = wrapper.declarations.declare_variable('PyTypeObject*',
+                                                                 'wrapper_type')
+            wrapper.after_call.write_code(
+                "%s = %s[typeid(*%s).name()];" %
+                (wrapper_type,
+                 self.cpp_class.get_type_narrowing_root().typeid_map_name,
+                 value))
+            ## fallback to the base type in case of typeid map lookup failure
+            wrapper.after_call.write_code("if (!%s)" % wrapper_type)
+            wrapper.after_call.indent()
+            wrapper.after_call.write_code("%s = &%s;" %
+                                          (wrapper_type,
+                                           self.cpp_class.pytypestruct))
+            wrapper.after_call.unindent()
+        else:
+            wrapper_type = '&'+self.cpp_class.pytypestruct
+
+        ## Create the Python wrapper object
         py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
         wrapper.after_call.write_code(
             "%s = PyObject_New(%s, %s);" %
-            (py_name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+            (py_name, self.cpp_class.pystruct, wrapper_type))
         
-        value = self.transformation.untransform(
-            self, wrapper.declarations, wrapper.after_call, self.value)
-        
+        ## Assign the C++ value to the Python wrapper
         if self.caller_owns_return:
             wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
         else:

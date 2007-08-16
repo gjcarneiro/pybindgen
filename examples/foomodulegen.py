@@ -55,10 +55,11 @@ def my_module_gen(out_file):
 
     mod = Module('foo')
 
-    Foo = CppClass('Foo')
+    Foo = CppClass('Foo', automatic_type_narrowing=True)
     mod.add_class(Foo)
     Foo.add_constructor(
         CppConstructor([Parameter.new('std::string', 'datum')]))
+    Foo.add_constructor(CppConstructor([]))
     Foo.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
     
 

@@ -179,6 +179,7 @@ class CppConstructor(ForwardWrapperBase):
         #assert isinstance(class_, CppClass)
         tmp_sink = codesink.MemoryCodeSink()
 
+        assert self._class is not None
         self.generate_body(tmp_sink, gen_call_params=[self._class])
 
         assert ((self.parse_params.get_parameters() == ['""'])

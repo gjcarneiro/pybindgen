@@ -12,3 +12,7 @@ Prefix applied to global declarations, such as instance and type
 structures.
 """
 
+automatic_type_narrowing = False
+"""
+Default value for the automatic_type_narrowing parameter of C++ classes.
+"""

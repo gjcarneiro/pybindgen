@@ -35,6 +35,8 @@ public:
 
     Foo (Foo const & other) : m_datum (other.get_datum ())
         {}
+
+    virtual ~Foo() {}
 };
 
 
@@ -44,6 +46,7 @@ public:
     static std::string Hooray () {
         return std::string ("Hooray!");
     }
+    virtual ~Bar() {}
 };
 
 

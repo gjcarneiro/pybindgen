@@ -120,5 +120,18 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(obj2.get_prefix(), "XXXXX")
         self.assertRaises(TypeError, foo.SomeObject, [123])
 
+    def test_return_type_narrowing(self):
+        obj = foo.SomeObject("zbr")
+
+        obj.set_foo_ptr(foo.Foo())
+        foo1 = obj.get_foo_ptr()
+        self.assertEqual(type(foo1), foo.Foo)
+        
+        bar2 = foo.Bar()
+        self.assertEqual(type(bar2), foo.Bar)
+        obj.set_foo_ptr(bar2)
+        foo2 = obj.get_foo_ptr()
+        self.assertEqual(type(foo2), foo.Bar)
+
 if __name__ == '__main__':
     unittest.main()
