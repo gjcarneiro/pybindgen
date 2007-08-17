@@ -55,11 +55,11 @@ APPNAME='pybindgen'
 srcdir = '.'
 blddir = 'build'
 
-def generate_version_py():
+def generate_version_py(force=False):
     """generates pybindgen/version.py, unless it already exists"""
 
     filename = os.path.join('pybindgen', 'version.py')
-    if os.path.exists(filename):
+    if not force and os.path.exists(filename):
         return
 
     version = get_version_from_bzr(srcdir)
@@ -82,7 +82,7 @@ def dist_hook(srcdir, blddir):
     shutil.copy(os.path.join(srcdir, "ChangeLog"), blddir)
 
     ## Write a pybindgen/version.py file containing the project version
-    generate_version_py()
+    generate_version_py(force=True)
 
     ## Copy it to the source dir
     shutil.copy(os.path.join('pybindgen', 'version.py'), os.path.join(srcdir, "pybindgen"))
