@@ -1,3 +1,7 @@
+=== pybindgen 0.6 ===
+	- Supports function/method/constructor overloading
+        - Supports automatic type narrowing on C++ class pointer return values
+
 === pybindgen 0.5 ===
 	- Support C++ class instance/static attribute setters (only
           getters supported before).
