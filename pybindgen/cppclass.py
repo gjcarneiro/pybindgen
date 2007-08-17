@@ -176,6 +176,7 @@ class CppClass(object):
     def _generate_typeid_map(self, code_sink, module):
         """generate the typeid map and fill it with values"""
         module.add_include("<map>")
+        module.add_include("<cxxabi.h>")
         module.header.writeln("\nstd::map<const char *, PyTypeObject *> %s;\n\n"
                               % self.typeid_map_name)
         for subclass in self.typeid_map:
@@ -602,21 +603,38 @@ class CppClassPtrReturnValue(ReturnValue):
         ## make a copy of the object
         if (self.cpp_class.automatic_type_narrowing
             and (self.caller_owns_return or self.cpp_class.incref_method is not None)):
-            wrapper_type = wrapper.declarations.declare_variable('PyTypeObject*',
-                                                                 'wrapper_type')
+
+            wrapper.after_call.write_code('// get python wrapper from RTTI')
+
+            typeid_map_name = self.cpp_class.get_type_narrowing_root().typeid_map_name
+            wrapper_type = wrapper.declarations.declare_variable(
+                'PyTypeObject*', 'wrapper_type', '0')
+            typeinfo_var = wrapper.declarations.declare_variable(
+                'const abi::__si_class_type_info *', '_typeinfo')
             wrapper.after_call.write_code(
-                "%s = %s[typeid(*%s).name()];" %
-                (wrapper_type,
-                 self.cpp_class.get_type_narrowing_root().typeid_map_name,
-                 value))
-            ## fallback to the base type in case of typeid map lookup failure
+                '%(typeinfo_var)s = dynamic_cast<const abi::__si_class_type_info*> (&typeid(*%(value)s));'
+                % vars())
+            wrapper.after_call.write_code(
+                'while (%(typeinfo_var)s && (%(wrapper_type)s = %(typeid_map_name)s[%(typeinfo_var)s->name()]) == 0)'
+                % vars())
+            wrapper.after_call.indent()
+            wrapper.after_call.write_code(
+                '%(typeinfo_var)s = dynamic_cast<const abi::__si_class_type_info*> '
+                '(%(typeinfo_var)s->__base_type);' % vars())
+            wrapper.after_call.unindent()
+
+            ## fallback code
             wrapper.after_call.write_code("if (!%s)" % wrapper_type)
             wrapper.after_call.indent()
             wrapper.after_call.write_code("%s = &%s;" %
                                           (wrapper_type,
                                            self.cpp_class.pytypestruct))
             wrapper.after_call.unindent()
+
+            wrapper.after_call.write_code('//')
+
         else:
+
             wrapper_type = '&'+self.cpp_class.pytypestruct
 
         ## Create the Python wrapper object
