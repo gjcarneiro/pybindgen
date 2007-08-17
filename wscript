@@ -57,10 +57,12 @@ blddir = 'build'
 
 def generate_version_py():
     """generates pybindgen/version.py, unless it already exists"""
-    version = get_version_from_bzr(srcdir)
+
     filename = os.path.join('pybindgen', 'version.py')
     if os.path.exists(filename):
         return
+
+    version = get_version_from_bzr(srcdir)
     dest = open(filename, 'w')
     if isinstance(version, list):
         dest.write('# [major, minor, micro, revno], '
