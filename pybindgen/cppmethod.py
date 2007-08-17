@@ -13,7 +13,8 @@ class CppMethod(ForwardWrapperBase):
     Class that generates a wrapper to a C++ class method
     """
 
-    def __init__(self, return_value, method_name, parameters, is_static=False):
+    def __init__(self, return_value, method_name, parameters, is_static=False,
+                 template_parameters=()):
         """
         return_value -- the method return value
         method_name -- name of the method
@@ -25,6 +26,8 @@ class CppMethod(ForwardWrapperBase):
             "return NULL;", "return NULL;")
         self.method_name = method_name
         self.is_static = is_static
+        self.template_parameters = template_parameters
+
         self._class = None
         self.docstring = None
         self.wrapper_base_name = None
@@ -43,10 +46,14 @@ class CppMethod(ForwardWrapperBase):
     def generate_call(self, class_):
         "virtual method implementation; do not call"
         #assert isinstance(class_, CppClass)
-        if self.is_static:
-            method = '%s::%s' % (class_.name, self.method_name)
+        if self.template_parameters:
+            template_params = '< %s >' % ', '.join(self.template_parameters)
         else:
-            method = 'self->obj->%s' % self.method_name
+            template_params = ''
+        if self.is_static:
+            method = '%s::%s%s' % (class_.name, self.method_name, template_params)
+        else:
+            method = 'self->obj->%s%s' % (self.method_name, template_params)
         if self.return_value.ctype == 'void':
             self.before_call.write_code(
                 '%s(%s);' %
