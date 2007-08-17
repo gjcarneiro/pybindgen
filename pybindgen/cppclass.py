@@ -176,8 +176,8 @@ class CppClass(object):
     def _generate_typeid_map(self, code_sink, module):
         """generate the typeid map and fill it with values"""
         module.add_include("<map>")
-        code_sink.writeln("\nstd::map<const char *, PyTypeObject *> %s;\n\n"
-                          % self.typeid_map_name)
+        module.header.writeln("\nstd::map<const char *, PyTypeObject *> %s;\n\n"
+                              % self.typeid_map_name)
         for subclass in self.typeid_map:
             module.after_init.write_code("%s[typeid(%s).name()] = &%s;"
                                          % (self.typeid_map_name, subclass.name,
