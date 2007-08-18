@@ -49,6 +49,8 @@ public:
     virtual ~Bar() {}
 };
 
+// caller owns return
+Foo* get_hidden_subclass_pointer ();
 
 class Zbr
 {

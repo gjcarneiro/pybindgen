@@ -68,6 +68,10 @@ def my_module_gen(out_file):
     Bar.add_method(CppMethod(ReturnValue.new('std::string'), 'Hooray', [], is_static=True))
     mod.add_class(Bar)
 
+    ## to test RTTI with a hidden subclass
+    mod.add_function(Function(ReturnValue.new('Foo*', caller_owns_return=True),
+                              'get_hidden_subclass_pointer', []))
+
 
     ## Zbr is a reference counted class
     Zbr = CppClass('Zbr', incref_method='Ref', decref_method='Unref')

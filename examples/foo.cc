@@ -37,3 +37,16 @@ int SomeObject::get_int (double from_float)
 {
     return (int) from_float;
 }
+
+
+class HiddenClass : public Bar
+{
+};
+
+
+Foo*
+get_hidden_subclass_pointer ()
+{
+    return new HiddenClass;
+}
+

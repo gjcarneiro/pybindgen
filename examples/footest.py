@@ -133,5 +133,10 @@ class TestFoo(unittest.TestCase):
         foo2 = obj.get_foo_ptr()
         self.assertEqual(type(foo2), foo.Bar)
 
+    def test_type_narrowing_hidden_subclass(self):
+        """This test only works with GCC >= 3.0 (and not with other compilers)"""
+        obj = foo.get_hidden_subclass_pointer()
+        self.assertEqual(type(obj), foo.Bar)
+
 if __name__ == '__main__':
     unittest.main()
