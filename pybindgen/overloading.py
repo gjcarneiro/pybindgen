@@ -64,11 +64,13 @@ class OverloadedWrapper(object):
 %s""" % (self.ERROR_RETURN,)
                 wrapper_name = "%s__%i" % (self.wrapper_function_name, number)
                 wrapper.set_parse_error_return(error_return)
+                code_sink.writeln()
                 wrapper.generate(code_sink, wrapper_name,
                                  extra_wrapper_params=["PyObject **return_exception"])
                 delegate_wrappers.append(wrapper_name)
             
             ## Generate the 'main wrapper' that calls the other ones
+            code_sink.writeln()
             code_sink.writeln("static " + self.RETURN_TYPE)
             code_sink.writeln("%s(%s *self,"
                               " PyObject *args, PyObject *kwargs)"
