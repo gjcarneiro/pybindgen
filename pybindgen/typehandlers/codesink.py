@@ -6,7 +6,7 @@ writes them to a file, memory, or another code sink object.
 class CodeSink(object):
     """Abstract base class for code sinks"""
     def __init__(self):
-        '''Constructor
+        r'''Constructor
 
         >>> sink = MemoryCodeSink()
         >>> sink.writeln("foo();")
@@ -20,6 +20,13 @@ class CodeSink(object):
         if (true) {
             bar();
         zbr();
+        
+        >>> sink = MemoryCodeSink()
+        >>> sink.writeln("foo();")
+        >>> sink.writeln()
+        >>> sink.writeln("bar();")
+        >>> print len(sink.flush().split("\n"))
+        4
         '''
         self.indent_level = 0 # current indent level
         self.indent_stack = [] # previous indent levels
@@ -33,7 +40,7 @@ class CodeSink(object):
             l.append(' '*self.indent_level + line)
         return l
 
-    def writeln(self, line='\n'):
+    def writeln(self, line=''):
         """Write one or more lines of code"""
         raise NotImplementedError
 
@@ -58,7 +65,7 @@ class FileCodeSink(CodeSink):
         CodeSink.__init__(self)
         self.file = file_
 
-    def writeln(self, line='\n'):
+    def writeln(self, line=''):
         """Write one or more lines of code"""
         self.file.write('\n'.join(self._format_code(line)))
         self.file.write('\n')
@@ -71,7 +78,7 @@ class MemoryCodeSink(CodeSink):
         CodeSink.__init__(self)
         self.lines = []
 
-    def writeln(self, line='\n'):
+    def writeln(self, line=''):
         """Write one or more lines of code"""
         self.lines.extend(self._format_code(line))
 
