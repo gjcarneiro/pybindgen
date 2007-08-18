@@ -1,5 +1,6 @@
 import pybindgen.typehandlers.base as typehandlers
 import pybindgen.typehandlers.codesink as codesink
+from pybindgen import module
     
 
 import unittest
@@ -64,6 +65,7 @@ if __name__ == '__main__':
     for mod in [
         typehandlers,
         codesink,
+        module,
         ]:
         suite.addTest(doctest.DocTestSuite(mod))
 
