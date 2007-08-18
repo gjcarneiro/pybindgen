@@ -48,7 +48,7 @@ class Function(ForwardWrapperBase):
         tmp_sink = codesink.MemoryCodeSink()
         self.generate_body(tmp_sink)
         code_sink.writeln("static PyObject *")
-        prototype_line = ("%s(PyObject *dummy PYBINDGEN_UNUSED, "
+        prototype_line = ("%s(PyObject * PYBINDGEN_UNUSED dummy, "
                           "PyObject *args, PyObject *kwargs") % (self.wrapper_actual_name,)
         if extra_wrapper_params:
             prototype_line += ", " + ", ".join(extra_wrapper_params)
