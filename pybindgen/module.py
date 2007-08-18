@@ -28,6 +28,7 @@ class Module(object):
                                     predecessor=self.before_init)
         self.c_function_name_transformer = None
         self.set_strip_prefix(name + '_')
+        self.one_time_definitions = {}
 
     def set_strip_prefix(self, prefix):
         """Sets the prefix string to be used when transforming a C
@@ -95,6 +96,32 @@ class Module(object):
         """
         assert isinstance(class_, CppClass)
         self.classes.append(class_)
+
+
+    def declare_one_time_definition(self, definition_name):
+        """
+        Internal helper method for code geneneration to coordinate
+        generation of code that can only be defined once per module
+
+        (note: assuming here one-to-one mapping between 'module' and
+        'compilation unit').
+
+        definition_name -- a string that uniquely identifies the code
+        definition that will be added.  If the given definition was
+        already declared KeyError is raised.
+        
+        >>> module = Module('foo')
+        >>> module.declare_one_time_definition("zbr")
+        >>> module.declare_one_time_definition("zbr")
+        Traceback (most recent call last):
+        ...
+        KeyError
+        >>> module.declare_one_time_definition("bar")
+        """
+        assert isinstance(definition_name, str)
+        if definition_name in self.one_time_definitions:
+            raise KeyError
+        self.one_time_definitions[definition_name] = None
 
 
     def generate(self, code_sink, docstring=None):
