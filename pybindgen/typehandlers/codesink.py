@@ -31,9 +31,7 @@ class CodeSink(object):
         l = []
         for line in code.split('\n'):
             l.append(' '*self.indent_level + line)
-        if l[-1]:
-            l.append('')
-        return '\n'.join(l)
+        return l
 
     def writeln(self, line='\n'):
         """Write one or more lines of code"""
@@ -62,7 +60,8 @@ class FileCodeSink(CodeSink):
 
     def writeln(self, line='\n'):
         """Write one or more lines of code"""
-        self.file.write(self._format_code(line))
+        self.file.write('\n'.join(self._format_code(line)))
+        self.file.write('\n')
 
 class MemoryCodeSink(CodeSink):
     """A code sink that keeps the code in memory,
@@ -74,7 +73,7 @@ class MemoryCodeSink(CodeSink):
 
     def writeln(self, line='\n'):
         """Write one or more lines of code"""
-        self.lines.append(self._format_code(line))
+        self.lines.extend(self._format_code(line))
 
     def flush_to(self, sink):
         """Flushes code to another code sink
@@ -89,7 +88,7 @@ class MemoryCodeSink(CodeSink):
         "Flushes the code and returns the formatted output as a return value string"
         l = []
         for line in self.lines:
-            l.append(self._format_code(line))
+            l.extend(self._format_code(line))
         self.lines = []
-        return "".join(l)
+        return "\n".join(l) + '\n'
 
