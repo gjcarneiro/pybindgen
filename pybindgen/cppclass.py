@@ -175,12 +175,63 @@ class CppClass(object):
 
     def _generate_typeid_map(self, code_sink, module):
         """generate the typeid map and fill it with values"""
-        module.add_include("<map>")
-        module.add_include("<cxxabi.h>")
-        module.header.writeln("\nstd::map<const char *, PyTypeObject *> %s;\n\n"
-                              % self.typeid_map_name)
+        try:
+            module.declare_one_time_definition("TypeIDMap")
+        except KeyError:
+            pass
+        else:
+            module.header.writeln('''
+
+#include <map>
+#include <typeinfo>
+#if defined(__GNUC__) && __GNUC__ >= 3
+# include <cxxabi.h>
+#endif
+
+namespace pybindgen {
+
+class TypeMap
+{
+   std::map<const char *, PyTypeObject *> m_map;
+
+public:
+
+   TypeMap() {}
+
+   void register_wrapper(const std::type_info &cpp_type_info, PyTypeObject *python_wrapper)
+   {
+       m_map[cpp_type_info.name()] = python_wrapper;
+   }
+
+   PyTypeObject * lookup_wrapper(const std::type_info &cpp_type_info, PyTypeObject *fallback_wrapper)
+   {
+       PyTypeObject *python_wrapper = m_map[cpp_type_info.name()];
+       if (python_wrapper)
+           return python_wrapper;
+       else {
+#if defined(__GNUC__) && __GNUC__ >= 3
+
+           // Get closest (in the single inheritance tree provided by cxxabi.h)
+           // registered python wrapper.
+           const abi::__si_class_type_info *_typeinfo =
+               dynamic_cast<const abi::__si_class_type_info*> (&cpp_type_info);
+           while (_typeinfo && (python_wrapper = m_map[_typeinfo->name()]) == 0)
+               _typeinfo = dynamic_cast<const abi::__si_class_type_info*> (_typeinfo->__base_type);
+
+           return python_wrapper? python_wrapper : fallback_wrapper;
+
+#else // non gcc 3+ compilers can only match against registerd classes, not hidden subclasses
+           return fallback_wrapper;
+#endif
+       }
+   }
+};
+
+}
+''')
+        module.header.writeln("\npybindgen::TypeMap %s;\n" % self.typeid_map_name)
         for subclass in self.typeid_map:
-            module.after_init.write_code("%s[typeid(%s).name()] = &%s;"
+            module.after_init.write_code("%s.register_wrapper(typeid(%s), &%s);"
                                          % (self.typeid_map_name, subclass.name,
                                             subclass.pytypestruct))
 
@@ -604,34 +655,12 @@ class CppClassPtrReturnValue(ReturnValue):
         if (self.cpp_class.automatic_type_narrowing
             and (self.caller_owns_return or self.cpp_class.incref_method is not None)):
 
-            wrapper.after_call.write_code('// get python wrapper from RTTI')
-
             typeid_map_name = self.cpp_class.get_type_narrowing_root().typeid_map_name
             wrapper_type = wrapper.declarations.declare_variable(
                 'PyTypeObject*', 'wrapper_type', '0')
-            typeinfo_var = wrapper.declarations.declare_variable(
-                'const abi::__si_class_type_info *', '_typeinfo')
             wrapper.after_call.write_code(
-                '%(typeinfo_var)s = dynamic_cast<const abi::__si_class_type_info*> (&typeid(*%(value)s));'
-                % vars())
-            wrapper.after_call.write_code(
-                'while (%(typeinfo_var)s && (%(wrapper_type)s = %(typeid_map_name)s[%(typeinfo_var)s->name()]) == 0)'
-                % vars())
-            wrapper.after_call.indent()
-            wrapper.after_call.write_code(
-                '%(typeinfo_var)s = dynamic_cast<const abi::__si_class_type_info*> '
-                '(%(typeinfo_var)s->__base_type);' % vars())
-            wrapper.after_call.unindent()
-
-            ## fallback code
-            wrapper.after_call.write_code("if (!%s)" % wrapper_type)
-            wrapper.after_call.indent()
-            wrapper.after_call.write_code("%s = &%s;" %
-                                          (wrapper_type,
-                                           self.cpp_class.pytypestruct))
-            wrapper.after_call.unindent()
-
-            wrapper.after_call.write_code('//')
+                '%s = %s.lookup_wrapper(typeid(*%s), &%s);'
+                % (wrapper_type, typeid_map_name, value, self.cpp_class.pytypestruct))
 
         else:
 
