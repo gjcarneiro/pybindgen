@@ -131,6 +131,8 @@ class CppClass(object):
             else:
                 self.allow_subclassing = parent.allow_subclassing
         else:
+            assert allow_subclassing or (self.parent is None or not self.parent.allow_subclassing), \
+                "Cannot disable subclassing if the parent class allows it"
             self.allow_subclassing = allow_subclassing
 
         self.typeid_map = None
@@ -230,7 +232,7 @@ public:
 
            return python_wrapper? python_wrapper : fallback_wrapper;
 
-#else // non gcc 3+ compilers can only match against registerd classes, not hidden subclasses
+#else // non gcc 3+ compilers can only match against explicitly registered classes, not hidden subclasses
            return fallback_wrapper;
 #endif
        }
@@ -312,12 +314,23 @@ public:
         """Generates forward declarations for the instance and type
         structures"""
 
-        code_sink.writeln('''
+        if self.allow_subclassing:
+            code_sink.writeln('''
+typedef struct {
+    PyObject_HEAD
+    %s *obj;
+    PyObject *inst_dict;
+} %s;
+    ''' % (self.name, self.pystruct))
+
+        else:
+
+            code_sink.writeln('''
 typedef struct {
     PyObject_HEAD
     %s *obj;
 } %s;
-''' % (self.name, self.pystruct))
+    ''' % (self.name, self.pystruct))
 
         code_sink.writeln()
         code_sink.writeln('extern PyTypeObject %s;' % (self.pytypestruct,))
@@ -365,6 +378,8 @@ typedef struct {
 
         have_constructor = self._generate_constructor(code_sink)
         self._generate_methods(code_sink)
+        if self.allow_subclassing:
+            self._generate_gc_methods(code_sink)
         self._generate_destructor(code_sink, have_constructor)
         self._generate_type_structure(code_sink, docstring)
         if self.typeid_map is not None:
@@ -383,12 +398,17 @@ typedef struct {
                      "tp_descr_set", "tp_is_gc"]:
             self.slots.setdefault(slot, "NULL")
 
-        self.slots.setdefault("tp_dictoffset", "0")
         self.slots.setdefault("tp_alloc", "PyType_GenericAlloc")
         self.slots.setdefault("tp_new", "PyType_GenericNew")
-        self.slots.setdefault("tp_free", "_PyObject_Del")
+        #self.slots.setdefault("tp_free", "_PyObject_Del")
+        self.slots.setdefault("tp_free", "0")
         self.slots.setdefault("tp_weaklistoffset", "0")
-        self.slots.setdefault("tp_flags", "Py_TPFLAGS_DEFAULT")
+        if self.allow_subclassing:
+            self.slots.setdefault("tp_flags", "Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_GC|Py_TPFLAGS_BASETYPE")
+            self.slots.setdefault("tp_dictoffset", "offsetof(%s, inst_dict)" % self.pystruct)
+        else:
+            self.slots.setdefault("tp_flags", "Py_TPFLAGS_DEFAULT")
+            self.slots.setdefault("tp_dictoffset", "0")
         self.slots.setdefault("tp_doc", (docstring is None and 'NULL'
                                          or "\"%s\"" % (docstring,)))
         dict_ = dict(self.slots)
@@ -467,6 +487,34 @@ typedef struct {
         code_sink.writeln("};")
         self.slots.setdefault("tp_methods", "%s_methods" % (self.name,))
 
+    def _generate_gc_methods(self, code_sink):
+        """Generate tp_clear and tp_traverse"""
+
+        ## --- tp_clear ---
+        tp_clear_function_name = "%s__tp_clear" % (self.pystruct,)
+        self.slots.setdefault("tp_clear", tp_clear_function_name )
+        code_sink.writeln(r'''
+static void
+%s(%s *self)
+{
+    // fprintf(stderr, "tp_clear >>> %%s at %%p <<<\n", self->ob_type->tp_name, self);
+    Py_CLEAR(self->inst_dict);
+}
+''' % (tp_clear_function_name, self.pystruct))
+
+        ## --- tp_traverse ---
+        tp_traverse_function_name = "%s__tp_traverse" % (self.pystruct,)
+        self.slots.setdefault("tp_traverse", tp_traverse_function_name )
+        code_sink.writeln(r'''
+static int
+%s(%s *self, visitproc visit, void *arg)
+{
+    // fprintf(stderr, "tp_traverse >>> %%s at %%p <<<\n", self->ob_type->tp_name, self);
+    Py_VISIT(self->inst_dict);
+    return 0;
+}
+''' % (tp_traverse_function_name, self.pystruct))
+
 
     def _generate_destructor(self, code_sink, have_constructor):
         """Generate a tp_dealloc function and register it in the type"""
@@ -476,22 +524,30 @@ typedef struct {
             return
 
         tp_dealloc_function_name = "_wrap_%s__tp_dealloc" % (self.pystruct,)
+
+        if self.allow_subclassing:
+            clear_code = "%s(self);" % self.slots["tp_clear"]
+        else:
+            clear_code = ""
+
         if have_constructor:
             if self.decref_method is None:
                 delete_code = "delete tmp;"
             else:
                 delete_code = ("if (tmp)\n        tmp->%s()"
                                % (self.decref_method,))
-            code_sink.writeln('''
+            code_sink.writeln(r'''
 static void
 %s(%s *self)
 {
+    // fprintf(stderr, "dealloc >>> %%s at %%p <<<\n", self->ob_type->tp_name, self);
     %s *tmp = self->obj;
     self->obj = NULL;
     %s;
-    PyObject_DEL(self);
+    %s
+    self->ob_type->tp_free((PyObject*)self);
 }
-    ''' % (tp_dealloc_function_name, self.pystruct, self.name, delete_code))
+''' % (tp_dealloc_function_name, self.pystruct, self.name, delete_code, clear_code))
 
         else: # don't have constructor
 
@@ -499,9 +555,10 @@ static void
 static void
 %s(%s *self)
 {
-    PyObject_DEL(self);
+    %s
+    self->ob_type->tp_free((PyObject*)self);
 }
-    ''' % (tp_dealloc_function_name, self.pystruct))
+''' % (tp_dealloc_function_name, self.pystruct, clear_code))
         code_sink.writeln()
         self.slots.setdefault("tp_dealloc", tp_dealloc_function_name )
 

@@ -88,7 +88,7 @@ class CppMethod(ForwardWrapperBase):
 
         code_sink.writeln("static PyObject *")
         if 'METH_STATIC' in flags:
-            _self_name = 'PYBINDGEN_UNUSED dummy'
+            _self_name = 'PYBINDGEN_UNUSED(dummy)'
         else:
             _self_name = 'self'
 

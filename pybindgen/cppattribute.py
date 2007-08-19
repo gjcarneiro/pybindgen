@@ -188,7 +188,7 @@ class CppStaticAttributeSetter(PySetter):
         self.after_call.write_code('return 0;')
 
         ## now generate the function itself
-        code_sink.writeln(("static int %s(%s * PYBINDGEN_UNUSED dummy, "
+        code_sink.writeln(("static int %s(%s * PYBINDGEN_UNUSED(dummy), "
                            "PyObject *value)")
                           % (self.c_function_name, self.class_.pystruct))
         code_sink.writeln('{')

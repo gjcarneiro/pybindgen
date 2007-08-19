@@ -97,7 +97,7 @@ def my_module_gen(out_file):
 
 
 
-    SomeObject = CppClass('SomeObject')
+    SomeObject = CppClass('SomeObject', allow_subclassing=True)
     SomeObject.add_instance_attribute(ReturnValue.new('std::string'), 'm_prefix')
     SomeObject.add_static_attribute(ReturnValue.new('std::string'), 'staticData') ## not working correctly
     
