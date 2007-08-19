@@ -73,7 +73,7 @@ class CppClass(object):
         )
 
     def __init__(self, name, parent=None, incref_method=None, decref_method=None,
-                 automatic_type_narrowing=None):
+                 automatic_type_narrowing=None, allow_subclassing=None):
         """Constructor
         name -- class name
         parent -- optional parent class wrapper
@@ -90,6 +90,8 @@ class CppClass(object):
                                     of this class and its descendents
                                     when returned by pointer from a
                                     function or method.
+        allow_subclassing -- if True, generated class wrappers will
+                             allow subclassing in Python.
         """
         self.name = name
         self.methods = {} # name => OverloadedMethod
@@ -122,6 +124,14 @@ class CppClass(object):
                 self.automatic_type_narrowing = parent.automatic_type_narrowing
         else:
             self.automatic_type_narrowing = automatic_type_narrowing
+
+        if allow_subclassing is None:
+            if parent is None:
+                self.allow_subclassing = settings.allow_subclassing
+            else:
+                self.allow_subclassing = parent.allow_subclassing
+        else:
+            self.allow_subclassing = allow_subclassing
 
         self.typeid_map = None
         self.typeid_map_name = None # name of C++ variable

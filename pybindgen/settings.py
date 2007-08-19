@@ -16,3 +16,8 @@ automatic_type_narrowing = False
 """
 Default value for the automatic_type_narrowing parameter of C++ classes.
 """
+
+allow_subclassing = False
+"""
+Allow generated classes to be subclassed by default.
+"""
