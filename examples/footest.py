@@ -1,4 +1,6 @@
 import sys
+import weakref
+import gc
 import os.path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '..', 'build', 'default', 'examples'))
@@ -137,6 +139,22 @@ class TestFoo(unittest.TestCase):
         """This test only works with GCC >= 3.0 (and not with other compilers)"""
         obj = foo.get_hidden_subclass_pointer()
         self.assertEqual(type(obj), foo.Bar)
+
+    def test_subclass_gc(self):
+        try:
+            class Test(foo.SomeObject):
+                pass
+        except TypeError:
+            self.fail()
+
+        t = Test("xxx")
+        t.xxx = t
+        ref = weakref.ref(t)
+        del t
+        while gc.collect():
+            pass
+        self.assertEqual(ref(), None)
+      
 
 if __name__ == '__main__':
     unittest.main()
