@@ -131,7 +131,8 @@ class CppClass(object):
             else:
                 self.allow_subclassing = parent.allow_subclassing
         else:
-            assert allow_subclassing or (self.parent is None or not self.parent.allow_subclassing), \
+            assert allow_subclassing or (self.parent is None or
+                                         not self.parent.allow_subclassing), \
                 "Cannot disable subclassing if the parent class allows it"
             self.allow_subclassing = allow_subclassing
 
@@ -404,8 +405,11 @@ typedef struct {
         self.slots.setdefault("tp_free", "0")
         self.slots.setdefault("tp_weaklistoffset", "0")
         if self.allow_subclassing:
-            self.slots.setdefault("tp_flags", "Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_GC|Py_TPFLAGS_BASETYPE")
-            self.slots.setdefault("tp_dictoffset", "offsetof(%s, inst_dict)" % self.pystruct)
+            self.slots.setdefault("tp_flags", ("Py_TPFLAGS_DEFAULT|"
+                                               "Py_TPFLAGS_HAVE_GC|"
+                                               "Py_TPFLAGS_BASETYPE"))
+            self.slots.setdefault("tp_dictoffset",
+                                  "offsetof(%s, inst_dict)" % self.pystruct)
         else:
             self.slots.setdefault("tp_flags", "Py_TPFLAGS_DEFAULT")
             self.slots.setdefault("tp_dictoffset", "0")
