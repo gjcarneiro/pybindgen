@@ -85,6 +85,8 @@ class SomeObject
 public:
     std::string m_prefix;
 
+    static int instance_count;
+
 private:
     Foo m_foo_value;
     Foo *m_foo_ptr;
@@ -96,6 +98,7 @@ public:
     static std::string staticData;
 
     virtual ~SomeObject () {
+        SomeObject::instance_count--;
         delete m_foo_ptr;
         if (m_zbr)
             m_zbr->Unref ();
@@ -104,12 +107,16 @@ public:
     SomeObject (std::string const prefix)
         : m_prefix (prefix), m_foo_ptr (0),
           m_foo_shared_ptr (0), m_zbr (0)
-        {}
+        {
+            SomeObject::instance_count++;
+        }
 
     SomeObject (int prefix_len)
         : m_prefix (prefix_len, 'X'), m_foo_ptr (0),
           m_foo_shared_ptr (0), m_zbr (0)
-        {}
+        {
+            SomeObject::instance_count++;
+        }
 
     int add_prefix (std::string& message) {
         message = m_prefix + message;

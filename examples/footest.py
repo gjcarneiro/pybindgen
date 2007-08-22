@@ -142,12 +142,16 @@ class TestFoo(unittest.TestCase):
 
     def test_subclass_gc(self):
         """Check if subclassed object is garbage collected"""
+
         try:
             class Test(foo.SomeObject):
                 pass
         except TypeError:
             self.fail()
 
+        while gc.collect():
+            pass
+        count_before = foo.SomeObject.instance_count
         t = Test("xxx")
         t.xxx = t
         ref = weakref.ref(t)
@@ -155,6 +159,19 @@ class TestFoo(unittest.TestCase):
         while gc.collect():
             pass
         self.assertEqual(ref(), None)
+        self.assertEqual(foo.SomeObject.instance_count, count_before)
+
+    def test_nosubclass_gc(self):
+        """Check if subclassable object is garbage collected"""
+        while gc.collect():
+            pass
+        count_before = foo.SomeObject.instance_count
+        t = foo.SomeObject("xxx")
+        t.xxx = t
+        del t
+        while gc.collect():
+            pass
+        self.assertEqual(foo.SomeObject.instance_count, count_before)
 
     def test_virtual_no_subclass(self):
         t = foo.SomeObject("xxx")

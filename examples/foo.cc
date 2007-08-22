@@ -38,6 +38,7 @@ int SomeObject::get_int (double from_float)
     return (int) from_float;
 }
 
+int SomeObject::instance_count = 0;
 
 class HiddenClass : public Bar
 {
