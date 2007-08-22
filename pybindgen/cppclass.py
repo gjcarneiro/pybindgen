@@ -376,6 +376,9 @@ public:
         method.class_ = self
         overload.add(method)
         if method.is_virtual:
+            if not self.allow_subclassing:
+                raise ValueError("Cannot add virtual methods if subclassing "
+                                 "support was not enabled for this class")
             helper_class = self.get_helper_class()
 
             parent_caller = CppVirtualMethodParentCaller(method.return_value,
