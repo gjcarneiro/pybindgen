@@ -110,7 +110,11 @@ def my_module_gen(out_file):
         CppConstructor([Parameter.new('int', 'prefix_len')]))
 
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('std::string'), 'get_prefix', []))
+        ReturnValue.new('std::string'), 'get_prefix', [],
+        is_virtual=True, is_const=True))
+
+    SomeObject.add_method(CppMethod(
+        ReturnValue.new('std::string'), 'call_get_prefix', []))
 
     SomeObject.add_method(CppMethod(ReturnValue.new('void'),
                                     'set_foo_value',

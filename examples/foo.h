@@ -95,7 +95,7 @@ public:
 
     static std::string staticData;
 
-    ~SomeObject () {
+    virtual ~SomeObject () {
         delete m_foo_ptr;
         if (m_zbr)
             m_zbr->Unref ();
@@ -116,8 +116,12 @@ public:
         return message.size ();
     }
 
-    std::string get_prefix () const {
+    virtual std::string get_prefix () const {
         return m_prefix;
+    }
+
+    std::string call_get_prefix () const {
+        return get_prefix();
     }
 
     // pass by value, direction=in

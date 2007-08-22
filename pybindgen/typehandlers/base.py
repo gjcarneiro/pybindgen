@@ -475,7 +475,8 @@ class ReverseWrapperBase(object):
         """
         raise NotImplementedError
 
-    def generate(self, code_sink, wrapper_name, decl_modifiers=('static',)):
+    def generate(self, code_sink, wrapper_name, decl_modifiers=('static',),
+                 decl_post_modifiers=()):
         """Generate the wrapper
         code_sink -- a CodeSink object that will receive the code
         wrapper_name -- C/C++ identifier of the function/method to generate
@@ -524,7 +525,8 @@ class ReverseWrapperBase(object):
 
         params_list = ', '.join([join_ctype_and_name(param.ctype, param.name)
                                  for param in self.parameters])
-        code_sink.writeln("%s(%s)" % (wrapper_name, params_list))
+        code_sink.writeln("%s(%s)%s" % (wrapper_name, params_list,
+                                        ' '.join([''] + list(decl_post_modifiers))))
 
         ## body
         code_sink.writeln('{')

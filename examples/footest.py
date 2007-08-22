@@ -141,6 +141,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(type(obj), foo.Bar)
 
     def test_subclass_gc(self):
+        """Check if subclassed object is garbage collected"""
         try:
             class Test(foo.SomeObject):
                 pass
@@ -154,7 +155,27 @@ class TestFoo(unittest.TestCase):
         while gc.collect():
             pass
         self.assertEqual(ref(), None)
-      
+
+    def test_virtual_no_subclass(self):
+        t = foo.SomeObject("xxx")
+        self.assertEqual(t.call_get_prefix(), "xxx")
+
+    def test_virtual_subclass(self):
+        class Test(foo.SomeObject):
+            def _get_prefix(self):
+                return "yyy"
+
+        t = Test("xxx")
+        self.assertEqual(t.call_get_prefix(), "yyy")
+
+    def test_virtual_with_chaining_to_parent_class(self):
+        class Test(foo.SomeObject):
+            def _get_prefix(self):
+                prefix = super(Test, self)._get_prefix()
+                return prefix + "yyy"
+
+        t = Test("xxx")
+        self.assertEqual(t.call_get_prefix(), "xxxyyy")
 
 if __name__ == '__main__':
     unittest.main()

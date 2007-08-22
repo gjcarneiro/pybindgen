@@ -4,14 +4,90 @@ Wrap C++ classes and methods
 
 import warnings
 
-from typehandlers.base import ForwardWrapperBase, Parameter, ReturnValue
+from typehandlers.base import ForwardWrapperBase, Parameter, ReturnValue, \
+    join_ctype_and_name
 
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor, \
-    CppOverloadedMethod, CppOverloadedConstructor
+    CppOverloadedMethod, CppOverloadedConstructor, \
+    CppVirtualMethodParentCaller, CppVirtualMethodProxy
+
 from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter,
                           CppStaticAttributeGetter, CppStaticAttributeSetter,
                           PyGetSetDef, PyMetaclass)
 import settings
+
+class CppHelperClass(object):
+    """
+    Generates code for a C++ proxy subclass that takes care of
+    forwarding virtual methods from C++ to Python.
+    """
+
+    def __init__(self, class_):
+        """
+        class_ -- original CppClass wrapper object
+        """
+        self.class_ = class_
+        self.name = class_.name + "_PythonProxy"
+        ## TODO: inheritance of virtual methods
+        self.virtual_parent_callers = []
+        self.virtual_proxies = []
+        
+    def add_virtual_parent_caller(self, parent_caller):
+        """Add a new CppVirtualMethodParentCaller object to this helper class"""
+        assert isinstance(parent_caller, CppVirtualMethodParentCaller)
+        self.virtual_parent_callers.append(parent_caller)
+
+    def add_virtual_proxy(self, virtual_proxy):
+        """Add a new CppVirtualMethodProxy object to this class"""
+        assert isinstance(virtual_proxy, CppVirtualMethodProxy)
+        self.virtual_proxies.append(virtual_proxy)
+
+    def generate(self, code_sink):
+        """
+        Generate the proxy class to a given code sink
+        """
+        code_sink.writeln("class %s : public %s\n{\npublic:" %
+                          (self.name, self.class_.name))
+
+        code_sink.indent()
+        code_sink.writeln("PyObject *m_pyself;")
+
+        ## write the constructors
+        for cons in self.class_.constructors:
+            params = ['PyObject *pyself']
+            params.extend([join_ctype_and_name(param.ctype, param.name)
+                           for param in cons.parameters])
+            code_sink.writeln("%s(%s)" % (self.name, ', '.join(params)))
+            code_sink.indent()
+            code_sink.writeln(": %s(%s), m_pyself((Py_INCREF(pyself), pyself))\n{}" %
+                              (self.class_.name,
+                               ', '.join([param.name for param in cons.parameters])))
+            code_sink.unindent()
+            code_sink.writeln()
+
+        ## write a destructor
+        code_sink.writeln("~%s()\n{" % self.name)
+        code_sink.indent()
+        code_sink.writeln("Py_CLEAR(m_pyself);")
+        code_sink.unindent()
+        code_sink.writeln("}\n")
+            
+        ## write the parent callers (_name)
+        for parent_caller in self.virtual_parent_callers:
+            parent_caller.class_ = self.class_
+            parent_caller.helper_class = self
+            code_sink.writeln()
+            parent_caller.generate(code_sink)
+
+        ## write the virtual proxies
+        for virtual_proxy in self.virtual_proxies:
+            virtual_proxy.class_ = self.class_
+            virtual_proxy.helper_class = self
+            code_sink.writeln()
+            virtual_proxy.generate(code_sink)
+
+        code_sink.unindent()
+        code_sink.writeln("};\n")
 
 
 class CppClass(object):
@@ -97,6 +173,7 @@ class CppClass(object):
         self.methods = {} # name => OverloadedMethod
         self.constructors = [] # (name, wrapper) pairs
         self.slots = dict()
+        self.helper_class = None
 
         prefix = settings.name_prefix.capitalize()
         self.pystruct = "Py%s%s" % (prefix, self.name)
@@ -147,23 +224,51 @@ class CppClass(object):
                 """Register this C++ class as pass-by-value parameter"""
                 CTYPES = [name]
                 cpp_class = self
+            self.ThisClassParameter = ThisClassParameter
+
             class ThisClassRefParameter(CppClassRefParameter):
                 """Register this C++ class as pass-by-reference parameter"""
                 CTYPES = [name+'&']
                 cpp_class = self
+            self.ThisClassRefParameter = ThisClassRefParameter
+
             class ThisClassReturn(CppClassReturnValue):
                 """Register this C++ class as value return"""
                 CTYPES = [name]
                 cpp_class = self
+            self.ThisClassReturn = ThisClassReturn
+
             class ThisClassPtrParameter(CppClassPtrParameter):
                 """Register this C++ class as pass-by-pointer parameter"""
                 CTYPES = [name+'*']
                 cpp_class = self
+            self.ThisClassPtrParameter = ThisClassPtrParameter
+
             class ThisClassPtrReturn(CppClassPtrReturnValue):
                 """Register this C++ class as pointer return"""
                 CTYPES = [name+'*']
                 cpp_class = self
+            self.ThisClassPtrReturn = ThisClassPtrReturn
 
+        self._inherit_default_constructors()
+
+    def _inherit_default_constructors(self):
+        """inherit the default constructors from the parentclass according to C++
+        language rules"""
+        if self.parent is None:
+            return
+        for cons in self.parent.constructors:
+            if len(cons.parameters) == 0:
+                self.add_constructor(CppConstructor([]))
+            elif (len(cons.parameters) == 1
+                  and isinstance(cons.parameters[0], self.parent.ThisClassRefParameter)):
+                self.add_constructor(CppConstructor([self.ThisClassRefParameter()]))
+
+    def get_helper_class(self):
+        """gets the "helper class" for this class wrapper, creating it if necessary"""
+        if self.helper_class is None:
+            self.helper_class = CppHelperClass(self)
+        return self.helper_class
     
     def get_type_narrowing_root(self):
         """Find the root CppClass along the subtree of all parent classes that
@@ -248,18 +353,18 @@ public:
                                          % (self.typeid_map_name, subclass.name,
                                             subclass.pytypestruct))
 
-    def add_method(self, wrapper, name=None):
+    def add_method(self, method, name=None):
         """
         Add a method to the class.
 
-        wrapper -- a CppMethod instance that can generate the wrapper
+        method -- a CppMethod instance that can generate the method wrapper
         name -- optional name of the class method as it will appear
                 from Python side
         """
         assert name is None or isinstance(name, str)
-        assert isinstance(wrapper, CppMethod)
+        assert isinstance(method, CppMethod)
         if name is None:
-            name = wrapper.method_name
+            name = method.method_name
             
         try:
             overload = self.methods[name]
@@ -268,9 +373,22 @@ public:
             overload.pystruct = self.pystruct
             self.methods[name] = overload
 
-        wrapper.class_ = self
-        overload.add(wrapper)
+        method.class_ = self
+        overload.add(method)
+        if method.is_virtual:
+            helper_class = self.get_helper_class()
 
+            parent_caller = CppVirtualMethodParentCaller(method.return_value,
+                                                         method.method_name,
+                                                         method.parameters)
+            helper_class.add_virtual_parent_caller(parent_caller)
+
+            proxy = CppVirtualMethodProxy(method.return_value,
+                                          method.method_name,
+                                          method.parameters,
+                                          is_const=method.is_const)
+            helper_class.add_virtual_proxy(proxy)
+            
 
     def add_constructor(self, wrapper):
         """
@@ -377,10 +495,16 @@ typedef struct {
             'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
             self.name, self.pytypestruct))
 
+        if self.helper_class is not None:
+            self.helper_class.generate(code_sink)
+
         have_constructor = self._generate_constructor(code_sink)
+
         self._generate_methods(code_sink)
+
         if self.allow_subclassing:
             self._generate_gc_methods(code_sink)
+
         self._generate_destructor(code_sink, have_constructor)
         self._generate_type_structure(code_sink, docstring)
         if self.typeid_map is not None:
@@ -428,6 +552,7 @@ typedef struct {
         if self.constructors:
             code_sink.writeln()
             overload = CppOverloadedConstructor(None)
+            self.constructors_overload = overload
             overload.pystruct = self.pystruct
             for constructor in self.constructors:
                 overload.add(constructor)
@@ -435,43 +560,20 @@ typedef struct {
             constructor = overload.wrapper_function_name
             code_sink.writeln()
         else:
-            ## if there is a parent constructor with no arguments,
-            ## a similar constructor should be added to this class
-            if self.parent is None:
-                parent_default_constructor = None
-            else:
-                parent_default_constructor = self.parent.get_default_constructor()
-            if parent_default_constructor is not None:
-                cons = CppConstructor([])
-                cons.set_class(self)
-                code_sink.writeln()
-                cons.generate(code_sink)
-                constructor = cons.wrapper_actual_name
-                code_sink.writeln()
-            else:
-                ## In C++, and unlike Python, constructors with
-                ## parameters are not automatically inheritted by
-                ## subclasses.  We must generate a 'no constructor'
-                ## tp_init to prevent this type from inheriring a
-                ## tp_init that will allocate an instance of the
-                ## parent class instead of this class.
-                code_sink.writeln()
-                constructor = CppNoConstructor().generate(code_sink, self)
-                have_constructor = False
-                code_sink.writeln()
+            ## In C++, and unlike Python, constructors with
+            ## parameters are not automatically inheritted by
+            ## subclasses.  We must generate a 'no constructor'
+            ## tp_init to prevent this type from inheriring a
+            ## tp_init that will allocate an instance of the
+            ## parent class instead of this class.
+            code_sink.writeln()
+            constructor = CppNoConstructor().generate(code_sink, self)
+            have_constructor = False
+            code_sink.writeln()
+
         self.slots.setdefault("tp_init", (constructor is None and "NULL"
                                           or constructor))
         return have_constructor
-
-    def get_default_constructor(self):
-        """get the default constructor for this class according to C++
-        language rules"""
-        for cons in self.constructors:
-            if len(cons.parameters) == 0:
-                return cons
-        if self.parent is not None:
-            return self.parent.get_default_constructor
-        return None
 
     def _generate_methods(self, code_sink):
         """generate the method wrappers"""
@@ -481,6 +583,9 @@ typedef struct {
             overload.generate(code_sink)
             method_defs.append(overload.get_py_method_def(meth_name))
             code_sink.writeln()
+        if self.helper_class is not None:
+            for meth in self.helper_class.virtual_parent_callers:
+                method_defs.append(meth.get_py_method_def())
         ## generate the method table
         code_sink.writeln("static PyMethodDef %s_methods[] = {" % (self.name,))
         code_sink.indent()
@@ -567,6 +672,9 @@ static void
         self.slots.setdefault("tp_dealloc", tp_dealloc_function_name )
 
 
+###
+### ------------ C++ class parameter type handlers ------------
+###
 class CppClassParameter(Parameter):
     "Class handlers"
     CTYPES = []
