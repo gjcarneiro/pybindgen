@@ -624,10 +624,9 @@ static void
             visit_self = ''
         else:
             visit_self = '''
-if (typeid(*self->obj) == typeid(%s))
-{
-    Py_VISIT(self);
-}''' % self.helper_class.name
+    if (typeid(*self->obj) == typeid(%s))
+        Py_VISIT(self);
+''' % self.helper_class.name
 
         code_sink.writeln(r'''
 static int
