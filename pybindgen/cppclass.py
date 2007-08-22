@@ -611,21 +611,34 @@ static void
 {
     // fprintf(stderr, "tp_clear >>> %%s at %%p <<<\n", self->ob_type->tp_name, self);
     Py_CLEAR(self->inst_dict);
+    delete self->obj;
+    self->obj = 0;
 }
 ''' % (tp_clear_function_name, self.pystruct))
 
         ## --- tp_traverse ---
         tp_traverse_function_name = "%s__tp_traverse" % (self.pystruct,)
         self.slots.setdefault("tp_traverse", tp_traverse_function_name )
+
+        if self.helper_class is None:
+            visit_self = ''
+        else:
+            visit_self = '''
+if (typeid(*self->obj) == typeid(%s))
+{
+    Py_VISIT(self);
+}''' % self.helper_class.name
+
         code_sink.writeln(r'''
 static int
 %s(%s *self, visitproc visit, void *arg)
 {
     // fprintf(stderr, "tp_traverse >>> %%s at %%p <<<\n", self->ob_type->tp_name, self);
     Py_VISIT(self->inst_dict);
+    %s
     return 0;
 }
-''' % (tp_traverse_function_name, self.pystruct))
+''' % (tp_traverse_function_name, self.pystruct, visit_self))
 
 
     def _generate_destructor(self, code_sink, have_constructor):
