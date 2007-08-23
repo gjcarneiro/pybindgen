@@ -217,13 +217,16 @@ class TestFoo(unittest.TestCase):
 
     def test_subclass_with_virtual_transfer_ptr(self):
         class Test(foo.SomeObject):
+            def __init__(self, prefix, extra_prefix):
+                super(Test, self).__init__(prefix)
+                self.extra_prefix = extra_prefix
             def _get_prefix(self):
                 prefix = super(Test, self)._get_prefix()
-                return prefix + "yyy"
+                return prefix + self.extra_prefix
         while gc.collect():
             pass
         count_before = foo.SomeObject.instance_count
-        obj = Test("xxx")
+        obj = Test("xxx", "yyy")
         foo.store_some_object(obj)
         del obj
         while gc.collect():
