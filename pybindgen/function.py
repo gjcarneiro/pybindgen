@@ -48,8 +48,15 @@ class Function(ForwardWrapperBase):
         tmp_sink = codesink.MemoryCodeSink()
         self.generate_body(tmp_sink)
         code_sink.writeln("static PyObject *")
-        prototype_line = ("%s(PyObject * PYBINDGEN_UNUSED(dummy), "
-                          "PyObject *args, PyObject *kwargs") % (self.wrapper_actual_name,)
+
+        python_args = ''
+        flags = self.get_py_method_def_flags()
+        if 'METH_VARARGS' in flags:
+            python_args += "PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args"
+            if 'METH_KEYWORDS' in flags:
+                python_args += ", PyObject *kwargs"
+
+        prototype_line = "%s(%s" % (self.wrapper_actual_name, python_args)
         if extra_wrapper_params:
             prototype_line += ", " + ", ".join(extra_wrapper_params)
         prototype_line += ')'
