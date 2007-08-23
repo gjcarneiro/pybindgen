@@ -730,9 +730,14 @@ class CppClassRefParameter(Parameter):
             wrapper.call_params.append('*%s->obj' % (name,))
 
         elif self.direction == Parameter.DIRECTION_OUT:
+            if self.cpp_class.allow_subclassing:
+                new_func = 'PyObject_GC_New'
+            else:
+                new_func = 'PyObject_New'
             wrapper.before_call.write_code(
-                "%s = PyObject_New(%s, %s);" %
-                (name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+                "%s = %s(%s, %s);" %
+                (name, new_func, self.cpp_class.pystruct,
+                 '&'+self.cpp_class.pytypestruct))
             if self.cpp_class.allow_subclassing:
                 wrapper.after_call.write_code(
                     "%s->inst_dict = NULL;" % (name,))
@@ -764,9 +769,13 @@ class CppClassReturnValue(ReturnValue):
         """see ReturnValue.convert_c_to_python"""
         py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
+        if self.cpp_class.allow_subclassing:
+            new_func = 'PyObject_GC_New'
+        else:
+            new_func = 'PyObject_New'
         wrapper.after_call.write_code(
-            "%s = PyObject_New(%s, %s);" %
-            (py_name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+            "%s = %s(%s, %s);" %
+            (py_name, new_func, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
         if self.cpp_class.allow_subclassing:
             wrapper.after_call.write_code(
                 "%s->inst_dict = NULL;" % (py_name,))
@@ -869,9 +878,13 @@ class CppClassPtrReturnValue(ReturnValue):
         ## Create the Python wrapper object
         py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
+        if self.cpp_class.allow_subclassing:
+            new_func = 'PyObject_GC_New'
+        else:
+            new_func = 'PyObject_New'
         wrapper.after_call.write_code(
-            "%s = PyObject_New(%s, %s);" %
-            (py_name, self.cpp_class.pystruct, wrapper_type))
+            "%s = %s(%s, %s);" %
+            (py_name, new_func, self.cpp_class.pystruct, wrapper_type))
 
         if self.cpp_class.allow_subclassing:
             wrapper.after_call.write_code(
