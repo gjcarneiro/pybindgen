@@ -733,6 +733,9 @@ class CppClassRefParameter(Parameter):
             wrapper.before_call.write_code(
                 "%s = PyObject_New(%s, %s);" %
                 (name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+            if self.cpp_class.allow_subclassing:
+                wrapper.after_call.write_code(
+                    "%s->inst_dict = NULL;" % (name,))
             wrapper.before_call.write_code(
                 "%s->obj = new %s;" % (name, self.cpp_class.name))
             wrapper.call_params.append('*%s->obj' % (name,))
@@ -764,6 +767,9 @@ class CppClassReturnValue(ReturnValue):
         wrapper.after_call.write_code(
             "%s = PyObject_New(%s, %s);" %
             (py_name, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+        if self.cpp_class.allow_subclassing:
+            wrapper.after_call.write_code(
+                "%s->inst_dict = NULL;" % (py_name,))
         wrapper.after_call.write_code(
             "%s->obj = new %s(%s);" % (py_name, self.cpp_class.name, self.value))
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
@@ -866,6 +872,10 @@ class CppClassPtrReturnValue(ReturnValue):
         wrapper.after_call.write_code(
             "%s = PyObject_New(%s, %s);" %
             (py_name, self.cpp_class.pystruct, wrapper_type))
+
+        if self.cpp_class.allow_subclassing:
+            wrapper.after_call.write_code(
+                "%s->inst_dict = NULL;" % (py_name,))
         
         ## Assign the C++ value to the Python wrapper
         if self.caller_owns_return:
