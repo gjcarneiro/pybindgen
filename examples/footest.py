@@ -213,6 +213,27 @@ class TestFoo(unittest.TestCase):
             pass
         ## check that SomeObject was finally deleted
         self.assertEqual(foo.SomeObject.instance_count, count_before)
+
+    def test_subclassable_store_and_take_back(self):
+        while gc.collect():
+            pass
+        count_before = foo.SomeObject.instance_count
+        obj = foo.SomeObject("xxx")
+        foo.store_some_object(obj)
+        del obj
+        while gc.collect():
+            pass
+        ## check that SomeObject isn't prematurely deleted
+        self.assertEqual(foo.SomeObject.instance_count, count_before + 1)
+
+        ## now get the object back from the C side..
+        obj = foo.take_some_object()
+
+        del obj
+        while gc.collect():
+            pass
+        ## check that SomeObject was finally deleted
+        self.assertEqual(foo.SomeObject.instance_count, count_before)
         
 
     def test_subclass_with_virtual_transfer_ptr(self):
