@@ -173,6 +173,16 @@ def my_module_gen(out_file):
 
     mod.add_class(SomeObject)
 
+
+    mod.add_function(Function(ReturnValue.new('void'), 'store_some_object',
+                              [Parameter.new('SomeObject*', 'obj', transfer_ownership=True)]))
+    mod.add_function(Function(ReturnValue.new('std::string'), 'invoke_some_object_get_prefix',
+                              []))
+    mod.add_function(Function(ReturnValue.new('SomeObject*', caller_owns_return=True),
+                              'take_some_object', []))
+    mod.add_function(Function(ReturnValue.new('void'), 'delete_some_object', []))
+
+
     mod.generate(FileCodeSink(out_file))
 
 

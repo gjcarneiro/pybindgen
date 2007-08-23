@@ -51,3 +51,37 @@ get_hidden_subclass_pointer ()
     return new HiddenClass;
 }
 
+
+static SomeObject *g_someObject = 0;
+
+// Transfer ownership of 'obj' to the library
+void store_some_object(SomeObject *obj)
+{
+    delete g_someObject;
+    g_someObject = obj;
+}
+
+// Invokes the virtual method in the stored SomeObject
+std::string invoke_some_object_get_prefix()
+{
+    if (g_someObject)
+        return g_someObject->get_prefix();
+    else
+        return std::string();
+}
+
+// Transfer ownership of 'obj' away from the library
+SomeObject* take_some_object()
+{
+    SomeObject *retval = g_someObject;
+    g_someObject = 0;
+    return retval;
+}
+
+// Deletes the contained object, if any
+void delete_some_object()
+{
+    delete g_someObject;
+    g_someObject = 0;
+}
+

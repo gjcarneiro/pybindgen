@@ -225,4 +225,19 @@ public:
 };
 
 
+
+
+// Transfer ownership of 'obj' to the library
+void store_some_object(SomeObject *obj);
+
+// Invokes the virtual method in the stored SomeObject
+std::string invoke_some_object_get_prefix();
+
+// Transfer ownership of 'obj' away from the library
+SomeObject* take_some_object();
+
+// Deletes the contained object, if any
+void delete_some_object();
+
+
 #endif 	    /* !FOO_H_ */

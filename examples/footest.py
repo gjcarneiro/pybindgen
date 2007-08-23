@@ -194,5 +194,56 @@ class TestFoo(unittest.TestCase):
         t = Test("xxx")
         self.assertEqual(t.call_get_prefix(), "xxxyyy")
 
+
+    def test_subclassable_transfer_ptr(self):
+        while gc.collect():
+            pass
+        count_before = foo.SomeObject.instance_count
+        obj = foo.SomeObject("xxx")
+        foo.store_some_object(obj)
+        del obj
+        while gc.collect():
+            pass
+        ## check that SomeObject isn't prematurely deleted
+        self.assertEqual(foo.SomeObject.instance_count, count_before + 1)
+
+        ## now delete the object from the C side..
+        foo.delete_some_object()
+        while gc.collect():
+            pass
+        ## check that SomeObject was finally deleted
+        self.assertEqual(foo.SomeObject.instance_count, count_before)
+        
+
+    def test_subclass_with_virtual_transfer_ptr(self):
+        class Test(foo.SomeObject):
+            def _get_prefix(self):
+                prefix = super(Test, self)._get_prefix()
+                return prefix + "yyy"
+        while gc.collect():
+            pass
+        count_before = foo.SomeObject.instance_count
+        obj = Test("xxx")
+        foo.store_some_object(obj)
+        del obj
+        while gc.collect():
+            pass
+
+        ## check that SomeObject isn't prematurely deleted
+        self.assertEqual(foo.SomeObject.instance_count, count_before + 1)
+
+        ## invoke the virtual method and check that it returns the correct value
+        prefix = foo.invoke_some_object_get_prefix()
+        self.assertEqual(prefix, "xxxyyy")
+
+        ## now delete the object from the C side..
+        foo.delete_some_object()
+        while gc.collect():
+            pass
+
+        ## check that SomeObject was finally deleted
+        self.assertEqual(foo.SomeObject.instance_count, count_before)
+        
+
 if __name__ == '__main__':
     unittest.main()
