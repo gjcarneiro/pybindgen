@@ -624,7 +624,7 @@ static void
             visit_self = ''
         else:
             visit_self = '''
-    if (typeid(*self->obj) == typeid(%s))
+    if (self->obj && typeid(*self->obj) == typeid(%s))
         Py_VISIT(self);
 ''' % self.helper_class.name
 
