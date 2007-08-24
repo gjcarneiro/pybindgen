@@ -22,7 +22,7 @@ class Function(ForwardWrapperBase):
             parse_error_return="return NULL;",
             error_return="return NULL;")
         self.function_name = function_name
-        self.wrapper_base_name = "_wrap_%s" % (self.function_name,)
+        self.wrapper_base_name = "_wrap_%s" % (self.function_name.replace('::', '__'),)
         self.wrapper_actual_name = None
         self.docstring = docstring
     
@@ -76,7 +76,7 @@ class Function(ForwardWrapperBase):
         """
         flags = self.get_py_method_def_flags()
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
-               (name, self.wrapper_actual_name, '|'.join(flags),
+               (name.replace('::', '_'), self.wrapper_actual_name, '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
 
 
