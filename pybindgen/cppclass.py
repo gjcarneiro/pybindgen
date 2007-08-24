@@ -457,7 +457,10 @@ typedef struct {
         code_sink.writeln()
         code_sink.writeln('extern PyTypeObject %s;' % (self.pytypestruct,))
         code_sink.writeln()
-        
+
+        if self.helper_class is not None:
+            self.helper_class.generate(code_sink)       
+
 
     def generate(self, code_sink, module, docstring=None):
         """Generates the class to a code sink"""
@@ -497,9 +500,6 @@ typedef struct {
         module.after_init.write_code(
             'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
             self.name, self.pytypestruct))
-
-        if self.helper_class is not None:
-            self.helper_class.generate(code_sink)
 
         have_constructor = self._generate_constructor(code_sink)
 
@@ -842,7 +842,7 @@ class CppClassPtrReturnValue(ReturnValue):
         """
         ctype -- C type, normally 'MyClass*'
         caller_owns_return -- if true, ownership of the object pointer
-                              is transfered to the caller
+                              is transferred to the caller
         """
         super(CppClassPtrReturnValue, self).__init__(ctype)
         self.caller_owns_return = caller_owns_return
@@ -858,52 +858,78 @@ class CppClassPtrReturnValue(ReturnValue):
         value = self.transformation.untransform(
             self, wrapper.declarations, wrapper.after_call, self.value)
 
-        ## Find out what Python wrapper to use, in case
-        ## automatic_type_narrowing is active and we are not forced to
-        ## make a copy of the object
-        if (self.cpp_class.automatic_type_narrowing
-            and (self.caller_owns_return or self.cpp_class.incref_method is not None)):
-
-            typeid_map_name = self.cpp_class.get_type_narrowing_root().typeid_map_name
-            wrapper_type = wrapper.declarations.declare_variable(
-                'PyTypeObject*', 'wrapper_type', '0')
-            wrapper.after_call.write_code(
-                '%s = %s.lookup_wrapper(typeid(*%s), &%s);'
-                % (wrapper_type, typeid_map_name, value, self.cpp_class.pytypestruct))
-
-        else:
-
-            wrapper_type = '&'+self.cpp_class.pytypestruct
-
-        ## Create the Python wrapper object
+        ## declare wrapper variable
         py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
-        if self.cpp_class.allow_subclassing:
-            new_func = 'PyObject_GC_New'
-        else:
-            new_func = 'PyObject_New'
-        wrapper.after_call.write_code(
-            "%s = %s(%s, %s);" %
-            (py_name, new_func, self.cpp_class.pystruct, wrapper_type))
 
-        if self.cpp_class.allow_subclassing:
-            wrapper.after_call.write_code(
-                "%s->inst_dict = NULL;" % (py_name,))
-        
-        ## Assign the C++ value to the Python wrapper
-        if self.caller_owns_return:
-            wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
-        else:
-            if self.cpp_class.incref_method is None:
-                ## The PyObject creates its own copy
+        def write_create_new_wrapper():
+            """Code path that creates a new wrapper for the returned object"""
+
+            ## Find out what Python wrapper to use, in case
+            ## automatic_type_narrowing is active and we are not forced to
+            ## make a copy of the object
+            if (self.cpp_class.automatic_type_narrowing
+                and (self.caller_owns_return or self.cpp_class.incref_method is not None)):
+
+                typeid_map_name = self.cpp_class.get_type_narrowing_root().typeid_map_name
+                wrapper_type = wrapper.declarations.declare_variable(
+                    'PyTypeObject*', 'wrapper_type', '0')
                 wrapper.after_call.write_code(
-                    "%s->obj = new %s(*%s);"
-                    % (py_name, self.cpp_class.name, value))
+                    '%s = %s.lookup_wrapper(typeid(*%s), &%s);'
+                    % (wrapper_type, typeid_map_name, value, self.cpp_class.pytypestruct))
+
             else:
-                ## The PyObject gets a new reference to the same obj
+
+                wrapper_type = '&'+self.cpp_class.pytypestruct
+
+            ## Create the Python wrapper object
+            if self.cpp_class.allow_subclassing:
+                new_func = 'PyObject_GC_New'
+            else:
+                new_func = 'PyObject_New'
+            wrapper.after_call.write_code(
+                "%s = %s(%s, %s);" %
+                (py_name, new_func, self.cpp_class.pystruct, wrapper_type))
+
+            if self.cpp_class.allow_subclassing:
                 wrapper.after_call.write_code(
-                    "%s->%s();" % (value, self.cpp_class.incref_method))
+                    "%s->inst_dict = NULL;" % (py_name,))
+
+            ## Assign the C++ value to the Python wrapper
+            if self.caller_owns_return:
                 wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
+            else:
+                if self.cpp_class.incref_method is None:
+                    ## The PyObject creates its own copy
+                    wrapper.after_call.write_code(
+                        "%s->obj = new %s(*%s);"
+                        % (py_name, self.cpp_class.name, value))
+                else:
+                    ## The PyObject gets a new reference to the same obj
+                    wrapper.after_call.write_code(
+                        "%s->%s();" % (value, self.cpp_class.incref_method))
+                    wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
+
+        if self.cpp_class.helper_class is None:
+            write_create_new_wrapper()
+        else:
+            wrapper.after_call.write_code("if (typeid(*(%s)) == typeid(%s))\n{"
+                                          % (value, self.cpp_class.helper_class.name))
+            wrapper.after_call.indent()
+
+            wrapper.after_call.write_code(
+                "%s = reinterpret_cast<%s*>(reinterpret_cast<%s*>(%s)->m_pyself);"
+                % (py_name, self.cpp_class.pystruct,
+                   self.cpp_class.helper_class.name, value))
+
+            wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
+            wrapper.after_call.write_code("Py_INCREF(%s);" % py_name)
+            wrapper.after_call.unindent()
+            wrapper.after_call.write_code("} else {")
+            wrapper.after_call.indent()
+            write_create_new_wrapper()
+            wrapper.after_call.unindent()
+            wrapper.after_call.write_code("}")
                 
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 

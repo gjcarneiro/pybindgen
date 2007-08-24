@@ -228,6 +228,7 @@ class TestFoo(unittest.TestCase):
 
         ## now get the object back from the C side..
         obj = foo.take_some_object()
+        self.assertEqual(obj.get_prefix(), "xxx")
 
         del obj
         while gc.collect():
@@ -268,6 +269,30 @@ class TestFoo(unittest.TestCase):
         ## check that SomeObject was finally deleted
         self.assertEqual(foo.SomeObject.instance_count, count_before)
         
+
+    def test_subclassed_store_and_take_back(self):
+        class Test(foo.SomeObject):
+            pass
+
+        while gc.collect():
+            pass
+        count_before = foo.SomeObject.instance_count
+        obj1 = Test("xxx")
+        obj1.attribute = 123
+        foo.store_some_object(obj1)
+
+        ## now get the object back from the C side..
+        obj2 = foo.take_some_object()
+
+        self.assert_(obj2 is obj1)
+        self.assertEqual(obj2.attribute, 123)
+        self.assertEqual(obj2.get_prefix(), "xxx")
+
+        del obj1, obj2
+        while gc.collect():
+            pass
+        ## check that SomeObject was finally deleted
+        self.assertEqual(foo.SomeObject.instance_count, count_before)
 
 if __name__ == '__main__':
     unittest.main()
