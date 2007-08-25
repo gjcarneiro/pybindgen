@@ -294,5 +294,12 @@ class TestFoo(unittest.TestCase):
         ## check that SomeObject was finally deleted
         self.assertEqual(foo.SomeObject.instance_count, count_before)
 
+    def test_namespaced_function(self):
+        self.assertEqual(foo.xpto.some_function(), "hello")
+
+    def test_namespaced_class(self):
+        self.assert_(hasattr(foo.xpto, 'SomeClass'))
+        
+
 if __name__ == '__main__':
     unittest.main()

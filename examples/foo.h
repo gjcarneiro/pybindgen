@@ -240,4 +240,15 @@ SomeObject* take_some_object();
 void delete_some_object();
 
 
+namespace xpto
+{
+    std::string some_function();
+
+    class SomeClass
+    {
+    public:
+        SomeClass() {}
+    };
+}
+
 #endif 	    /* !FOO_H_ */

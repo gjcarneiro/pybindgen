@@ -85,3 +85,11 @@ void delete_some_object()
     g_someObject = 0;
 }
 
+
+namespace xpto
+{
+    std::string some_function()
+    {
+        return "hello";
+    }
+}

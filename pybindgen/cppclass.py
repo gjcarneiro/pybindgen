@@ -170,6 +170,7 @@ class CppClass(object):
                              allow subclassing in Python.
         """
         self.name = name
+        self.full_name = None # full name with C++ namespaces attached
         self.methods = {} # name => OverloadedMethod
         self.constructors = [] # (name, wrapper) pairs
         self.slots = dict()
@@ -251,6 +252,22 @@ class CppClass(object):
             self.ThisClassPtrReturn = ThisClassPtrReturn
 
         self._inherit_default_constructors()
+
+
+    def get_module(self):
+        """Get the Module object this class belongs to"""
+        return self._module
+
+    def set_module(self, module):
+        """Set the Module object this class belongs to"""
+        self._module = module
+        if module.cpp_namespace:
+            self.full_name = module.cpp_namespace + '::' + self.name
+        else:
+            self.full_name = self.name
+
+    module = property(get_module, set_module)
+
 
     def _inherit_default_constructors(self):
         """inherit the default constructors from the parentclass according to C++
@@ -443,7 +460,7 @@ typedef struct {
     %s *obj;
     PyObject *inst_dict;
 } %s;
-    ''' % (self.name, self.pystruct))
+    ''' % (self.full_name, self.pystruct))
 
         else:
 
@@ -452,7 +469,7 @@ typedef struct {
     PyObject_HEAD
     %s *obj;
 } %s;
-    ''' % (self.name, self.pystruct))
+    ''' % (self.full_name, self.pystruct))
 
         code_sink.writeln()
         code_sink.writeln('extern PyTypeObject %s;' % (self.pytypestruct,))
@@ -671,7 +688,7 @@ static void
     %s
     self->ob_type->tp_free((PyObject*)self);
 }
-''' % (tp_dealloc_function_name, self.pystruct, self.name, delete_code, clear_code))
+''' % (tp_dealloc_function_name, self.pystruct, self.full_name, delete_code, clear_code))
 
         else: # don't have constructor
 
@@ -742,7 +759,7 @@ class CppClassRefParameter(Parameter):
                 wrapper.after_call.write_code(
                     "%s->inst_dict = NULL;" % (name,))
             wrapper.before_call.write_code(
-                "%s->obj = new %s;" % (name, self.cpp_class.name))
+                "%s->obj = new %s;" % (name, self.cpp_class.full_name))
             wrapper.call_params.append('*%s->obj' % (name,))
             wrapper.build_params.add_parameter("N", [name])
 
@@ -763,7 +780,7 @@ class CppClassReturnValue(ReturnValue):
 
     def get_c_error_return(self): # only used in reverse wrappers
         """See ReturnValue.get_c_error_return"""
-        return "return %s();" % (self.cpp_class.name,)
+        return "return %s();" % (self.cpp_class.full_name,)
 
     def convert_c_to_python(self, wrapper):
         """see ReturnValue.convert_c_to_python"""
@@ -780,13 +797,13 @@ class CppClassReturnValue(ReturnValue):
             wrapper.after_call.write_code(
                 "%s->inst_dict = NULL;" % (py_name,))
         wrapper.after_call.write_code(
-            "%s->obj = new %s(%s);" % (py_name, self.cpp_class.name, self.value))
+            "%s->obj = new %s(%s);" % (py_name, self.cpp_class.full_name, self.value))
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
     def convert_python_to_c(self, wrapper):
         """see ReturnValue.convert_python_to_c"""
         name = wrapper.declarations.declare_variable(
-            self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
+            self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.full_name)
         wrapper.parse_params.add_parameter(
             'O!', ['&'+self.cpp_class.pytypestruct, '&'+name])
         wrapper.after_call.write_code('%s = *%s->obj;' % (self.value, name))
@@ -903,7 +920,7 @@ class CppClassPtrReturnValue(ReturnValue):
                     ## The PyObject creates its own copy
                     wrapper.after_call.write_code(
                         "%s->obj = new %s(*%s);"
-                        % (py_name, self.cpp_class.name, value))
+                        % (py_name, self.cpp_class.full_name, value))
                 else:
                     ## The PyObject gets a new reference to the same obj
                     wrapper.after_call.write_code(
@@ -950,7 +967,7 @@ class CppClassPtrReturnValue(ReturnValue):
                 ## the caller receives a copy
                 wrapper.after_call.write_code(
                     "%s = new %s(*%s);"
-                    % (self.value, self.cpp_class.name, value))
+                    % (self.value, self.cpp_class.full_name, value))
             else:
                 ## the caller gets a new reference to the same obj
                 wrapper.after_call.write_code(

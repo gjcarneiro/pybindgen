@@ -182,6 +182,12 @@ def my_module_gen(out_file):
                               'take_some_object', []))
     mod.add_function(Function(ReturnValue.new('void'), 'delete_some_object', []))
 
+    xpto = mod.add_cpp_namespace("xpto")
+    xpto.add_function(Function(ReturnValue.new('std::string'), 'some_function', []))
+
+    SomeClass = CppClass('SomeClass')
+    xpto.add_class(SomeClass)
+    SomeClass.add_constructor(CppConstructor([]))
 
     mod.generate(FileCodeSink(out_file))
 

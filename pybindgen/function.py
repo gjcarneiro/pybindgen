@@ -21,19 +21,35 @@ class Function(ForwardWrapperBase):
             return_value, parameters,
             parse_error_return="return NULL;",
             error_return="return NULL;")
+        self._module = None
         self.function_name = function_name
-        self.wrapper_base_name = "_wrap_%s" % (self.function_name.replace('::', '__'),)
+        self.wrapper_base_name = None
         self.wrapper_actual_name = None
         self.docstring = docstring
+
+    def get_module(self):
+        """Get the Module object this function belongs to"""
+        return self._module
+    def set_module(self, module):
+        """Set the Module object this function belongs to"""
+        self._module = module
+        self.wrapper_base_name = "_wrap_%s%s" % (module.prefix, self.function_name)
+    module = property(get_module, set_module)
     
     def generate_call(self):
         "virtual method implementation; do not call"
+        if self._module.cpp_namespace:
+            namespace = self._module.cpp_namespace + '::'
+        else:
+            namespace = ''
         if self.return_value.ctype == 'void':
             self.before_call.write_code(
-                '%s(%s);' % (self.function_name, ", ".join(self.call_params)))
+                '%s%s(%s);' % (namespace, self.function_name,
+                               ", ".join(self.call_params)))
         else:
             self.before_call.write_code(
-                'retval = %s(%s);' % (self.function_name, ", ".join(self.call_params)))
+                'retval = %s%s(%s);' % (namespace, self.function_name,
+                                        ", ".join(self.call_params)))
 
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """
@@ -76,11 +92,12 @@ class Function(ForwardWrapperBase):
         """
         flags = self.get_py_method_def_flags()
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
-               (name.replace('::', '_'), self.wrapper_actual_name, '|'.join(flags),
+               (name, self.wrapper_actual_name, '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
 
 
 class OverloadedFunction(overloading.OverloadedWrapper):
+    """Adds support for overloaded functions"""
     RETURN_TYPE = 'PyObject *'
     ERROR_RETURN = 'return NULL;'
 

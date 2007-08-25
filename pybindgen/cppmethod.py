@@ -55,7 +55,7 @@ class CppMethod(ForwardWrapperBase):
         else:
             template_params = ''
         if self.is_static:
-            method = '%s::%s%s' % (class_.name, self.method_name, template_params)
+            method = '%s::%s%s' % (class_.full_name, self.method_name, template_params)
         else:
             method = 'self->obj->%s%s' % (self.method_name, template_params)
         if self.return_value.ctype == 'void':
@@ -182,7 +182,7 @@ class CppConstructor(ForwardWrapperBase):
         "virtual method implementation; do not call"
         #assert isinstance(class_, CppClass)
         if class_.helper_class is None:
-            class_name = class_.name
+            class_name = class_.full_name
             call_params = self.call_params
         else:
             class_name = class_.helper_class.name
@@ -320,7 +320,7 @@ class CppVirtualMethodParentCaller(CppMethod):
     def generate_call(self, class_):
         "virtual method implementation; do not call"
         #assert isinstance(class_, CppClass)
-        method = 'self->obj->%s::%s' % (class_.name, self.method_name)
+        method = 'self->obj->%s::%s' % (class_.full_name, self.method_name)
         if self.return_value.ctype == 'void':
             self.before_call.write_code(
                 '%s(%s);' %
@@ -383,21 +383,22 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
             r'if (!PyObject_HasAttrString(m_pyself, "_%s"))' % self.method_name)
         if self.return_value.ctype == 'void':
             self.before_call.write_code(r'    %s::%s(%s);'
-                                        % (self.class_.name, self.method_name, call_params))
+                                        % (self.class_.full_name, self.method_name, call_params))
             self.before_call.write_code(r'    return;')
         else:
             self.before_call.write_code(r'    return %s::%s(%s);'
-                                        % (self.class_.name, self.method_name, call_params))
+                                        % (self.class_.full_name, self.method_name, call_params))
 
         ## Set "m_pyself->obj = this" around virtual method call invocation
         self_obj_before = self.declarations.declare_variable(
-            '%s*' % self.class_.name, 'self_obj_before')
+            '%s*' % self.class_.full_name, 'self_obj_before')
         self.before_call.write_code("%s = reinterpret_cast<%s*>(m_pyself)->obj;" %
                                     (self_obj_before, self.class_.pystruct))
         if self.is_const:
-            this_expression = "const_cast<%s*>((const %s*) this)" % (self.class_.name, self.class_.name)
+            this_expression = ("const_cast<%s*>((const %s*) this)" %
+                               (self.class_.full_name, self.class_.full_name))
         else:
-            this_expression = "(%s*) this" % (self.class_.name)
+            this_expression = "(%s*) this" % (self.class_.full_name)
         self.before_call.write_code("reinterpret_cast<%s*>(m_pyself)->obj = %s;" %
                                     (self.class_.pystruct, this_expression))
         self.before_call.add_cleanup_code("reinterpret_cast<%s*>(m_pyself)->obj = %s;" %
