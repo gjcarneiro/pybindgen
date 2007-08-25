@@ -96,6 +96,12 @@ def set_options(opt):
     opt.tool_options('python')
     opt.tool_options('compiler_cxx')
 
+    opt.add_option('--generate-version',
+                   help=('Generate a new pybindgen/version.py file from version control'
+                         ' introspection.  Only works from a bzr checkout tree, and is'
+                         ' meant to be used by pybindgen developers only.'),
+                   action="store_true", default=False,
+                   dest='generate_version')
 
 def configure(conf):
     ## Write a pybindgen/version.py file containing the project version
@@ -117,6 +123,9 @@ def configure(conf):
 
 
 def build(bld):
+    if Params.g_options.generate_version:
+        generate_version_py(force=True)
+
     if Params.g_commands['check']:
         bld.add_subdirs('tests')
     bld.add_subdirs('examples')
