@@ -78,7 +78,7 @@ class CppStaticAttributeGetter(PyGetter):
         self.attribute_name = attribute_name
         self.c_function_name = "_wrap_%s__get_%s" % (self.class_.pystruct,
                                                      self.attribute_name)
-        value_type.value = "%s::%s" % (self.class_.name, self.attribute_name)
+        value_type.value = "%s::%s" % (self.class_.full_name, self.attribute_name)
 
     def generate_call(self):
         "virtual method implementation; do not call"
@@ -167,7 +167,7 @@ class CppStaticAttributeSetter(PySetter):
         self.attribute_name = attribute_name
         self.c_function_name = "_wrap_%s__set_%s" % (self.class_.pystruct,
                                                      self.attribute_name)
-        value_type.value =  "%s::%s" % (self.class_.name, self.attribute_name)
+        value_type.value =  "%s::%s" % (self.class_.full_name, self.attribute_name)
 
     def generate(self, code_sink):
         """

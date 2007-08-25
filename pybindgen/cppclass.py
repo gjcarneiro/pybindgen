@@ -261,8 +261,8 @@ class CppClass(object):
     def set_module(self, module):
         """Set the Module object this class belongs to"""
         self._module = module
-        if module.cpp_namespace:
-            self.full_name = module.cpp_namespace + '::' + self.name
+        if module.cpp_namespace_prefix:
+            self.full_name = module.cpp_namespace_prefix + '::' + self.name
         else:
             self.full_name = self.name
 
@@ -367,7 +367,7 @@ public:
         module.header.writeln("\npybindgen::TypeMap %s;\n" % self.typeid_map_name)
         for subclass in self.typeid_map:
             module.after_init.write_code("%s.register_wrapper(typeid(%s), &%s);"
-                                         % (self.typeid_map_name, subclass.name,
+                                         % (self.typeid_map_name, subclass.full_name,
                                             subclass.pytypestruct))
 
     def add_method(self, method, name=None):
@@ -732,6 +732,16 @@ class CppClassRefParameter(Parameter):
     DIRECTIONS = [Parameter.DIRECTION_IN,
                   Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_INOUT]
+
+    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN):
+        """
+        ctype -- C type, normally 'MyClass*'
+        name -- parameter name
+        """
+        if ctype == self.cpp_class.name:
+            ctype = self.cpp_class.full_name
+        super(CppClassRefParameter, self).__init__(
+            ctype, name, direction)
     
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
@@ -777,6 +787,12 @@ class CppClassReturnValue(ReturnValue):
     "Class return handlers"
     CTYPES = []
     cpp_class = CppClass('dummy') # CppClass instance
+
+    def __init__(self, ctype):
+        """override to fix the ctype parameter with namespace information"""
+        if ctype == self.cpp_class.name:
+            ctype = self.cpp_class.full_name
+        super(CppClassReturnValue, self).__init__(ctype)
 
     def get_c_error_return(self): # only used in reverse wrappers
         """See ReturnValue.get_c_error_return"""
@@ -824,6 +840,8 @@ class CppClassPtrParameter(Parameter):
         transfer_ownership -- this parameter transfer the ownership of
                               the pointed-to object to the called function
         """
+        if ctype == self.cpp_class.name:
+            ctype = self.cpp_class.full_name
         super(CppClassPtrParameter, self).__init__(
             ctype, name, direction=Parameter.DIRECTION_IN)
         self.transfer_ownership = transfer_ownership
@@ -861,6 +879,8 @@ class CppClassPtrReturnValue(ReturnValue):
         caller_owns_return -- if true, ownership of the object pointer
                               is transferred to the caller
         """
+        if ctype == self.cpp_class.name:
+            ctype = self.cpp_class.full_name
         super(CppClassPtrReturnValue, self).__init__(ctype)
         self.caller_owns_return = caller_owns_return
 

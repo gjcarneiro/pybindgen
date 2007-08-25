@@ -98,6 +98,8 @@ def my_module_gen(out_file):
 
 
     SomeObject = CppClass('SomeObject', allow_subclassing=True)
+    mod.add_class(SomeObject)
+
     SomeObject.add_instance_attribute(ReturnValue.new('std::string'), 'm_prefix')
     SomeObject.add_static_attribute(ReturnValue.new('std::string'), 'staticData')
 
@@ -169,9 +171,6 @@ def my_module_gen(out_file):
     SomeObject.add_method(CppMethod(ReturnValue.new('int'), 'get_int',
                                     [Parameter.new('double', 'from_float')]),
                           name="get_int")
-
-
-    mod.add_class(SomeObject)
 
 
     mod.add_function(Function(ReturnValue.new('void'), 'store_some_object',

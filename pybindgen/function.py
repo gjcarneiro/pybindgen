@@ -38,8 +38,8 @@ class Function(ForwardWrapperBase):
     
     def generate_call(self):
         "virtual method implementation; do not call"
-        if self._module.cpp_namespace:
-            namespace = self._module.cpp_namespace + '::'
+        if self._module.cpp_namespace_prefix:
+            namespace = self._module.cpp_namespace_prefix + '::'
         else:
             namespace = ''
         if self.return_value.ctype == 'void':
