@@ -163,7 +163,7 @@ class CppClass(object):
                          if not given)
         automatic_type_narrowing -- if True, automatic return type
                                     narrowing will be done on objects
-                                    of this class and its descendents
+                                    of this class and its descendants
                                     when returned by pointer from a
                                     function or method.
         allow_subclassing -- if True, generated class wrappers will
@@ -175,6 +175,10 @@ class CppClass(object):
         self.constructors = [] # (name, wrapper) pairs
         self.slots = dict()
         self.helper_class = None
+        ## list of CppClasses from which a value of this class can be
+        ## implicitly generated; corresponds to a
+        ## operator ThisClass(); in the other class.
+        self.implicitly_converts_from = []
 
         prefix = settings.name_prefix.capitalize()
         self.pystruct = "Py%s%s" % (prefix, self.name)
@@ -253,6 +257,14 @@ class CppClass(object):
 
         self._inherit_default_constructors()
 
+    def implicitly_converts_to(self, other):
+        """
+        Declares that values of this class can be implicitly converted
+        to another class; corresponds to a operator AnotherClass();
+        special method.
+        """
+        assert isinstance(other, CppClass)
+        other.implicitly_converts_from.append(self)
 
     def get_module(self):
         """Get the Module object this class belongs to"""

@@ -61,7 +61,14 @@ def my_module_gen(out_file):
         CppConstructor([Parameter.new('std::string', 'datum')]))
     Foo.add_constructor(CppConstructor([]))
     Foo.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
-    
+
+    Zoo = CppClass('Zoo', automatic_type_narrowing=True)
+    mod.add_class(Zoo)
+    Zoo.add_constructor(
+        CppConstructor([Parameter.new('std::string', 'datum')]))
+    Zoo.add_constructor(CppConstructor([]))
+    Zoo.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
+    Zoo.implicitly_converts_to(Foo)
 
     Bar = CppClass('Bar', parent=Foo)
     ## a static method..
@@ -187,6 +194,34 @@ def my_module_gen(out_file):
     SomeClass = CppClass('SomeClass')
     xpto.add_class(SomeClass)
     SomeClass.add_constructor(CppConstructor([]))
+
+    ## ---- some implicity conversion APIs
+    mod.add_function(Function(ReturnValue.new('void'),
+                               'function_that_takes_foo',
+                               [Parameter.new('Foo', 'foo')]))
+    mod.add_function(Function(ReturnValue.new('void'),
+                               'function_that_takes_foo_ref',
+                               [Parameter.new('Foo&', 'foo')]))
+    mod.add_function(Function(ReturnValue.new('void'),
+                               'function_that_takes_foo_ptr',
+                               [Parameter.new('Foo*', 'foo', transfer_ownership=False)]))
+    mod.add_function(Function(ReturnValue.new('Foo'), 'function_that_returns_foo', []))
+    
+    cls = CppClass('ClassThatTakesFoo')
+    mod.add_class(cls)
+    cls.add_constructor(CppConstructor([Parameter.new('Foo', 'foo')]))
+    cls.add_method(CppMethod(ReturnValue.new('Foo'), 'get_foo', []))
+
+    cls = CppClass('ClassThatTakesFooRef')
+    mod.add_class(cls)
+    cls.add_constructor(CppConstructor([Parameter.new('Foo&', 'foo')]))
+    cls.add_method(CppMethod(ReturnValue.new('Foo'), 'get_foo', []))
+
+    cls = CppClass('ClassThatTakesFooPtr')
+    mod.add_class(cls)
+    cls.add_constructor(CppConstructor([Parameter.new('Foo*', 'foo', transfer_ownership=False)]))
+    cls.add_method(CppMethod(ReturnValue.new('Foo'), 'get_foo', []))
+
 
     mod.generate(FileCodeSink(out_file))
 

@@ -299,7 +299,93 @@ class TestFoo(unittest.TestCase):
 
     def test_namespaced_class(self):
         self.assert_(hasattr(foo.xpto, 'SomeClass'))
+
+    def test_implicit_conversion_method_value(self):
+        obj = foo.SomeObject("xxx")
         
+        zoo1 = foo.Zoo("zpto")
+        try:
+            obj.set_foo_value(zoo1)
+        except TypeError:
+            self.fail()
+        foo1 = obj.get_foo_value()
+        self.assertEqual(foo1.get_datum(), "zpto")
+
+    def test_implicit_conversion_method_ref(self):
+        obj = foo.SomeObject("xxx")
+        
+        zoo1 = foo.Zoo("zpto")
+        try:
+            obj.set_foo_by_ref(zoo1)
+        except TypeError:
+            self.fail()
+        foo1 = obj.get_foo_value()
+        self.assertEqual(foo1.get_datum(), "zpto")
+
+    def test_implicit_conversion_method_ptr(self):
+        obj = foo.SomeObject("xxx")
+        
+        zoo1 = foo.Zoo("zpto")
+        try:
+            obj.set_foo_ptr(zoo1)
+        except TypeError:
+            self.fail()
+        foo1 = obj.get_foo_ptr()
+        self.assertEqual(foo1.get_datum(), "zpto")
+        
+    def test_implicit_conversion_function_value(self):
+        zoo1 = foo.Zoo("zpto")
+        try:
+            foo.function_that_takes_foo(zoo1)
+        except TypeError:
+            self.fail()
+        foo1 = obj.function_that_returns_foo()
+        self.assertEqual(foo1.get_datum(), "zpto")
+
+    def test_implicit_conversion_function_ref(self):
+        zoo1 = foo.Zoo("zpto")
+        try:
+            foo.function_that_takes_foo_ref(zoo1)
+        except TypeError:
+            self.fail()
+        foo1 = obj.function_that_returns_foo()
+        self.assertEqual(foo1.get_datum(), "zpto")
+
+    def test_implicit_conversion_function_ptr(self):
+        zoo1 = foo.Zoo("zpto")
+        try:
+            foo.function_that_takes_foo_ptr(zoo1)
+        except TypeError:
+            self.fail()
+        foo1 = obj.function_that_returns_foo()
+        self.assertEqual(foo1.get_datum(), "zpto")
+        
+    def test_implicit_conversion_constructor_value(self):
+        zoo1 = foo.Zoo("zpto")
+        try:
+            obj = foo.ClassThatTakesFoo(zoo1)
+        except TypeError:
+            self.fail()
+        foo1 = obj.get_foo()
+        self.assertEqual(foo1.get_datum(), "zpto")
+
+    def test_implicit_conversion_constructor_ref(self):
+        zoo1 = foo.Zoo("zpto")
+        try:
+            obj = foo.ClassThatTakesFooRef(zoo1)
+        except TypeError:
+            self.fail()
+        foo1 = obj.get_foo()
+        self.assertEqual(foo1.get_datum(), "zpto")
+
+    def test_implicit_conversion_constructor_ptr(self):
+        zoo1 = foo.Zoo("zpto")
+        try:
+            obj = foo.ClassThatTakesFooPtr(zoo1)
+        except TypeError:
+            self.fail()
+        foo1 = obj.get_foo()
+        self.assertEqual(foo1.get_datum(), "zpto")
 
 if __name__ == '__main__':
     unittest.main()
