@@ -266,6 +266,31 @@ class CppClass(object):
         assert isinstance(other, CppClass)
         other.implicitly_converts_from.append(self)
 
+    def get_all_implicit_conversions(self):
+        """
+        Gets a new list of all other classes whose value can be implicitly
+        converted to a value of this class.
+
+        >>> Foo = CppClass("Foo")
+        >>> Bar = CppClass("Bar")
+        >>> Zbr = CppClass("Zbr")
+        >>> Bar.implicitly_converts_to(Foo)
+        >>> Zbr.implicitly_converts_to(Bar)
+        >>> l = Foo.get_all_implicit_conversions()
+        >>> l.sort(lambda cls1, cls2: cmp(cls1.name, cls2.name))
+        >>> [cls.name for cls in l]
+        ['Bar', 'Zbr']
+        """
+        classes = []
+        to_visit = list(self.implicitly_converts_from)
+        while to_visit:
+            source = to_visit.pop(0)
+            if source in classes or source is self:
+                continue
+            classes.append(source)
+            to_visit.extend(source.implicitly_converts_from)
+        return classes
+
     def get_module(self):
         """Get the Module object this class belongs to"""
         return self._module

@@ -2,8 +2,30 @@
 C wrapper wrapper
 """
 from typehandlers.base import ForwardWrapperBase
-from typehandlers import codesink
 
+def isiterable(obj): 
+    """Returns True if an object appears to be iterable"""
+    return hasattr(obj, '__iter__') or isinstance(obj, basestring)
+
+def vector_counter(vec):
+    """
+    >>> list(vector_counter([[1,2], ['a', 'b'], ['x', 'y']]))
+    [[1, 'a', 'x'], [1, 'a', 'y'], [1, 'b', 'x'], [1, 'b', 'y'], [2, 'a', 'x'], [2, 'a', 'y'], [2, 'b', 'x'], [2, 'b', 'y']]
+    """
+    iters = [iter(l) for l in vec]
+    values = [it.next() for it in iters[:-1]] + [vec[-1][0]]
+    while 1:
+        for idx in xrange(len(iters)-1, -1, -1):
+            try:
+                values[idx] = iters[idx].next()
+            except StopIteration:
+                iters[idx] = iter(vec[idx])
+                values[idx] = iters[idx].next()
+            else:
+                break
+        else:
+            raise StopIteration
+        yield list(values)
 
 class OverloadedWrapper(object):
     """
@@ -22,6 +44,7 @@ class OverloadedWrapper(object):
         wrapper_name -- C/C++ name of the wrapper
         """
         self.wrappers = []
+        self.all_wrappers = None
         self.wrapper_name = wrapper_name
         self.wrapper_function_name = None
         self.pystruct = 'PyObject'
@@ -33,24 +56,66 @@ class OverloadedWrapper(object):
         """
         assert isinstance(wrapper, ForwardWrapperBase)
         self.wrappers.append(wrapper)
-    
+
+    def _compute_all_wrappers(self):
+        """
+        Computes all the wrappers that should be generated; this
+        includes not only the regular overloaded wrappers but also
+        additional wrappers created in runtime to fulfil implicit
+        conversion requirements.  The resulting list is stored as
+        self.all_wrappers
+        """
+        self.all_wrappers = []
+        for wrapper in self.wrappers:
+            self.all_wrappers.append(wrapper)
+            ## add additional wrappers to support implicit conversion
+            if not hasattr(wrapper, "clone"):
+                continue
+            implicit_conversion_classes = []
+            implicit_conversion_positions = []
+            for pos, param in enumerate(wrapper.parameters):
+                if not isinstance(param, CppClassParameter):
+                    continue
+                conversion_sources = param.cpp_class.get_all_implicit_conversions()
+                if conversion_sources:
+                    conversion_sources.insert(0, param.cpp_class)
+                    implicit_conversion_classes.append(conversion_sources)
+                    implicit_conversion_positions.append(pos)
+            if not implicit_conversion_classes:
+                continue
+            ## Now generate the addition wrappers, with all possible
+            ## combinations of implicit conversion source classes...
+            combinations = vector_counter(implicit_conversion_classes)
+            ## skip the first one, as it is the same as in the original wrapper
+            combinations.next()
+            for combination in combinations:
+                wrapper_clone = wrapper.clone()
+                for pos, cpp_class in zip(implicit_conversion_positions, combination):
+                    ## now make this parameter handle a different C++ class
+                    wrapper_clone.parameters[pos].cpp_class = cpp_class
+                self.all_wrappers.append(wrapper_clone)
+                
+
     def generate(self, code_sink):
         """
         Generate all the wrappers plus the 'aggregator' wrapper to a code sink.
         """
-        if len(self.wrappers) == 1:
+
+        self._compute_all_wrappers()
+
+        if len(self.all_wrappers) == 1:
             ## special case when there's only one wrapper; keep
             ## simple things simple
-            self.wrappers[0].generate(code_sink)
-            self.wrapper_function_name = self.wrappers[0].wrapper_actual_name
+            self.all_wrappers[0].generate(code_sink)
+            self.wrapper_function_name = self.all_wrappers[0].wrapper_actual_name
             assert self.wrapper_function_name is not None
         else:
             ## multiple overloaded wrappers case..
 
             ## Generate the individual "low level" wrappers that handle a single prototype
-            self.wrapper_function_name = self.wrappers[0].wrapper_base_name
+            self.wrapper_function_name = self.all_wrappers[0].wrapper_base_name
             delegate_wrappers = []
-            for number, wrapper in enumerate(self.wrappers):
+            for number, wrapper in enumerate(self.all_wrappers):
                 ## enforce uniform method flags
                 wrapper.force_parse = wrapper.PARSE_TUPLE_AND_KEYWORDS
                 ## an extra parameter 'return_exception' is used to
@@ -117,15 +182,20 @@ class OverloadedWrapper(object):
 
         name -- python wrapper/method name
         """
-        if len(self.wrappers) == 1:
-            return self.wrappers[0].get_py_method_def(name)
+        if len(self.all_wrappers) == 1:
+            return self.all_wrappers[0].get_py_method_def(name)
         else:
-            flags = self.wrappers[0].get_py_method_def_flags()
+            flags = self.all_wrappers[0].get_py_method_def_flags()
             ## detect inconsistencies in flags; they must all be the same
             if __debug__:
-                for func in self.wrappers:
+                for func in self.all_wrappers:
                     assert func.get_py_method_def_flags() == flags
             docstring = None # FIXME
             return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
                 (name, self.wrapper_function_name, '|'.join(flags),
                  (docstring is None and "NULL" or ('"'+docstring+'"')))
+
+
+
+from cppclass import CppClassParameter
+

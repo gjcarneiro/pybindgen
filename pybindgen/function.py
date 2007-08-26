@@ -1,6 +1,9 @@
 """
 C function wrapper
 """
+
+from copy import copy
+
 from typehandlers.base import ForwardWrapperBase
 from typehandlers import codesink
 import overloading
@@ -26,6 +29,20 @@ class Function(ForwardWrapperBase):
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
         self.docstring = docstring
+
+    def clone(self):
+        """Creates a semi-deep copy of this function wrapper.  The returned
+        function wrapper clone contains copies of all parameters, so
+        they can be modified at will.
+        """
+        func = Function(self.return_value,
+                        self.function_name,
+                        [copy(param) for param in self.parameters],
+                        docstring=self.docstring)
+        func._module = self._module
+        func.wrapper_base_name = self.wrapper_base_name
+        func.wrapper_actual_name = self.wrapper_actual_name
+        return func
 
     def get_module(self):
         """Get the Module object this function belongs to"""

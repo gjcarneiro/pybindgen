@@ -2,6 +2,8 @@
 Wrap C++ class methods and constructods.
 """
 
+from copy import copy
+
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase
 from typehandlers import codesink
 import overloading
@@ -35,6 +37,23 @@ class CppMethod(ForwardWrapperBase):
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
 
+    def clone(self):
+        """Creates a semi-deep copy of this method wrapper.  The returned
+        method wrapper clone contains copies of all parameters, so
+        they can be modified at will.
+        """
+        meth = CppMethod(self.return_value,
+                         self.method_name,
+                         [copy(param) for param in self.parameters],
+                         is_static=self.is_static,
+                         template_parameters=self.template_parameters,
+                         is_virtual=self.is_virtual,
+                         is_const=self.is_const)
+        meth._class = self._class
+        meth.docstring = self.docstring
+        meth.wrapper_base_name = self.wrapper_base_name
+        meth.wrapper_actual_name = self.wrapper_actual_name
+        return meth
 
     def set_class(self, class_):
         """set the class object this method belongs to"""
@@ -167,6 +186,16 @@ class CppConstructor(ForwardWrapperBase):
         self.wrapper_actual_name = None
         self._class = None
 
+    def clone(self):
+        """Creates a semi-deep copy of this constructor wrapper.  The returned
+        constructor wrapper clone contains copies of all parameters, so
+        they can be modified at will.
+        """
+        meth = CppConstructor([copy(param) for param in self.parameters])
+        meth._class = self._class
+        meth.wrapper_base_name = self.wrapper_base_name
+        meth.wrapper_actual_name = self.wrapper_actual_name
+        return meth
 
     def set_class(self, class_):
         "Set the class wrapper object (CppClass)"
@@ -359,6 +388,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         super(CppVirtualMethodProxy, self).__init__(return_value, parameters)
         self.method_name = method_name
         self.is_const = is_const
+        self.class_ = None
 
     def generate_python_call(self):
         """code to call the python method"""
@@ -372,7 +402,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
     def generate(self, code_sink):
         """generates the proxy virtual method"""
         if self.is_const:
-            decl_post_modifiers=['const']
+            decl_post_modifiers = ['const']
         else:
             decl_post_modifiers = []
 

@@ -318,7 +318,7 @@ class TestFoo(unittest.TestCase):
             foo.function_that_takes_foo(zoo1)
         except TypeError:
             self.fail()
-        foo1 = obj.function_that_returns_foo()
+        foo1 = foo.function_that_returns_foo()
         self.assertEqual(foo1.get_datum(), "zpto")
 
         
