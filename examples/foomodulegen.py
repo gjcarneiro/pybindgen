@@ -199,27 +199,11 @@ def my_module_gen(out_file):
     mod.add_function(Function(ReturnValue.new('void'),
                                'function_that_takes_foo',
                                [Parameter.new('Foo', 'foo')]))
-    mod.add_function(Function(ReturnValue.new('void'),
-                               'function_that_takes_foo_ref',
-                               [Parameter.new('Foo&', 'foo')]))
-    mod.add_function(Function(ReturnValue.new('void'),
-                               'function_that_takes_foo_ptr',
-                               [Parameter.new('Foo*', 'foo', transfer_ownership=False)]))
     mod.add_function(Function(ReturnValue.new('Foo'), 'function_that_returns_foo', []))
     
     cls = CppClass('ClassThatTakesFoo')
     mod.add_class(cls)
     cls.add_constructor(CppConstructor([Parameter.new('Foo', 'foo')]))
-    cls.add_method(CppMethod(ReturnValue.new('Foo'), 'get_foo', []))
-
-    cls = CppClass('ClassThatTakesFooRef')
-    mod.add_class(cls)
-    cls.add_constructor(CppConstructor([Parameter.new('Foo&', 'foo')]))
-    cls.add_method(CppMethod(ReturnValue.new('Foo'), 'get_foo', []))
-
-    cls = CppClass('ClassThatTakesFooPtr')
-    mod.add_class(cls)
-    cls.add_constructor(CppConstructor([Parameter.new('Foo*', 'foo', transfer_ownership=False)]))
     cls.add_method(CppMethod(ReturnValue.new('Foo'), 'get_foo', []))
 
 

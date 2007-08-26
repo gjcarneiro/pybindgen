@@ -102,16 +102,6 @@ void function_that_takes_foo(Foo foo)
     g_foo = foo;
 }
 
-void function_that_takes_foo_ref(const Foo& foo)
-{
-    g_foo = foo;
-}
-
-void function_that_takes_foo_ptr(const Foo *foo)
-{
-    g_foo = *foo;
-}
-
 Foo function_that_returns_foo()
 {
     return g_foo;

@@ -64,29 +64,9 @@ public:
     Foo get_foo () const { return m_foo; }
 };
 
-class ClassThatTakesFooRef
-{
-    Foo m_foo;
-public:
-    ClassThatTakesFooRef(const Foo& foo) : m_foo(foo) {}
-    Foo get_foo () const { return m_foo; }
-};
-
-class ClassThatTakesFooPtr
-{
-    Foo m_foo;
-public:
-    // transfer_ownership=False
-    ClassThatTakesFooPtr(const Foo *foo) : m_foo(*foo) {}
-    Foo get_foo () const { return m_foo; }
-};
-
 extern Foo g_foo;
 
 void function_that_takes_foo(Foo foo);
-void function_that_takes_foo_ref(const Foo& foo);
-void function_that_takes_foo_ptr(const Foo *foo);
-
 Foo function_that_returns_foo();
 
 
