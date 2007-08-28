@@ -776,6 +776,17 @@ class CppClassParameterBase(Parameter):
         self.py_name = None
 
 
+class CppClassReturnValueBase(ReturnValue):
+    "Class return handlers -- base class"
+    CTYPES = []
+    cpp_class = CppClass('dummy') # CppClass instance
+
+    def __init__(self, ctype):
+        super(CppClassReturnValueBase, self).__init__(ctype)
+        ## name of the PyFoo * variable used in return value building
+        self.py_name = None
+
+
 class CppClassParameter(CppClassParameterBase):
     "Class handlers"
     CTYPES = []
@@ -854,7 +865,7 @@ class CppClassRefParameter(CppClassParameterBase):
             wrapper.build_params.add_parameter("O", [name])
 
 
-class CppClassReturnValue(ReturnValue):
+class CppClassReturnValue(CppClassReturnValueBase):
     "Class return handlers"
     CTYPES = []
     cpp_class = CppClass('dummy') # CppClass instance
@@ -905,19 +916,42 @@ class CppClassPtrParameter(CppClassParameterBase):
     DIRECTIONS = [Parameter.DIRECTION_IN]
     SUPPORTS_TRANSFORMATIONS = True
 
-    def __init__(self, ctype, name, transfer_ownership):
+    def __init__(self, ctype, name, transfer_ownership=None, custodian=None):
         """
         ctype -- C type, normally 'MyClass*'
         name -- parameter name
+
         transfer_ownership -- this parameter transfer the ownership of
-                              the pointed-to object to the called function
+                              the pointed-to object to the called
+                              function; should be omitted if custodian
+                              is given.
+        custodian -- the object (custodian) that is responsible for
+                     managing the life cycle of the parameter.
+                     Possible values are: None: no object is
+                     custodian; the integer -1: the return value; the
+                     integer 0: the instance of the method in which
+                     the ReturnValue is being used will become the
+                     custodian; integer > 0: parameter number,
+                     starting at 1, whose object will be used as
+                     custodian.  Note: only C++ class parameters can
+                     be used as custodians, not parameters of builtin
+                     Python types.
         """
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassPtrParameter, self).__init__(
             ctype, name, direction=Parameter.DIRECTION_IN)
-        self.transfer_ownership = transfer_ownership
-        
+
+        if custodian is None:
+            if transfer_ownership is None:
+                raise TypeError
+            self.transfer_ownership = transfer_ownership
+        else:
+            if transfer_ownership is not None:
+                raise TypeError
+            self.transfer_ownership = False
+        self.custodian = custodian
+
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
         assert isinstance(wrapper, ForwardWrapperBase)
@@ -940,7 +974,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                     name, self.cpp_class.incref_method,))
 
 
-class CppClassPtrReturnValue(ReturnValue):
+class CppClassPtrReturnValue(CppClassReturnValueBase):
     "Class* return handler"
     CTYPES = []
     SUPPORTS_TRANSFORMATIONS = True
