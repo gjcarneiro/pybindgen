@@ -107,3 +107,9 @@ Foo function_that_returns_foo()
     return g_foo;
 }
 
+int Foo::instance_count = 0;
+
+Foo* get_foo_with_other_as_custodian (const SomeObject *other)
+{
+    return new Foo;
+}

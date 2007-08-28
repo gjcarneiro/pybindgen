@@ -27,16 +27,18 @@ class Foo
 {
     std::string m_datum;
 public:
+    static int instance_count;
+
     Foo () : m_datum ("")
-        {}
+        { Foo::instance_count++; }
     Foo (std::string datum) : m_datum (datum)
-        {}
+        { Foo::instance_count++; }
     std::string get_datum () const { return m_datum; }
 
     Foo (Foo const & other) : m_datum (other.get_datum ())
-        {}
+        { Foo::instance_count++; }
 
-    virtual ~Foo() {}
+    virtual ~Foo() { Foo::instance_count--; }
 };
 
 class Zoo
@@ -252,6 +254,13 @@ public:
     int get_int (const char *from_string);
     int get_int (double from_float);
 
+    // custodian/ward tests
+    Foo* get_foo_with_self_as_custodian () {
+        return new Foo;
+    }
+    Foo* get_foo_with_other_as_custodian (const SomeObject *other) {
+        return new Foo;
+    }
 };
 
 
@@ -280,5 +289,8 @@ namespace xpto
         SomeClass() {}
     };
 }
+
+Foo* get_foo_with_other_as_custodian(const SomeObject *other);
+
 
 #endif 	    /* !FOO_H_ */

@@ -910,16 +910,34 @@ class CppClassPtrReturnValue(ReturnValue):
     SUPPORTS_TRANSFORMATIONS = True
     cpp_class = CppClass('dummy') # CppClass instance
 
-    def __init__(self, ctype, caller_owns_return):
+    def __init__(self, ctype, caller_owns_return=None, custodian=None):
         """
         ctype -- C type, normally 'MyClass*'
         caller_owns_return -- if true, ownership of the object pointer
-                              is transferred to the caller
+                              is transferred to the caller; should be
+                              omitted when custodian is given.
+        custodian -- the object (custodian) that is responsible for
+                     managing the life cycle of the return value.
+                     Possible values are: None: no object is
+                     custodian; the integer 0: the instance of the
+                     method in which the ReturnValue is being used
+                     will become the custodian; integer > 0: parameter
+                     number, starting at 1, whose object will be used
+                     as custodian.  Note: only C++ class parameters
+                     can be used as custodians, not parameters of
+                     builtin Python types.
         """
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassPtrReturnValue, self).__init__(ctype)
-        self.caller_owns_return = caller_owns_return
+        if custodian is None and caller_owns_return is None:
+            raise TypeError("caller_owns_return not given")
+        self.custodian = custodian
+        if custodian is None:
+            self.caller_owns_return = caller_owns_return
+        else:
+            assert caller_owns_return is None
+            self.caller_owns_return = True
 
     def get_c_error_return(self): # only used in reverse wrappers
         """See ReturnValue.get_c_error_return"""

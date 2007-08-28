@@ -57,6 +57,7 @@ def my_module_gen(out_file):
 
     Foo = CppClass('Foo', automatic_type_narrowing=True)
     mod.add_class(Foo)
+    Foo.add_static_attribute(ReturnValue.new('int'), 'instance_count')
     Foo.add_constructor(
         CppConstructor([Parameter.new('std::string', 'datum')]))
     Foo.add_constructor(CppConstructor([]))
@@ -151,6 +152,19 @@ def my_module_gen(out_file):
     SomeObject.add_method(CppMethod(
         ReturnValue.new('void'), 'get_foo_by_ref',
         [Parameter.new('Foo&', 'foo', direction=Parameter.DIRECTION_OUT)]))
+
+    ## custodian/ward tests
+    SomeObject.add_method(CppMethod(
+        ReturnValue.new('Foo*', custodian=0), 'get_foo_with_self_as_custodian',
+        []))
+    SomeObject.add_method(CppMethod(
+        ReturnValue.new('Foo*', custodian=1), 'get_foo_with_other_as_custodian',
+        [Parameter.new('SomeObject*', 'other', transfer_ownership=False)]))
+
+    mod.add_function(Function(ReturnValue.new('Foo*', custodian=1),
+                              'get_foo_with_other_as_custodian',
+                              [Parameter.new('SomeObject*', 'other', transfer_ownership=False)]))
+
 
     ## get/set recfcounted object Zbr
     SomeObject.add_method(CppMethod(

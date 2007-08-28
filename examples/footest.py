@@ -331,6 +331,88 @@ class TestFoo(unittest.TestCase):
         foo1 = obj.get_foo()
         self.assertEqual(foo1.get_datum(), "zpto")
 
+    def test_custodian_method_self(self):
+        while gc.collect():
+            pass
+        SomeObject_count_before = foo.SomeObject.instance_count
+        obj1 = foo.SomeObject("xxx")
+        Foo_count1 = foo.Foo.instance_count
+        foo1 = obj1.get_foo_with_self_as_custodian()
+        Foo_count2 = foo.Foo.instance_count
+        self.assertEqual(Foo_count2, Foo_count1 + 1)
+
+        ## now, deleting foo1 should keep Foo count the same, since
+        ## obj1 is keeping it alive
+        del foo1
+        while gc.collect():
+            pass
+        self.assertEqual(foo.Foo.instance_count, Foo_count2)
+
+        ## now deleting obj1 should cause both foo1 and obj1 to be destroyed
+        del obj1
+        while gc.collect():
+            pass
+        self.assertEqual(foo.SomeObject.instance_count, SomeObject_count_before)
+        self.assertEqual(foo.Foo.instance_count, Foo_count1)
+
+    def test_custodian_method_other(self):
+        while gc.collect():
+            pass
+        SomeObject_count_before = foo.SomeObject.instance_count
+        obj1 = foo.SomeObject("xxx")
+        obj2 = foo.SomeObject("yyy")
+        Foo_count1 = foo.Foo.instance_count
+        foo1 = obj1.get_foo_with_other_as_custodian(obj2)
+        Foo_count2 = foo.Foo.instance_count
+        self.assertEqual(Foo_count2, Foo_count1 + 1)
+
+        ## now, deleting foo1 should keep Foo count the same, since
+        ## obj1 is keeping it alive
+        del foo1
+        while gc.collect():
+            pass
+        self.assertEqual(foo.Foo.instance_count, Foo_count2)
+
+        ##  deleting obj1 should still keep Foo count the same, since
+        ## obj2, not obj1, is keeping it alive
+        del obj1
+        while gc.collect():
+            pass
+        self.assertEqual(foo.Foo.instance_count, Foo_count2)
+        self.assertEqual(foo.SomeObject.instance_count, SomeObject_count_before + 1)
+
+        ## now deleting obj2 should cause both foo1 and obj2 to be destroyed
+        del obj2
+        while gc.collect():
+            pass
+        self.assertEqual(foo.SomeObject.instance_count, SomeObject_count_before)
+        self.assertEqual(foo.Foo.instance_count, Foo_count1)
+
+
+    def test_custodian_function_other(self):
+        while gc.collect():
+            pass
+        SomeObject_count_before = foo.SomeObject.instance_count
+        obj1 = foo.SomeObject("xxx")
+        Foo_count1 = foo.Foo.instance_count
+        foo1 = foo.get_foo_with_other_as_custodian(obj1)
+        Foo_count2 = foo.Foo.instance_count
+        self.assertEqual(Foo_count2, Foo_count1 + 1)
+
+        ## now, deleting foo1 should keep Foo count the same, since
+        ## obj1 is keeping it alive
+        del foo1
+        while gc.collect():
+            pass
+        self.assertEqual(foo.Foo.instance_count, Foo_count2)
+
+        ## now deleting obj1 should cause both foo1 and obj1 to be destroyed
+        del obj1
+        while gc.collect():
+            pass
+        self.assertEqual(foo.SomeObject.instance_count, SomeObject_count_before)
+        self.assertEqual(foo.Foo.instance_count, Foo_count1)
+        
 
 if __name__ == '__main__':
     unittest.main()
