@@ -166,10 +166,25 @@ def my_module_gen(out_file):
     SomeObject.add_method(CppMethod(
         ReturnValue.new('Foobar*', custodian=1), 'get_foobar_with_other_as_custodian',
         [Parameter.new('SomeObject*', 'other', transfer_ownership=False)]))
+    SomeObject.add_method(CppMethod(
+        ReturnValue.new('void'), 'set_foobar_with_self_as_custodian',
+        [Parameter.new('Foobar*', 'foobar', custodian=0)]))
 
     mod.add_function(Function(ReturnValue.new('Foobar*', custodian=1),
                               'get_foobar_with_other_as_custodian',
                               [Parameter.new('SomeObject*', 'other', transfer_ownership=False)]))
+
+    mod.add_function(Function(ReturnValue.new('Foobar*', caller_owns_return=True),
+                              'create_new_foobar', []))
+
+    mod.add_function(Function(ReturnValue.new('void'),
+                              'set_foobar_with_other_as_custodian',
+                              [Parameter.new('Foobar*', 'foobar', custodian=2),
+                               Parameter.new('SomeObject*', 'other', transfer_ownership=False)]))
+
+    mod.add_function(Function(ReturnValue.new('SomeObject*', caller_owns_return=True),
+                              'set_foobar_with_return_as_custodian',
+                              [Parameter.new('Foobar*', 'foobar', custodian=-1)]))
 
 
     ## get/set recfcounted object Zbr

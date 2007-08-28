@@ -114,3 +114,18 @@ Foobar* get_foobar_with_other_as_custodian (const SomeObject *other)
 {
     return new Foobar;
 }
+
+Foobar* create_new_foobar()
+{
+    return new Foobar;
+}
+
+void set_foobar_with_other_as_custodian(Foobar *foobar, const SomeObject *other)
+{
+      // empty
+}
+
+SomeObject * set_foobar_with_return_as_custodian(Foobar *foobar)
+{
+    return new SomeObject("xxx");
+}

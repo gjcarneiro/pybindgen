@@ -273,6 +273,8 @@ public:
     Foobar* get_foobar_with_other_as_custodian (const SomeObject *other) {
         return new Foobar;
     }
+    void set_foobar_with_self_as_custodian (Foobar *foobar) {
+    }
 };
 
 
@@ -303,6 +305,10 @@ namespace xpto
 }
 
 Foobar* get_foobar_with_other_as_custodian(const SomeObject *other);
+
+Foobar* create_new_foobar();
+void set_foobar_with_other_as_custodian(Foobar *foobar, const SomeObject *other);
+SomeObject * set_foobar_with_return_as_custodian(Foobar *foobar);
 
 
 #endif 	    /* !FOO_H_ */
