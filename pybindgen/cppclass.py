@@ -659,16 +659,23 @@ typedef struct {
         ## --- tp_clear ---
         tp_clear_function_name = "%s__tp_clear" % (self.pystruct,)
         self.slots.setdefault("tp_clear", tp_clear_function_name )
+
+        if self.decref_method is None:
+            delete_code = "delete self->obj;"
+        else:
+            delete_code = ("if (self->obj)\n        self->obj->%s();"
+                           % (self.decref_method,))
+
         code_sink.writeln(r'''
 static void
 %s(%s *self)
 {
     // fprintf(stderr, "tp_clear >>> %%s at %%p <<<\n", self->ob_type->tp_name, self);
     Py_CLEAR(self->inst_dict);
-    delete self->obj;
+    %s
     self->obj = 0;
 }
-''' % (tp_clear_function_name, self.pystruct))
+''' % (tp_clear_function_name, self.pystruct, delete_code))
 
         ## --- tp_traverse ---
         tp_traverse_function_name = "%s__tp_traverse" % (self.pystruct,)
@@ -705,27 +712,30 @@ static int
 
         if self.allow_subclassing:
             clear_code = "%s(self);" % self.slots["tp_clear"]
+            delete_code = ""
         else:
             clear_code = ""
-
-        if have_constructor:
             if self.decref_method is None:
                 delete_code = "delete tmp;"
             else:
-                delete_code = ("if (tmp)\n        tmp->%s()"
+                delete_code = ("if (tmp)\n        tmp->%s();"
                                % (self.decref_method,))
+
+        if have_constructor:
             code_sink.writeln(r'''
 static void
 %s(%s *self)
 {
     // fprintf(stderr, "dealloc >>> %%s at %%p <<<\n", self->ob_type->tp_name, self);
-    %s *tmp = self->obj;
+    %s
     self->obj = NULL;
-    %s;
+    %s
     %s
     self->ob_type->tp_free((PyObject*)self);
 }
-''' % (tp_dealloc_function_name, self.pystruct, self.full_name, delete_code, clear_code))
+''' % (tp_dealloc_function_name, self.pystruct,
+       (delete_code and ("%s *tmp = self->obj;" % self.full_name) or ''),
+       delete_code, clear_code))
 
         else: # don't have constructor
 
@@ -733,10 +743,12 @@ static void
 static void
 %s(%s *self)
 {
+    %s *tmp = self->obj;
+    %s
     %s
     self->ob_type->tp_free((PyObject*)self);
 }
-''' % (tp_dealloc_function_name, self.pystruct, clear_code))
+''' % (tp_dealloc_function_name, self.pystruct, self.full_name, clear_code, delete_code))
         code_sink.writeln()
         self.slots.setdefault("tp_dealloc", tp_dealloc_function_name )
 
@@ -744,7 +756,27 @@ static void
 ###
 ### ------------ C++ class parameter type handlers ------------
 ###
-class CppClassParameter(Parameter):
+class CppClassParameterBase(Parameter):
+    "Base class for all C++ Class parameter handlers"
+    CTYPES = []
+    cpp_class = CppClass('dummy') # CppClass instance
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+
+    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN):
+        """
+        ctype -- C type, normally 'MyClass*'
+        name -- parameter name
+        """
+        if ctype == self.cpp_class.name:
+            ctype = self.cpp_class.full_name
+        super(CppClassParameterBase, self).__init__(
+            ctype, name, direction)
+
+        ## name of the PyFoo * variable used in parameter parsing
+        self.py_name = None
+
+
+class CppClassParameter(CppClassParameterBase):
     "Class handlers"
     CTYPES = []
     cpp_class = CppClass('dummy') # CppClass instance
@@ -756,13 +788,14 @@ class CppClassParameter(Parameter):
         assert isinstance(self.cpp_class, CppClass)
         name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', self.name)
+        self.py_name = name
         wrapper.parse_params.add_parameter(
             'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
         wrapper.call_params.append(
             '*((%s *) %s)->obj' % (self.cpp_class.pystruct, name))
 
 
-class CppClassRefParameter(Parameter):
+class CppClassRefParameter(CppClassParameterBase):
     "Class& handlers"
     CTYPES = []
     cpp_class = CppClass('dummy') # CppClass instance
@@ -787,6 +820,7 @@ class CppClassRefParameter(Parameter):
 
         name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', self.name)
+        self.py_name = name
 
         if self.direction == Parameter.DIRECTION_IN:
             wrapper.parse_params.add_parameter(
@@ -839,6 +873,7 @@ class CppClassReturnValue(ReturnValue):
         """see ReturnValue.convert_c_to_python"""
         py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
+        self.py_name = py_name
         if self.cpp_class.allow_subclassing:
             new_func = 'PyObject_GC_New'
         else:
@@ -863,7 +898,7 @@ class CppClassReturnValue(ReturnValue):
     
 
 
-class CppClassPtrParameter(Parameter):
+class CppClassPtrParameter(CppClassParameterBase):
     "Class* handlers"
     CTYPES = []
     cpp_class = CppClass('dummy') # CppClass instance
@@ -889,6 +924,7 @@ class CppClassPtrParameter(Parameter):
         assert isinstance(self.cpp_class, CppClass)
         name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', self.name)
+        self.py_name = name
         wrapper.parse_params.add_parameter(
             'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
 
@@ -953,6 +989,7 @@ class CppClassPtrReturnValue(ReturnValue):
         ## declare wrapper variable
         py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
+        self.py_name = py_name
 
         def write_create_new_wrapper():
             """Code path that creates a new wrapper for the returned object"""
@@ -982,6 +1019,7 @@ class CppClassPtrReturnValue(ReturnValue):
             wrapper.after_call.write_code(
                 "%s = %s(%s, %s);" %
                 (py_name, new_func, self.cpp_class.pystruct, wrapper_type))
+            self.py_name = py_name
 
             if self.cpp_class.allow_subclassing:
                 wrapper.after_call.write_code(
@@ -1024,7 +1062,32 @@ class CppClassPtrReturnValue(ReturnValue):
             wrapper.after_call.write_code("}")
                 
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
-
+        
+        def add_ward(custodian, ward):
+            wards = wrapper.declarations.declare_variable(
+                'PyObject*', 'wards')
+            wrapper.after_call.write_code(
+                "%(wards)s = PyObject_GetAttrString(%(custodian)s, \"__wards__\");"
+                % vars())
+            wrapper.after_call.write_code(
+                "if (%(wards)s == NULL) {\n"
+                "    PyErr_Clear();\n"
+                "    %(wards)s = PyList_New(0);\n"
+                "    PyObject_SetAttrString(%(custodian)s, \"__wards__\", %(wards)s);\n"
+                "}" % vars())
+            wrapper.after_call.write_code("PyList_Append(%s, %s);" % (wards, ward))
+            wrapper.after_call.add_cleanup_code("Py_DECREF(%s);" % wards)
+            
+        if self.custodian is None:
+            pass
+        elif self.custodian == 0:
+            add_ward('((PyObject *) self)', "((PyObject *) %s)" % py_name)
+        else:
+            assert self.custodian > 0
+            param = wrapper.parameters[self.custodian - 1]
+            assert isinstance(param, CppClassParameterBase)
+            add_ward("((PyObject *) %s)" % param.py_name, "((PyObject *) %s)" % py_name)
+    
 
     def convert_python_to_c(self, wrapper):
         """See ReturnValue.convert_python_to_c"""
@@ -1058,3 +1121,4 @@ class CppClassPtrReturnValue(ReturnValue):
                           "  The C++ API should be redesigned "
                           "to avoid this situation.")
             
+

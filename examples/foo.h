@@ -112,6 +112,18 @@ public:
 };
 
 
+class Foobar
+{
+public:
+    static int instance_count;
+
+    Foobar ()
+        { Foobar::instance_count++; }
+
+    virtual ~Foobar() { Foobar::instance_count--; }
+};
+
+
 class SomeObject
 {
 public:
@@ -255,11 +267,11 @@ public:
     int get_int (double from_float);
 
     // custodian/ward tests
-    Foo* get_foo_with_self_as_custodian () {
-        return new Foo;
+    Foobar* get_foobar_with_self_as_custodian () {
+        return new Foobar;
     }
-    Foo* get_foo_with_other_as_custodian (const SomeObject *other) {
-        return new Foo;
+    Foobar* get_foobar_with_other_as_custodian (const SomeObject *other) {
+        return new Foobar;
     }
 };
 
@@ -290,7 +302,7 @@ namespace xpto
     };
 }
 
-Foo* get_foo_with_other_as_custodian(const SomeObject *other);
+Foobar* get_foobar_with_other_as_custodian(const SomeObject *other);
 
 
 #endif 	    /* !FOO_H_ */

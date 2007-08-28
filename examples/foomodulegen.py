@@ -71,6 +71,12 @@ def my_module_gen(out_file):
     Zoo.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
     Zoo.implicitly_converts_to(Foo)
 
+
+    Foobar = CppClass('Foobar')
+    mod.add_class(Foobar)
+    Foobar.add_static_attribute(ReturnValue.new('int'), 'instance_count')
+
+
     Bar = CppClass('Bar', parent=Foo)
     ## a static method..
     Bar.add_method(CppMethod(ReturnValue.new('std::string'), 'Hooray', [], is_static=True))
@@ -155,14 +161,14 @@ def my_module_gen(out_file):
 
     ## custodian/ward tests
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('Foo*', custodian=0), 'get_foo_with_self_as_custodian',
+        ReturnValue.new('Foobar*', custodian=0), 'get_foobar_with_self_as_custodian',
         []))
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('Foo*', custodian=1), 'get_foo_with_other_as_custodian',
+        ReturnValue.new('Foobar*', custodian=1), 'get_foobar_with_other_as_custodian',
         [Parameter.new('SomeObject*', 'other', transfer_ownership=False)]))
 
-    mod.add_function(Function(ReturnValue.new('Foo*', custodian=1),
-                              'get_foo_with_other_as_custodian',
+    mod.add_function(Function(ReturnValue.new('Foobar*', custodian=1),
+                              'get_foobar_with_other_as_custodian',
                               [Parameter.new('SomeObject*', 'other', transfer_ownership=False)]))
 
 

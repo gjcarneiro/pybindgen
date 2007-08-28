@@ -108,8 +108,9 @@ Foo function_that_returns_foo()
 }
 
 int Foo::instance_count = 0;
+int Foobar::instance_count = 0;
 
-Foo* get_foo_with_other_as_custodian (const SomeObject *other)
+Foobar* get_foobar_with_other_as_custodian (const SomeObject *other)
 {
-    return new Foo;
+    return new Foobar;
 }
