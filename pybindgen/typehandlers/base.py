@@ -639,6 +639,17 @@ class ForwardWrapperBase(object):
         """
         raise NotImplementedError
 
+    def _before_return_hook(self):
+        """
+        Optional hook that lets subclasses add code after all
+        parameters are parsed and after the function C return value is
+        processed, but after the python wrapper return value (py_ret)
+        is built and returned.  Subclasses may add code to
+        self.after_call, which will be placed before py_ret is
+        created.
+        """
+        pass
+
     def generate_body(self, code_sink, gen_call_params=()):
         """Generate the wrapper function body
         code_sink -- a CodeSink object that will receive the code
@@ -682,6 +693,7 @@ class ForwardWrapperBase(object):
         if self.return_value is None:
             assert self.build_params.get_parameters() == ['""'], \
                    "this wrapper is not supposed to return values"
+            self._before_return_hook()
             self.after_call.write_cleanup()
         else:
             try:
@@ -690,6 +702,8 @@ class ForwardWrapperBase(object):
                 raise CodeGenerationError(
                     'python_to_c method of return value %s not implemented'
                     % (self.return_value.ctype,))
+
+            self._before_return_hook()
 
             params = self.build_params.get_parameters()
             if params:
