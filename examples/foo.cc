@@ -112,6 +112,7 @@ int Foobar::instance_count = 0;
 
 Foobar* get_foobar_with_other_as_custodian (const SomeObject *other)
 {
+    other++;
     return new Foobar;
 }
 
@@ -122,10 +123,12 @@ Foobar* create_new_foobar()
 
 void set_foobar_with_other_as_custodian(Foobar *foobar, const SomeObject *other)
 {
-      // empty
+    foobar++;
+    other++;
 }
 
 SomeObject * set_foobar_with_return_as_custodian(Foobar *foobar)
 {
+    foobar++;
     return new SomeObject("xxx");
 }

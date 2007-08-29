@@ -167,6 +167,7 @@ public:
         return message.size ();
     }
 
+    // --------  Virtual methods ----------
     virtual std::string get_prefix () const {
         return m_prefix;
     }
@@ -174,6 +175,19 @@ public:
     std::string call_get_prefix () const {
         return get_prefix();
     }
+
+    virtual std::string get_prefix_with_foo_value (Foo foo) const {
+        return m_prefix + foo.get_datum();
+    }
+
+    virtual std::string get_prefix_with_foo_ref (const Foo &foo) const {
+        return m_prefix + foo.get_datum ();
+    }
+
+    virtual std::string get_prefix_with_foo_ptr (const Foo *foo) const {
+        return m_prefix + foo->get_datum ();
+    }
+
 
     // pass by value, direction=in
     void set_foo_value (Foo foo) {
@@ -271,9 +285,11 @@ public:
         return new Foobar;
     }
     Foobar* get_foobar_with_other_as_custodian (const SomeObject *other) {
+        other++;
         return new Foobar;
     }
     void set_foobar_with_self_as_custodian (Foobar *foobar) {
+        foobar++;
     }
 };
 

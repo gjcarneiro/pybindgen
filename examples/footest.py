@@ -493,5 +493,20 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(foo.SomeObject.instance_count, SomeObject_count_before)
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1)
 
+    def test_subclass_with_virtual_with_foo_parameter_value(self):
+        class Test(foo.SomeObject):
+            def __init__(self, prefix, extra_prefix):
+                super(Test, self).__init__(prefix)
+                self.extra_prefix = extra_prefix
+            def _get_prefix_with_foo_value(self, fooval):
+                prefix = super(Test, self)._get_prefix_with_foo_value(fooval)
+                return prefix + self.extra_prefix + fooval.get_datum()
+
+        t = Test("123", "456")
+        foo1 = foo.Foo("zbr")
+        prefix = t.get_prefix_with_foo_value(foo1)
+        self.assertEqual(prefix, "123zbr456zbr")
+
+
 if __name__ == '__main__':
     unittest.main()

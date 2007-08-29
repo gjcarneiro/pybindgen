@@ -127,10 +127,28 @@ def my_module_gen(out_file):
     SomeObject.add_constructor(
         CppConstructor([Parameter.new('int', 'prefix_len')]))
 
+    # --- some virtual methods ---
     SomeObject.add_method(CppMethod(
         ReturnValue.new('std::string'), 'get_prefix', [],
         is_virtual=True, is_const=True))
 
+    SomeObject.add_method(CppMethod(
+        ReturnValue.new('std::string'), 'get_prefix_with_foo_value',
+        [Parameter.new('Foo', 'foo')],
+        is_virtual=True, is_const=True))
+
+    #SomeObject.add_method(CppMethod(
+    #    ReturnValue.new('std::string'), 'get_prefix_with_foo_ref',
+    #    [Parameter.new('Foo&', 'foo')],
+    #    is_virtual=True, is_const=True))
+
+    #SomeObject.add_method(CppMethod(
+    #    ReturnValue.new('std::string'), 'get_prefix_with_foo_ptr',
+    #    [Parameter.new('Foo*', 'foo', transfer_ownership=False)],
+    #    is_virtual=True, is_const=True))
+
+
+    # ---
     SomeObject.add_method(CppMethod(
         ReturnValue.new('std::string'), 'call_get_prefix', []))
 

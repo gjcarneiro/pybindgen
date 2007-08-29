@@ -4,7 +4,7 @@ Wrap C++ classes and methods
 
 import warnings
 
-from typehandlers.base import ForwardWrapperBase, Parameter, ReturnValue, \
+from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, Parameter, ReturnValue, \
     join_ctype_and_name
 
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor, \
@@ -805,6 +805,26 @@ class CppClassParameter(CppClassParameterBase):
             'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
         wrapper.call_params.append(
             '*((%s *) %s)->obj' % (self.cpp_class.pystruct, name))
+
+    def convert_c_to_python(self, wrapper):
+        '''Write some code before calling the Python method.'''
+        assert isinstance(wrapper, ReverseWrapperBase)
+
+        self.py_name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
+        if self.cpp_class.allow_subclassing:
+            new_func = 'PyObject_GC_New'
+        else:
+            new_func = 'PyObject_New'
+        wrapper.before_call.write_code(
+            "%s = %s(%s, %s);" %
+            (self.py_name, new_func, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+        if self.cpp_class.allow_subclassing:
+            wrapper.before_call.write_code(
+                "%s->inst_dict = NULL;" % (py_name,))
+        wrapper.before_call.write_code(
+            "%s->obj = new %s(%s);" % (self.py_name, self.cpp_class.full_name, self.value))
+        wrapper.build_params.add_parameter("N", [self.py_name])
 
 
 class CppClassRefParameter(CppClassParameterBase):
