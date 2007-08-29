@@ -7,6 +7,7 @@ from copy import copy
 from typehandlers.base import ForwardWrapperBase
 from typehandlers import codesink
 import overloading
+import cppclass
 
 
 class Function(ForwardWrapperBase):
@@ -67,6 +68,10 @@ class Function(ForwardWrapperBase):
             self.before_call.write_code(
                 'retval = %s%s(%s);' % (namespace, self.function_name,
                                         ", ".join(self.call_params)))
+
+    def _before_return_hook(self):
+        "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
+        cppclass.implement_parameter_custodians(self)
 
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """

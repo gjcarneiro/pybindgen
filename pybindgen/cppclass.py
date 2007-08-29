@@ -716,9 +716,11 @@ static int
         else:
             clear_code = ""
             if self.decref_method is None:
-                delete_code = "delete tmp;"
+                delete_code = "delete tmp; self->obj = NULL;"
             else:
-                delete_code = ("if (tmp)\n        tmp->%s();"
+                delete_code = ("if (tmp)\n"
+                               "    tmp->%s();\n"
+                               "self->obj = NULL;"
                                % (self.decref_method,))
 
         if have_constructor:
@@ -728,7 +730,6 @@ static void
 {
     // fprintf(stderr, "dealloc >>> %%s at %%p <<<\n", self->ob_type->tp_name, self);
     %s
-    self->obj = NULL;
     %s
     %s
     self->ob_type->tp_free((PyObject*)self);
@@ -974,6 +975,23 @@ class CppClassPtrParameter(CppClassParameterBase):
                     name, self.cpp_class.incref_method,))
 
 
+def _add_ward(wrapper, custodian, ward):
+    wards = wrapper.declarations.declare_variable(
+        'PyObject*', 'wards')
+    wrapper.after_call.write_code(
+        "%(wards)s = PyObject_GetAttrString(%(custodian)s, \"__wards__\");"
+        % vars())
+    wrapper.after_call.write_code(
+        "if (%(wards)s == NULL) {\n"
+        "    PyErr_Clear();\n"
+        "    %(wards)s = PyList_New(0);\n"
+        "    PyObject_SetAttrString(%(custodian)s, \"__wards__\", %(wards)s);\n"
+        "}" % vars())
+    wrapper.after_call.write_code("PyList_Append(%s, %s);" % (wards, ward))
+    wrapper.after_call.add_cleanup_code("Py_DECREF(%s);" % wards)
+
+
+
 class CppClassPtrReturnValue(CppClassReturnValueBase):
     "Class* return handler"
     CTYPES = []
@@ -1097,30 +1115,17 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                 
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
         
-        def add_ward(custodian, ward):
-            wards = wrapper.declarations.declare_variable(
-                'PyObject*', 'wards')
-            wrapper.after_call.write_code(
-                "%(wards)s = PyObject_GetAttrString(%(custodian)s, \"__wards__\");"
-                % vars())
-            wrapper.after_call.write_code(
-                "if (%(wards)s == NULL) {\n"
-                "    PyErr_Clear();\n"
-                "    %(wards)s = PyList_New(0);\n"
-                "    PyObject_SetAttrString(%(custodian)s, \"__wards__\", %(wards)s);\n"
-                "}" % vars())
-            wrapper.after_call.write_code("PyList_Append(%s, %s);" % (wards, ward))
-            wrapper.after_call.add_cleanup_code("Py_DECREF(%s);" % wards)
-            
         if self.custodian is None:
             pass
         elif self.custodian == 0:
-            add_ward('((PyObject *) self)', "((PyObject *) %s)" % py_name)
+            assert wrapper.class_.allow_subclassing
+            _add_ward(wrapper, '((PyObject *) self)', "((PyObject *) %s)" % py_name)
         else:
             assert self.custodian > 0
             param = wrapper.parameters[self.custodian - 1]
+            assert param.cpp_class.allow_subclassing
             assert isinstance(param, CppClassParameterBase)
-            add_ward("((PyObject *) %s)" % param.py_name, "((PyObject *) %s)" % py_name)
+            _add_ward(wrapper, "((PyObject *) %s)" % param.py_name, "((PyObject *) %s)" % py_name)
     
 
     def convert_python_to_c(self, wrapper):
@@ -1156,3 +1161,28 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                           "to avoid this situation.")
             
 
+def implement_parameter_custodians(wrapper):
+    """
+    Generate the necessary code to implement the custodian=<N> option
+    of C++ class parameters.  It accepts a Forward Wrapper as argument.
+    """
+    assert isinstance(wrapper, ForwardWrapperBase)
+    for param in wrapper.parameters:
+        if not isinstance(param, CppClassPtrParameter):
+            continue
+        if param.custodian is None:
+            continue
+        if param.custodian == -1: # the custodian is the return value
+            assert wrapper.return_value.cpp_class.allow_subclassing
+            _add_ward(wrapper, "((PyObject *) %s)" % wrapper.return_value.py_name,
+                       "((PyObject *) %s)" % param.py_name)
+        elif param.custodian == 0: # the custodian is the method self
+            assert wrapper.class_.allow_subclassing
+            _add_ward(wrapper, "((PyObject *) self)",
+                       "((PyObject *) %s)" % param.py_name)
+        else: # the custodian is another parameter
+            assert param.custodian > 0
+            custodian_param = wrapper.parameters[param.custodian - 1]
+            assert custodian_param.cpp_class.allow_subclassing
+            _add_ward(wrapper, "((PyObject *) %s)" % custodian_param.py_name,
+                       "((PyObject *) %s)" % param.py_name)

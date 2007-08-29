@@ -86,6 +86,10 @@ class CppMethod(ForwardWrapperBase):
                 'retval = %s(%s);' %
                 (method, ", ".join(self.call_params)))
 
+    def _before_return_hook(self):
+        """hook that post-processes parameters and check for custodian=<n>
+        CppClass parameters"""
+        cppclass.implement_parameter_custodians(self)
 
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """
@@ -220,6 +224,10 @@ class CppConstructor(ForwardWrapperBase):
         self.before_call.write_code(
             'self->obj = new %s(%s);' %
             (class_name, ", ".join(call_params)))
+
+    def _before_return_hook(self):
+        "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
+        cppclass.implement_parameter_custodians(self)
 
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """
@@ -437,3 +445,6 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         super(CppVirtualMethodProxy, self).generate(
             code_sink, self.method_name, decl_modifiers=['virtual'],
             decl_post_modifiers=decl_post_modifiers)
+
+
+import cppclass
