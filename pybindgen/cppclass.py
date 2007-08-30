@@ -763,7 +763,7 @@ class CppClassParameterBase(Parameter):
     cpp_class = CppClass('dummy') # CppClass instance
     DIRECTIONS = [Parameter.DIRECTION_IN]
 
-    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN):
+    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False):
         """
         ctype -- C type, normally 'MyClass*'
         name -- parameter name
@@ -771,7 +771,7 @@ class CppClassParameterBase(Parameter):
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassParameterBase, self).__init__(
-            ctype, name, direction)
+            ctype, name, direction, is_const)
 
         ## name of the PyFoo * variable used in parameter parsing
         self.py_name = None
@@ -835,7 +835,7 @@ class CppClassRefParameter(CppClassParameterBase):
                   Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_INOUT]
 
-    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN):
+    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False):
         """
         ctype -- C type, normally 'MyClass*'
         name -- parameter name
@@ -843,7 +843,7 @@ class CppClassRefParameter(CppClassParameterBase):
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassRefParameter, self).__init__(
-            ctype, name, direction)
+            ctype, name, direction, is_const)
     
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
@@ -878,12 +878,61 @@ class CppClassRefParameter(CppClassParameterBase):
 
         ## well, personally I think inout here doesn't make much sense
         ## (it's just plain confusing), but might as well support it..
+
+        ## C++ class reference inout parameters allow "inplace"
+        ## modifications, i.e. the object is not explicitly returned
+        ## but is instead modified by the callee.
         elif self.direction == Parameter.DIRECTION_INOUT:
             wrapper.parse_params.add_parameter(
                 'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
             wrapper.call_params.append(
                 '*%s->obj' % (name))
-            wrapper.build_params.add_parameter("O", [name])
+
+    def convert_c_to_python(self, wrapper):
+        '''Write some code before calling the Python method.'''
+        assert isinstance(wrapper, ReverseWrapperBase)
+
+        self.py_name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
+        if self.cpp_class.allow_subclassing:
+            new_func = 'PyObject_GC_New'
+        else:
+            new_func = 'PyObject_New'
+        wrapper.before_call.write_code(
+            "%s = %s(%s, %s);" %
+            (self.py_name, new_func, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+        if self.cpp_class.allow_subclassing:
+            wrapper.before_call.write_code(
+                "%s->inst_dict = NULL;" % (py_name,))
+
+        if self.direction == Parameter.DIRECTION_IN:
+            wrapper.before_call.write_code(
+                "%s->obj = new %s(%s);" % (self.py_name, self.cpp_class.full_name, self.value))
+            wrapper.build_params.add_parameter("N", [self.py_name])
+        else:
+            ## out/inout case:
+            ## the callee receives a "temporary wrapper", which loses
+            ## the ->obj pointer after the python call; this is so
+            ## that the python code directly manipulates the object
+            ## received as parameter, instead of a copy.
+            wrapper.before_call.write_code(
+                "%s->obj = &(%s);" % (self.py_name, self.value))
+            wrapper.build_params.add_parameter("O", [self.py_name])
+            wrapper.before_call.add_cleanup_code("Py_DECREF(%s);" % self.py_name)
+
+            ## if after the call we notice the callee kept a reference
+            ## to the pyobject, we then swap pywrapper->obj for a copy
+            ## of the original object.  Else the ->obj pointer is
+            ## simply erased (we never owned this object in the first
+            ## place).
+            wrapper.after_call.write_code(
+                "if (%s->ob_refcnt == 1)\n"
+                "    %s->obj = NULL;\n"
+                "else\n"
+                "    %s->obj = new %s(%s);" %
+                (self.py_name, self.py_name, self.py_name,
+                 self.cpp_class.full_name, self.value))
+            
 
 
 class CppClassReturnValue(CppClassReturnValueBase):
@@ -937,7 +986,7 @@ class CppClassPtrParameter(CppClassParameterBase):
     DIRECTIONS = [Parameter.DIRECTION_IN]
     SUPPORTS_TRANSFORMATIONS = True
 
-    def __init__(self, ctype, name, transfer_ownership=None, custodian=None):
+    def __init__(self, ctype, name, transfer_ownership=None, custodian=None, is_const=False):
         """
         ctype -- C type, normally 'MyClass*'
         name -- parameter name
@@ -957,11 +1006,12 @@ class CppClassPtrParameter(CppClassParameterBase):
                      custodian.  Note: only C++ class parameters can
                      be used as custodians, not parameters of builtin
                      Python types.
+        is_const -- if true, the parameter has a const attached to the leftmost
         """
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassPtrParameter, self).__init__(
-            ctype, name, direction=Parameter.DIRECTION_IN)
+            ctype, name, direction=Parameter.DIRECTION_IN, is_const=is_const)
 
         if custodian is None:
             if transfer_ownership is None:

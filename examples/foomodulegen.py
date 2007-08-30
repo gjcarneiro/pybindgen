@@ -137,10 +137,10 @@ def my_module_gen(out_file):
         [Parameter.new('Foo', 'foo')],
         is_virtual=True, is_const=True))
 
-    #SomeObject.add_method(CppMethod(
-    #    ReturnValue.new('std::string'), 'get_prefix_with_foo_ref',
-    #    [Parameter.new('Foo&', 'foo')],
-    #    is_virtual=True, is_const=True))
+    SomeObject.add_method(CppMethod(
+            ReturnValue.new('std::string'), 'get_prefix_with_foo_ref',
+            [Parameter.new('Foo&', 'foo', is_const=True)],
+            is_virtual=True, is_const=True))
 
     #SomeObject.add_method(CppMethod(
     #    ReturnValue.new('std::string'), 'get_prefix_with_foo_ptr',

@@ -949,7 +949,7 @@ class Parameter(object):
             return cls(*args, **kwargs)
 
 
-    def __init__(self, ctype, name, direction=DIRECTION_IN):
+    def __init__(self, ctype, name, direction=DIRECTION_IN, is_const=False):
         '''
         Creates a parameter object
 
@@ -963,11 +963,14 @@ class Parameter(object):
         '''
         if type(self) is Parameter:
             raise TypeError('Parameter is an abstract class; use Parameter.new(...)')
+        if is_const and not ctype.startswith('const'):
+            ctype = 'const ' + ctype
         self.ctype = ctype
         self.untransformed_ctype = ctype
         self.name = name
         assert direction in self.DIRECTIONS
         self.direction = direction
+        self.is_const = is_const
         self.transformation = NullTypeTransformation()
         self.value = name
 
@@ -996,7 +999,7 @@ Parameter.CTYPES = NotImplemented
 
 
 
-    
+
 
 
 class TypeMatcher(object):
