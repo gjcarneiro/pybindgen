@@ -139,7 +139,8 @@ def my_module_gen(out_file):
 
     SomeObject.add_method(CppMethod(
             ReturnValue.new('std::string'), 'get_prefix_with_foo_ref',
-            [Parameter.new('Foo&', 'foo', is_const=True)],
+            [Parameter.new('Foo&', 'foo', is_const=True,
+                           direction=Parameter.DIRECTION_INOUT)],
             is_virtual=True, is_const=True))
 
     #SomeObject.add_method(CppMethod(

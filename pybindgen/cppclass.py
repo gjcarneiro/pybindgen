@@ -915,8 +915,12 @@ class CppClassRefParameter(CppClassParameterBase):
             ## the ->obj pointer after the python call; this is so
             ## that the python code directly manipulates the object
             ## received as parameter, instead of a copy.
+            if self.is_const:
+                value = "const_cast<%s*>(&(%s))" % (self.cpp_class.full_name, self.value)
+            else:
+                value = "&(%s)" % self.value
             wrapper.before_call.write_code(
-                "%s->obj = &(%s);" % (self.py_name, self.value))
+                "%s->obj = %s;" % (self.py_name, value))
             wrapper.build_params.add_parameter("O", [self.py_name])
             wrapper.before_call.add_cleanup_code("Py_DECREF(%s);" % self.py_name)
 
