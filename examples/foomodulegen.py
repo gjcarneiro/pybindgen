@@ -143,10 +143,10 @@ def my_module_gen(out_file):
                            direction=Parameter.DIRECTION_INOUT)],
             is_virtual=True, is_const=True))
 
-    #SomeObject.add_method(CppMethod(
-    #    ReturnValue.new('std::string'), 'get_prefix_with_foo_ptr',
-    #    [Parameter.new('Foo*', 'foo', transfer_ownership=False)],
-    #    is_virtual=True, is_const=True))
+    SomeObject.add_method(CppMethod(
+        ReturnValue.new('std::string'), 'get_prefix_with_foo_ptr',
+        [Parameter.new('Foo*', 'foo', transfer_ownership=False, is_const=True)],
+        is_virtual=True, is_const=True))
 
 
     # ---

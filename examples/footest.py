@@ -522,5 +522,20 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(prefix, "123zbr456zbr")
 
 
+    def test_subclass_with_virtual_with_foo_parameter_ptr(self):
+        class Test(foo.SomeObject):
+            def __init__(self, prefix, extra_prefix):
+                super(Test, self).__init__(prefix)
+                self.extra_prefix = extra_prefix
+            def _get_prefix_with_foo_ptr(self, fooval):
+                prefix = super(Test, self)._get_prefix_with_foo_ptr(fooval)
+                return prefix + self.extra_prefix + fooval.get_datum()
+
+        t = Test("123", "456")
+        foo1 = foo.Foo("zbr")
+        prefix = t.get_prefix_with_foo_ptr(foo1)
+        self.assertEqual(prefix, "123zbr456zbr")
+
+
 if __name__ == '__main__':
     unittest.main()
