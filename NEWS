@@ -1,3 +1,12 @@
+=== pybindgen 0.7 ===
+	- Automatic C++ pointer-to-class return type narrowing
+	- Optionally allow subclassing in Python of certain C++ classes 
+	- Add support for overriding C++ virtual methods in Python
+	- Add support for C++ namespaces
+	- Add support for C++ implicit conversions
+	- Add support for a "custodian and ward" memory management model
+	- Assorted bug fixes
+
 === pybindgen 0.6 ===
 	- Supports function/method/constructor overloading
         - Supports automatic type narrowing on C++ class pointer return values
