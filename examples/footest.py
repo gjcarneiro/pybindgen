@@ -536,6 +536,13 @@ class TestFoo(unittest.TestCase):
         prefix = t.get_prefix_with_foo_ptr(foo1)
         self.assertEqual(prefix, "123zbr456zbr")
 
+    def test_attribute_with_getset(self):
+        obj = foo.SomeObject("")
+        f1 = foo.Foo("hello")
+        obj.foo = f1
+        f2 = obj.foo
+        self.assertEqual(f2.get_datum(), "hello")
+
 
 if __name__ == '__main__':
     unittest.main()

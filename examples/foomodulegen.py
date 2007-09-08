@@ -114,6 +114,9 @@ def my_module_gen(out_file):
     SomeObject = CppClass('SomeObject', allow_subclassing=True)
     mod.add_class(SomeObject)
 
+    SomeObject.add_instance_attribute(ReturnValue.new('Foo'), 'foo',
+                                      getter='get_foo_value',
+                                      setter='set_foo_value')
     SomeObject.add_instance_attribute(ReturnValue.new('std::string'), 'm_prefix')
     SomeObject.add_static_attribute(ReturnValue.new('std::string'), 'staticData')
 

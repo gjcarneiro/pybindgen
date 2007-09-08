@@ -30,19 +30,24 @@ class CppInstanceAttributeGetter(PyGetter):
     '''
     A getter for a C++ instance attribute.
     '''
-    def __init__(self, value_type, class_, attribute_name):
+    def __init__(self, value_type, class_, attribute_name, getter=None):
         """
         value_type -- a ReturnValue object handling the value type;
         class_ -- the class (CppClass object)
         attribute_name -- name of attribute
+        getter -- None, or name of a method of the class used to get the value
         """
         super(CppInstanceAttributeGetter, self).__init__(
             value_type, [], "return NULL;", "return NULL;", no_c_retval=True)
         self.class_ = class_
         self.attribute_name = attribute_name
+        self.getter = getter
         self.c_function_name = "_wrap_%s__get_%s" % (self.class_.pystruct,
                                                      self.attribute_name)
-        value_type.value = "self->obj->%s" % self.attribute_name
+        if self.getter is None:
+            value_type.value = "self->obj->%s" % self.attribute_name
+        else:
+            value_type.value = "self->obj->%s()" % self.getter
 
     def generate_call(self):
         "virtual method implementation; do not call"
@@ -104,19 +109,20 @@ class CppInstanceAttributeSetter(PySetter):
     '''
     A setter for a C++ instance attribute.
     '''
-    def __init__(self, value_type, class_, attribute_name):
+    def __init__(self, value_type, class_, attribute_name, setter=None):
         """
         value_type -- a ReturnValue object handling the value type;
         class_ -- the class (CppClass object)
         attribute_name -- name of attribute
+        setter -- None, or name of a method of the class used to set the value
         """
         super(CppInstanceAttributeSetter, self).__init__(
             value_type, [], "return -1;")
         self.class_ = class_
         self.attribute_name = attribute_name
+        self.setter = setter
         self.c_function_name = "_wrap_%s__set_%s" % (self.class_.pystruct,
                                                      self.attribute_name)
-        value_type.value = "self->obj->%s" % self.attribute_name
 
     def generate(self, code_sink):
         """
@@ -127,11 +133,26 @@ class CppInstanceAttributeSetter(PySetter):
         self.before_call.write_code(
             'py_retval = Py_BuildValue("(O)", value);')
         self.before_call.add_cleanup_code('Py_DECREF(py_retval);')
+
+        if self.setter is not None:
+            ## if we have a setter method, redirect the value to a temporary variable
+            value_var = self.declarations.declare_variable(self.return_value.ctype, 'tmp_value')
+            self.return_value.value = value_var
+        else:
+            ## else the value is written directly to a C++ instance attribute
+            self.return_value.value = "self->obj->%s" % self.attribute_name
+
         self.return_value.convert_python_to_c(self)
+
         parse_tuple_params = ['py_retval']
         parse_tuple_params.extend(self.parse_params.get_parameters())
         self.before_call.write_error_check('!PyArg_ParseTuple(%s)' %
                                            (', '.join(parse_tuple_params),))
+
+        if self.setter is not None:
+            ## if we have a setter method, now is the time to call it
+            self.after_call.write_code("self->obj->%s(%s);" % (self.setter, value_var))
+
         ## cleanup and return
         self.after_call.write_cleanup()
         self.after_call.write_code('return 0;')

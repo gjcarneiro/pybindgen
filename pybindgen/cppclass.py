@@ -472,19 +472,23 @@ public:
             setter = CppStaticAttributeSetter(value_type, self, name)
         self.static_attributes.add_attribute(name, getter, setter)
 
-    def add_instance_attribute(self, value_type, name, is_const=False):
+    def add_instance_attribute(self, value_type, name, is_const=False,
+                               getter=None, setter=None):
         """
         value_type -- a ReturnValue object
         name -- attribute name (i.e. the name of the class member variable)
         is_const -- True if the attribute is const, i.e. cannot be modified
+        getter -- None, or name of a method of this class used to get the value
+        setter -- None, or name of a method of this class used to set the value
         """
         assert isinstance(value_type, ReturnValue)
-        getter = CppInstanceAttributeGetter(value_type, self, name)
+        getter_wrapper = CppInstanceAttributeGetter(value_type, self, name, getter=getter)
         if is_const:
-            setter = None
+            setter_wrapper = None
+            assert setter is None
         else:
-            setter = CppInstanceAttributeSetter(value_type, self, name)
-        self.instance_attributes.add_attribute(name, getter, setter)
+            setter_wrapper = CppInstanceAttributeSetter(value_type, self, name, setter=setter)
+        self.instance_attributes.add_attribute(name, getter_wrapper, setter_wrapper)
 
     def generate_forward_declarations(self, code_sink):
         """Generates forward declarations for the instance and type
