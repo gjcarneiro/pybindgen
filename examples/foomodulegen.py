@@ -152,6 +152,27 @@ def my_module_gen(out_file):
         is_virtual=True, is_const=True))
 
 
+    ## add a function that appears as a method of an object
+    SomeObject.add_method(
+        Function(ReturnValue.new('std::string'), 'some_object_get_something_prefixed',
+                 [Parameter.new('SomeObject*', 'obj', transfer_ownership=False, is_const=True),
+                  Parameter.new('std::string', 'something')]),
+        name='get_something_prefixed')
+
+    ## add a function that appears as a method of an object
+    SomeObject.add_method(
+        Function(ReturnValue.new('std::string'), 'some_object_val_get_something_prefixed',
+                 [Parameter.new('SomeObject', 'obj'),
+                  Parameter.new('std::string', 'something')]),
+        name='val_get_something_prefixed')
+
+    ## add a function that appears as a method of an object
+    SomeObject.add_method(
+        Function(ReturnValue.new('std::string'), 'some_object_ref_get_something_prefixed',
+                 [Parameter.new('SomeObject&', 'obj', is_const=True),
+                  Parameter.new('std::string', 'something')]),
+        name='ref_get_something_prefixed')
+
     # ---
     SomeObject.add_method(CppMethod(
         ReturnValue.new('std::string'), 'call_get_prefix', []))

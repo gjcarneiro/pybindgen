@@ -294,6 +294,12 @@ public:
 };
 
 
+// A function that will appear as a method of SomeObject
+// obj: transfer_ownership=false
+std::string some_object_get_something_prefixed(const SomeObject *obj, const std::string something);
+
+std::string some_object_val_get_something_prefixed(SomeObject obj, const std::string something);
+std::string some_object_ref_get_something_prefixed(const SomeObject &obj, const std::string something);
 
 
 // Transfer ownership of 'obj' to the library

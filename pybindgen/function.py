@@ -7,7 +7,6 @@ from copy import copy
 from typehandlers.base import ForwardWrapperBase
 from typehandlers import codesink
 import overloading
-import cppclass
 
 
 class Function(ForwardWrapperBase):
@@ -30,6 +29,7 @@ class Function(ForwardWrapperBase):
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
         self.docstring = docstring
+        self.self_parameter_pystruct = None
 
     def clone(self):
         """Creates a semi-deep copy of this function wrapper.  The returned
@@ -90,7 +90,11 @@ class Function(ForwardWrapperBase):
         python_args = ''
         flags = self.get_py_method_def_flags()
         if 'METH_VARARGS' in flags:
-            python_args += "PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args"
+            if self.self_parameter_pystruct is None:
+                self_param = 'PyObject * PYBINDGEN_UNUSED(dummy)'
+            else:
+                self_param = '%s *self' % self.self_parameter_pystruct
+            python_args += "%s, PyObject *args" % self_param
             if 'METH_KEYWORDS' in flags:
                 python_args += ", PyObject *kwargs"
 
@@ -123,3 +127,4 @@ class OverloadedFunction(overloading.OverloadedWrapper):
     RETURN_TYPE = 'PyObject *'
     ERROR_RETURN = 'return NULL;'
 
+import cppclass

@@ -14,6 +14,7 @@ from cppmethod import CppMethod, CppConstructor, CppNoConstructor, \
 from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter,
                           CppStaticAttributeGetter, CppStaticAttributeSetter,
                           PyGetSetDef, PyMetaclass)
+
 import settings
 
 class CppHelperClass(object):
@@ -416,9 +417,19 @@ public:
                 from Python side
         """
         assert name is None or isinstance(name, str)
-        assert isinstance(method, CppMethod)
-        if name is None:
-            name = method.method_name
+        if isinstance(method, CppMethod):
+            if name is None:
+                name = method.method_name
+        elif isinstance(method, function.Function):
+            assert name is not None
+            assert isinstance(method.parameters[0], CppClassParameterBase)
+            assert method.parameters[0].cpp_class is self
+            method.parameters[0].take_value_from_python_self = True
+            method.module = self.module
+            method.is_virtual = False
+            method.self_parameter_pystruct = self.pystruct
+        else:
+            raise TypeError
             
         try:
             overload = self.methods[name]
@@ -780,6 +791,11 @@ class CppClassParameterBase(Parameter):
         ## name of the PyFoo * variable used in parameter parsing
         self.py_name = None
 
+        ## it True, this parameter is 'fake', and instead of being
+        ## passed a parameter from python it is assumed to be the
+        ## 'self' parameter of a method wrapper
+        self.take_value_from_python_self = False
+
 
 class CppClassReturnValueBase(ReturnValue):
     "Class return handlers -- base class"
@@ -802,13 +818,15 @@ class CppClassParameter(CppClassParameterBase):
         "parses python args to get C++ value"
         assert isinstance(wrapper, ForwardWrapperBase)
         assert isinstance(self.cpp_class, CppClass)
-        name = wrapper.declarations.declare_variable(
-            self.cpp_class.pystruct+'*', self.name)
-        self.py_name = name
-        wrapper.parse_params.add_parameter(
-            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
+        if self.take_value_from_python_self:
+            self.py_name = 'self'
+        else:
+            self.py_name = wrapper.declarations.declare_variable(
+                self.cpp_class.pystruct+'*', self.name)
+            wrapper.parse_params.add_parameter(
+                'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
         wrapper.call_params.append(
-            '*((%s *) %s)->obj' % (self.cpp_class.pystruct, name))
+            '*((%s *) %s)->obj' % (self.cpp_class.pystruct, self.py_name))
 
     def convert_c_to_python(self, wrapper):
         '''Write some code before calling the Python method.'''
@@ -854,31 +872,38 @@ class CppClassRefParameter(CppClassParameterBase):
         assert isinstance(wrapper, ForwardWrapperBase)
         assert isinstance(self.cpp_class, CppClass)
 
-        name = wrapper.declarations.declare_variable(
-            self.cpp_class.pystruct+'*', self.name)
-        self.py_name = name
 
         if self.direction == Parameter.DIRECTION_IN:
-            wrapper.parse_params.add_parameter(
-                'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
-            wrapper.call_params.append('*%s->obj' % (name,))
+            if self.take_value_from_python_self:
+                self.py_name = 'self'
+            else:
+                self.py_name = wrapper.declarations.declare_variable(
+                    self.cpp_class.pystruct+'*', self.name)
+                wrapper.parse_params.add_parameter(
+                    'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
+            wrapper.call_params.append('*%s->obj' % (self.py_name,))
 
         elif self.direction == Parameter.DIRECTION_OUT:
+            assert not self.take_value_from_python_self
+
+            self.py_name = wrapper.declarations.declare_variable(
+                self.cpp_class.pystruct+'*', self.name)
+
             if self.cpp_class.allow_subclassing:
                 new_func = 'PyObject_GC_New'
             else:
                 new_func = 'PyObject_New'
             wrapper.before_call.write_code(
                 "%s = %s(%s, %s);" %
-                (name, new_func, self.cpp_class.pystruct,
+                (self.py_name, new_func, self.cpp_class.pystruct,
                  '&'+self.cpp_class.pytypestruct))
             if self.cpp_class.allow_subclassing:
                 wrapper.after_call.write_code(
-                    "%s->inst_dict = NULL;" % (name,))
+                    "%s->inst_dict = NULL;" % (self.py_name,))
             wrapper.before_call.write_code(
-                "%s->obj = new %s;" % (name, self.cpp_class.full_name))
-            wrapper.call_params.append('*%s->obj' % (name,))
-            wrapper.build_params.add_parameter("N", [name])
+                "%s->obj = new %s;" % (self.py_name, self.cpp_class.full_name))
+            wrapper.call_params.append('*%s->obj' % (self.py_name,))
+            wrapper.build_params.add_parameter("N", [self.py_name])
 
         ## well, personally I think inout here doesn't make much sense
         ## (it's just plain confusing), but might as well support it..
@@ -887,10 +912,15 @@ class CppClassRefParameter(CppClassParameterBase):
         ## modifications, i.e. the object is not explicitly returned
         ## but is instead modified by the callee.
         elif self.direction == Parameter.DIRECTION_INOUT:
+            assert not self.take_value_from_python_self
+
+            self.py_name = wrapper.declarations.declare_variable(
+                self.cpp_class.pystruct+'*', self.name)
+
             wrapper.parse_params.add_parameter(
-                'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
+                'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
             wrapper.call_params.append(
-                '*%s->obj' % (name))
+                '*%s->obj' % (self.py_name))
 
     def convert_c_to_python(self, wrapper):
         '''Write some code before calling the Python method.'''
@@ -1035,22 +1065,25 @@ class CppClassPtrParameter(CppClassParameterBase):
         "parses python args to get C++ value"
         assert isinstance(wrapper, ForwardWrapperBase)
         assert isinstance(self.cpp_class, CppClass)
-        name = wrapper.declarations.declare_variable(
-            self.cpp_class.pystruct+'*', self.name)
-        self.py_name = name
-        wrapper.parse_params.add_parameter(
-            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name], self.name)
+
+        if self.take_value_from_python_self:
+            self.py_name = 'self'
+        else:
+            self.py_name = wrapper.declarations.declare_variable(
+                self.cpp_class.pystruct+'*', self.name)
+            wrapper.parse_params.add_parameter(
+                'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
 
         value = self.transformation.transform(
-            self, wrapper.declarations, wrapper.before_call, '%s->obj' % name)
+            self, wrapper.declarations, wrapper.before_call, '%s->obj' % self.py_name)
         wrapper.call_params.append(value)
         
         if self.transfer_ownership:
             if self.cpp_class.incref_method is None:
-                wrapper.after_call.write_code('%s->obj = NULL;' % (name,))
+                wrapper.after_call.write_code('%s->obj = NULL;' % (self.py_name,))
             else:
                 wrapper.before_call.write_code('%s->obj->%s();' % (
-                    name, self.cpp_class.incref_method,))
+                    self.py_name, self.cpp_class.incref_method,))
 
 
     def convert_c_to_python(self, wrapper):
@@ -1387,3 +1420,6 @@ def implement_parameter_custodians(wrapper):
             assert custodian_param.cpp_class.allow_subclassing
             _add_ward(wrapper, "((PyObject *) %s)" % custodian_param.py_name,
                        "((PyObject *) %s)" % param.py_name)
+
+
+import function

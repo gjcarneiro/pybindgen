@@ -132,3 +132,18 @@ SomeObject * set_foobar_with_return_as_custodian(Foobar *foobar)
     foobar++;
     return new SomeObject("xxx");
 }
+
+std::string some_object_get_something_prefixed(const SomeObject *obj, const std::string something)
+{
+    return obj->get_prefix() + something;
+}
+
+std::string some_object_val_get_something_prefixed(SomeObject obj, const std::string something)
+{
+    return obj.get_prefix() + something;
+}
+
+std::string some_object_ref_get_something_prefixed(const SomeObject &obj, const std::string something)
+{
+    return obj.get_prefix() + something;
+}

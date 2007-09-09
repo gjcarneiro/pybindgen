@@ -543,6 +543,18 @@ class TestFoo(unittest.TestCase):
         f2 = obj.foo
         self.assertEqual(f2.get_datum(), "hello")
 
+    def test_function_as_method(self):
+        obj = foo.SomeObject("xpto")
+        self.assertEqual(obj.get_something_prefixed("something"), "xptosomething")
+
+    def test_function_as_method_val(self):
+        obj = foo.SomeObject("xpto")
+        self.assertEqual(obj.val_get_something_prefixed("something"), "xptosomething")
+
+    def test_function_as_method_ref(self):
+        obj = foo.SomeObject("xpto")
+        self.assertEqual(obj.ref_get_something_prefixed("something"), "xptosomething")
+
 
 if __name__ == '__main__':
     unittest.main()
