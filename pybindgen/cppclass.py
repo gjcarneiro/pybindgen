@@ -1,5 +1,4 @@
-"""
-Wrap C++ classes and methods
+ C++ classes and methods
 """
 
 import warnings

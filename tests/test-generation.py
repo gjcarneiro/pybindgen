@@ -56,7 +56,8 @@ public:
 
     ## test return type handlers of reverse wrappers
     for return_type, return_handler in typehandlers.base.return_type_matcher.items():
-        if issubclass(return_handler, cppclass.CppClassPtrReturnValue):
+        if issubclass(return_handler, (cppclass.CppClassPtrReturnValue,
+                                       typehandlers.pyobjecttype.PyObjectReturnValue)):
             for caller_owns_return in True, False:
                 retval = return_handler(return_type, caller_owns_return=caller_owns_return)
                 wrapper = MyReverseWrapper(retval, [])
@@ -116,7 +117,8 @@ public:
         print "%s %s(void);" % (return_type, function_name)
         print
 
-        if issubclass(return_handler, cppclass.CppClassPtrReturnValue):
+        if issubclass(return_handler, (cppclass.CppClassPtrReturnValue,
+                                       typehandlers.pyobjecttype.PyObjectReturnValue)):
             retval = return_handler(return_type, caller_owns_return=True)
         else:
             retval = return_handler(return_type)
@@ -133,7 +135,8 @@ public:
             elif direction == (Parameter.DIRECTION_OUT):
                 param_name = 'param_out'
 
-            if issubclass(param_handler, cppclass.CppClassPtrParameter):
+            if issubclass(param_handler, (cppclass.CppClassPtrParameter,
+                                          typehandlers.pyobjecttype.PyObjectParam)):
                 for transfer_ownership in True, False:
                     name = param_name + (transfer_ownership and '_transfer' or '_notransfer')
                     param = param_handler(param_type, name , transfer_ownership=transfer_ownership)
