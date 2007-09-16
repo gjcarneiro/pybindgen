@@ -73,13 +73,15 @@ def generate_version_py(force=False):
     dest.close()
     
 
-def dist_hook(srcdir, blddir):
+def dist_hook():
+    blddir = '../build'
+    srcdir = '..'
     subprocess.Popen([os.path.join(srcdir, "generate-ChangeLog")],  shell=True).wait()
     try:
-        os.chmod(os.path.join(blddir, "ChangeLog"), 0644)
+        os.chmod(os.path.join(srcdir, "ChangeLog"), 0644)
     except OSError:
         pass
-    shutil.copy(os.path.join(srcdir, "ChangeLog"), blddir)
+    shutil.copy(os.path.join(srcdir, "ChangeLog"), '.')
 
     ## Write a pybindgen/version.py file containing the project version
     generate_version_py(force=True)
@@ -108,18 +110,14 @@ def configure(conf):
     generate_version_py()
 
     conf.check_tool('misc')
-    if not conf.check_tool('compiler_cxx'):
-        fatal("Error: no C++ compiler was found in PATH.")
+    conf.check_tool('compiler_cxx')
     if os.path.basename(conf.env['CXX']).startswith("g++"):
         conf.env.append_value('CXXFLAGS', ['-Wall', '-fno-strict-aliasing'])
         if Params.g_options.debug_level == 'ultradebug':
             conf.env.append_value('CXXFLAGS', ['-Wextra'])
-    if not (conf.check_tool('python')
-            and conf.check_python_version((2,4,2))
-            and conf.check_python_headers()):
-        fatal("Error: missing Python development environment.\n"
-              "(Hint: if you do not have a debugging Python library installed"
-              " try using the configure option '--debug-level release')")
+    conf.check_tool('python')
+    conf.check_python_version((2,4,2))
+    conf.check_python_headers()
 
 
 def build(bld):
