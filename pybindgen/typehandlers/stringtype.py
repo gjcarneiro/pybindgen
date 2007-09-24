@@ -4,7 +4,7 @@
 from base import ReturnValue, Parameter, ReverseWrapperBase, ForwardWrapperBase
 
 
-class StringParam(Parameter):
+class CStringParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
     CTYPES = ['char*', 'const char*', 'char const*']
