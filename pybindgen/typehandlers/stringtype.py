@@ -118,7 +118,7 @@ class CharReturn(ReturnValue):
         wrapper.build_params.add_parameter("c", [self.value])
 
 
-class StringReturn(ReturnValue):
+class CStringReturn(ReturnValue):
 
     CTYPES = ['char*', 'const char*']
 
