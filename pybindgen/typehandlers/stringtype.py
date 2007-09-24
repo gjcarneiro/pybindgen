@@ -20,6 +20,22 @@ class StringParam(Parameter):
         wrapper.call_params.append(name)
 
 
+class CharParam(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['char']
+    
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        wrapper.build_params.add_parameter('c', [self.value])
+
+    def convert_python_to_c(self, wrapper):
+        assert isinstance(wrapper, ForwardWrapperBase)
+        name = wrapper.declarations.declare_variable(self.ctype, self.name)
+        wrapper.parse_params.add_parameter('c', ['&'+name], self.value)
+        wrapper.call_params.append(name)
+
+
 class StdStringParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
@@ -85,6 +101,33 @@ class StdStringRefParam(Parameter):
 
         if self.direction & Parameter.DIRECTION_OUT:
             wrapper.build_params.add_parameter("s#", [name_std+'.c_str()', name_std+'.size()'])
+
+
+class CharReturn(ReturnValue):
+
+    CTYPES = ['char']
+
+    def get_c_error_return(self):
+        return "return '\\0';"
+
+    def convert_python_to_c(self, wrapper):
+        name = wrapper.declarations.declare_variable("char*", "retval_ptr")
+        wrapper.parse_params.add_parameter("c", ['&'+name], self.value)
+
+    def convert_c_to_python(self, wrapper):
+        wrapper.build_params.add_parameter("c", [self.value])
+
+
+class StringReturn(ReturnValue):
+
+    CTYPES = ['char*', 'const char*']
+
+    def convert_python_to_c(self, wrapper):
+        name = wrapper.declarations.declare_variable(self.ctype, "retval_ptr")
+        wrapper.parse_params.add_parameter("s", ['&'+name], self.value)
+
+    def convert_c_to_python(self, wrapper):
+        wrapper.build_params.add_parameter("s", [self.value])
 
 
 class StdStringReturn(ReturnValue):
