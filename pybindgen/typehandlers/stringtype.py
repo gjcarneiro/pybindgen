@@ -122,6 +122,9 @@ class StringReturn(ReturnValue):
 
     CTYPES = ['char*', 'const char*']
 
+    def get_c_error_return(self):
+        return "return NULL;"
+
     def convert_python_to_c(self, wrapper):
         name = wrapper.declarations.declare_variable(self.ctype, "retval_ptr")
         wrapper.parse_params.add_parameter("s", ['&'+name], self.value)
