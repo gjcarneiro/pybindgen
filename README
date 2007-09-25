@@ -12,7 +12,7 @@ manually by a developer;
 
  * The main interface for code generation is a simple Python API, not
 some obscure interface definition language.  Other frontends, such as
-parsing header files with gccxml, are easy to add as an additional
+parsing header files with gccxml, could be added in the future as an additional
 layer;
 
  * Can be easily extended with new type handlers;
@@ -25,11 +25,12 @@ layer;
 
  * Supports wrapping of simple C++ classes;
 
+ * Supports virtual methods in classes;
+
+ * Supports reference counted classes and smart pointers;
+
 Planned:
-
- * Support virtual methods in classes;
-
- * Support reference counted classes;
 
  * Callbacks;
 
+ * C++ Enumerations;
