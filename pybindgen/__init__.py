@@ -4,6 +4,7 @@ from module import Module
 from function import Function
 from typehandlers.codesink import CodeSink, FileCodeSink
 from cppclass import CppMethod, CppClass, CppConstructor
+from enum import Enum
 import version
 
 def write_preamble(code_sink, min_python_version=(2, 3)):

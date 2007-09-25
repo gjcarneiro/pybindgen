@@ -6,6 +6,7 @@ from function import Function, OverloadedFunction
 from typehandlers.base import CodeBlock, DeclarationsScope
 from typehandlers.codesink import MemoryCodeSink
 from cppclass import CppClass
+from enum import Enum
 
 
 class Module(object):
@@ -21,6 +22,7 @@ class Module(object):
         self.parent = parent
         self.docstring = docstring
         self.submodules = []
+        self.enums = []
 
         if parent is None:
             self.prefix = self.name
@@ -126,6 +128,14 @@ class Module(object):
         """
         assert isinstance(name, str)
         return Module(name, parent=self, cpp_namespace=name)
+
+    def add_enum(self, enum):
+        """
+        Add an enumeration.
+        """
+        assert isinstance(enum, Enum)
+        self.enums.append(enum)
+        enum.module = self
 
     def declare_one_time_definition(self, definition_name):
         """
@@ -235,6 +245,15 @@ class Module(object):
             for class_ in self.classes:
                 code_sink.writeln()
                 class_.generate(code_sink, self)
+                code_sink.writeln()
+
+        ## generate the enums
+        if self.enums:
+            code_sink.writeln('/* --- enumerations --- */')
+            code_sink.writeln()
+            for enum in self.enums:
+                code_sink.writeln()
+                enum.generate(code_sink)
                 code_sink.writeln()
 
         ## register the submodules

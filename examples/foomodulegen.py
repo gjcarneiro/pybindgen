@@ -6,7 +6,7 @@ import re
 import pybindgen
 from pybindgen.typehandlers import base as typehandlers
 from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
-from pybindgen import (CppMethod, CppConstructor, CppClass)
+from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
 
 
 
@@ -268,6 +268,12 @@ def my_module_gen(out_file):
 
     xpto = mod.add_cpp_namespace("xpto")
     xpto.add_function(Function(ReturnValue.new('std::string'), 'some_function', []))
+
+    ## enums..
+    xpto.add_enum(Enum('FooType', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC']))
+    xpto.add_function(Function(ReturnValue.new('FooType'), 'get_foo_type', []))
+    xpto.add_function(Function(ReturnValue.new('void'), 'set_foo_type', [Parameter.new("FooType", 'type')]))
+
 
     SomeClass = CppClass('SomeClass')
     xpto.add_class(SomeClass)

@@ -324,6 +324,15 @@ namespace xpto
     public:
         SomeClass() {}
     };
+
+    enum FooType {
+        FOO_TYPE_AAA,
+        FOO_TYPE_BBB,
+        FOO_TYPE_CCC,
+    };
+
+    FooType get_foo_type ();
+    void set_foo_type (FooType type);
 }
 
 Foobar* get_foobar_with_other_as_custodian(const SomeObject *other);

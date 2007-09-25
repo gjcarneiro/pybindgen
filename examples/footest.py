@@ -555,6 +555,10 @@ class TestFoo(unittest.TestCase):
         obj = foo.SomeObject("xpto")
         self.assertEqual(obj.ref_get_something_prefixed("something"), "xptosomething")
 
+    def test_enum(self):
+        foo.xpto.set_foo_type(foo.xpto.FOO_TYPE_BBB)
+        self.assertEqual(foo.xpto.get_foo_type(), foo.xpto.FOO_TYPE_BBB)
+
 
 if __name__ == '__main__':
     unittest.main()

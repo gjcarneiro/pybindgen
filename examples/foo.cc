@@ -147,3 +147,16 @@ std::string some_object_ref_get_something_prefixed(const SomeObject &obj, const 
 {
     return obj.get_prefix() + something;
 }
+
+namespace xpto
+{
+    FooType g_fooType;
+    FooType get_foo_type ()
+    {
+        return g_fooType;
+    }
+    void set_foo_type (FooType type)
+    {
+        g_fooType = type;
+    }
+}
