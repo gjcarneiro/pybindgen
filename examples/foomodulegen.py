@@ -290,6 +290,11 @@ def my_module_gen(out_file):
     cls.add_constructor(CppConstructor([Parameter.new('Foo', 'foo')]))
     cls.add_method(CppMethod(ReturnValue.new('Foo'), 'get_foo', []))
 
+    cls = CppClass('SingletonClass', is_singleton=True)
+    mod.add_class(cls)
+    cls.add_method(CppMethod(ReturnValue.new('SingletonClass*', caller_owns_return=True),
+                             'GetInstance', [], is_static=True))
+
 
     mod.generate(FileCodeSink(out_file))
 

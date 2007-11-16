@@ -341,5 +341,22 @@ Foobar* create_new_foobar();
 void set_foobar_with_other_as_custodian(Foobar *foobar, const SomeObject *other);
 SomeObject * set_foobar_with_return_as_custodian(Foobar *foobar);
 
+class SingletonClass
+{
+private:
+    static SingletonClass *m_instance;
+
+    SingletonClass () {}
+    ~SingletonClass () {}
+
+public:
+    static SingletonClass *GetInstance ()
+        {
+            if (not m_instance)
+                m_instance = new SingletonClass;
+            return m_instance;
+        }
+};
+
 
 #endif 	    /* !FOO_H_ */

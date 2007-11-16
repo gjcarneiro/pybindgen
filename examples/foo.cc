@@ -160,3 +160,7 @@ namespace xpto
         g_fooType = type;
     }
 }
+
+
+SingletonClass *SingletonClass::m_instance = NULL;
+
