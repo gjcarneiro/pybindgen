@@ -150,7 +150,8 @@ class CppClass(object):
         )
 
     def __init__(self, name, parent=None, incref_method=None, decref_method=None,
-                 automatic_type_narrowing=None, allow_subclassing=None):
+                 automatic_type_narrowing=None, allow_subclassing=None,
+                 is_singleton=False):
         """Constructor
         name -- class name
         parent -- optional parent class wrapper
@@ -169,8 +170,12 @@ class CppClass(object):
                                     function or method.
         allow_subclassing -- if True, generated class wrappers will
                              allow subclassing in Python.
+        is_singleton -- if True, the class is considered a singleton,
+                        and so the python wrapper will never call the
+                        C++ class destructor to free the value.
         """
         self.name = name
+        self.is_singleton = is_singleton
         self.full_name = None # full name with C++ namespaces attached
         self.methods = {} # name => OverloadedMethod
         self.constructors = [] # (name, wrapper) pairs
@@ -675,11 +680,14 @@ typedef struct {
         tp_clear_function_name = "%s__tp_clear" % (self.pystruct,)
         self.slots.setdefault("tp_clear", tp_clear_function_name )
 
-        if self.decref_method is None:
-            delete_code = "delete self->obj;"
+        if self.is_singleton:
+            delete_code = ''
         else:
-            delete_code = ("if (self->obj)\n        self->obj->%s();"
-                           % (self.decref_method,))
+            if self.decref_method is None:
+                delete_code = "delete self->obj;"
+            else:
+                delete_code = ("if (self->obj)\n        self->obj->%s();"
+                               % (self.decref_method,))
 
         code_sink.writeln(r'''
 static void
@@ -730,13 +738,16 @@ static int
             delete_code = ""
         else:
             clear_code = ""
-            if self.decref_method is None:
-                delete_code = "delete tmp; self->obj = NULL;"
+            if self.is_singleton:
+                delete_code = ''
             else:
-                delete_code = ("if (tmp)\n"
-                               "    tmp->%s();\n"
-                               "self->obj = NULL;"
-                               % (self.decref_method,))
+                if self.decref_method is None:
+                    delete_code = "delete tmp; self->obj = NULL;"
+                else:
+                    delete_code = ("if (tmp)\n"
+                                   "    tmp->%s();\n"
+                                   "self->obj = NULL;"
+                                   % (self.decref_method,))
 
         if have_constructor:
             code_sink.writeln(r'''
@@ -759,12 +770,14 @@ static void
 static void
 %s(%s *self)
 {
-    %s *tmp = self->obj;
+    %s
     %s
     %s
     self->ob_type->tp_free((PyObject*)self);
 }
-''' % (tp_dealloc_function_name, self.pystruct, self.full_name, clear_code, delete_code))
+''' % (tp_dealloc_function_name, self.pystruct,
+       (delete_code and ("%s *tmp = self->obj;" % self.full_name) or ''),
+       clear_code, delete_code))
         code_sink.writeln()
         self.slots.setdefault("tp_dealloc", tp_dealloc_function_name )
 
