@@ -1025,9 +1025,14 @@ class TypeMatcher(object):
         name -- C type name
         type_handler -- class to handle this C type
         """
-        if name in self._types:
-            raise ValueError("return type %s already registered" % (name,))
-        self._types[name] = type_handler
+        if name.startswith('::'):
+            canonical_name = name
+        else:
+            canonical_name = '::'+name
+
+        if canonical_name in self._types:
+            raise ValueError("return type %s already registered" % (canonical_name,))
+        self._types[canonical_name] = type_handler
             
         
     def lookup(self, name):
@@ -1039,18 +1044,23 @@ class TypeMatcher(object):
 
         name -- C type name, possibly transformed (e.g. MySmartPointer<Foo> looks up Foo*)
         """
+        if name.startswith('::'):
+            canonical_name = name
+        else:
+            canonical_name = '::'+name
+
         try:
-            return self._types[name], None
+            return self._types[canonical_name], None
         except KeyError:
             ## Now try all the type transformations
             for transf in self._transformations:
-                untransformed_name = transf.get_untransformed_name(name)
+                untransformed_name = transf.get_untransformed_name(canonical_name)
                 try:
                     return self._types[untransformed_name], transf
                 except KeyError:
                     continue
             else:
-                raise KeyError
+                raise KeyError(canonical_name)
     
 
     def items(self):
