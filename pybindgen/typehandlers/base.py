@@ -1019,17 +1019,27 @@ class TypeMatcher(object):
         assert isinstance(transformation, TypeTransformation)
         self._transformations.append(transformation)
 
+    def _canonicalize_name(self, name):
+        tokens = []
+        for token in name.split(' '):
+            if token in ['const']:
+                tokens.append(token)
+                continue
+            if token in ['*', '&']:
+                tokens[-1] = tokens[-1] + token
+                continue
+            if token.startswith('::'):
+                tokens.append(token)
+            else:
+                tokens.append('::'+token)
+        return ' '.join(tokens)
 
     def register(self, name, type_handler):
         """Register a new handler class for a given C type
         name -- C type name
         type_handler -- class to handle this C type
         """
-        if name.startswith('::'):
-            canonical_name = name
-        else:
-            canonical_name = '::'+name
-
+        canonical_name = self._canonicalize_name(name)
         if canonical_name in self._types:
             raise ValueError("return type %s already registered" % (canonical_name,))
         self._types[canonical_name] = type_handler
@@ -1044,11 +1054,7 @@ class TypeMatcher(object):
 
         name -- C type name, possibly transformed (e.g. MySmartPointer<Foo> looks up Foo*)
         """
-        if name.startswith('::'):
-            canonical_name = name
-        else:
-            canonical_name = '::'+name
-
+        canonical_name = self._canonicalize_name(name)
         try:
             return self._types[canonical_name], None
         except KeyError:

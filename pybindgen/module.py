@@ -33,7 +33,10 @@ class Module(object):
             error_return = 'return NULL;'
 
         self.cpp_namespace = cpp_namespace
-        self.cpp_namespace_prefix = '::'.join(self.get_namespace_path())
+        path = self.get_namespace_path()
+        if path[0] == '::':
+            del path[0]
+        self.cpp_namespace_prefix = '::'.join(path)
 
         self.init_function_name = "init%s" % self.prefix
         self.declarations = DeclarationsScope()

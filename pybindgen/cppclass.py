@@ -305,7 +305,10 @@ class CppClass(object):
         """Set the Module object this class belongs to"""
         self._module = module
         if module.cpp_namespace_prefix:
-            self.full_name = module.cpp_namespace_prefix + '::' + self.name
+            if module.cpp_namespace_prefix == '::':
+                self.full_name = '::' + self.name
+            else:
+                self.full_name = module.cpp_namespace_prefix + '::' + self.name
         else:
             self.full_name = self.name
 
@@ -1066,11 +1069,12 @@ class CppClassPtrParameter(CppClassParameterBase):
 
         if custodian is None:
             if transfer_ownership is None:
-                raise TypeError
+                raise TypeError("transfer_ownership parameter missing")
             self.transfer_ownership = transfer_ownership
         else:
             if transfer_ownership is not None:
-                raise TypeError
+                raise TypeError("the transfer_ownership parameter should "
+                                "not be given when there is a custodian")
             self.transfer_ownership = False
         self.custodian = custodian
 
