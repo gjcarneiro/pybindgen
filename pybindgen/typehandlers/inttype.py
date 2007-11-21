@@ -108,3 +108,41 @@ class IntRefParam(Parameter):
             wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
         if self.direction & self.DIRECTION_OUT:
             wrapper.build_params.add_parameter("i", [name])
+
+
+
+class UInt16Return(ReturnValue):
+
+    CTYPES = ['uint16_t']
+
+    def get_c_error_return(self):
+        return "return 0;"
+    
+    def convert_python_to_c(self, wrapper):
+        tmp_var = wrapper.declarations.declare_variable(self.ctype, "tmp")
+        wrapper.parse_params.add_parameter("i", ["&"+tmp_var], prepend=True)
+        wrapper.after_call.write_error_check('%s > 0xffff' % tmp_var,
+                                             'PyErr_SetString(PyExc_ValueError, "Out of range");')
+        wrapper.after_call.write_code(
+            "%s = %s;" % (self.value, tmp_var))
+
+    def convert_c_to_python(self, wrapper):
+        wrapper.build_params.add_parameter("i", [self.value], prepend=True)
+
+class UInt8Return(ReturnValue):
+
+    CTYPES = ['uint8_t']
+
+    def get_c_error_return(self):
+        return "return 0;"
+    
+    def convert_python_to_c(self, wrapper):
+        tmp_var = wrapper.declarations.declare_variable(self.ctype, "tmp")
+        wrapper.parse_params.add_parameter("i", ["&"+tmp_var], prepend=True)
+        wrapper.after_call.write_error_check('%s > 0xff' % tmp_var,
+                                             'PyErr_SetString(PyExc_ValueError, "Out of range");')
+        wrapper.after_call.write_code(
+            "%s = %s;" % (self.value, tmp_var))
+
+    def convert_c_to_python(self, wrapper):
+        wrapper.build_params.add_parameter("i", [self.value], prepend=True)
