@@ -445,8 +445,13 @@ class ModuleParser(object):
                                                    allow_empty=True, recursive=False):
             if fun.name.startswith('__'):
                 continue
+
+            dummy_global_annotations, parameter_annotations = \
+                annotations_scanner.get_annotations(fun.location.file_name,
+                                                    fun.location.line)
+
             try:
-                return_type = type_registry.lookup_return(fun.return_type)
+                return_type = type_registry.lookup_return(fun.return_type, parameter_annotations.get('return', {}))
             except (TypeError, KeyError), ex:
                 warnings.warn("Return value '%s' error (used in %s): %r"
                               % (fun.return_type.decl_string, fun, ex))
@@ -454,7 +459,8 @@ class ModuleParser(object):
             arguments = []
             for arg in fun.arguments:
                 try:
-                    arguments.append(type_registry.lookup_parameter(arg.type, arg.name))
+                    arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
+                                                                    parameter_annotations.get(arg.name, {})))
                 except (TypeError, KeyError), ex:
                     warnings.warn("Parameter '%s %s' error (used in %s): %r"
                                   % (arg.type.decl_string, arg.name, fun, ex))
