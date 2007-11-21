@@ -365,6 +365,9 @@ class ModuleParser(object):
 
     def _scan_methods(self, cls, class_wrapper):
         for member in cls.get_members('public'):
+            
+            if member.name in [class_wrapper.incref_method, class_wrapper.decref_method]:
+                continue
 
             dummy_global_annotations, parameter_annotations = \
                 annotations_scanner.get_annotations(member.location.file_name,
