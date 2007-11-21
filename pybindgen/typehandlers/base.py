@@ -1064,7 +1064,7 @@ class TypeMatcher(object):
             for transf in self._transformations:
                 untransformed_name = transf.get_untransformed_name(canonical_name)
                 try:
-                    return self._types[untransformed_name], transf
+                    return self._types[self._canonicalize_name(untransformed_name)], transf
                 except KeyError:
                     continue
             else:

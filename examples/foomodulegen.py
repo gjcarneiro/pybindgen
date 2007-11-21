@@ -12,7 +12,7 @@ from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
 
 class PointerHolderTransformation(typehandlers.TypeTransformation):
     def __init__(self):
-        self.rx = re.compile(r'PointerHolder<(\w+)>')
+        self.rx = re.compile(r'(?:::)?PointerHolder<(\w+)>')
 
     def get_untransformed_name(self, name):
         m = self.rx.match(name)
