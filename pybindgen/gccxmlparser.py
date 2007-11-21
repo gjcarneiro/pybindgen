@@ -35,6 +35,7 @@ class GccXmlTypeRegistry(object):
         else:
             full_name = '::' + cpp_class.full_name
         self.classes[full_name] = cpp_class
+        self._root_ns_rx = re.compile(r"(^|\s)(::)")
 
     def _get_class_type_traits(self, type_info):
         assert isinstance(type_info, cpptypes.type_t)
@@ -84,6 +85,12 @@ class GccXmlTypeRegistry(object):
             return (cpp_class, is_const, is_pointer, is_reference, pointer_is_const)
         return (None, is_const, is_pointer, is_reference, pointer_is_const)
 
+    def _fixed_std_type_name(self, type_info):
+        return type_info.decl_string
+        #decl = self._root_ns_rx.sub('', type_info.decl_string)
+        #return decl
+        
+
     def lookup_return(self, type_info, annotations={}):
         assert isinstance(type_info, cpptypes.type_t)
         cpp_class, is_const, is_pointer, is_reference, pointer_is_const = \
@@ -98,7 +105,7 @@ class GccXmlTypeRegistry(object):
                 warnings.warn("invalid annotation name %r" % name)
 
         if cpp_class is None:
-            return ReturnValue.new(type_info.decl_string, **kwargs)
+            return ReturnValue.new(self._fixed_std_type_name(type_info), **kwargs)
 
         if not is_pointer and not is_reference:
             return cpp_class.ThisClassReturn(type_info.decl_string)
@@ -139,7 +146,7 @@ class GccXmlTypeRegistry(object):
         cpp_class, is_const, is_pointer, is_reference, pointer_is_const = \
             self._get_class_type_traits(type_info)
         if cpp_class is None:
-            return Parameter.new(type_info.decl_string, param_name, **kwargs)
+            return Parameter.new(self._fixed_std_type_name(type_info), param_name, **kwargs)
         if not is_pointer and not is_reference:
             return cpp_class.ThisClassParameter(type_info.decl_string, param_name, **kwargs)
         if is_pointer and not is_reference:

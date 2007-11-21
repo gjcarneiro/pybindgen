@@ -64,7 +64,7 @@ class StdStringRefParam(Parameter):
     DIRECTIONS = [Parameter.DIRECTION_IN,
                   Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['std::string&']
+    CTYPES = ['std::string&', 'std::string const &']
     
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
