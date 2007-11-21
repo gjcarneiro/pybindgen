@@ -181,6 +181,7 @@ class CppClass(object):
         self.constructors = [] # (name, wrapper) pairs
         self.slots = dict()
         self.helper_class = None
+        self.cannot_be_constructed = False
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
         ## operator ThisClass(); in the other class.
@@ -464,7 +465,9 @@ public:
                                           method.parameters,
                                           is_const=method.is_const)
             helper_class.add_virtual_proxy(proxy)
-            
+
+    def set_cannot_be_constructed(self, flag=True):
+        self.cannot_be_constructed = flag
 
     def add_constructor(self, wrapper):
         """
@@ -629,7 +632,7 @@ typedef struct {
     def _generate_constructor(self, code_sink):
         """generate the constructor, if any"""
         have_constructor = True
-        if self.constructors:
+        if self.constructors and not self.cannot_be_constructed:
             code_sink.writeln()
             overload = CppOverloadedConstructor(None)
             self.constructors_overload = overload

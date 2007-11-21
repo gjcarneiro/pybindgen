@@ -262,13 +262,19 @@ class ModuleParser(object):
         for member in cls.get_members('public'):
 
             if isinstance(member, calldef.member_function_t):
+                is_virtual = (member.virtuality != calldef.VIRTUALITY_TYPES.NOT_VIRTUAL)
+                pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
+
                 try:
                     return_type = type_registry.lookup_return(member.return_type)
                 except (TypeError, KeyError), ex:
                     warnings.warn("Return value '%s' error (used in %s): %r"
                                   % (member.return_type.decl_string, member, ex))
+                    if pure_virtual:
+                        class_wrapper.set_cannot_be_constructed(True)
                     continue
                 arguments = []
+                ok = True
                 for arg in member.arguments:
                     try:
                         arguments.append(type_registry.lookup_parameter(arg.type, arg.name))
@@ -276,17 +282,15 @@ class ModuleParser(object):
                         warnings.warn("Parameter '%s %s' error (used in %s): %r"
                                       % (arg.type.decl_string, arg.name, member, ex))
                         ok = False
-                        break
-                else:
-                    ok = True
                 if not ok:
+                    if pure_virtual:
+                        class_wrapper.set_cannot_be_constructed(True)
                     continue
 
                 method_wrapper = CppMethod(return_type, member.name, arguments,
                                            is_const=member.has_const,
                                            is_static=member.has_static,
-                                           is_virtual=(member.virtuality !=
-                                                       calldef.VIRTUALITY_TYPES.NOT_VIRTUAL))
+                                           is_virtual=is_virtual)
                 class_wrapper.add_method(method_wrapper)
 
             elif isinstance(member, calldef.constructor_t):
@@ -361,8 +365,7 @@ class ModuleParser(object):
 def _test():
     module_parser = ModuleParser('foo', '::')
     module = module_parser.parse(sys.argv[1:])
-    if 0:
-        print "------------ cut here ----------------------"
+    if 1:
         out = FileCodeSink(sys.stdout)
         import utils
         utils.write_preamble(out)
