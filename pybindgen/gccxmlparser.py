@@ -307,19 +307,31 @@ class ModuleParser(object):
             else:
                 base_class_wrapper = None
 
+            kwargs = {}
+
+            global_annotations, dummy_param_annotations = \
+                annotations_scanner.get_annotations(cls.location.file_name,
+                                                    cls.location.line)
+            for name, value in global_annotations.iteritems():
+                if name == 'allow_subclassing':
+                    kwargs.setdefault('allow_subclassing', annotations_scanner.parse_boolean(value))
+                elif name == 'is_singleton':
+                    kwargs.setdefault('is_singleton', annotations_scanner.parse_boolean(value))
+                elif name == 'incref_method':
+                    kwargs.setdefault('incref_method', value)
+                elif name == 'decref_method':
+                    kwargs.setdefault('decref_method', value)
+                else:
+                    warnings.warn("Class annotation %r ignored" % name)
+
             if self._class_has_virtual_methods(cls):
-                allow_subclassing = True
-            else:
-                allow_subclassing = None
+                kwargs.setdefault('allow_subclassing', True)
 
-            if self._class_has_public_destructor(cls):
-                is_singleton = None
-            else:
-                is_singleton = True
+            if not self._class_has_public_destructor(cls):
+                kwargs.setdefault('is_singleton', True)
 
-            class_wrapper = CppClass(cls.name, parent=base_class_wrapper,
-                                     allow_subclassing=allow_subclassing,
-                                     is_singleton=is_singleton)
+            
+            class_wrapper = CppClass(cls.name, parent=base_class_wrapper, **kwargs)
             module.add_class(class_wrapper)
             registered_classes[cls] = class_wrapper
             type_registry.register_class(class_wrapper)
@@ -386,10 +398,13 @@ class ModuleParser(object):
                         class_wrapper.set_cannot_be_constructed(True)
                     continue
 
+                if pure_virtual and not class_wrapper.allow_subclassing:
+                    class_wrapper.set_cannot_be_constructed(True)
+
                 method_wrapper = CppMethod(return_type, member.name, arguments,
                                            is_const=member.has_const,
                                            is_static=member.has_static,
-                                           is_virtual=is_virtual)
+                                           is_virtual=(is_virtual and class_wrapper.allow_subclassing))
                 class_wrapper.add_method(method_wrapper)
 
             elif isinstance(member, calldef.constructor_t):
