@@ -120,6 +120,8 @@ class CodeBlock(object):
         """
         Calls declare_variable() on the associated DeclarationsScope object.
         """
+        if ':' in name:
+            raise ValueError("invalid variable name: %s " % name)
         return self.declarations.declare_variable(type_, name, initializer, array)
         
     def write_code(self, code):

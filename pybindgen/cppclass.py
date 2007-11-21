@@ -1029,7 +1029,7 @@ class CppClassReturnValue(CppClassReturnValueBase):
     def convert_python_to_c(self, wrapper):
         """see ReturnValue.convert_python_to_c"""
         name = wrapper.declarations.declare_variable(
-            self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.full_name)
+            self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
         wrapper.parse_params.add_parameter(
             'O!', ['&'+self.cpp_class.pytypestruct, '&'+name])
         wrapper.after_call.write_code('%s = *%s->obj;' % (self.value, name))
