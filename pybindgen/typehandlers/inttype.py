@@ -119,7 +119,7 @@ class UInt16Return(ReturnValue):
         return "return 0;"
     
     def convert_python_to_c(self, wrapper):
-        tmp_var = wrapper.declarations.declare_variable(self.ctype, "tmp")
+        tmp_var = wrapper.declarations.declare_variable("int", "tmp")
         wrapper.parse_params.add_parameter("i", ["&"+tmp_var], prepend=True)
         wrapper.after_call.write_error_check('%s > 0xffff' % tmp_var,
                                              'PyErr_SetString(PyExc_ValueError, "Out of range");')
@@ -137,7 +137,7 @@ class UInt8Return(ReturnValue):
         return "return 0;"
     
     def convert_python_to_c(self, wrapper):
-        tmp_var = wrapper.declarations.declare_variable(self.ctype, "tmp")
+        tmp_var = wrapper.declarations.declare_variable("int", "tmp")
         wrapper.parse_params.add_parameter("i", ["&"+tmp_var], prepend=True)
         wrapper.after_call.write_error_check('%s > 0xff' % tmp_var,
                                              'PyErr_SetString(PyExc_ValueError, "Out of range");')
