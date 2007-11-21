@@ -34,7 +34,7 @@ class Module(object):
 
         self.cpp_namespace = cpp_namespace
         path = self.get_namespace_path()
-        if path[0] == '::':
+        if path and path[0] == '::':
             del path[0]
         self.cpp_namespace_prefix = '::'.join(path)
 
