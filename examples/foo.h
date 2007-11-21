@@ -204,14 +204,14 @@ public:
         foo = m_foo_value;
     }
 
-    // pass by pointer, direction=in, transfers ownership
+    // -*- @foo(transfer_ownership=true, direction=in) -*-
     void set_foo_ptr (Foo *foo) {
         if (m_foo_ptr)
             delete m_foo_ptr;
         m_foo_ptr = foo;
     }
 
-    // pass by pointer, direction=in, doesn't transfer ownership
+    // -*- @foo(transfer_ownership=false, direction=in) -*-
     void set_foo_shared_ptr (Foo *foo) {
         m_foo_shared_ptr = foo;
     }
@@ -221,7 +221,7 @@ public:
         return m_foo_value;
     }
 
-    // return pointer, caller doesn't own return
+    // -*- @return(caller_owns_return=false) -*-
     Foo * get_foo_shared_ptr () {
         return m_foo_shared_ptr;
     }

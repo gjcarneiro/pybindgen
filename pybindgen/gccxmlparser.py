@@ -3,6 +3,7 @@
 import sys
 import os.path
 import warnings
+import re
 from pygccxml import parser
 from pygccxml import declarations
 from module import Module
@@ -83,52 +84,144 @@ class GccXmlTypeRegistry(object):
             return (cpp_class, is_const, is_pointer, is_reference, pointer_is_const)
         return (None, is_const, is_pointer, is_reference, pointer_is_const)
 
-    def lookup_return(self, type_info):
+    def lookup_return(self, type_info, annotations={}):
         assert isinstance(type_info, cpptypes.type_t)
         cpp_class, is_const, is_pointer, is_reference, pointer_is_const = \
             self._get_class_type_traits(type_info)
+
+
+        kwargs = {}
+        for name, value in annotations.iteritems():
+            if name == 'caller_owns_return':
+                kwargs['caller_owns_return'] = annotations_scanner.parse_boolean(value)
+            else:
+                warnings.warn("invalid annotation name %r" % name)
+
         if cpp_class is None:
-            return ReturnValue.new(type_info.decl_string)
+            return ReturnValue.new(type_info.decl_string, **kwargs)
+
         if not is_pointer and not is_reference:
             return cpp_class.ThisClassReturn(type_info.decl_string)
         if is_pointer and not is_reference:
             if is_const:
                 ## a pointer to const object usually means caller_owns_return=False
-                return cpp_class.ThisClassPtrReturn(type_info.decl_string, caller_owns_return=False)
+                return cpp_class.ThisClassPtrReturn(type_info.decl_string, caller_owns_return=False,
+                                                    **kwargs)
             else:
                 ## This will fail, "missing caller_owns_return
                 ## parameter", but the lack of a const does not always
                 ## imply caller_owns_return=True, so trying to guess
                 ## here is a Bad Idea™
-                return cpp_class.ThisClassPtrReturn(type_info.decl_string)
+                return cpp_class.ThisClassPtrReturn(type_info.decl_string, **kwargs)
         if not is_pointer and is_reference:
-            return cpp_class.ThisClassRefReturn(type_info.decl_string)
+            return cpp_class.ThisClassRefReturn(type_info.decl_string, **kwargs)
         assert 0, "this line should not be reached"
 
-    def lookup_parameter(self, type_info, param_name):
+    def lookup_parameter(self, type_info, param_name, annotations={}):
         assert isinstance(type_info, cpptypes.type_t)
+
+        kwargs = {}
+        for name, value in annotations.iteritems():
+            if name == 'transfer_ownership':
+                kwargs['transfer_ownership'] = annotations_scanner.parse_boolean(value)
+            elif name == 'direction':
+                if value.lower() == 'in':
+                    kwargs['direction'] = Parameter.DIRECTION_IN
+                elif value.lower() == 'out':
+                    kwargs['direction'] = Parameter.DIRECTION_OUT
+                elif value.lower() == 'inout':
+                    kwargs['direction'] = Parameter.DIRECTION_INOUT
+                else:
+                    warnings.warn("invalid direction direction %r" % value)
+            else:
+                warnings.warn("invalid annotation name %r" % name)
+
         cpp_class, is_const, is_pointer, is_reference, pointer_is_const = \
             self._get_class_type_traits(type_info)
         if cpp_class is None:
-            return Parameter.new(type_info.decl_string, param_name)
+            return Parameter.new(type_info.decl_string, param_name, **kwargs)
         if not is_pointer and not is_reference:
-            return cpp_class.ThisClassParameter(type_info.decl_string, param_name)
+            return cpp_class.ThisClassParameter(type_info.decl_string, param_name, **kwargs)
         if is_pointer and not is_reference:
             if is_const:
                 ## a pointer to const object usually means transfer_ownership=False
+                kwargs.setdefault('transfer_ownership', False)
                 return cpp_class.ThisClassPtrParameter(type_info.decl_string, param_name,
-                                                       transfer_ownership=False)
+                                                       **kwargs)
             else:
                 ## This will fail, "missing param_name
                 ## parameter", but the lack of a const does not always
                 ## imply transfer_ownership=True, so trying to guess
                 ## here is a Bad Idea™
-                return cpp_class.ThisClassPtrParameter(type_info.decl_string, param_name)
+                return cpp_class.ThisClassPtrParameter(type_info.decl_string, param_name, **kwargs)
         if not is_pointer and is_reference:
-            return cpp_class.ThisClassRefParameter(type_info.decl_string, param_name)
+            return cpp_class.ThisClassRefParameter(type_info.decl_string, param_name, **kwargs)
         assert 0, "this line should not be reached"
 
 type_registry = GccXmlTypeRegistry()
+
+
+class AnnotationsScanner(object):
+    def __init__(self):
+        self.files = {} # file name -> list(lines)
+        self._comment_rx = re.compile(r"^\s*//\s+-\*-(.*)-\*-\s*")
+        self._global_annotation_rx = re.compile(r"(\w+)=([^\s;]+)")
+        self._param_annotation_rx = re.compile(r"@(\w+)\(([^;]+)\)")
+
+    def get_annotations(self, file_name, line_number):
+        """
+        file_name -- absolute file name where the definition is
+        line_number -- line number of where the definition is within the file
+        """
+        try:
+            lines = self.files[file_name]
+        except KeyError:
+            lines = file(file_name, "rt").readlines()
+            self.files[file_name] = lines
+
+        line_number -= 2
+        global_annotations = {}
+        parameter_annotations = {}
+        while 1:
+            line = lines[line_number]
+            line_number -= 1
+            m = self._comment_rx.match(line)
+            if m is None:
+                break
+            line = m.group(1).strip()
+            for annotation_str in line.split(';'):
+                annotation_str = annotation_str.strip()
+                m = self._global_annotation_rx.match(annotation_str)
+                if m is not None:
+                    global_annotations[m.group(1)] = m.group(2)
+                    continue
+
+                m = self._param_annotation_rx.match(annotation_str)
+                if m is not None:
+                    param_annotation = {}
+                    parameter_annotations[m.group(1)] = param_annotation
+                    for param in m.group(2).split(','):
+                        m = self._global_annotation_rx.match(param.strip())
+                        if m is not None:
+                            param_annotation[m.group(1)] = m.group(2)
+                        else:
+                            warnings.warn("%s:%i: could not parse %r as parameter annotation element" %
+                                          (file_name, line_number, param.strip()))
+                    continue
+                warnings.warn("%s:%i: could not parse %r" %
+                              (file_name, line_number, annotation_str))
+        return global_annotations, parameter_annotations
+
+    def parse_boolean(self, value):
+        if value.lower() in ['false', 'off']:
+            return False
+        elif value.lower() in ['true', 'on']:
+            return True
+        else:
+            warnings.warn("bad boolean value %r" % value)
+        
+
+annotations_scanner = AnnotationsScanner()
 
 ## ------------------------
 
@@ -261,12 +354,17 @@ class ModuleParser(object):
     def _scan_methods(self, cls, class_wrapper):
         for member in cls.get_members('public'):
 
+            dummy_global_annotations, parameter_annotations = \
+                annotations_scanner.get_annotations(member.location.file_name,
+                                                    member.location.line)
+            
             if isinstance(member, calldef.member_function_t):
                 is_virtual = (member.virtuality != calldef.VIRTUALITY_TYPES.NOT_VIRTUAL)
                 pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
 
                 try:
-                    return_type = type_registry.lookup_return(member.return_type)
+                    return_type = type_registry.lookup_return(member.return_type,
+                                                              parameter_annotations.get('return', {}))
                 except (TypeError, KeyError), ex:
                     warnings.warn("Return value '%s' error (used in %s): %r"
                                   % (member.return_type.decl_string, member, ex))
@@ -277,7 +375,8 @@ class ModuleParser(object):
                 ok = True
                 for arg in member.arguments:
                     try:
-                        arguments.append(type_registry.lookup_parameter(arg.type, arg.name))
+                        arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
+                                                                        parameter_annotations.get(arg.name, {})))
                     except (TypeError, KeyError), ex:
                         warnings.warn("Parameter '%s %s' error (used in %s): %r"
                                       % (arg.type.decl_string, arg.name, member, ex))
@@ -365,7 +464,7 @@ class ModuleParser(object):
 def _test():
     module_parser = ModuleParser('foo', '::')
     module = module_parser.parse(sys.argv[1:])
-    if 1:
+    if 0:
         out = FileCodeSink(sys.stdout)
         import utils
         utils.write_preamble(out)
