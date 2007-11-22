@@ -24,7 +24,7 @@ class IntParam(Parameter):
 class UnsignedIntParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['unsigned int']
+    CTYPES = ['unsigned int', 'uint32_t']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -53,7 +53,7 @@ class IntReturn(ReturnValue):
 
 class UnsignedIntReturn(ReturnValue):
 
-    CTYPES = ['unsigned int']
+    CTYPES = ['unsigned int', 'uint32_t']
 
     def get_c_error_return(self):
         return "return 0;"
