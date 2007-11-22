@@ -538,12 +538,11 @@ typedef struct {
         code_sink.writeln('extern PyTypeObject %s;' % (self.pytypestruct,))
         code_sink.writeln()
 
+        if self.helper_class is not None:
+            self.helper_class.generate(code_sink)       
 
     def generate(self, code_sink, module, docstring=None):
         """Generates the class to a code sink"""
-
-        if self.helper_class is not None:
-            self.helper_class.generate(code_sink)       
 
         ## generate getsets
         instance_getsets = self.instance_attributes.generate(code_sink)
