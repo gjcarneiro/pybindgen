@@ -702,7 +702,7 @@ class ForwardWrapperBase(object):
                 self.return_value.convert_c_to_python(self)
             except NotImplementedError:
                 raise CodeGenerationError(
-                    'python_to_c method of return value %s not implemented'
+                    'convert_c_to_python method of return value %s not implemented'
                     % (self.return_value.ctype,))
 
             self._before_return_hook()
@@ -1030,7 +1030,7 @@ class TypeMatcher(object):
             if token in ['*', '&']:
                 tokens[-1] = tokens[-1] + token
                 continue
-            if token.startswith('::'):
+            if token.startswith('::') or token in ['<', '>']:
                 tokens.append(token)
             else:
                 tokens.append('::'+token)
