@@ -1037,30 +1037,14 @@ class TypeMatcher(object):
         assert isinstance(transformation, TypeTransformation)
         self._transformations.append(transformation)
 
-    def _canonicalize_name(self, name):
-        tokens = []
-        for token in name.split(' '):
-            if token in ['const']:
-                tokens.append(token)
-                continue
-            if token in ['*', '&']:
-                tokens[-1] = tokens[-1] + token
-                continue
-            if token.startswith('::') or token in ['<', '>']:
-                tokens.append(token)
-            else:
-                tokens.append('::'+token)
-        return ' '.join(tokens)
-
     def register(self, name, type_handler):
         """Register a new handler class for a given C type
         name -- C type name
         type_handler -- class to handle this C type
         """
-        canonical_name = self._canonicalize_name(name)
-        if canonical_name in self._types:
-            raise ValueError("return type %s already registered" % (canonical_name,))
-        self._types[canonical_name] = type_handler
+        if name in self._types:
+            raise ValueError("return type %s already registered" % (name,))
+        self._types[name] = type_handler
             
         
     def lookup(self, name):
@@ -1072,13 +1056,12 @@ class TypeMatcher(object):
 
         name -- C type name, possibly transformed (e.g. MySmartPointer<Foo> looks up Foo*)
         """
-        canonical_name = self._canonicalize_name(name)
         try:
-            return self._types[canonical_name], None
+            return self._types[name], None
         except KeyError:
             ## Now try all the type transformations
             for transf in self._transformations:
-                untransformed_name = transf.get_untransformed_name(canonical_name)
+                untransformed_name = transf.get_untransformed_name(name)
                 if untransformed_name is None:
                     continue
                 try:
@@ -1086,7 +1069,7 @@ class TypeMatcher(object):
                 except KeyError:
                     continue
             else:
-                raise KeyError(canonical_name)
+                raise KeyError(name)
     
 
     def items(self):
