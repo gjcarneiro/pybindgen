@@ -86,9 +86,8 @@ class GccXmlTypeRegistry(object):
         return (None, is_const, is_pointer, is_reference, pointer_is_const)
 
     def _fixed_std_type_name(self, type_info):
-        return type_info.decl_string
-        #decl = self._root_ns_rx.sub('', type_info.decl_string)
-        #return decl
+        decl = self._root_ns_rx.sub('', type_info.decl_string)
+        return decl
         
 
     def lookup_return(self, type_info, annotations={}):
