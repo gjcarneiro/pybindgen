@@ -97,6 +97,9 @@ public:
                 param_name = 'param_out'
             param = param_handler(param_type, param_name, direction)
 
+            if 'const' in param.ctype and direction&Parameter.DIRECTION_OUT:
+                continue
+
             wrapper = MyReverseWrapper(ReturnValue.new('void'), [param])
             wrapper_number += 1
             try:

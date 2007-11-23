@@ -10,7 +10,7 @@ import re
 
 class SmartPointerTransformation(typehandlers.TypeTransformation):
     def __init__(self):
-        self.rx = re.compile(r'(?:::)MySmartPointer<(\w+)>')
+        self.rx = re.compile(r'(?:::)?MySmartPointer<(\w+)>')
 
     def get_untransformed_name(self, name):
         m = self.rx.match(name)
