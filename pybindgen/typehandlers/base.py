@@ -596,7 +596,8 @@ class ForwardWrapperBase(object):
 
     def __init__(self, return_value, parameters,
                  parse_error_return, error_return,
-                 force_parse=None, no_c_retval=False):
+                 force_parse=None, no_c_retval=False,
+                 unblock_threads=False):
         '''
         Base constructor
 
@@ -604,7 +605,9 @@ class ForwardWrapperBase(object):
         parameters -- a list of type handlers for the parameters
         parse_error_return  -- statement to return an error during parameter parsing
         error_return -- statement to return an error after parameter parsing
-
+        force_parse -- force generation of code to parse parameters even if there are none
+        no_c_retval -- force the wrapper to not have a C return value
+        unblock_threads -- generate code to unblock python threads during the C function call
         '''
         assert isinstance(return_value, ReturnValue) or return_value is None
         assert isinstance(parameters, list)
@@ -623,6 +626,7 @@ class ForwardWrapperBase(object):
         self.call_params = []
         self.force_parse = force_parse
         self.meth_flags = []
+        self.unblock_threads = unblock_threads
         
         if return_value is not None:
             self.declarations.declare_variable('PyObject*', 'py_retval')
@@ -657,6 +661,12 @@ class ForwardWrapperBase(object):
         code_sink -- a CodeSink object that will receive the code
         """
 
+        if self.unblock_threads:
+            py_thread_state = self.declarations.declare_variable("PyThreadState*", "py_thread_state", "NULL")
+            self.after_call.write_code(
+                "\nif (%s)\n"
+                "     PyEval_RestoreThread(%s);\n" % (py_thread_state, py_thread_state))
+
         ## convert the input parameters
         for param in self.parameters:
             try:
@@ -665,6 +675,12 @@ class ForwardWrapperBase(object):
                 raise CodeGenerationError(
                     'convert_python_to_c method of parameter %s not implemented'
                     % (param.ctype,))
+
+        if self.unblock_threads:
+            self.before_call.write_code(
+                "\nif (PyEval_ThreadsInitialized ())\n"
+                "     %s = PyEval_SaveThread();\n"
+                % (py_thread_state, ))
 
         self.generate_call(*gen_call_params)
 

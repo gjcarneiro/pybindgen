@@ -7,7 +7,7 @@ from copy import copy
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase
 from typehandlers import codesink
 import overloading
-
+import settings
 
 
 class CppMethod(ForwardWrapperBase):
@@ -16,16 +16,20 @@ class CppMethod(ForwardWrapperBase):
     """
 
     def __init__(self, return_value, method_name, parameters, is_static=False,
-                 template_parameters=(), is_virtual=False, is_const=False):
+                 template_parameters=(), is_virtual=False, is_const=False,
+                 unblock_threads=None):
         """
         return_value -- the method return value
         method_name -- name of the method
         parameters -- the method parameters
         is_static -- whether it is a static method
         """
+        if unblock_threads is None:
+            unblock_threads = settings.unblock_threads
         super(CppMethod, self).__init__(
             return_value, parameters,
-            "return NULL;", "return NULL;")
+            "return NULL;", "return NULL;",
+            unblock_threads=unblock_threads)
         self.method_name = method_name
         self.is_static = is_static
         self.is_virtual = is_virtual
@@ -178,14 +182,17 @@ class CppConstructor(ForwardWrapperBase):
     wrapper is used as the python class __init__ method.
     """
 
-    def __init__(self, parameters):
+    def __init__(self, parameters, unblock_threads=None):
         """
         parameters -- the constructor parameters
         """
+        if unblock_threads is None:
+            unblock_threads = settings.unblock_threads
         super(CppConstructor, self).__init__(
             None, parameters,
             "return -1;", "return -1;",
-            force_parse=ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS)
+            force_parse=ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS,
+            unblock_threads=unblock_threads)
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
         self._class = None
@@ -331,14 +338,14 @@ class CppVirtualMethodParentCaller(CppMethod):
     implementation in a parent base class.
     """
 
-    def __init__(self, return_value, method_name, parameters):
+    def __init__(self, return_value, method_name, parameters, unblock_threads=None):
         """
         return_value -- the method return value
         method_name -- name of the method
         parameters -- the method parameters
         """
         super(CppVirtualMethodParentCaller, self).__init__(
-            return_value, method_name, parameters)
+            return_value, method_name, parameters, unblock_threads=unblock_threads)
         self._helper_class = None
 
     def set_class(self, class_):

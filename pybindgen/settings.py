@@ -21,3 +21,10 @@ allow_subclassing = False
 """
 Allow generated classes to be subclassed by default.
 """
+
+unblock_threads = False
+"""
+When True, by default methods/functions/constructors will unblock
+threads around the funcion call, i.e. allows other Python threads to
+run during the call.
+"""

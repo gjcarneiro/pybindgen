@@ -7,6 +7,7 @@ from copy import copy
 from typehandlers.base import ForwardWrapperBase
 from typehandlers import codesink
 import overloading
+import settings
 
 
 class Function(ForwardWrapperBase):
@@ -14,16 +15,19 @@ class Function(ForwardWrapperBase):
     Class that generates a wrapper to a C function.
     """
 
-    def __init__(self, return_value, function_name, parameters, docstring=None):
+    def __init__(self, return_value, function_name, parameters, docstring=None, unblock_threads=None):
         """
         return_value -- the function return value
         function_name -- name of the C function
         parameters -- the function parameters
         """
+        if unblock_threads is None:
+            unblock_threads = settings.unblock_threads
         super(Function, self).__init__(
             return_value, parameters,
             parse_error_return="return NULL;",
-            error_return="return NULL;")
+            error_return="return NULL;",
+            unblock_threads=unblock_threads)
         self._module = None
         self.function_name = function_name
         self.wrapper_base_name = None
