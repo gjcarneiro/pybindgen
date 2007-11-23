@@ -44,12 +44,15 @@ class Enum(object):
         """Set the Module object this class belongs to; can only be set once"""
         assert self._module is None
         self._module = module
-        namespace = []
         if module.cpp_namespace_prefix:
-            namespace.append(module.cpp_namespace_prefix)
-        if self.cpp_namespace:
-            namespace.append(self.cpp_namespace)
-        self.full_name = '::'.join(namespace + [self.name])
+            if module.cpp_namespace_prefix == '::':
+                self.full_name = self.name
+            else:
+                self.full_name = module.cpp_namespace_prefix + '::' + self.name
+        else:
+            self.full_name = self.name
+        if self.full_name.startswith('::'):
+            self.full_name = self.full_name[2:]
 
         ## Register type handlers for the enum type
         class ThisEnumParameter(inttype.IntParam):
