@@ -1065,7 +1065,7 @@ class TypeMatcher(object):
                 if untransformed_name is None:
                     continue
                 try:
-                    return self._types[self._canonicalize_name(untransformed_name)], transf
+                    return self._types[untransformed_name], transf
                 except KeyError:
                     continue
             else:
