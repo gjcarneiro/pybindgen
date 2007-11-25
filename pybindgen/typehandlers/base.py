@@ -116,6 +116,11 @@ class CodeBlock(object):
         self.error_return = error_return
         self.declarations = declarations
 
+    def clear(self):
+        self._cleanup_actions = {}
+        self._last_cleanup_position = 0        
+        self.sink = codesink.MemoryCodeSink()
+
     def declare_variable(self, type_, name, initializer=None, array=None):
         """
         Calls declare_variable() on the associated DeclarationsScope object.
@@ -222,6 +227,9 @@ class ParseTupleParameters(object):
         None
         """
         self._parse_tuple_items = [] # (template, param_values, param_name, optional)
+
+    def clear(self):
+        self._parse_tuple_items = []
         
     def add_parameter(self, param_template, param_values, param_name=None,
                       prepend=False, optional=False):
@@ -304,6 +312,9 @@ class BuildValueParameters(object):
         """
         self._build_value_items = [] # (template, param_value, cleanup_handle)
 
+    def clear(self):
+        self._build_value_items = []
+
     def add_parameter(self, param_template, param_values,
                       prepend=False, cancels_cleanup=None):
         """
@@ -379,6 +390,10 @@ class DeclarationsScope(object):
         else:
             assert isinstance(parent_scope, DeclarationsScope)
             self.declared_variables = parent_scope.declared_variables
+
+    def clear(self):
+        self._declarations = codesink.MemoryCodeSink()
+        self.declared_variables.clear()
 
     def declare_variable(self, type_, name, initializer=None, array=None):
         """Add code to declare a variable. Returns the actual variable
@@ -627,12 +642,30 @@ class ForwardWrapperBase(object):
         self.force_parse = force_parse
         self.meth_flags = []
         self.unblock_threads = unblock_threads
+        self.no_c_retval = no_c_retval
         
         if return_value is not None:
             self.declarations.declare_variable('PyObject*', 'py_retval')
         if (not no_c_retval and return_value is not None
             and return_value.ctype != 'void'):
             self.declarations.declare_variable(return_value.ctype, 'retval')
+
+    def reset_code_generation_state(self):
+        self.declarations.clear()
+        self.before_parse.clear()
+        self.before_call.clear()
+        self.after_call.clear()
+        self.build_params.clear()
+        self.parse_params.clear()
+        self.call_params = []
+        self.meth_flags = []
+
+        if self.return_value is not None:
+            self.declarations.declare_variable('PyObject*', 'py_retval')
+        if (not self.no_c_retval and self.return_value is not None
+            and self.return_value.ctype != 'void'):
+            self.declarations.declare_variable(self.return_value.ctype, 'retval')
+        
 
     def set_parse_error_return(self, parse_error_return):
         self.before_parse.error_return = parse_error_return

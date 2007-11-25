@@ -4,7 +4,7 @@ Wrap C++ class methods and constructods.
 
 from copy import copy
 
-from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase
+from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, join_ctype_and_name
 from typehandlers import codesink
 import overloading
 import settings
@@ -40,6 +40,7 @@ class CppMethod(ForwardWrapperBase):
         self.docstring = None
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
+        self.static_decl = True
 
     def clone(self):
         """Creates a semi-deep copy of this method wrapper.  The returned
@@ -95,6 +96,39 @@ class CppMethod(ForwardWrapperBase):
         CppClass parameters"""
         cppclass.implement_parameter_custodians(self)
 
+    def get_wrapper_signature(self, wrapper_name, extra_wrapper_params=()):
+        flags = self.get_py_method_def_flags()
+
+        retline = "PyObject *"
+        if 'METH_STATIC' in flags:
+            _self_name = 'PYBINDGEN_UNUSED(dummy)'
+        else:
+            _self_name = 'self'
+
+        if extra_wrapper_params:
+            extra = ', '.join([''] + list(extra_wrapper_params))
+        else:
+            extra = ''
+        if 'METH_VARARGS' in flags:
+            if 'METH_KEYWORDS' in flags:
+                line = ("%s(%s *%s, PyObject *args, PyObject *kwargs%s)"
+                            % (wrapper_name, self.class_.pystruct, _self_name, extra))
+            else:
+                assert not extra_wrapper_params, \
+                    "extra_wrapper_params can only be used with"\
+                    " full varargs/kwargs wrappers"
+                line = (
+                    "%s(%s *%s, PyObject *args)"
+                    % (wrapper_name, self.class_.pystruct, _self_name))
+        else:
+            assert not extra_wrapper_params, \
+                "extra_wrapper_params can only be used with full varargs/kwargs wrappers"
+            if 'METH_STATIC' in flags:
+                line = ("%s(void)" % (wrapper_name,))
+            else:
+                line = ("%s(%s *%s)" % (wrapper_name, self.class_.pystruct, _self_name))
+        return retline, line
+
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """
         Generates the wrapper code
@@ -115,40 +149,12 @@ class CppMethod(ForwardWrapperBase):
         else:
             self.wrapper_actual_name = wrapper_name
 
-        flags = self.get_py_method_def_flags()
-
-        code_sink.writeln("static PyObject *")
-        if 'METH_STATIC' in flags:
-            _self_name = 'PYBINDGEN_UNUSED(dummy)'
-        else:
-            _self_name = 'self'
-
-        if extra_wrapper_params:
-            extra = ', '.join([''] + list(extra_wrapper_params))
-        else:
-            extra = ''
-        if 'METH_VARARGS' in flags:
-            if 'METH_KEYWORDS' in flags:
-                code_sink.writeln(
-                    "%s(%s *%s, PyObject *args, PyObject *kwargs%s)"
-                    % (self.wrapper_actual_name, class_.pystruct, _self_name, extra))
-            else:
-                assert not extra_wrapper_params, \
-                    "extra_wrapper_params can only be used with"\
-                    " full varargs/kwargs wrappers"
-                code_sink.writeln(
-                    "%s(%s *%s, PyObject *args)"
-                    % (self.wrapper_actual_name, class_.pystruct, _self_name))
-        else:
-            assert not extra_wrapper_params, \
-                "extra_wrapper_params can only be used with full varargs/kwargs wrappers"
-            if 'METH_STATIC' in flags:
-                code_sink.writeln("%s(void)" % (self.wrapper_actual_name,))
-            else:
-                code_sink.writeln(
-                    "%s(%s *%s)"
-                    % (self.wrapper_actual_name, class_.pystruct, _self_name))
-                
+        retline, line = self.get_wrapper_signature(self.wrapper_actual_name, extra_wrapper_params)
+        if self.static_decl:
+            retline = 'static ' + retline
+        code_sink.writeln(retline)
+        code_sink.writeln(line)
+        
         code_sink.writeln('{')
         code_sink.indent()
         tmp_sink.flush_to(code_sink)
@@ -347,6 +353,7 @@ class CppVirtualMethodParentCaller(CppMethod):
         super(CppVirtualMethodParentCaller, self).__init__(
             return_value, method_name, parameters, unblock_threads=unblock_threads)
         self._helper_class = None
+        self.static_decl = False
 
     def set_class(self, class_):
         "Set the class wrapper object (CppClass)"
@@ -355,11 +362,22 @@ class CppVirtualMethodParentCaller(CppMethod):
     def set_helper_class(self, helper_class):
         "Set the C++ helper class, which is used for overriding virtual methods"
         self._helper_class = helper_class
-        self.wrapper_base_name = "_wrap_%s" % self.method_name
+        self.wrapper_base_name = "%s::_wrap_%s" % (self._helper_class.name, self.method_name)
     def get_helper_class(self):
         "Get the C++ helper class, which is used for overriding virtual methods"
         return self._helper_class
     helper_class = property(get_helper_class, set_helper_class)
+
+    def generate_declaration(self, code_sink):
+        ## We need to fake generate the code (and throw away the
+        ## result) only in order to obtain correct method signature.
+        tmp_sink = codesink.MemoryCodeSink()
+        self.generate_body(tmp_sink, gen_call_params=[self.class_])
+
+        retline, line = self.get_wrapper_signature('_wrap_'+self.method_name, ())
+        code_sink.writeln(' '.join(['static', retline, line]) + ';')
+
+        self.reset_code_generation_state()
 
     def generate_call(self, class_):
         "virtual method implementation; do not call"
@@ -403,7 +421,29 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         super(CppVirtualMethodProxy, self).__init__(return_value, parameters)
         self.method_name = method_name
         self.is_const = is_const
-        self.class_ = None
+        self._class = None
+        self._helper_class = None
+
+
+    def set_class(self, class_):
+        "Set the class wrapper object (CppClass)"
+        assert isinstance(class_, cppclass.CppClass)
+        self._class = class_
+    def get_class(self):
+        "Get the class wrapper object (CppClass)"
+        return self._class
+    class_ = property(get_class, set_class)
+
+
+    def set_helper_class(self, helper_class):
+        "Set the C++ helper class, which is used for overriding virtual methods"
+        self._helper_class = helper_class
+        self.wrapper_base_name = "_wrap_%s" % self.method_name
+    def get_helper_class(self):
+        "Get the C++ helper class, which is used for overriding virtual methods"
+        return self._helper_class
+    helper_class = property(get_helper_class, set_helper_class)
+
 
     def generate_python_call(self):
         """code to call the python method"""
@@ -413,6 +453,19 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
                                     % (', '.join(params),))
         self.before_call.write_error_check('py_retval == NULL')
         self.before_call.add_cleanup_code('Py_DECREF(py_retval);')
+
+    def generate_declaration(self, code_sink):
+        if self.is_const:
+            decl_post_modifiers = ' const'
+        else:
+            decl_post_modifiers = ''
+
+        params_list = ', '.join([join_ctype_and_name(param.ctype, param.name)
+                                 for param in self.parameters])
+        code_sink.writeln("virtual %s %s(%s)%s;" %
+                          (self.return_value.ctype, self.method_name, params_list,
+                           decl_post_modifiers))
+
 
     def generate(self, code_sink):
         """generates the proxy virtual method"""
@@ -428,29 +481,30 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
             r'if (!PyObject_HasAttrString(m_pyself, "_%s"))' % self.method_name)
         if self.return_value.ctype == 'void':
             self.before_call.write_code(r'    %s::%s(%s);'
-                                        % (self.class_.full_name, self.method_name, call_params))
+                                        % (self._class.full_name, self.method_name, call_params))
             self.before_call.write_code(r'    return;')
         else:
             self.before_call.write_code(r'    return %s::%s(%s);'
-                                        % (self.class_.full_name, self.method_name, call_params))
+                                        % (self._class.full_name, self.method_name, call_params))
 
         ## Set "m_pyself->obj = this" around virtual method call invocation
         self_obj_before = self.declarations.declare_variable(
-            '%s*' % self.class_.full_name, 'self_obj_before')
+            '%s*' % self._class.full_name, 'self_obj_before')
         self.before_call.write_code("%s = reinterpret_cast<%s*>(m_pyself)->obj;" %
-                                    (self_obj_before, self.class_.pystruct))
+                                    (self_obj_before, self._class.pystruct))
         if self.is_const:
             this_expression = ("const_cast<%s*>((const %s*) this)" %
-                               (self.class_.full_name, self.class_.full_name))
+                               (self._class.full_name, self._class.full_name))
         else:
-            this_expression = "(%s*) this" % (self.class_.full_name)
+            this_expression = "(%s*) this" % (self._class.full_name)
         self.before_call.write_code("reinterpret_cast<%s*>(m_pyself)->obj = %s;" %
-                                    (self.class_.pystruct, this_expression))
+                                    (self._class.pystruct, this_expression))
         self.before_call.add_cleanup_code("reinterpret_cast<%s*>(m_pyself)->obj = %s;" %
-                                          (self.class_.pystruct, self_obj_before))
+                                          (self._class.pystruct, self_obj_before))
         
         super(CppVirtualMethodProxy, self).generate(
-            code_sink, self.method_name, decl_modifiers=['virtual'],
+            code_sink, '::'.join((self._helper_class.name, self.method_name)),
+            decl_modifiers=[],
             decl_post_modifiers=decl_post_modifiers)
 
 

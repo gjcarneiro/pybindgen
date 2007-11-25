@@ -43,9 +43,9 @@ class CppHelperClass(object):
         assert isinstance(virtual_proxy, CppVirtualMethodProxy)
         self.virtual_proxies.append(virtual_proxy)
 
-    def generate(self, code_sink):
+    def generate_forward_declarations(self, code_sink):
         """
-        Generate the proxy class to a given code sink
+        Generate the proxy class (declaration only) to a given code sink
         """
         code_sink.writeln("class %s : public %s\n{\npublic:" %
                           (self.name, self.class_.full_name))
@@ -78,6 +78,27 @@ class CppHelperClass(object):
             parent_caller.class_ = self.class_
             parent_caller.helper_class = self
             code_sink.writeln()
+            parent_caller.generate_declaration(code_sink)
+
+        ## write the virtual proxies
+        for virtual_proxy in self.virtual_proxies:
+            virtual_proxy.class_ = self.class_
+            virtual_proxy.helper_class = self
+            code_sink.writeln()
+            virtual_proxy.generate_declaration(code_sink)
+
+        code_sink.unindent()
+        code_sink.writeln("};\n")
+
+    def generate(self, code_sink):
+        """
+        Generate the proxy class (virtual method bodies only) to a given code sink
+        """
+        ## write the parent callers (_name)
+        for parent_caller in self.virtual_parent_callers:
+            parent_caller.class_ = self.class_
+            parent_caller.helper_class = self
+            code_sink.writeln()
             parent_caller.generate(code_sink)
 
         ## write the virtual proxies
@@ -86,9 +107,6 @@ class CppHelperClass(object):
             virtual_proxy.helper_class = self
             code_sink.writeln()
             virtual_proxy.generate(code_sink)
-
-        code_sink.unindent()
-        code_sink.writeln("};\n")
 
 
 class CppClass(object):
@@ -174,6 +192,7 @@ class CppClass(object):
                         and so the python wrapper will never call the
                         C++ class destructor to free the value.
         """
+        self._module = None
         self.name = name
         self.is_singleton = is_singleton
         self.full_name = None # full name with C++ namespaces attached
@@ -513,8 +532,10 @@ public:
         self.instance_attributes.add_attribute(name, getter_wrapper, setter_wrapper)
 
     def generate_forward_declarations(self, code_sink):
-        """Generates forward declarations for the instance and type
-        structures"""
+        """
+        Generates forward declarations for the instance and type
+        structures.
+        """
 
         if self.allow_subclassing:
             code_sink.writeln('''
@@ -539,10 +560,13 @@ typedef struct {
         code_sink.writeln()
 
         if self.helper_class is not None:
-            self.helper_class.generate(code_sink)       
+            self.helper_class.generate_forward_declarations(code_sink)       
 
     def generate(self, code_sink, module, docstring=None):
         """Generates the class to a code sink"""
+
+        if self.helper_class is not None:
+            self.helper_class.generate(code_sink)       
 
         ## generate getsets
         instance_getsets = self.instance_attributes.generate(code_sink)
