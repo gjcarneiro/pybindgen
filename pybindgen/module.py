@@ -55,6 +55,12 @@ class Module(object):
             self.one_time_definitions = parent.one_time_definitions
             self.includes = parent.includes
 
+    def get_submodule(self, submodule_name):
+        for submodule in self.submodules:
+            if submodule.name == submodule_name:
+                return submodule
+        raise ValueError("submodule %s not found" % submodule_name)
+        
     def set_strip_prefix(self, prefix):
         """Sets the prefix string to be used when transforming a C
         function name into the python function name; the given prefix

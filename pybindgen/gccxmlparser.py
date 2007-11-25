@@ -487,7 +487,7 @@ class ModuleParser(object):
         for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
             if nested_namespace.name.startswith('__'):
                 continue
-            nested_module = Module(name=nested_namespace.name, parent=module, cpp_namespace=nested_namespace.name)
+            nested_module = module.get_submodule(nested_namespace.name)
             self._scan_namespace_functions(nested_module, nested_namespace)
     
 
