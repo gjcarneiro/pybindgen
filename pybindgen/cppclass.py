@@ -1313,6 +1313,11 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         ## Value transformations
         value = self.transformation.untransform(
             self, wrapper.declarations, wrapper.after_call, self.value)
+        
+        wrapper.after_call.write_code("if (!(%s)) {\n"
+                                      "    Py_INCREF(Py_None);\n"
+                                      "    return Py_None;\n"
+                                      "}" % value)
 
         ## declare wrapper variable
         py_name = wrapper.declarations.declare_variable(
