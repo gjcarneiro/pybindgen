@@ -82,9 +82,11 @@ public:
 };
 
 // caller owns return
+// -*- @return(caller_owns_return=true) -*-
 Foo* get_hidden_subclass_pointer ();
 
 class Zbr
+// -*- incref_method=Ref; decref_method=Unref -*-
 {
     int m_refcount;
     std::string m_datum;
@@ -204,14 +206,14 @@ public:
         foo = m_foo_value;
     }
 
-    // -*- @foo(transfer_ownership=true, direction=in) -*-
+    // -*- @foo(transfer_ownership=true) -*-
     void set_foo_ptr (Foo *foo) {
         if (m_foo_ptr)
             delete m_foo_ptr;
         m_foo_ptr = foo;
     }
 
-    // -*- @foo(transfer_ownership=false, direction=in) -*-
+    // -*- @foo(transfer_ownership=false) -*-
     void set_foo_shared_ptr (Foo *foo) {
         m_foo_shared_ptr = foo;
     }
@@ -226,14 +228,14 @@ public:
         return m_foo_shared_ptr;
     }
     
-    // return pointer, caller owns return
+    // -*- @return(caller_owns_return=true) -*-
     Foo * get_foo_ptr () {
         Foo *foo = m_foo_ptr;
         m_foo_ptr = NULL;
         return foo;
     }
 
-    // return reference counted object, caller owns return
+    // -*- @return(caller_owns_return=true) -*-
     Zbr* get_zbr () {
         if (m_zbr)
         {
@@ -244,9 +246,11 @@ public:
     }
 
     // return reference counted object, caller does not own return
+    // -*- @return(caller_owns_return=false) -*-
     Zbr* peek_zbr () { return m_zbr; }
 
     // pass reference counted object, transfer ownership
+    // -*- @zbr(transfer_ownership=true) -*-
     void set_zbr_transfer (Zbr *zbr) {
         if (m_zbr)
             m_zbr->Unref ();
@@ -254,6 +258,7 @@ public:
     }
 
     // pass reference counted object, does not transfer ownership
+    // -*- @zbr(transfer_ownership=false) -*-
     void set_zbr_shared (Zbr *zbr) {
         if (m_zbr)
             m_zbr->Unref ();
@@ -295,7 +300,7 @@ public:
 
 
 // A function that will appear as a method of SomeObject
-// obj: transfer_ownership=false
+// -*- @obj(transfer_ownership=false) -*-
 std::string some_object_get_something_prefixed(const SomeObject *obj, const std::string something);
 
 std::string some_object_val_get_something_prefixed(SomeObject obj, const std::string something);
@@ -303,12 +308,14 @@ std::string some_object_ref_get_something_prefixed(const SomeObject &obj, const 
 
 
 // Transfer ownership of 'obj' to the library
+// -*- @obj(transfer_ownership=true) -*-
 void store_some_object(SomeObject *obj);
 
 // Invokes the virtual method in the stored SomeObject
 std::string invoke_some_object_get_prefix();
 
 // Transfer ownership of 'obj' away from the library
+// -*- @return(caller_owns_return=true) -*-
 SomeObject* take_some_object();
 
 // Deletes the contained object, if any
@@ -337,6 +344,7 @@ namespace xpto
 
 Foobar* get_foobar_with_other_as_custodian(const SomeObject *other);
 
+// -*- @return(caller_owns_return=true) -*-
 Foobar* create_new_foobar();
 void set_foobar_with_other_as_custodian(Foobar *foobar, const SomeObject *other);
 SomeObject * set_foobar_with_return_as_custodian(Foobar *foobar);
