@@ -211,11 +211,12 @@ class AnnotationsScanner(object):
                         if m is not None:
                             param_annotation[m.group(1)] = m.group(2)
                         else:
-                            warnings.warn("%s:%i: could not parse %r as parameter annotation element" %
-                                          (file_name, line_number, param.strip()))
+                            warnings.warn_explicit("could not parse %r as parameter annotation element" %
+                                                   (param.strip()),
+                                                   Warning, file_name, line_number)
                     continue
-                warnings.warn("%s:%i: could not parse %r" %
-                              (file_name, line_number, annotation_str))
+                warnings.warn_explicit("could not parse %r" % (annotation_str),
+                                       Warning, file_name, line_number)
         return global_annotations, parameter_annotations
 
     def parse_boolean(self, value):
@@ -224,7 +225,7 @@ class AnnotationsScanner(object):
         elif value.lower() in ['true', 'on']:
             return True
         else:
-            warnings.warn("bad boolean value %r" % value)
+            raise ValueError("bad boolean value %r" % value)
         
 
 annotations_scanner = AnnotationsScanner()
@@ -288,14 +289,16 @@ class ModuleParser(object):
         while unregistered_classes:
             cls = unregistered_classes.pop(0)
             if '<' in cls.name:
-                warnings.warn("Class %s ignored because it is templated; templates not yet supported"
-                              % cls.decl_string)
+                warnings.warn_explicit("Class %s ignored because it is templated; templates not yet supported"
+                                       % cls.decl_string,
+                                       Warning, cls.location.file_name, cls.location.line)
                 continue
                 
             if len(cls.bases) > 1:
-                warnings.warn("Class %s ignored because it uses multiple "
-                              "inheritance (not yet supported by pybindgen)"
-                              % cls.decl_string)
+                warnings.warn_explicit(("Class %s ignored because it uses multiple "
+                                        "inheritance (not yet supported by pybindgen)"
+                                        % cls.decl_string),
+                                       Warning, cls.location.file_name, cls.location.line)
                 continue
             if cls.bases:
                 base_cls = cls.bases[0].related_class
@@ -304,9 +307,10 @@ class ModuleParser(object):
                 except KeyError:
                     ## base class not yet registered => postpone this class registration
                     if base_cls not in unregistered_classes:
-                        warnings.warn("Class %s ignored because it uses has a base class (%s) "
-                                      "which is not declared."
-                                      % (cls.decl_string, base_cls.decl_string))
+                        warnings.warn_explicit("Class %s ignored because it uses has a base class (%s) "
+                                               "which is not declared."
+                                               % (cls.decl_string, base_cls.decl_string),
+                                               Warning, cls.location.file_name, cls.location.line)
                         continue
                     unregistered_classes.append(cls)
                     continue
@@ -328,7 +332,8 @@ class ModuleParser(object):
                 elif name == 'decref_method':
                     kwargs.setdefault('decref_method', value)
                 else:
-                    warnings.warn("Class annotation %r ignored" % name)
+                    warnings.warn_explicit("Class annotation %r ignored" % name,
+                                           Warning, cls.location.file_name, cls.location.line)
 
             if self._class_has_virtual_methods(cls):
                 kwargs.setdefault('allow_subclassing', True)
@@ -336,7 +341,7 @@ class ModuleParser(object):
             if not self._class_has_public_destructor(cls):
                 kwargs.setdefault('is_singleton', True)
 
-            
+
             class_wrapper = CppClass(cls.name, parent=base_class_wrapper, **kwargs)
             module.add_class(class_wrapper)
             registered_classes[cls] = class_wrapper
@@ -387,8 +392,9 @@ class ModuleParser(object):
                     return_type = type_registry.lookup_return(member.return_type,
                                                               parameter_annotations.get('return', {}))
                 except (TypeError, KeyError), ex:
-                    warnings.warn("Return value '%s' error (used in %s): %r"
-                                  % (member.return_type.decl_string, member, ex))
+                    warnings.warn_explicit("Return value '%s' error (used in %s): %r"
+                                           % (member.return_type.decl_string, member, ex),
+                                           Warning, member.location.file_name, member.location.line)
                     if pure_virtual:
                         class_wrapper.set_cannot_be_constructed(True)
                     continue
@@ -399,8 +405,9 @@ class ModuleParser(object):
                         arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
                                                                         parameter_annotations.get(arg.name, {})))
                     except (TypeError, KeyError), ex:
-                        warnings.warn("Parameter '%s %s' error (used in %s): %r"
-                                      % (arg.type.decl_string, arg.name, member, ex))
+                        warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
+                                               % (arg.type.decl_string, arg.name, member, ex),
+                                               Warning, member.location.file_name, member.location.line)
                         ok = False
                 if not ok:
                     if pure_virtual:
@@ -422,8 +429,9 @@ class ModuleParser(object):
                     try:
                         arguments.append(type_registry.lookup_parameter(arg.type, arg.name))
                     except (TypeError, KeyError), ex:
-                        warnings.warn("Parameter '%s %s' error (used in %s): %r"
-                                      % (arg.type.decl_string, arg.name, member, ex))
+                        warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
+                                               % (arg.type.decl_string, arg.name, member, ex),
+                                               Warning, member.location.file_name, member.location.line)
                         ok = False
                         break
                 else:
@@ -437,8 +445,9 @@ class ModuleParser(object):
                 try:
                     return_type = type_registry.lookup_return(member.type)
                 except (TypeError, KeyError), ex:
-                    warnings.warn("Return value '%s' error (used in %s): %r"
-                                  % (member.type.decl_string, member, ex))
+                    warnings.warn_explicit("Return value '%s' error (used in %s): %r"
+                                           % (member.type.decl_string, member, ex),
+                                           Warning, member.location.file_name, member.location.line)
                     continue
                 if member.type_qualifiers.has_static:
                     class_wrapper.add_static_attribute(return_type, member.name)
@@ -462,8 +471,9 @@ class ModuleParser(object):
             try:
                 return_type = type_registry.lookup_return(fun.return_type, parameter_annotations.get('return', {}))
             except (TypeError, KeyError), ex:
-                warnings.warn("Return value '%s' error (used in %s): %r"
-                              % (fun.return_type.decl_string, fun, ex))
+                warnings.warn_explicit("Return value '%s' error (used in %s): %r"
+                                       % (fun.return_type.decl_string, fun, ex),
+                                       Warning, fun.location.file_name, fun.location.line)
                 continue
             arguments = []
             for arg in fun.arguments:
@@ -471,8 +481,10 @@ class ModuleParser(object):
                     arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
                                                                     parameter_annotations.get(arg.name, {})))
                 except (TypeError, KeyError), ex:
-                    warnings.warn("Parameter '%s %s' error (used in %s): %r"
-                                  % (arg.type.decl_string, arg.name, fun, ex))
+                    warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
+                                           % (arg.type.decl_string, arg.name, fun, ex),
+                                           Warning, fun.location.file_name, fun.location.line)
+
                     ok = False
                     break
             else:
