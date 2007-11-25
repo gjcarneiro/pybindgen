@@ -170,9 +170,18 @@ type_registry = GccXmlTypeRegistry()
 class AnnotationsScanner(object):
     def __init__(self):
         self.files = {} # file name -> list(lines)
+        self.used_annotations = {} # file name -> list(line_numbers)
         self._comment_rx = re.compile(r"^\s*//\s+-\*-(.*)-\*-\s*")
         self._global_annotation_rx = re.compile(r"(\w+)=([^\s;]+)")
         self._param_annotation_rx = re.compile(r"@(\w+)\(([^;]+)\)")
+
+    def _declare_used_annotation(self, file_name, line_number):
+        try:
+            l = self.used_annotations[file_name]
+        except KeyError:
+            l = []
+            self.used_annotations[file_name] = l
+        l.append(line_number)
 
     def get_annotations(self, file_name, line_number):
         """
@@ -195,6 +204,7 @@ class AnnotationsScanner(object):
             if m is None:
                 break
             line = m.group(1).strip()
+            self._declare_used_annotation(file_name, line_number + 2)
             for annotation_str in line.split(';'):
                 annotation_str = annotation_str.strip()
                 m = self._global_annotation_rx.match(annotation_str)
@@ -226,6 +236,22 @@ class AnnotationsScanner(object):
             return True
         else:
             raise ValueError("bad boolean value %r" % value)
+
+    def warn_unused_annotations(self):
+        for file_name, lines in self.files.iteritems():
+            try:
+                used_annotations = self.used_annotations[file_name]
+            except KeyError:
+                used_annotations = []
+            for line_number, line in enumerate(lines):
+                m = self._comment_rx.match(line)
+                if m is None:
+                    continue
+                #print >> sys.stderr, (line_number+1), used_annotations
+                if (line_number + 1) not in used_annotations:
+                    warnings.warn_explicit("unused annotation",
+                                           Warning, file_name, line_number+1)
+                    
         
 
 annotations_scanner = AnnotationsScanner()
@@ -270,6 +296,8 @@ class ModuleParser(object):
         module = Module(self.module_name, cpp_namespace=module_namespace.decl_string)
         self._scan_namespace_types(module, module_namespace)
         self._scan_namespace_functions(module, module_namespace)
+
+        annotations_scanner.warn_unused_annotations()
 
         return module
 
