@@ -1014,7 +1014,7 @@ class Parameter(object):
         '''
         if type(self) is Parameter:
             raise TypeError('Parameter is an abstract class; use Parameter.new(...)')
-        if is_const and not ctype.startswith('const'):
+        if is_const and 'const' not in ctype:
             ctype = 'const ' + ctype
         self.ctype = ctype
         self.untransformed_ctype = ctype
