@@ -95,13 +95,17 @@ class GccXmlTypeRegistry(object):
         cpp_class, is_const, is_pointer, is_reference, pointer_is_const = \
             self._get_class_type_traits(type_info)
 
-
         kwargs = {}
         for name, value in annotations.iteritems():
             if name == 'caller_owns_return':
                 kwargs['caller_owns_return'] = annotations_scanner.parse_boolean(value)
+            elif name == 'custodian':
+                kwargs['custodian'] = int(value)
             else:
                 warnings.warn("invalid annotation name %r" % name)
+
+        if is_const:
+            kwargs['is_const'] = True
 
         if cpp_class is None:
             return ReturnValue.new(self._fixed_std_type_name(type_info), **kwargs)
@@ -139,11 +143,15 @@ class GccXmlTypeRegistry(object):
                     kwargs['direction'] = Parameter.DIRECTION_INOUT
                 else:
                     warnings.warn("invalid direction direction %r" % value)
+            elif name == 'custodian':
+                kwargs['custodian'] = int(value)
             else:
                 warnings.warn("invalid annotation name %r" % name)
 
         cpp_class, is_const, is_pointer, is_reference, pointer_is_const = \
             self._get_class_type_traits(type_info)
+        if is_const:
+            kwargs['is_const'] = True
         if cpp_class is None:
             return Parameter.new(self._fixed_std_type_name(type_info), param_name, **kwargs)
         if not is_pointer and not is_reference:
