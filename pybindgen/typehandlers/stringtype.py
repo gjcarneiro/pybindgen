@@ -7,7 +7,7 @@ from base import ReturnValue, Parameter, ReverseWrapperBase, ForwardWrapperBase
 class CStringParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['char*', 'const char*', 'char const*']
+    CTYPES = ['char*', 'const char*', 'char const*', 'char const *']
     
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -39,7 +39,7 @@ class CharParam(Parameter):
 class StdStringParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['std::string']
+    CTYPES = ['std::string', 'const std::string', 'std::string const']
     
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -64,7 +64,7 @@ class StdStringRefParam(Parameter):
     DIRECTIONS = [Parameter.DIRECTION_IN,
                   Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['std::string&', 'std::string const &']
+    CTYPES = ['std::string&', 'std::string const &', 'std::string &']
     
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
