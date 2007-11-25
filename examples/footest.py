@@ -4,7 +4,11 @@ import gc
 import os.path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '..', 'build', 'default', 'examples'))
-import foo
+if len(sys.argv) > 1:
+    import foo2 as foo
+    del sys.argv[1]
+else:
+    import foo
 import unittest
 
 
