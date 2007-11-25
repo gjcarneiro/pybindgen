@@ -164,6 +164,7 @@ public:
             SomeObject::instance_count++;
         }
 
+    // -*- @message(direction=inout) -*-
     int add_prefix (std::string& message) {
         message = m_prefix + message;
         return message.size ();
@@ -182,6 +183,7 @@ public:
         return m_prefix + foo.get_datum();
     }
 
+    // -*- @foo(direction=inout) -*-
     virtual std::string get_prefix_with_foo_ref (const Foo &foo) const {
         return m_prefix + foo.get_datum ();
     }
@@ -202,6 +204,7 @@ public:
     }
 
     // pass by reference, direction=out
+    // -*- @foo(direction=out) -*-
     void get_foo_by_ref (Foo& foo) {
         foo = m_foo_value;
     }
@@ -286,13 +289,17 @@ public:
     int get_int (double from_float);
 
     // custodian/ward tests
+
+    // -*- @return(custodian=0) -*-
     Foobar* get_foobar_with_self_as_custodian () {
         return new Foobar;
     }
+    // -*- @return(custodian=1) -*-
     Foobar* get_foobar_with_other_as_custodian (const SomeObject *other) {
         other++;
         return new Foobar;
     }
+    // -*- @foobar(custodian=0) -*-
     void set_foobar_with_self_as_custodian (Foobar *foobar) {
         foobar++;
     }
@@ -342,14 +349,18 @@ namespace xpto
     void set_foo_type (FooType type);
 }
 
+// -*- @return(custodian=1) -*-
 Foobar* get_foobar_with_other_as_custodian(const SomeObject *other);
 
 // -*- @return(caller_owns_return=true) -*-
 Foobar* create_new_foobar();
+// -*- @foobar(custodian=2) -*-
 void set_foobar_with_other_as_custodian(Foobar *foobar, const SomeObject *other);
+// -*- @foobar(custodian=-1); @return(caller_owns_return=true) -*-
 SomeObject * set_foobar_with_return_as_custodian(Foobar *foobar);
 
 class SingletonClass
+// -*- is_singleton=true -*-
 {
 private:
     static SingletonClass *m_instance;
@@ -358,8 +369,8 @@ private:
     ~SingletonClass () {}
 
 public:
-    static SingletonClass *GetInstance ()
-        {
+    // -*- @return(caller_owns_return=true) -*-
+    static SingletonClass *GetInstance () {
             if (not m_instance)
                 m_instance = new SingletonClass;
             return m_instance;
