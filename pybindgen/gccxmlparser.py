@@ -536,11 +536,14 @@ class ModuleParser(object):
 
             as_method = None
             of_class = None
+            alt_name = None
             for name, value in global_annotations.iteritems():
                 if name == 'as_method':
                     as_method = value
                 elif name == 'of_class':
                     of_class = value
+                elif name == 'name':
+                    alt_name = value
                 else:
                     warnings.warn_explicit("Incorrect annotation",
                                            Warning, fun.location.file_name, fun.location.line)
@@ -552,7 +555,7 @@ class ModuleParser(object):
                 continue
                     
             func_wrapper = Function(return_type, fun.name, arguments)
-            module.add_function(func_wrapper)
+            module.add_function(func_wrapper, name=alt_name)
 
         ## scan nested namespaces (mapped as python submodules)
         for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
