@@ -307,10 +307,12 @@ public:
 
 
 // A function that will appear as a method of SomeObject
-// -*- @obj(transfer_ownership=false) -*-
+// -*- as_method=get_something_prefixed; of_class=SomeObject; @obj(transfer_ownership=false) -*-
 std::string some_object_get_something_prefixed(const SomeObject *obj, const std::string something);
 
+// -*- as_method=val_get_something_prefixed; of_class=SomeObject -*-
 std::string some_object_val_get_something_prefixed(SomeObject obj, const std::string something);
+// -*- as_method=ref_get_something_prefixed; of_class=SomeObject -*-
 std::string some_object_ref_get_something_prefixed(const SomeObject &obj, const std::string something);
 
 

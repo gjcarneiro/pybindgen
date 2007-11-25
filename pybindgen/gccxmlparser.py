@@ -27,6 +27,7 @@ __all__ = ['ModuleScanner']
 class GccXmlTypeRegistry(object):
     def __init__(self):
         self.classes = {}  # value is a (return_handler, parameter_handler) tuple
+        self._root_ns_rx = re.compile(r"(^|\s)(::)")
     
     def register_class(self, cpp_class):
         assert isinstance(cpp_class, CppClass)
@@ -35,7 +36,13 @@ class GccXmlTypeRegistry(object):
         else:
             full_name = '::' + cpp_class.full_name
         self.classes[full_name] = cpp_class
-        self._root_ns_rx = re.compile(r"(^|\s)(::)")
+
+    def find_class(self, class_name, module_namespace):
+        if not class_name.startswith(module_namespace):
+            class_name = module_namespace + class_name
+        if not class_name.startswith('::'):
+            class_name = '::' + class_name
+        return self.classes[class_name]           
 
     def _get_class_type_traits(self, type_info):
         assert isinstance(type_info, cpptypes.type_t)
@@ -500,10 +507,9 @@ class ModuleParser(object):
             if fun.name.startswith('__'):
                 continue
 
-            dummy_global_annotations, parameter_annotations = \
+            global_annotations, parameter_annotations = \
                 annotations_scanner.get_annotations(fun.location.file_name,
                                                     fun.location.line)
-
             try:
                 return_type = type_registry.lookup_return(fun.return_type, parameter_annotations.get('return', {}))
             except (TypeError, KeyError), ex:
@@ -526,6 +532,23 @@ class ModuleParser(object):
             else:
                 ok = True
             if not ok:
+                continue
+
+            as_method = None
+            of_class = None
+            for name, value in global_annotations.iteritems():
+                if name == 'as_method':
+                    as_method = value
+                elif name == 'of_class':
+                    of_class = value
+                else:
+                    warnings.warn_explicit("Incorrect annotation",
+                                           Warning, fun.location.file_name, fun.location.line)
+
+            if as_method is not None:
+                assert of_class is not None
+                cpp_class = type_registry.find_class(of_class, (self.module_namespace_name or '::'))
+                cpp_class.add_method(Function(return_type, fun.name, arguments), name=as_method)
                 continue
                     
             func_wrapper = Function(return_type, fun.name, arguments)
