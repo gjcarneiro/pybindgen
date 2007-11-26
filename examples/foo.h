@@ -26,6 +26,7 @@ struct PointerHolder
 
 
 class Foo
+// -*- automatic_type_narrowing=True -*-
 {
     std::string m_datum;
 public:
@@ -44,6 +45,7 @@ public:
 };
 
 class Zoo
+// -*- automatic_type_narrowing=True -*-
 {
     std::string m_datum;
 public:

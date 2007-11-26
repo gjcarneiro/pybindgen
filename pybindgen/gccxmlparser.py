@@ -388,6 +388,8 @@ class ModuleParser(object):
                     kwargs.setdefault('incref_method', value)
                 elif name == 'decref_method':
                     kwargs.setdefault('decref_method', value)
+                elif name == 'automatic_type_narrowing':
+                    kwargs.setdefault('automatic_type_narrowing', annotations_scanner.parse_boolean(value))
                 else:
                     warnings.warn_explicit("Class annotation %r ignored" % name,
                                            Warning, cls.location.file_name, cls.location.line)
