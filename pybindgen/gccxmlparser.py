@@ -360,8 +360,22 @@ class ModuleParser(object):
             else:
                 base_class_wrapper = None
 
-            kwargs = {}
+            ## If this class implicitly converts to another class, but
+            ## that other class is not yet registered, postpone.
+            for operator in cls.casting_operators(allow_empty=True):
+                try:
+                    type_registry.find_class(operator.return_type.decl_string, '::')
+                except KeyError:
+                    ok = False
+                    break
+            else:
+                ok = True
+            if not ok:
+                unregistered_classes.append(cls)
+                continue
+            ##--
 
+            kwargs = {}
             global_annotations, dummy_param_annotations = \
                 annotations_scanner.get_annotations(cls.location.file_name,
                                                     cls.location.line)
@@ -384,11 +398,15 @@ class ModuleParser(object):
             if not self._class_has_public_destructor(cls):
                 kwargs.setdefault('is_singleton', True)
 
-
             class_wrapper = CppClass(cls.name, parent=base_class_wrapper, **kwargs)
             module.add_class(class_wrapper)
             registered_classes[cls] = class_wrapper
             type_registry.register_class(class_wrapper)
+
+            for operator in cls.casting_operators(allow_empty=True):
+                other_class = type_registry.find_class(operator.return_type.decl_string, '::')
+                class_wrapper.implicitly_converts_to(other_class)
+
             assert cls.decl_string in type_registry.classes\
                 and type_registry.classes[cls.decl_string] == class_wrapper
 
