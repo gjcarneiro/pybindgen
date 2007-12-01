@@ -1,3 +1,13 @@
+=== pybindgen 0.8 ===
+    - Support C++ instance attributes through getter/setter methods
+    - Support functions as methods of C++ classes
+    - Support the PyObject* type
+    - Support unsigned int, C strings (char*) (from Mark Lee)
+    - Add basic support for enum types
+    - New experimental automatic module generator based on C/C++
+      header file scanner and annotations in comments, using pygccxml
+    - Some bug fixes
+
 === pybindgen 0.7 ===
 	- Automatic C++ pointer-to-class return type narrowing
 	- Optionally allow subclassing in Python of certain C++ classes 
