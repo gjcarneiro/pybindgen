@@ -25,24 +25,24 @@ def build(bld):
     obj.env.append_value("CPPPATH", bld.m_curdirnode.srcpath(obj.env))
 
 
-    ### Same thing, but using gccxml autoscanning
+    if bld.env()['ENABLE_PYGCCXML']:
+        ### Same thing, but using gccxml autoscanning
+        bindgen = bld.create_obj('command-output')
+        bindgen.stdout = 'foomodule2.cc'
+        bindgen.argv = [bindgen.input_file('foomodulegen-auto.py'), bindgen.input_file('foo.h')]
+        bindgen.command = 'python'
+        bindgen.command_is_external = True
+        bindgen.prio = 3 # must run after the 'py' objects in ../pybindgen
 
-    bindgen = bld.create_obj('command-output')
-    bindgen.stdout = 'foomodule2.cc'
-    bindgen.argv = [bindgen.input_file('foomodulegen-auto.py'), bindgen.input_file('foo.h')]
-    bindgen.command = 'python'
-    bindgen.command_is_external = True
-    bindgen.prio = 3 # must run after the 'py' objects in ../pybindgen
+        obj = bld.create_obj('cpp', 'shlib', 'pyext')
+        obj.source = [
+            'foo.cc',
+            'foomodule2.cc'
+            ]
+        obj.target = 'foo2'
+        obj.install_var = 0 # do not install
 
-    obj = bld.create_obj('cpp', 'shlib', 'pyext')
-    obj.source = [
-        'foo.cc',
-        'foomodule2.cc'
-        ]
-    obj.target = 'foo2'
-    obj.install_var = 0 # do not install
-
-    ## Workaround a WAF bug (http://code.google.com/p/waf/issues/detail?id=37)
-    obj.env.append_value("CPPPATH", bld.m_curdirnode.srcpath(obj.env))
+        ## Workaround a WAF bug (http://code.google.com/p/waf/issues/detail?id=37)
+        obj.env.append_value("CPPPATH", bld.m_curdirnode.srcpath(obj.env))
 
 

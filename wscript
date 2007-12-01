@@ -2,11 +2,14 @@
 ## (C) 2007 Gustavo J. A. M. Carneiro
 
 import Params
+Params.g_autoconfig = True
+
 from Params import fatal
 import os
 import pproc as subprocess
 import shutil
 import sys
+import Configure
 
 os.environ['PYTHONPATH'] = os.path.join(os.getcwd(), 'build', 'default')
 
@@ -118,6 +121,17 @@ def configure(conf):
     conf.check_tool('python')
     conf.check_python_version((2,4,2))
     conf.check_python_headers()
+
+    gccxml = conf.find_program('gccxml')
+    if not gccxml:
+        conf.env['ENABLE_PYGCCXML'] = False
+    else:
+	try:
+		conf.check_python_module('pygccxml')
+	except Configure.ConfigurationError:
+            conf.env['ENABLE_PYGCCXML'] = False
+        else:
+            conf.env['ENABLE_PYGCCXML'] = True
 
 
 def build(bld):
