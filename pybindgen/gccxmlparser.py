@@ -186,7 +186,8 @@ class AnnotationsScanner(object):
     def __init__(self):
         self.files = {} # file name -> list(lines)
         self.used_annotations = {} # file name -> list(line_numbers)
-        self._comment_rx = re.compile(r"^\s*//\s+-\*-(.*)-\*-\s*")
+        self._comment_rx = re.compile(
+            r"^\s*(?://\s+-#-(?P<annotation1>.*)-#-\s*)|(?:/\*\s+-#-(?P<annotation2>.*)-#-\s*\*/)")
         self._global_annotation_rx = re.compile(r"(\w+)=([^\s;]+)")
         self._param_annotation_rx = re.compile(r"@(\w+)\(([^;]+)\)")
 
@@ -218,7 +219,10 @@ class AnnotationsScanner(object):
             m = self._comment_rx.match(line)
             if m is None:
                 break
-            line = m.group(1).strip()
+            s = m.group('annotation1')
+            if s is None:
+                s = m.group('annotation2')
+            line = s.strip()
             self._declare_used_annotation(file_name, line_number + 2)
             for annotation_str in line.split(';'):
                 annotation_str = annotation_str.strip()

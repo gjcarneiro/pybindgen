@@ -10,9 +10,9 @@
 int print_something(const char *message);
 int print_something_else(const char *message2);
 
-// -*- name=get_int -*-
+/* -#- name=get_int -#- */
 int get_int_from_string(const char *from_string);
-// -*- name=get_int -*-
+// -#- name=get_int -#-
 int get_int_from_float(double from_float);
 
 // In this example PointerHolder<T> automatically implies
@@ -26,7 +26,7 @@ struct PointerHolder
 
 
 class Foo
-// -*- automatic_type_narrowing=True -*-
+// -#- automatic_type_narrowing=True -#-
 {
     std::string m_datum;
 public:
@@ -45,7 +45,7 @@ public:
 };
 
 class Zoo
-// -*- automatic_type_narrowing=True -*-
+// -#- automatic_type_narrowing=True -#-
 {
     std::string m_datum;
 public:
@@ -86,11 +86,11 @@ public:
 };
 
 // caller owns return
-// -*- @return(caller_owns_return=true) -*-
+// -#- @return(caller_owns_return=true) -#-
 Foo* get_hidden_subclass_pointer ();
 
 class Zbr
-// -*- incref_method=Ref; decref_method=Unref -*-
+// -#- incref_method=Ref; decref_method=Unref -#-
 {
     int m_refcount;
     std::string m_datum;
@@ -168,7 +168,7 @@ public:
             SomeObject::instance_count++;
         }
 
-    // -*- @message(direction=inout) -*-
+    // -#- @message(direction=inout) -#-
     int add_prefix (std::string& message) {
         message = m_prefix + message;
         return message.size ();
@@ -187,7 +187,7 @@ public:
         return m_prefix + foo.get_datum();
     }
 
-    // -*- @foo(direction=inout) -*-
+    // -#- @foo(direction=inout) -#-
     virtual std::string get_prefix_with_foo_ref (const Foo &foo) const {
         return m_prefix + foo.get_datum ();
     }
@@ -208,19 +208,19 @@ public:
     }
 
     // pass by reference, direction=out
-    // -*- @foo(direction=out) -*-
+    // -#- @foo(direction=out) -#-
     void get_foo_by_ref (Foo& foo) {
         foo = m_foo_value;
     }
 
-    // -*- @foo(transfer_ownership=true) -*-
+    // -#- @foo(transfer_ownership=true) -#-
     void set_foo_ptr (Foo *foo) {
         if (m_foo_ptr)
             delete m_foo_ptr;
         m_foo_ptr = foo;
     }
 
-    // -*- @foo(transfer_ownership=false) -*-
+    // -#- @foo(transfer_ownership=false) -#-
     void set_foo_shared_ptr (Foo *foo) {
         m_foo_shared_ptr = foo;
     }
@@ -230,19 +230,19 @@ public:
         return m_foo_value;
     }
 
-    // -*- @return(caller_owns_return=false) -*-
+    // -#- @return(caller_owns_return=false) -#-
     Foo * get_foo_shared_ptr () {
         return m_foo_shared_ptr;
     }
     
-    // -*- @return(caller_owns_return=true) -*-
+    // -#- @return(caller_owns_return=true) -#-
     Foo * get_foo_ptr () {
         Foo *foo = m_foo_ptr;
         m_foo_ptr = NULL;
         return foo;
     }
 
-    // -*- @return(caller_owns_return=true) -*-
+    // -#- @return(caller_owns_return=true) -#-
     Zbr* get_zbr () {
         if (m_zbr)
         {
@@ -253,11 +253,11 @@ public:
     }
 
     // return reference counted object, caller does not own return
-    // -*- @return(caller_owns_return=false) -*-
+    // -#- @return(caller_owns_return=false) -#-
     Zbr* peek_zbr () { return m_zbr; }
 
     // pass reference counted object, transfer ownership
-    // -*- @zbr(transfer_ownership=true) -*-
+    // -#- @zbr(transfer_ownership=true) -#-
     void set_zbr_transfer (Zbr *zbr) {
         if (m_zbr)
             m_zbr->Unref ();
@@ -265,7 +265,7 @@ public:
     }
 
     // pass reference counted object, does not transfer ownership
-    // -*- @zbr(transfer_ownership=false) -*-
+    // -#- @zbr(transfer_ownership=false) -#-
     void set_zbr_shared (Zbr *zbr) {
         if (m_zbr)
             m_zbr->Unref ();
@@ -294,16 +294,16 @@ public:
 
     // custodian/ward tests
 
-    // -*- @return(custodian=0) -*-
+    // -#- @return(custodian=0) -#-
     Foobar* get_foobar_with_self_as_custodian () {
         return new Foobar;
     }
-    // -*- @return(custodian=1) -*-
+    // -#- @return(custodian=1) -#-
     Foobar* get_foobar_with_other_as_custodian (const SomeObject *other) {
         other++;
         return new Foobar;
     }
-    // -*- @foobar(custodian=0) -*-
+    // -#- @foobar(custodian=0) -#-
     void set_foobar_with_self_as_custodian (Foobar *foobar) {
         foobar++;
     }
@@ -311,24 +311,24 @@ public:
 
 
 // A function that will appear as a method of SomeObject
-// -*- as_method=get_something_prefixed; of_class=SomeObject; @obj(transfer_ownership=false) -*-
+// -#- as_method=get_something_prefixed; of_class=SomeObject; @obj(transfer_ownership=false) -#-
 std::string some_object_get_something_prefixed(const SomeObject *obj, const std::string something);
 
-// -*- as_method=val_get_something_prefixed; of_class=SomeObject -*-
+// -#- as_method=val_get_something_prefixed; of_class=SomeObject -#-
 std::string some_object_val_get_something_prefixed(SomeObject obj, const std::string something);
-// -*- as_method=ref_get_something_prefixed; of_class=SomeObject -*-
+// -#- as_method=ref_get_something_prefixed; of_class=SomeObject -#-
 std::string some_object_ref_get_something_prefixed(const SomeObject &obj, const std::string something);
 
 
 // Transfer ownership of 'obj' to the library
-// -*- @obj(transfer_ownership=true) -*-
+// -#- @obj(transfer_ownership=true) -#-
 void store_some_object(SomeObject *obj);
 
 // Invokes the virtual method in the stored SomeObject
 std::string invoke_some_object_get_prefix();
 
 // Transfer ownership of 'obj' away from the library
-// -*- @return(caller_owns_return=true) -*-
+// -#- @return(caller_owns_return=true) -#-
 SomeObject* take_some_object();
 
 // Deletes the contained object, if any
@@ -355,18 +355,18 @@ namespace xpto
     void set_foo_type (FooType type);
 }
 
-// -*- @return(custodian=1) -*-
+// -#- @return(custodian=1) -#-
 Foobar* get_foobar_with_other_as_custodian(const SomeObject *other);
 
-// -*- @return(caller_owns_return=true) -*-
+// -#- @return(caller_owns_return=true) -#-
 Foobar* create_new_foobar();
-// -*- @foobar(custodian=2) -*-
+// -#- @foobar(custodian=2) -#-
 void set_foobar_with_other_as_custodian(Foobar *foobar, const SomeObject *other);
-// -*- @foobar(custodian=-1); @return(caller_owns_return=true) -*-
+// -#- @foobar(custodian=-1); @return(caller_owns_return=true) -#-
 SomeObject * set_foobar_with_return_as_custodian(Foobar *foobar);
 
 class SingletonClass
-// -*- is_singleton=true -*-
+// -#- is_singleton=true -#-
 {
 private:
     static SingletonClass *m_instance;
@@ -375,7 +375,7 @@ private:
     ~SingletonClass () {}
 
 public:
-    // -*- @return(caller_owns_return=true) -*-
+    // -#- @return(caller_owns_return=true) -#-
     static SingletonClass *GetInstance () {
             if (not m_instance)
                 m_instance = new SingletonClass;
