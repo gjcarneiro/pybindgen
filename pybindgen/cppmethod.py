@@ -447,8 +447,11 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
 
     def generate_python_call(self):
         """code to call the python method"""
-        params = ['m_pyself', '"_%s"' % self.method_name]
-        params.extend(self.build_params.get_parameters())
+        params = ['m_pyself', '(char *) "_%s"' % self.method_name]
+        build_params = self.build_params.get_parameters()
+        if build_params[0][0] == '"':
+            build_params[0] = '(char *) ' + build_params[0]
+        params.extend(build_params)
         self.before_call.write_code('py_retval = PyObject_CallMethod(%s);'
                                     % (', '.join(params),))
         self.before_call.write_error_check('py_retval == NULL')

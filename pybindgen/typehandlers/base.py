@@ -730,10 +730,10 @@ class ForwardWrapperBase(object):
                 if keywords is None:
                     keywords = []
                 keywords_var = self.declarations.declare_variable(
-                    'char *', 'keywords',
+                    'const char *', 'keywords',
                     '{' + ', '.join(['"%s"' % kw for kw in keywords] + ['NULL']) + '}',
                      '[]')
-                param_list = ['args', 'kwargs', params[0], keywords_var] + params[1:]
+                param_list = ['args', 'kwargs', params[0], '(char **) ' + keywords_var] + params[1:]
                 self.before_parse.write_error_check('!PyArg_ParseTupleAndKeywords(%s)' %
                                                     (', '.join(param_list),))
                 self.meth_flags.append("METH_KEYWORDS")

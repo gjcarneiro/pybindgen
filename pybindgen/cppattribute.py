@@ -358,7 +358,7 @@ class PyGetSetDef(object):
         for name, getter, setter in self.attributes:
             code_sink.writeln('{')
             code_sink.indent()
-            code_sink.writeln('"%s", /* attribute name */' % name)
+            code_sink.writeln('(char*) "%s", /* attribute name */' % name)
 
             ## getter
             getter_c_name = (getter and getter.c_function_name or "NULL")
