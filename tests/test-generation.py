@@ -14,7 +14,10 @@ from pybindgen import cppclass
 class MyReverseWrapper(typehandlers.base.ReverseWrapperBase):
     def generate_python_call(self):
         params = ['NULL'] # function object to call
-        params.extend(self.build_params.get_parameters())
+        build_params = self.build_params.get_parameters()
+        if build_params[0][0] == '"':
+            build_params[0] = '(char *) ' + build_params[0]
+        params.extend(build_params)
         self.before_call.write_code('py_retval = PyObject_CallFunction(%s);' % (', '.join(params),))
         self.before_call.write_error_check('py_retval == NULL')
         self.before_call.add_cleanup_code('Py_DECREF(py_retval);')
