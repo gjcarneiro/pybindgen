@@ -368,13 +368,19 @@ class CppVirtualMethodParentCaller(CppMethod):
         return self._helper_class
     helper_class = property(get_helper_class, set_helper_class)
 
-    def generate_declaration(self, code_sink):
+    def generate_declaration(self, code_sink, extra_wrapper_parameters=()):
         ## We need to fake generate the code (and throw away the
         ## result) only in order to obtain correct method signature.
         tmp_sink = codesink.MemoryCodeSink()
         self.generate_body(tmp_sink, gen_call_params=[self.class_])
 
-        retline, line = self.get_wrapper_signature('_wrap_'+self.method_name, ())
+        if self.overload_index is None:
+            overload_str = ''
+        else:
+            overload_str = '__%i' % self.overload_index
+
+        retline, line = self.get_wrapper_signature(
+            '_wrap_'+self.method_name+overload_str, extra_wrapper_parameters)
         code_sink.writeln(' '.join(['static', retline, line]) + ';')
 
         self.reset_code_generation_state()
@@ -405,6 +411,23 @@ class CppVirtualMethodParentCaller(CppMethod):
                 '::'.join((self._helper_class.name, self.wrapper_actual_name)),
                 '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
+
+
+    def clone(self):
+        """Creates a semi-deep copy of this method wrapper.  The returned
+        method wrapper clone contains copies of all parameters, so
+        they can be modified at will.
+        """
+        meth = CppVirtualMethodParentCaller(
+            self.return_value,
+            self.method_name,
+            [copy(param) for param in self.parameters])
+        meth._class = self._class
+        meth._helper_class = self._helper_class
+        meth.docstring = self.docstring
+        meth.wrapper_base_name = self.wrapper_base_name
+        meth.wrapper_actual_name = self.wrapper_actual_name
+        return meth
 
 
 class CppVirtualMethodProxy(ReverseWrapperBase):

@@ -48,6 +48,8 @@ class OverloadedWrapper(object):
         self.wrapper_name = wrapper_name
         self.wrapper_function_name = None
         self.pystruct = 'PyObject'
+        self.static_decl = True
+        self.enable_implicit_conversions = True
         
     def add(self, wrapper):
         """
@@ -68,6 +70,8 @@ class OverloadedWrapper(object):
         self.all_wrappers = []
         for wrapper in self.wrappers:
             self.all_wrappers.append(wrapper)
+            if not self.enable_implicit_conversions:
+                continue
             ## add additional wrappers to support implicit conversion
             if not hasattr(wrapper, "clone"):
                 continue
@@ -136,7 +140,10 @@ class OverloadedWrapper(object):
             
             ## Generate the 'main wrapper' that calls the other ones
             code_sink.writeln()
-            code_sink.writeln("static " + self.RETURN_TYPE)
+            if self.static_decl:
+                code_sink.writeln("static " + self.RETURN_TYPE)
+            else:
+                code_sink.writeln(self.RETURN_TYPE)
             code_sink.writeln("%s(%s *self,"
                               " PyObject *args, PyObject *kwargs)"
                               % (self.wrapper_function_name, self.pystruct))
@@ -197,6 +204,19 @@ class OverloadedWrapper(object):
                 (name, self.wrapper_function_name, '|'.join(flags),
                  (docstring is None and "NULL" or ('"'+docstring+'"')))
 
+    def generate_declaration(self, code_sink):
+        self._compute_all_wrappers()
+
+        if len(self.all_wrappers) > 1:
+            for i, wrapper in enumerate(self.all_wrappers):
+                wrapper.overload_index = i
+                wrapper.force_parse = wrapper.PARSE_TUPLE_AND_KEYWORDS
+                wrapper.generate_declaration(
+                    code_sink,
+                    extra_wrapper_parameters=["PyObject **return_exception"])
+
+        self.all_wrappers[0].overload_index = None
+        self.all_wrappers[0].generate_declaration(code_sink)
 
 
 from cppclass import CppClassParameter

@@ -4,6 +4,7 @@
 
 #include <string>
 #include <iostream>
+#include <sstream>
 
 // Yes, this code is stupid, I know; it is only meant as an example!
 
@@ -196,6 +197,16 @@ public:
         return m_prefix + foo->get_datum ();
     }
 
+
+    // A couple of overloaded virtual methods
+    virtual std::string get_something () const {
+        return "something";
+    }
+    virtual std::string get_something (int x) const {
+        std::stringstream out;
+        out << x;
+        return out.str ();
+    }
 
     // pass by value, direction=in
     void set_foo_value (Foo foo) {

@@ -29,14 +29,30 @@ class CppHelperClass(object):
         """
         self.class_ = class_
         self.name = class_.name + "_PythonProxy"
-        ## TODO: inheritance of virtual methods
-        self.virtual_parent_callers = []
+        self.virtual_parent_callers = {}
         self.virtual_proxies = []
         
     def add_virtual_parent_caller(self, parent_caller):
         """Add a new CppVirtualMethodParentCaller object to this helper class"""
         assert isinstance(parent_caller, CppVirtualMethodParentCaller)
-        self.virtual_parent_callers.append(parent_caller)
+
+        name = parent_caller.method_name
+        try:
+            overload = self.virtual_parent_callers[name]
+        except KeyError:
+            overload = CppOverloadedMethod(name)
+            ## implicit conversions + virtual methods disabled
+            ## temporarily until I can figure out how to fix the unit
+            ## tests.
+            overload.enable_implicit_conversions = False
+            overload.static_decl = False
+            overload.pystruct = self.class_.pystruct
+            self.virtual_parent_callers[name] = overload
+            assert self.class_ is not None
+        parent_caller.class_ = self.class_
+        parent_caller.helper_class = self
+        overload.add(parent_caller)
+
 
     def add_virtual_proxy(self, virtual_proxy):
         """Add a new CppVirtualMethodProxy object to this class"""
@@ -74,9 +90,7 @@ class CppHelperClass(object):
         code_sink.writeln("}\n")
             
         ## write the parent callers (_name)
-        for parent_caller in self.virtual_parent_callers:
-            parent_caller.class_ = self.class_
-            parent_caller.helper_class = self
+        for parent_caller in self.virtual_parent_callers.itervalues():
             code_sink.writeln()
             parent_caller.generate_declaration(code_sink)
 
@@ -95,7 +109,7 @@ class CppHelperClass(object):
         Generate the proxy class (virtual method bodies only) to a given code sink
         """
         ## write the parent callers (_name)
-        for parent_caller in self.virtual_parent_callers:
+        for parent_caller in self.virtual_parent_callers.itervalues():
             parent_caller.class_ = self.class_
             parent_caller.helper_class = self
             code_sink.writeln()
@@ -691,8 +705,8 @@ typedef struct {
             method_defs.append(overload.get_py_method_def(meth_name))
             code_sink.writeln()
         if self.helper_class is not None:
-            for meth in self.helper_class.virtual_parent_callers:
-                method_defs.append(meth.get_py_method_def())
+            for meth_name, meth in self.helper_class.virtual_parent_callers.iteritems():
+                method_defs.append(meth.get_py_method_def(meth_name))
         ## generate the method table
         code_sink.writeln("static PyMethodDef %s_methods[] = {" % (self.name,))
         code_sink.indent()

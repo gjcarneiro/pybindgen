@@ -563,6 +563,26 @@ class TestFoo(unittest.TestCase):
         foo.xpto.set_foo_type(foo.xpto.FOO_TYPE_BBB)
         self.assertEqual(foo.xpto.get_foo_type(), foo.xpto.FOO_TYPE_BBB)
 
+    def test_virtual_overload(self):
+        ## first test the plain object
+        obj = foo.SomeObject("")
+        self.assertEqual(obj.get_something(), "something")
+        self.assertEqual(obj.get_something(123), "123")
+
+        ## now subclass it
+        class MyObject(foo.SomeObject):
+            def get_something(self, arg=None):
+                self.arg = arg
+                return str(arg)
+            
+        obj = MyObject("")
+        s1 = obj.get_something()
+        self.assertEqual(s1, "None")
+        self.assertEqual(obj.arg, None)
+
+        s2 = obj.get_something(123)
+        self.assertEqual(s2, "123")
+        self.assertEqual(obj.arg, 123)
 
 if __name__ == '__main__':
     unittest.main()

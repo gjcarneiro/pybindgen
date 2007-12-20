@@ -151,6 +151,16 @@ def my_module_gen(out_file):
         [Parameter.new('Foo*', 'foo', transfer_ownership=False, is_const=True)],
         is_virtual=True, is_const=True))
 
+    ## overloaded virtual methods
+    SomeObject.add_method(CppMethod(
+        ReturnValue.new('std::string'), 'get_something',
+        [],
+        is_virtual=True, is_const=True))
+    SomeObject.add_method(CppMethod(
+        ReturnValue.new('std::string'), 'get_something',
+        [Parameter.new('int', 'x')],
+        is_virtual=True, is_const=True))
+
 
     ## add a function that appears as a method of an object
     SomeObject.add_method(

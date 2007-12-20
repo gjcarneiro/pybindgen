@@ -643,6 +643,7 @@ class ForwardWrapperBase(object):
         self.meth_flags = []
         self.unblock_threads = unblock_threads
         self.no_c_retval = no_c_retval
+        self.overload_index = None
         
         if return_value is not None:
             self.declarations.declare_variable('PyObject*', 'py_retval')
