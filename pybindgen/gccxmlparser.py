@@ -442,8 +442,9 @@ class ModuleParser(object):
         return False
 
     def _scan_methods(self, cls, class_wrapper):
+        have_trivial_constructor = False
+
         for member in cls.get_members('public'):
-            
             if member.name in [class_wrapper.incref_method, class_wrapper.decref_method]:
                 continue
 
@@ -451,6 +452,7 @@ class ModuleParser(object):
                 annotations_scanner.get_annotations(member.location.file_name,
                                                     member.location.line)
             
+            ## ------------ method --------------------
             if isinstance(member, calldef.member_function_t):
                 is_virtual = (member.virtuality != calldef.VIRTUALITY_TYPES.NOT_VIRTUAL)
                 pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
@@ -490,7 +492,11 @@ class ModuleParser(object):
                                            is_virtual=(is_virtual and class_wrapper.allow_subclassing))
                 class_wrapper.add_method(method_wrapper)
 
+            ## ------------ constructor --------------------
             elif isinstance(member, calldef.constructor_t):
+                if not member.arguments:
+                    have_trivial_constructor = True
+
                 arguments = []
                 for arg in member.arguments:
                     try:
@@ -508,6 +514,7 @@ class ModuleParser(object):
                 constructor_wrapper = CppConstructor(arguments)
                 class_wrapper.add_constructor(constructor_wrapper)
 
+            ## ------------ attribute --------------------
             elif isinstance(member, variable_t):
                 try:
                     return_type = type_registry.lookup_return(member.type)
@@ -523,6 +530,12 @@ class ModuleParser(object):
             
             elif isinstance(member, calldef.destructor_t):
                 pass
+
+        ## gccxml 0.9, unlike 0.7, does not explicitly report inheritted trivial constructors
+        ## thankfully pygccxml comes to the rescue!
+        if not have_trivial_constructor:
+            if type_traits.has_trivial_constructor(cls):
+                class_wrapper.add_constructor(CppConstructor([]))
 
             
     def _scan_namespace_functions(self, module, module_namespace):
