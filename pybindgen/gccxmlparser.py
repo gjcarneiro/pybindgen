@@ -294,11 +294,18 @@ class ModuleParser(object):
         self.module_namespace_name = module_namespace_name
         self.location_filter = None
         self.header_files = None
+        self.gccxml_config = None
+        self.whitelist_paths = []
 
     def __location_match(self, decl):
-        return (decl.location.file_name in self.header_files)
+        if decl.location.file_name in self.header_files:
+            return True
+        for incdir in self.whitelist_paths:
+            if os.path.abspath(decl.location.file_name).startswith(incdir):
+                return True
+        return False
 
-    def parse(self, header_files):
+    def parse(self, header_files, include_paths=None, whitelist_paths=None):
         """
         parses a set of header files and returns a pybindgen Module instance.
         """
@@ -306,8 +313,17 @@ class ModuleParser(object):
         self.header_files = [os.path.abspath(f) for f in header_files]
         self.location_filter = declarations.custom_matcher_t(self.__location_match)
 
-        config = parser.config_t()
-        decls = parser.parse(header_files, config)
+        if whitelist_paths is not None:
+            assert isinstance(whitelist_paths, list)
+            self.whitelist_paths = [os.path.abspath(p) for p in whitelist_paths]
+
+        if include_paths is not None:
+            assert isinstance(include_paths, list)
+            self.gccxml_config = parser.config_t(include_paths=include_paths)
+        else:
+            self.gccxml_config = parser.config_t()
+
+        decls = parser.parse(header_files, self.gccxml_config)
         if self.module_namespace_name == '::':
             module_namespace = declarations.get_global_namespace(decls)
         else:
