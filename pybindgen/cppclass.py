@@ -268,6 +268,7 @@ class CppClass(object):
                 CTYPES = [name]
                 cpp_class = self
             self.ThisClassReturn = ThisClassReturn
+            self.ThisClassRefReturn = ThisClassReturn
 
             class ThisClassPtrParameter(CppClassPtrParameter):
                 """Register this C++ class as pass-by-pointer parameter"""
