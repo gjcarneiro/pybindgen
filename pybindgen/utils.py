@@ -74,7 +74,8 @@ def get_mangled_name(base_name, template_args):
     assert isinstance(template_args, (tuple, list))
 
     if template_args:
-        return '%s__lt__%s__gt__' % (base_name, '_'.join(template_args))
+        return '%s__lt__%s__gt__' % (base_name, '_'.join(
+                [arg.replace(' ', '_') for arg in template_args]))
     else:
         return base_name
 
