@@ -305,6 +305,13 @@ def my_module_gen(out_file):
     cls.add_method(CppMethod(ReturnValue.new('SingletonClass*', caller_owns_return=True),
                              'GetInstance', [], is_static=True))
 
+    ## A class that has no public default constructor...
+    cls = CppClass('InterfaceId', is_singleton=True)
+    mod.add_class(cls)
+    ## A function that returns such a class...
+    mod.add_function(Function(ReturnValue.new('InterfaceId'),
+                              'make_interface_id', []))
+
 
     mod.generate(FileCodeSink(out_file))
 

@@ -87,9 +87,14 @@ class CppMethod(ForwardWrapperBase):
                 '%s(%s);' %
                 (method, ", ".join(self.call_params)))
         else:
-            self.before_call.write_code(
-                'retval = %s(%s);' %
-                (method, ", ".join(self.call_params)))
+            if self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
+                self.before_call.write_code(
+                    '%s retval = %s(%s);' %
+                    (self.return_value.ctype, method, ", ".join(self.call_params)))
+            else:
+                self.before_call.write_code(
+                    'retval = %s(%s);' %
+                    (method, ", ".join(self.call_params)))
 
     def _before_return_hook(self):
         """hook that post-processes parameters and check for custodian=<n>
@@ -394,9 +399,14 @@ class CppVirtualMethodParentCaller(CppMethod):
                 '%s(%s);' %
                 (method, ", ".join(self.call_params)))
         else:
-            self.before_call.write_code(
-                'retval = %s(%s);' %
-                (method, ", ".join(self.call_params)))
+            if self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
+                self.before_call.write_code(
+                    '%s retval = %s(%s);' %
+                    (self.return_value.ctype, method, ", ".join(self.call_params)))
+            else:
+                self.before_call.write_code(
+                    'retval = %s(%s);' %
+                    (method, ", ".join(self.call_params)))
 
     def get_py_method_def(self, method_name=None):
         "Get the PyMethodDef entry suitable for this method"

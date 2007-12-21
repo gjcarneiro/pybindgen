@@ -69,9 +69,15 @@ class Function(ForwardWrapperBase):
                 '%s%s(%s);' % (namespace, self.function_name,
                                ", ".join(self.call_params)))
         else:
-            self.before_call.write_code(
-                'retval = %s%s(%s);' % (namespace, self.function_name,
-                                        ", ".join(self.call_params)))
+            if self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
+                self.before_call.write_code(
+                    '%s retval = %s%s(%s);' % (self.return_value.ctype,
+                                               namespace, self.function_name,
+                                            ", ".join(self.call_params)))
+            else:
+                self.before_call.write_code(
+                    'retval = %s%s(%s);' % (namespace, self.function_name,
+                                            ", ".join(self.call_params)))
 
     def _before_return_hook(self):
         "hook that post-processes parameters and check for custodian=<n> CppClass parameters"

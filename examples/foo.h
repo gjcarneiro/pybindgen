@@ -396,4 +396,17 @@ public:
 };
 
 
+class InterfaceId
+{
+public:
+    ~InterfaceId () {}
+private:
+    InterfaceId () {}
+    friend InterfaceId make_interface_id ();
+};
+
+InterfaceId make_interface_id ();
+
+
+
 #endif 	    /* !FOO_H_ */

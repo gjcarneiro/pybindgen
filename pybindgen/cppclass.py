@@ -281,6 +281,8 @@ class CppClass(object):
                 """Register this C++ class as value return"""
                 CTYPES = [name]
                 cpp_class = self
+                REQUIRES_ASSIGNMENT_CONSTRUCTOR = True
+
             self.ThisClassReturn = ThisClassReturn
             self.ThisClassRefReturn = ThisClassReturn
 

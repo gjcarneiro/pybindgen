@@ -164,3 +164,8 @@ namespace xpto
 
 SingletonClass *SingletonClass::m_instance = NULL;
 
+InterfaceId make_interface_id ()
+{
+    return InterfaceId ();
+}
+

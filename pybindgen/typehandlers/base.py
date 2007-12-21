@@ -648,7 +648,8 @@ class ForwardWrapperBase(object):
         if return_value is not None:
             self.declarations.declare_variable('PyObject*', 'py_retval')
         if (not no_c_retval and return_value is not None
-            and return_value.ctype != 'void'):
+            and return_value.ctype != 'void'
+            and not return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR):
             self.declarations.declare_variable(return_value.ctype, 'retval')
 
     def reset_code_generation_state(self):
@@ -865,7 +866,8 @@ class ReturnValue(object):
 
     ## whether it supports type transformations
     SUPPORTS_TRANSFORMATIONS = False
-
+    
+    REQUIRES_ASSIGNMENT_CONSTRUCTOR = False
 
     class __metaclass__(type):
         "Metaclass for automatically registering parameter type handlers"
