@@ -408,5 +408,13 @@ private:
 InterfaceId make_interface_id ();
 
 
+template <typename T>
+std::string TypeNameGet (void)
+{
+  return "unknown";
+}
+
+template <> std::string TypeNameGet<int> (void);
+
 
 #endif 	    /* !FOO_H_ */

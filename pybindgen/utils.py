@@ -67,3 +67,14 @@ typedef intobjargproc ssizeobjargproc;
 #endif  /* !__GNUC__ */
 ''')
     
+
+
+def get_mangled_name(base_name, template_args):
+    assert isinstance(base_name, str)
+    assert isinstance(template_args, (tuple, list))
+
+    if template_args:
+        return '%s__lt__%s__gt__' % (base_name, '_'.join(template_args))
+    else:
+        return base_name
+

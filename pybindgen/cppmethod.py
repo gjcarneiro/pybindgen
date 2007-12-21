@@ -8,6 +8,7 @@ from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, join_ctype
 from typehandlers import codesink
 import overloading
 import settings
+import utils
 
 
 class CppMethod(ForwardWrapperBase):
@@ -35,12 +36,14 @@ class CppMethod(ForwardWrapperBase):
         self.is_virtual = is_virtual
         self.is_const = is_const
         self.template_parameters = template_parameters
+        self.mangled_name = utils.get_mangled_name(self.method_name, self.template_parameters)
 
         self._class = None
         self.docstring = None
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
         self.static_decl = True
+
 
     def clone(self):
         """Creates a semi-deep copy of this method wrapper.  The returned
@@ -64,13 +67,12 @@ class CppMethod(ForwardWrapperBase):
         """set the class object this method belongs to"""
         self._class = class_
         self.wrapper_base_name = "_wrap_%s_%s" % (
-            class_.name, self.method_name)
+            class_.name, self.mangled_name)
     def get_class(self):
         """get the class object this method belongs to"""
         return self._class
     class_ = property(get_class, set_class)
 
-    
     def generate_call(self, class_):
         "virtual method implementation; do not call"
         #assert isinstance(class_, CppClass)

@@ -16,6 +16,8 @@ from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter
                           PyGetSetDef, PyMetaclass)
 
 import settings
+import utils
+
 
 class CppHelperClass(object):
     """
@@ -476,12 +478,13 @@ public:
         else:
             raise TypeError
             
+        mangled_name = utils.get_mangled_name(name, method.template_parameters)
         try:
-            overload = self.methods[name]
+            overload = self.methods[mangled_name]
         except KeyError:
-            overload = CppOverloadedMethod(name)
+            overload = CppOverloadedMethod(mangled_name)
             overload.pystruct = self.pystruct
-            self.methods[name] = overload
+            self.methods[mangled_name] = overload
 
         method.class_ = self
         overload.add(method)

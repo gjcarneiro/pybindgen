@@ -15,6 +15,7 @@ from cppclass import CppClass, CppConstructor, CppMethod
 from pygccxml.declarations import type_traits
 from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
+from pygccxml.declarations import templates
 
 #from pygccxml.declarations.calldef import \
 #    destructor_t, constructor_t, member_function_t
@@ -502,10 +503,16 @@ class ModuleParser(object):
                 if pure_virtual and not class_wrapper.allow_subclassing:
                     class_wrapper.set_cannot_be_constructed(True)
 
+                if templates.is_instantiation(member.demangled_name):
+                    template_parameters = templates.args(member.demangled_name)
+                else:
+                    template_parameters = ()
+
                 method_wrapper = CppMethod(return_type, member.name, arguments,
                                            is_const=member.has_const,
                                            is_static=member.has_static,
-                                           is_virtual=(is_virtual and class_wrapper.allow_subclassing))
+                                           is_virtual=(is_virtual and class_wrapper.allow_subclassing),
+                                           template_parameters=template_parameters)
                 class_wrapper.add_method(method_wrapper)
 
             ## ------------ constructor --------------------
@@ -606,8 +613,14 @@ class ModuleParser(object):
                 cpp_class = type_registry.find_class(of_class, (self.module_namespace_name or '::'))
                 cpp_class.add_method(Function(return_type, fun.name, arguments), name=as_method)
                 continue
+
+            if templates.is_instantiation(fun.demangled_name):
+                template_parameters = templates.args(fun.demangled_name)
+            else:
+                template_parameters = ()
                     
-            func_wrapper = Function(return_type, fun.name, arguments)
+            func_wrapper = Function(return_type, fun.name, arguments,
+                                    template_parameters=template_parameters)
             module.add_function(func_wrapper, name=alt_name)
 
         ## scan nested namespaces (mapped as python submodules)

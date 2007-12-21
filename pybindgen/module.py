@@ -7,6 +7,7 @@ from typehandlers.base import CodeBlock, DeclarationsScope
 from typehandlers.codesink import MemoryCodeSink
 from cppclass import CppClass
 from enum import Enum
+import utils
 
 
 class Module(object):
@@ -111,11 +112,12 @@ class Module(object):
         assert isinstance(wrapper, Function)
         if name is None:
             name = self.c_function_name_transformer(wrapper.function_name)
+        mangled_name = utils.get_mangled_name(name, wrapper.template_parameters)
         try:
-            overload = self.functions[name]
+            overload = self.functions[mangled_name]
         except KeyError:
-            overload = OverloadedFunction(name) # FIXME: name should be C function name
-            self.functions[name] = overload
+            overload = OverloadedFunction(mangled_name)
+            self.functions[mangled_name] = overload
         wrapper.module = self
         overload.add(wrapper)
 

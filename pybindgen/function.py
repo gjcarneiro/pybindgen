@@ -8,6 +8,7 @@ from typehandlers.base import ForwardWrapperBase
 from typehandlers import codesink
 import overloading
 import settings
+import utils
 
 
 class Function(ForwardWrapperBase):
@@ -15,7 +16,8 @@ class Function(ForwardWrapperBase):
     Class that generates a wrapper to a C function.
     """
 
-    def __init__(self, return_value, function_name, parameters, docstring=None, unblock_threads=None):
+    def __init__(self, return_value, function_name, parameters, docstring=None, unblock_threads=None,
+                 template_parameters=()):
         """
         return_value -- the function return value
         function_name -- name of the C function
@@ -34,6 +36,8 @@ class Function(ForwardWrapperBase):
         self.wrapper_actual_name = None
         self.docstring = docstring
         self.self_parameter_pystruct = None
+        self.template_parameters = template_parameters
+        self.mangled_name = utils.get_mangled_name(self.function_name, self.template_parameters)
 
     def clone(self):
         """Creates a semi-deep copy of this function wrapper.  The returned
@@ -55,7 +59,8 @@ class Function(ForwardWrapperBase):
     def set_module(self, module):
         """Set the Module object this function belongs to"""
         self._module = module
-        self.wrapper_base_name = "_wrap_%s%s" % (module.prefix, self.function_name)
+        self.wrapper_base_name = "_wrap_%s%s" % (
+            module.prefix, self.mangled_name)
     module = property(get_module, set_module)
     
     def generate_call(self):
@@ -64,20 +69,26 @@ class Function(ForwardWrapperBase):
             namespace = self._module.cpp_namespace_prefix + '::'
         else:
             namespace = ''
+
+        if self.template_parameters:
+            template_params = '< %s >' % ', '.join(self.template_parameters)
+        else:
+            template_params = ''
+ 
         if self.return_value.ctype == 'void':
             self.before_call.write_code(
-                '%s%s(%s);' % (namespace, self.function_name,
-                               ", ".join(self.call_params)))
+                '%s%s%s(%s);' % (namespace, self.function_name, template_params,
+                                 ", ".join(self.call_params)))
         else:
             if self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
                 self.before_call.write_code(
-                    '%s retval = %s%s(%s);' % (self.return_value.ctype,
-                                               namespace, self.function_name,
-                                            ", ".join(self.call_params)))
+                    '%s retval = %s%s%s(%s);' % (self.return_value.ctype,
+                                                 namespace, self.function_name, template_params,
+                                                 ", ".join(self.call_params)))
             else:
                 self.before_call.write_code(
-                    'retval = %s%s(%s);' % (namespace, self.function_name,
-                                            ", ".join(self.call_params)))
+                    'retval = %s%s%s(%s);' % (namespace, self.function_name, template_params,
+                                              ", ".join(self.call_params)))
 
     def _before_return_hook(self):
         "hook that post-processes parameters and check for custodian=<n> CppClass parameters"

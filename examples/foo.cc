@@ -169,3 +169,7 @@ InterfaceId make_interface_id ()
     return InterfaceId ();
 }
 
+template <> std::string TypeNameGet<int> (void)
+{
+    return "int";
+}
