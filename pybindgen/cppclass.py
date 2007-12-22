@@ -5,7 +5,7 @@ Wrap C++ classes and methods
 import warnings
 
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, Parameter, ReturnValue, \
-    join_ctype_and_name
+    join_ctype_and_name, CodeGenerationError
 
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor, \
     CppOverloadedMethod, CppOverloadedConstructor, \
@@ -908,7 +908,7 @@ class CppClassParameter(CppClassParameterBase):
                 "%s->inst_dict = NULL;" % (self.py_name,))
 
         if self.cpp_class.cannot_be_constructed:
-            raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
+            raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
         wrapper.before_call.write_code(
             "%s->obj = new %s(%s);" % (self.py_name, self.cpp_class.full_name, self.value))
 
@@ -968,7 +968,7 @@ class CppClassRefParameter(CppClassParameterBase):
                     "%s->inst_dict = NULL;" % (self.py_name,))
 
             if self.cpp_class.cannot_be_constructed:
-                raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
+                raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
             wrapper.before_call.write_code(
                 "%s->obj = new %s;" % (self.py_name, self.cpp_class.full_name))
 
@@ -1011,7 +1011,7 @@ class CppClassRefParameter(CppClassParameterBase):
 
         if self.direction == Parameter.DIRECTION_IN:
             if self.cpp_class.cannot_be_constructed:
-                raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
+                raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
             wrapper.before_call.write_code(
                 "%s->obj = new %s(%s);" % (self.py_name, self.cpp_class.full_name, self.value))
 
@@ -1037,7 +1037,7 @@ class CppClassRefParameter(CppClassParameterBase):
             ## simply erased (we never owned this object in the first
             ## place).
             if self.cpp_class.cannot_be_constructed:
-                raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
+                raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
             wrapper.after_call.write_code(
                 "if (%s->ob_refcnt == 1)\n"
                 "    %s->obj = NULL;\n"
@@ -1080,7 +1080,7 @@ class CppClassReturnValue(CppClassReturnValueBase):
                 "%s->inst_dict = NULL;" % (py_name,))
 
         if self.cpp_class.cannot_be_constructed:
-            raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
+            raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
         wrapper.after_call.write_code(
             "%s->obj = new %s(%s);" % (py_name, self.cpp_class.full_name, self.value))
 
@@ -1224,7 +1224,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                     if self.direction == Parameter.DIRECTION_IN:
 
                         if self.cpp_class.cannot_be_constructed:
-                            raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
+                            raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
                         wrapper.before_call.write_code(
                             "%s->obj = new %s(*%s);" %
                             (self.py_name, self.cpp_class.full_name, self.value))
@@ -1251,7 +1251,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                         ## simply erased (we never owned this object in the first
                         ## place).
                         if self.cpp_class.cannot_be_constructed:
-                            raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
+                            raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
                         wrapper.after_call.write_code(
                             "if (%s->ob_refcnt == 1)\n"
                             "    %s->obj = NULL;\n"
@@ -1406,7 +1406,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                 if self.cpp_class.incref_method is None:
                     ## The PyObject creates its own copy
                     if self.cpp_class.cannot_be_constructed:
-                        raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
+                        raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
                     wrapper.after_call.write_code(
                         "%s->obj = new %s(*%s);"
                         % (py_name, self.cpp_class.full_name, value))
@@ -1468,7 +1468,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             if self.cpp_class.incref_method is None:
                 ## the caller receives a copy
                 if self.cpp_class.cannot_be_constructed:
-                    raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
+                    raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
                 wrapper.after_call.write_code(
                     "%s = new %s(*%s);"
                     % (self.value, self.cpp_class.full_name, value))
