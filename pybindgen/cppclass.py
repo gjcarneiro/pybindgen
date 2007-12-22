@@ -906,8 +906,12 @@ class CppClassParameter(CppClassParameterBase):
         if self.cpp_class.allow_subclassing:
             wrapper.before_call.write_code(
                 "%s->inst_dict = NULL;" % (self.py_name,))
+
+        if self.cpp_class.cannot_be_constructed:
+            raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
         wrapper.before_call.write_code(
             "%s->obj = new %s(%s);" % (self.py_name, self.cpp_class.full_name, self.value))
+
         wrapper.build_params.add_parameter("N", [self.py_name])
 
 
@@ -962,8 +966,12 @@ class CppClassRefParameter(CppClassParameterBase):
             if self.cpp_class.allow_subclassing:
                 wrapper.after_call.write_code(
                     "%s->inst_dict = NULL;" % (self.py_name,))
+
+            if self.cpp_class.cannot_be_constructed:
+                raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
             wrapper.before_call.write_code(
                 "%s->obj = new %s;" % (self.py_name, self.cpp_class.full_name))
+
             wrapper.call_params.append('*%s->obj' % (self.py_name,))
             wrapper.build_params.add_parameter("N", [self.py_name])
 
@@ -1002,8 +1010,11 @@ class CppClassRefParameter(CppClassParameterBase):
                 "%s->inst_dict = NULL;" % (self.py_name,))
 
         if self.direction == Parameter.DIRECTION_IN:
+            if self.cpp_class.cannot_be_constructed:
+                raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
             wrapper.before_call.write_code(
                 "%s->obj = new %s(%s);" % (self.py_name, self.cpp_class.full_name, self.value))
+
             wrapper.build_params.add_parameter("N", [self.py_name])
         else:
             ## out/inout case:
@@ -1025,6 +1036,8 @@ class CppClassRefParameter(CppClassParameterBase):
             ## of the original object.  Else the ->obj pointer is
             ## simply erased (we never owned this object in the first
             ## place).
+            if self.cpp_class.cannot_be_constructed:
+                raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
             wrapper.after_call.write_code(
                 "if (%s->ob_refcnt == 1)\n"
                 "    %s->obj = NULL;\n"
@@ -1065,8 +1078,12 @@ class CppClassReturnValue(CppClassReturnValueBase):
         if self.cpp_class.allow_subclassing:
             wrapper.after_call.write_code(
                 "%s->inst_dict = NULL;" % (py_name,))
+
+        if self.cpp_class.cannot_be_constructed:
+            raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
         wrapper.after_call.write_code(
             "%s->obj = new %s(%s);" % (py_name, self.cpp_class.full_name, self.value))
+
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
     def convert_python_to_c(self, wrapper):
@@ -1206,6 +1223,8 @@ class CppClassPtrParameter(CppClassParameterBase):
 
                     if self.direction == Parameter.DIRECTION_IN:
 
+                        if self.cpp_class.cannot_be_constructed:
+                            raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
                         wrapper.before_call.write_code(
                             "%s->obj = new %s(*%s);" %
                             (self.py_name, self.cpp_class.full_name, self.value))
@@ -1231,6 +1250,8 @@ class CppClassPtrParameter(CppClassParameterBase):
                         ## of the original object.  Else the ->obj pointer is
                         ## simply erased (we never owned this object in the first
                         ## place).
+                        if self.cpp_class.cannot_be_constructed:
+                            raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
                         wrapper.after_call.write_code(
                             "if (%s->ob_refcnt == 1)\n"
                             "    %s->obj = NULL;\n"
@@ -1384,6 +1405,8 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             else:
                 if self.cpp_class.incref_method is None:
                     ## The PyObject creates its own copy
+                    if self.cpp_class.cannot_be_constructed:
+                        raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
                     wrapper.after_call.write_code(
                         "%s->obj = new %s(*%s);"
                         % (py_name, self.cpp_class.full_name, value))
@@ -1444,6 +1467,8 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         if self.caller_owns_return:
             if self.cpp_class.incref_method is None:
                 ## the caller receives a copy
+                if self.cpp_class.cannot_be_constructed:
+                    raise ValueError("%s cannot be constructed" % self.cpp_class.full_name)
                 wrapper.after_call.write_code(
                     "%s = new %s(*%s);"
                     % (self.value, self.cpp_class.full_name, value))
