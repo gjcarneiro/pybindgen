@@ -189,7 +189,7 @@ class AnnotationsScanner(object):
         self.used_annotations = {} # file name -> list(line_numbers)
         self._comment_rx = re.compile(
             r"^\s*(?://\s+-#-(?P<annotation1>.*)-#-\s*)|(?:/\*\s+-#-(?P<annotation2>.*)-#-\s*\*/)")
-        self._global_annotation_rx = re.compile(r"(\w+)=([^\s;]+)")
+        self._global_annotation_rx = re.compile(r"(\w+)(?:=([^\s;]+))?")
         self._param_annotation_rx = re.compile(r"@(\w+)\(([^;]+)\)")
 
     def _declare_used_annotation(self, file_name, line_number):
@@ -465,9 +465,11 @@ class ModuleParser(object):
             if member.name in [class_wrapper.incref_method, class_wrapper.decref_method]:
                 continue
 
-            dummy_global_annotations, parameter_annotations = \
+            global_annotations, parameter_annotations = \
                 annotations_scanner.get_annotations(member.location.file_name,
                                                     member.location.line)
+            if 'ignore' in global_annotations:
+                continue
             
             ## ------------ method --------------------
             if isinstance(member, calldef.member_function_t):
@@ -597,6 +599,7 @@ class ModuleParser(object):
             as_method = None
             of_class = None
             alt_name = None
+            ignore = False
             for name, value in global_annotations.iteritems():
                 if name == 'as_method':
                     as_method = value
@@ -604,9 +607,13 @@ class ModuleParser(object):
                     of_class = value
                 elif name == 'name':
                     alt_name = value
+                elif name == 'ignore':
+                    ignore = True
                 else:
                     warnings.warn_explicit("Incorrect annotation",
                                            Warning, fun.location.file_name, fun.location.line)
+            if ignore:
+                continue
 
             if as_method is not None:
                 assert of_class is not None

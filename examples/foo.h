@@ -403,10 +403,11 @@ public:
 private:
     InterfaceId () {}
     friend InterfaceId make_interface_id ();
+    // -#- ignore -#-
+    friend InterfaceId make_object_interface_id ();
 };
 
 InterfaceId make_interface_id ();
-
 
 template <typename T>
 std::string TypeNameGet (void)
