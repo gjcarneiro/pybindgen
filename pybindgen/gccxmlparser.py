@@ -461,6 +461,22 @@ class ModuleParser(object):
     def _scan_methods(self, cls, class_wrapper):
         have_trivial_constructor = False
 
+        ## look for protected pure virtual functions; if any is found,
+        ## then the class cannot be constructed (because protected
+        ## virtual functions not yet implemented.
+        for member in cls.get_members('protected'):
+            if isinstance(member, calldef.member_function_t):
+                pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
+                if pure_virtual:
+                    warnings.warn_explicit("%s: protected virtual functions not yet implemented "
+                                           "by PyBindGen, so the constructor for the class will "
+                                           "have to be disabled to avoid compilation errors."
+                                           % member,
+                                           Warning, member.location.file_name, member.location.line)
+                    class_wrapper.set_cannot_be_constructed(True)
+                    break
+
+
         for member in cls.get_members('public'):
             if member.name in [class_wrapper.incref_method, class_wrapper.decref_method]:
                 continue
