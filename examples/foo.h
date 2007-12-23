@@ -450,5 +450,67 @@ inline CannotBeConstructed* get_cannot_be_constructed_ptr () {
     return CannotBeConstructed::get_ptr ();
 }
 
+class AbstractBaseClass
+{
+public:
+    ~AbstractBaseClass () {}
+
+protected:
+    // A pure virtual method with a parameter type so strange that it
+    // cannot be possibly be automatically wrapped by pybindgen; this
+    // will cause the cannot_be_constructed flag on the class to be
+    // set to true, and allow us to test code generation error
+    // handling (see below).
+    virtual void do_something (char ****) = 0;
+
+    AbstractBaseClass () {}
+};
+
+class AbstractBaseClassImpl : public AbstractBaseClass
+{
+public:
+    ~AbstractBaseClassImpl () {}
+
+    // -#- @return(caller_owns_return=true) -#-
+    static AbstractBaseClass* get_abstract_base_class_ptr1 ()
+        {
+            return new AbstractBaseClassImpl;
+        }
+
+    // This method will be scanned by gccxmlparser and generate an error
+    // that is only detected in code generation time.
+    // -#- @return(caller_owns_return=false) -#-
+    static AbstractBaseClass* get_abstract_base_class_ptr2 ()
+        {
+            static AbstractBaseClassImpl *singleton = NULL;
+            if (not singleton)
+                singleton = new AbstractBaseClassImpl;
+            return singleton;
+        }
+
+protected:
+    virtual void do_something (char ****) {}
+
+    AbstractBaseClassImpl () {}
+};
+
+
+// -#- @return(caller_owns_return=true) -#-
+inline AbstractBaseClass* get_abstract_base_class_ptr1 ()
+{
+    return AbstractBaseClassImpl::get_abstract_base_class_ptr1 ();
+}
+
+// This function will be scanned by gccxmlparser and generate an error
+// that is only detected in code generation time.
+// -#- @return(caller_owns_return=false) -#-
+inline AbstractBaseClass* get_abstract_base_class_ptr2 ()
+{
+    static AbstractBaseClass *singleton = NULL;
+    if (not singleton)
+        singleton = AbstractBaseClassImpl::get_abstract_base_class_ptr1 ();
+    return singleton;
+}
+
 
 #endif 	    /* !FOO_H_ */

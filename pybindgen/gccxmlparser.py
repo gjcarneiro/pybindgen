@@ -16,6 +16,7 @@ from pygccxml.declarations import type_traits
 from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
 from pygccxml.declarations import templates
+import settings
 
 #from pygccxml.declarations.calldef import \
 #    destructor_t, constructor_t, member_function_t
@@ -24,6 +25,21 @@ from pygccxml.declarations.variable import variable_t
 __all__ = ['ModuleScanner']
 
 ## ------------------------
+
+class ErrorHandler(settings.ErrorHandler):
+    def handle_error(self, wrapper, exception, traceback_):
+        try:
+            definition = wrapper.gccxml_definition
+        except AttributeError:
+            print >> sys.stderr, "exception %r in wrapper %s" % (exception, wrapper)
+        else:
+            warnings.warn_explicit("exception %r in wrapper for %s"
+                                   % (exception, definition),
+                                   Warning, definition.location.file_name,
+                                   definition.location.line)
+        return True
+settings.error_handler = ErrorHandler()
+
 
 class GccXmlTypeRegistry(object):
     def __init__(self):
@@ -531,6 +547,7 @@ class ModuleParser(object):
                                            is_static=member.has_static,
                                            is_virtual=(is_virtual and class_wrapper.allow_subclassing),
                                            template_parameters=template_parameters)
+                method_wrapper.gccxml_definition = member
                 class_wrapper.add_method(method_wrapper)
 
             ## ------------ constructor --------------------
@@ -553,6 +570,7 @@ class ModuleParser(object):
                 if not ok:
                     continue
                 constructor_wrapper = CppConstructor(arguments)
+                constructor_wrapper.gccxml_definition = member
                 class_wrapper.add_constructor(constructor_wrapper)
 
             ## ------------ attribute --------------------
@@ -634,7 +652,9 @@ class ModuleParser(object):
             if as_method is not None:
                 assert of_class is not None
                 cpp_class = type_registry.find_class(of_class, (self.module_namespace_name or '::'))
-                cpp_class.add_method(Function(return_type, fun.name, arguments), name=as_method)
+                function_wrapper = Function(return_type, fun.name, arguments)
+                cpp_class.add_method(function_wrapper, name=as_method)
+                function_wrapper.gccxml_definition = fun
                 continue
 
             if templates.is_instantiation(fun.demangled_name):
@@ -644,6 +664,7 @@ class ModuleParser(object):
                     
             func_wrapper = Function(return_type, fun.name, arguments,
                                     template_parameters=template_parameters)
+            func_wrapper.gccxml_definition = fun
             module.add_function(func_wrapper, name=alt_name)
 
         ## scan nested namespaces (mapped as python submodules)
