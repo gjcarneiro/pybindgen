@@ -4,6 +4,7 @@ import sys
 import re
 
 import pybindgen
+import pybindgen.utils
 from pybindgen.typehandlers import base as typehandlers
 from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
 from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
@@ -305,6 +306,7 @@ def my_module_gen(out_file):
     cls.add_method(CppMethod(ReturnValue.new('SingletonClass*', caller_owns_return=True),
                              'GetInstance', [], is_static=True))
 
+
     ## A class that has no public default constructor...
     cls = CppClass('InterfaceId', is_singleton=True)
     mod.add_class(cls)
@@ -313,8 +315,30 @@ def my_module_gen(out_file):
                               'make_interface_id', []))
 
 
-    mod.generate(FileCodeSink(out_file))
+    ## A class the cannot be constructed; this will cause late CodeGenerationError's
+    cls = CppClass('CannotBeConstructed')
+    mod.add_class(cls)
+    cls.set_cannot_be_constructed(True)
+    cls.add_method(CppMethod(ReturnValue.new('CannotBeConstructed'),
+                             'get_value', [], is_static=True))
+    cls.add_method(CppMethod(ReturnValue.new('CannotBeConstructed*', caller_owns_return=True),
+                             'get_ptr', [], is_static=True))
+    mod.add_function(Function(ReturnValue.new('CannotBeConstructed'),
+                              'get_cannot_be_constructed_value', []))
+    mod.add_function(Function(ReturnValue.new('CannotBeConstructed*', caller_owns_return=True),
+                              'get_cannot_be_constructed_ptr', []))
 
+    class MyErrorHandler(pybindgen.settings.ErrorHandler):
+        def __init__(self):
+            self.num_errors = 0
+        def handle_error(self, wrapper, exception, traceback_):
+            print >> sys.stderr, "exception %s in wrapper %s" % (exception, wrapper)
+            self.num_errors += 1
+            return True
+    pybindgen.settings.error_handler = MyErrorHandler()
+
+    ## ---- finally, generate the whole thing ----
+    mod.generate(FileCodeSink(out_file))
 
 if __name__ == '__main__':
     my_module_gen(sys.stdout)

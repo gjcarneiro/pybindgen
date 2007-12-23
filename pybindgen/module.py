@@ -231,20 +231,26 @@ class Module(object):
         self.before_init.write_error_check("m == NULL")
 
         ## generate the function wrappers
+        py_method_defs = []
         if self.functions:
             code_sink.writeln('/* --- module functions --- */')
             code_sink.writeln()
             for func_name, overload in self.functions.iteritems():
                 code_sink.writeln()
-                overload.generate(code_sink)
+                #overload.generate(code_sink)
+                try:
+                    utils.call_with_error_handling(overload.generate, (code_sink,), {}, overload)
+                except utils.SkipWrapper:
+                    continue
                 code_sink.writeln()
+                py_method_defs.append(overload.get_py_method_def(func_name))
 
         ## generate the function table
         code_sink.writeln("static PyMethodDef %s_functions[] = {"
                           % (self.prefix,))
         code_sink.indent()
-        for func_name, overload in self.functions.iteritems():
-            code_sink.writeln(overload.get_py_method_def(func_name))
+        for py_method_def in py_method_defs:
+            code_sink.writeln(py_method_def)
         code_sink.writeln("{NULL, NULL, 0, NULL}")
         code_sink.unindent()
         code_sink.writeln("};")

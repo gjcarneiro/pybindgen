@@ -706,7 +706,11 @@ typedef struct {
         method_defs = []
         for meth_name, overload in self.methods.iteritems():
             code_sink.writeln()
-            overload.generate(code_sink)
+            #overload.generate(code_sink)
+            try:
+                utils.call_with_error_handling(overload.generate, (code_sink,), {}, overload)
+            except utils.SkipWrapper:
+                continue
             method_defs.append(overload.get_py_method_def(meth_name))
             code_sink.writeln()
         if self.helper_class is not None:

@@ -418,4 +418,37 @@ std::string TypeNameGet (void)
 template <> std::string TypeNameGet<int> (void);
 
 
+// Test code generation errors and error handling
+
+class CannotBeConstructed
+{
+public:
+    ~CannotBeConstructed () {}
+
+    // This static method cannot be generated
+    static CannotBeConstructed get_value () {
+        return CannotBeConstructed ();
+    }
+
+    // This static method can be generated because caller-owns-return=true
+    // -#- @return(caller_owns_return=true) -#-
+    static CannotBeConstructed* get_ptr () {
+        return new CannotBeConstructed ();
+    }
+private:
+    CannotBeConstructed () {}
+};
+
+// This function cannot be generated
+inline CannotBeConstructed get_cannot_be_constructed_value () {
+    return CannotBeConstructed::get_value ();
+}
+
+// This static method can be generated because caller-owns-return=true
+// -#- @return(caller_owns_return=true) -#-
+inline CannotBeConstructed* get_cannot_be_constructed_ptr () {
+    return CannotBeConstructed::get_ptr ();
+}
+
+
 #endif 	    /* !FOO_H_ */

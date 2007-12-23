@@ -1,7 +1,9 @@
+import sys
 from typehandlers.codesink import CodeSink
+from typehandlers.base import CodeGenerationError
 import version
+import settings
 
-__all__ = ['write_preamble']
 
 def write_preamble(code_sink, min_python_version=(2, 3)):
     """
@@ -70,6 +72,7 @@ typedef intobjargproc ssizeobjargproc;
 
 
 def get_mangled_name(base_name, template_args):
+    """for internal pybindgen use"""
     assert isinstance(base_name, str)
     assert isinstance(template_args, (tuple, list))
 
@@ -79,3 +82,26 @@ def get_mangled_name(base_name, template_args):
     else:
         return base_name
 
+
+class SkipWrapper(Exception):
+    """Exception that is raised to signal a wrapper failed to generate but
+    must simply be skipped.
+    for internal pybindgen use"""
+
+def call_with_error_handling(callable, args, kwargs, wrapper,
+                             exceptions_to_handle=(ValueError,TypeError,CodeGenerationError)):
+    """for internal pybindgen use"""
+    if settings.error_handler is None:
+        return callable(*args, **kwargs)
+    else:
+        try:
+            return callable(*args, **kwargs)
+        except Exception, ex:
+            if isinstance(ex, exceptions_to_handle):
+                dummy1, dummy2, traceback = sys.exc_info()
+                if settings.error_handler.handle_error(wrapper, ex, traceback):
+                    raise SkipWrapper
+                else:
+                    raise
+            else:
+                raise
