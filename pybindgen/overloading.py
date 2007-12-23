@@ -2,6 +2,7 @@
 C wrapper wrapper
 """
 from typehandlers.base import ForwardWrapperBase
+import utils
 
 def isiterable(obj): 
     """Returns True if an object appears to be iterable"""
@@ -110,7 +111,11 @@ class OverloadedWrapper(object):
         if len(self.all_wrappers) == 1:
             ## special case when there's only one wrapper; keep
             ## simple things simple
-            self.all_wrappers[0].generate(code_sink)
+
+            #self.all_wrappers[0].generate(code_sink)
+            utils.call_with_error_handling(self.all_wrappers[0].generate,
+                                           (code_sink,), {}, self.all_wrappers[0])
+
             self.wrapper_function_name = self.all_wrappers[0].wrapper_actual_name
             assert self.wrapper_function_name is not None
         else:
@@ -134,9 +139,23 @@ class OverloadedWrapper(object):
                 wrapper_name = "%s__%i" % (self.wrapper_function_name, number)
                 wrapper.set_parse_error_return(error_return)
                 code_sink.writeln()
-                wrapper.generate(code_sink, wrapper_name,
-                                 extra_wrapper_params=["PyObject **return_exception"])
+
+                # wrapper.generate(code_sink, wrapper_name,
+                #                  extra_wrapper_params=["PyObject **return_exception"])
+                try:
+                    utils.call_with_error_handling(
+                        wrapper.generate, args=(code_sink, wrapper_name),
+                        kwargs=dict(extra_wrapper_params=["PyObject **return_exception"]),
+                        wrapper=wrapper)
+                except utils.SkipWrapper:
+                    continue
+
                 delegate_wrappers.append(wrapper_name)
+
+            ## if all wrappers did not generate, then the overload
+            ## aggregator wrapper should not be generated either..
+            if not delegate_wrappers:
+                raise utils.SkipWrapper
             
             ## Generate the 'main wrapper' that calls the other ones
             code_sink.writeln()
