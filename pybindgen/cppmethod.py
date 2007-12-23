@@ -528,16 +528,16 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         ## Set "m_pyself->obj = this" around virtual method call invocation
         self_obj_before = self.declarations.declare_variable(
             '%s*' % self._class.full_name, 'self_obj_before')
-        self.before_call.write_code("%s = reinterpret_cast<%s*>(m_pyself)->obj;" %
+        self.before_call.write_code("%s = reinterpret_cast< %s* >(m_pyself)->obj;" %
                                     (self_obj_before, self._class.pystruct))
         if self.is_const:
-            this_expression = ("const_cast<%s*>((const %s*) this)" %
+            this_expression = ("const_cast< %s* >((const %s*) this)" %
                                (self._class.full_name, self._class.full_name))
         else:
             this_expression = "(%s*) this" % (self._class.full_name)
-        self.before_call.write_code("reinterpret_cast<%s*>(m_pyself)->obj = %s;" %
+        self.before_call.write_code("reinterpret_cast< %s* >(m_pyself)->obj = %s;" %
                                     (self._class.pystruct, this_expression))
-        self.before_call.add_cleanup_code("reinterpret_cast<%s*>(m_pyself)->obj = %s;" %
+        self.before_call.add_cleanup_code("reinterpret_cast< %s* >(m_pyself)->obj = %s;" %
                                           (self._class.pystruct, self_obj_before))
         
         super(CppVirtualMethodProxy, self).generate(
