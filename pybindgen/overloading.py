@@ -237,6 +237,11 @@ class OverloadedWrapper(object):
         self.all_wrappers[0].overload_index = None
         self.all_wrappers[0].generate_declaration(code_sink)
 
+    def reset_code_generation_state(self):
+        self._compute_all_wrappers()
+        for wrapper in self.all_wrappers:
+            wrapper.reset_code_generation_state()
+
 
 from cppclass import CppClassParameter
 

@@ -7,6 +7,8 @@ import warnings
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, Parameter, ReturnValue, \
     join_ctype_and_name, CodeGenerationError
 
+from typehandlers.codesink import NullCodeSink
+
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor, \
     CppOverloadedMethod, CppOverloadedConstructor, \
     CppVirtualMethodParentCaller, CppVirtualMethodProxy
@@ -93,6 +95,18 @@ class CppHelperClass(object):
             
         ## write the parent callers (_name)
         for parent_caller in self.virtual_parent_callers.itervalues():
+            parent_caller.class_ = self.class_
+            parent_caller.helper_class = self
+            parent_caller.reset_code_generation_state()
+            ## test code generation
+            try:
+                utils.call_with_error_handling(parent_caller.generate,
+                                               (NullCodeSink(),), {}, parent_caller)
+            except utils.SkipWrapper:
+                continue
+            finally:
+                parent_caller.reset_code_generation_state()
+
             code_sink.writeln()
             parent_caller.generate_declaration(code_sink)
 
@@ -100,6 +114,18 @@ class CppHelperClass(object):
         for virtual_proxy in self.virtual_proxies:
             virtual_proxy.class_ = self.class_
             virtual_proxy.helper_class = self
+            ## test code generation
+            virtual_proxy.class_ = self.class_
+            virtual_proxy.helper_class = self
+            virtual_proxy.reset_code_generation_state()
+            try:
+                utils.call_with_error_handling(virtual_proxy.generate,
+                                               (NullCodeSink(),), {}, virtual_proxy)
+            except utils.SkipWrapper:
+                continue
+            finally:
+                virtual_proxy.reset_code_generation_state()
+                
             code_sink.writeln()
             virtual_proxy.generate_declaration(code_sink)
 
@@ -115,14 +141,27 @@ class CppHelperClass(object):
             parent_caller.class_ = self.class_
             parent_caller.helper_class = self
             code_sink.writeln()
-            parent_caller.generate(code_sink)
 
+            ## parent_caller.generate(code_sink)
+            try:
+                utils.call_with_error_handling(parent_caller.generate,
+                                               (code_sink,), {}, parent_caller)
+            except utils.SkipWrapper:
+                continue
+                
         ## write the virtual proxies
         for virtual_proxy in self.virtual_proxies:
             virtual_proxy.class_ = self.class_
             virtual_proxy.helper_class = self
             code_sink.writeln()
-            virtual_proxy.generate(code_sink)
+
+            ## virtual_proxy.generate(code_sink)
+            try:
+                utils.call_with_error_handling(virtual_proxy.generate,
+                                               (code_sink,), {}, virtual_proxy)
+            except utils.SkipWrapper:
+                continue
+
 
 
 class CppClass(object):

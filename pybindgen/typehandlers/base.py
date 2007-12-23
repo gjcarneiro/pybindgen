@@ -478,12 +478,20 @@ class ReverseWrapperBase(object):
 
         if error_return is None:
             error_return = return_value.get_c_error_return()
+        self.error_return = error_return
         self.declarations = DeclarationsScope()
         self.before_call = CodeBlock(error_return, self.declarations)
         self.after_call = CodeBlock(error_return, self.declarations,
                                     predecessor=self.before_call)
         self.build_params = BuildValueParameters()
         self.parse_params = ParseTupleParameters()
+
+    def reset_code_generation_state(self):
+        self.declarations.clear()
+        self.before_call.clear()
+        self.after_call.clear()
+        self.build_params.clear()
+        self.parse_params.clear()        
 
     def generate_python_call(self):
         """Generates the code (into self.before_call) to call into

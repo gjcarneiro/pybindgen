@@ -99,3 +99,25 @@ class MemoryCodeSink(CodeSink):
         self.lines = []
         return "\n".join(l) + '\n'
 
+
+class NullCodeSink(CodeSink):
+    """A code sink that discards all content.  Useful to 'test' if code
+    generation would work without actually generating anything."""
+
+    def __init__(self):
+        "Constructor"
+        CodeSink.__init__(self)
+
+    def writeln(self, line=''):
+        """Write one or more lines of code"""
+        pass
+
+    def flush_to(self, sink):
+        """Flushes code to another code sink
+        sink -- another CodeSink instance
+        """
+        raise TypeError("Cannot flush a NullCodeSink; it has no content!")
+
+    def flush(self):
+        "Flushes the code and returns the formatted output as a return value string"
+        raise TypeError("Cannot flush a NullCodeSink; it has no content!")
