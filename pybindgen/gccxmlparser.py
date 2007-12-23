@@ -28,9 +28,17 @@ __all__ = ['ModuleScanner']
 
 class ErrorHandler(settings.ErrorHandler):
     def handle_error(self, wrapper, exception, traceback_):
-        try:
+        if hasattr(wrapper, "gccxml_definition"):
             definition = wrapper.gccxml_definition
-        except AttributeError:
+        elif hasattr(wrapper, "main_wrapper"):
+            try:
+                definition = wrapper.main_wrapper.gccxml_definition
+            except AttributeError:
+                definition = None
+        else:
+            definition = None
+
+        if definition is None:
             print >> sys.stderr, "exception %r in wrapper %s" % (exception, wrapper)
         else:
             warnings.warn_explicit("exception %r in wrapper for %s"

@@ -536,12 +536,14 @@ public:
             parent_caller = CppVirtualMethodParentCaller(method.return_value,
                                                          method.method_name,
                                                          method.parameters)
+            parent_caller.main_wrapper = method
             helper_class.add_virtual_parent_caller(parent_caller)
 
             proxy = CppVirtualMethodProxy(method.return_value,
                                           method.method_name,
                                           method.parameters,
                                           is_const=method.is_const)
+            proxy.main_wrapper = method
             helper_class.add_virtual_proxy(proxy)
 
     def set_cannot_be_constructed(self, flag=True):
