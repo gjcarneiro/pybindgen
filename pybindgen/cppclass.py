@@ -1320,12 +1320,19 @@ class CppClassPtrParameter(CppClassParameterBase):
                                           % (value, self.cpp_class.helper_class.name))
             wrapper.before_call.indent()
 
-            wrapper.before_call.write_code(
-                "%s = reinterpret_cast< %s* >(reinterpret_cast< %s* >(%s)->m_pyself);"
-                % (py_name, self.cpp_class.pystruct,
-                   self.cpp_class.helper_class.name, value))
-
-            wrapper.before_call.write_code("%s->obj = %s;" % (py_name, value))
+            if self.is_const:
+                wrapper.before_call.write_code(
+                    "%s = reinterpret_cast< %s* >(reinterpret_cast< %s* >(const_cast< %s* > (%s))->m_pyself);"
+                    % (py_name, self.cpp_class.pystruct,
+                       self.cpp_class.helper_class.name, self.cpp_class.full_name, value))
+                wrapper.before_call.write_code("%s->obj = const_cast< %s* > (%s);" %
+                                               (py_name, self.cpp_class.full_name, value))
+            else:
+                wrapper.before_call.write_code(
+                    "%s = reinterpret_cast< %s* >(reinterpret_cast< %s* >(%s)->m_pyself);"
+                    % (py_name, self.cpp_class.pystruct,
+                       self.cpp_class.helper_class.name, value))
+                wrapper.before_call.write_code("%s->obj = %s;" % (py_name, value))
             wrapper.before_call.write_code("Py_INCREF(%s);" % py_name)
             wrapper.before_call.unindent()
             wrapper.before_call.write_code("} else {")
