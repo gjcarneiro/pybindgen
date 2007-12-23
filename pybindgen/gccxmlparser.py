@@ -554,6 +554,7 @@ class ModuleParser(object):
                                            is_const=member.has_const,
                                            is_static=member.has_static,
                                            is_virtual=(is_virtual and class_wrapper.allow_subclassing),
+                                           is_pure_virtual=pure_virtual,
                                            template_parameters=template_parameters)
                 method_wrapper.gccxml_definition = member
                 class_wrapper.add_method(method_wrapper)

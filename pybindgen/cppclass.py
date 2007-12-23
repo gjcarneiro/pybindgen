@@ -35,6 +35,7 @@ class CppHelperClass(object):
         self.name = class_.name + "_PythonProxy"
         self.virtual_parent_callers = {}
         self.virtual_proxies = []
+        self.cannot_be_constructed = False
         
     def add_virtual_parent_caller(self, parent_caller):
         """Add a new CppVirtualMethodParentCaller object to this helper class"""
@@ -122,6 +123,8 @@ class CppHelperClass(object):
                 utils.call_with_error_handling(virtual_proxy.generate,
                                                (NullCodeSink(),), {}, virtual_proxy)
             except utils.SkipWrapper:
+                if virtual_proxy.method.is_pure_virtual:
+                    self.cannot_be_constructed = True
                 continue
             finally:
                 virtual_proxy.reset_code_generation_state()
@@ -256,6 +259,7 @@ class CppClass(object):
         self.slots = dict()
         self.helper_class = None
         self.cannot_be_constructed = False
+        self.have_pure_virtual_methods = False
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
         ## operator ThisClass(); in the other class.
@@ -340,6 +344,23 @@ class CppClass(object):
             self.ThisClassPtrReturn = ThisClassPtrReturn
 
         self._inherit_default_constructors()
+
+    def get_construct_name(self):
+        """Get a name usable for new %s construction, or raise
+        CodeGenerationError if none found"""
+        if self.cannot_be_constructed:
+            raise CodeGenerationError("%s cannot be constructed" % self.full_name)
+        if self.have_pure_virtual_methods:
+            if self.helper_class is None:
+                raise CodeGenerationError("%s cannot be constructed" % self.full_name)
+            else:
+                if self.helper_class.cannot_be_constructed:
+                    raise CodeGenerationError("%s cannot be constructed" % self.full_name)
+                else:
+                    return self.helper_class.name
+        else:
+            return self.full_name
+        
 
     def implicitly_converts_to(self, other):
         """
@@ -513,6 +534,7 @@ public:
             method.parameters[0].take_value_from_python_self = True
             method.module = self.module
             method.is_virtual = False
+            method.is_pure_virtual = False
             method.self_parameter_pystruct = self.pystruct
         else:
             raise TypeError
@@ -533,18 +555,16 @@ public:
                                  "support was not enabled for this class")
             helper_class = self.get_helper_class()
 
-            parent_caller = CppVirtualMethodParentCaller(method.return_value,
-                                                         method.method_name,
-                                                         method.parameters)
+            parent_caller = CppVirtualMethodParentCaller(method)
             parent_caller.main_wrapper = method
             helper_class.add_virtual_parent_caller(parent_caller)
 
-            proxy = CppVirtualMethodProxy(method.return_value,
-                                          method.method_name,
-                                          method.parameters,
-                                          is_const=method.is_const)
+            proxy = CppVirtualMethodProxy(method)
             proxy.main_wrapper = method
             helper_class.add_virtual_proxy(proxy)
+
+        if method.is_pure_virtual:
+            self.have_pure_virtual_methods = True
 
     def set_cannot_be_constructed(self, flag=True):
         self.cannot_be_constructed = flag
@@ -952,10 +972,8 @@ class CppClassParameter(CppClassParameterBase):
             wrapper.before_call.write_code(
                 "%s->inst_dict = NULL;" % (self.py_name,))
 
-        if self.cpp_class.cannot_be_constructed:
-            raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
         wrapper.before_call.write_code(
-            "%s->obj = new %s(%s);" % (self.py_name, self.cpp_class.full_name, self.value))
+            "%s->obj = new %s(%s);" % (self.py_name, self.cpp_class.get_construct_name(), self.value))
 
         wrapper.build_params.add_parameter("N", [self.py_name])
 
@@ -1011,12 +1029,8 @@ class CppClassRefParameter(CppClassParameterBase):
             if self.cpp_class.allow_subclassing:
                 wrapper.after_call.write_code(
                     "%s->inst_dict = NULL;" % (self.py_name,))
-
-            if self.cpp_class.cannot_be_constructed:
-                raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
             wrapper.before_call.write_code(
-                "%s->obj = new %s;" % (self.py_name, self.cpp_class.full_name))
-
+                "%s->obj = new %s;" % (self.py_name, self.cpp_class.get_construct_name()))
             wrapper.call_params.append('*%s->obj' % (self.py_name,))
             wrapper.build_params.add_parameter("N", [self.py_name])
 
@@ -1055,11 +1069,8 @@ class CppClassRefParameter(CppClassParameterBase):
                 "%s->inst_dict = NULL;" % (self.py_name,))
 
         if self.direction == Parameter.DIRECTION_IN:
-            if self.cpp_class.cannot_be_constructed:
-                raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
             wrapper.before_call.write_code(
-                "%s->obj = new %s(%s);" % (self.py_name, self.cpp_class.full_name, self.value))
-
+                "%s->obj = new %s(%s);" % (self.py_name, self.cpp_class.get_construct_name(), self.value))
             wrapper.build_params.add_parameter("N", [self.py_name])
         else:
             ## out/inout case:
@@ -1081,15 +1092,13 @@ class CppClassRefParameter(CppClassParameterBase):
             ## of the original object.  Else the ->obj pointer is
             ## simply erased (we never owned this object in the first
             ## place).
-            if self.cpp_class.cannot_be_constructed:
-                raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
             wrapper.after_call.write_code(
                 "if (%s->ob_refcnt == 1)\n"
                 "    %s->obj = NULL;\n"
                 "else\n"
                 "    %s->obj = new %s(%s);" %
                 (self.py_name, self.py_name, self.py_name,
-                 self.cpp_class.full_name, self.value))
+                 self.cpp_class.get_construct_name(), self.value))
             
 
 
@@ -1123,12 +1132,8 @@ class CppClassReturnValue(CppClassReturnValueBase):
         if self.cpp_class.allow_subclassing:
             wrapper.after_call.write_code(
                 "%s->inst_dict = NULL;" % (py_name,))
-
-        if self.cpp_class.cannot_be_constructed:
-            raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
         wrapper.after_call.write_code(
-            "%s->obj = new %s(%s);" % (py_name, self.cpp_class.full_name, self.value))
-
+            "%s->obj = new %s(%s);" % (py_name, self.cpp_class.get_construct_name(), self.value))
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
     def convert_python_to_c(self, wrapper):
@@ -1267,12 +1272,9 @@ class CppClassPtrParameter(CppClassParameterBase):
                     ## the object after the call.
 
                     if self.direction == Parameter.DIRECTION_IN:
-
-                        if self.cpp_class.cannot_be_constructed:
-                            raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
                         wrapper.before_call.write_code(
                             "%s->obj = new %s(*%s);" %
-                            (self.py_name, self.cpp_class.full_name, self.value))
+                            (self.py_name, self.cpp_class.get_construct_name(), self.value))
 
                         wrapper.build_params.add_parameter("N", [self.py_name])
                     else:
@@ -1295,15 +1297,13 @@ class CppClassPtrParameter(CppClassParameterBase):
                         ## of the original object.  Else the ->obj pointer is
                         ## simply erased (we never owned this object in the first
                         ## place).
-                        if self.cpp_class.cannot_be_constructed:
-                            raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
                         wrapper.after_call.write_code(
                             "if (%s->ob_refcnt == 1)\n"
                             "    %s->obj = NULL;\n"
                             "else\n"
                             "    %s->obj = new %s(*%s);" %
                             (self.py_name, self.py_name, self.py_name,
-                             self.cpp_class.full_name, value))
+                             self.cpp_class.get_construct_name(), value))
 
                 else:
                     ## The PyObject gets a new reference to the same obj
@@ -1457,11 +1457,9 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             else:
                 if self.cpp_class.incref_method is None:
                     ## The PyObject creates its own copy
-                    if self.cpp_class.cannot_be_constructed:
-                        raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
                     wrapper.after_call.write_code(
                         "%s->obj = new %s(*%s);"
-                        % (py_name, self.cpp_class.full_name, value))
+                        % (py_name, self.cpp_class.get_construct_name(), value))
                 else:
                     ## The PyObject gets a new reference to the same obj
                     wrapper.after_call.write_code(
@@ -1519,11 +1517,9 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         if self.caller_owns_return:
             if self.cpp_class.incref_method is None:
                 ## the caller receives a copy
-                if self.cpp_class.cannot_be_constructed:
-                    raise CodeGenerationError("%s cannot be constructed" % self.cpp_class.full_name)
                 wrapper.after_call.write_code(
                     "%s = new %s(*%s);"
-                    % (self.value, self.cpp_class.full_name, value))
+                    % (self.value, self.cpp_class.get_construct_name(), value))
             else:
                 ## the caller gets a new reference to the same obj
                 wrapper.after_call.write_code(

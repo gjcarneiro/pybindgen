@@ -18,7 +18,7 @@ class CppMethod(ForwardWrapperBase):
 
     def __init__(self, return_value, method_name, parameters, is_static=False,
                  template_parameters=(), is_virtual=False, is_const=False,
-                 unblock_threads=None):
+                 unblock_threads=None, is_pure_virtual=False):
         """
         return_value -- the method return value
         method_name -- name of the method
@@ -34,6 +34,7 @@ class CppMethod(ForwardWrapperBase):
         self.method_name = method_name
         self.is_static = is_static
         self.is_virtual = is_virtual
+        self.is_pure_virtual = is_pure_virtual
         self.is_const = is_const
         self.template_parameters = template_parameters
         self.mangled_name = utils.get_mangled_name(self.method_name, self.template_parameters)
@@ -351,16 +352,14 @@ class CppVirtualMethodParentCaller(CppMethod):
     implementation in a parent base class.
     """
 
-    def __init__(self, return_value, method_name, parameters, unblock_threads=None):
+    def __init__(self, method, unblock_threads=None):
         """
-        return_value -- the method return value
-        method_name -- name of the method
-        parameters -- the method parameters
         """
         super(CppVirtualMethodParentCaller, self).__init__(
-            return_value, method_name, parameters, unblock_threads=unblock_threads)
+            method.return_value, method.method_name, method.parameters, unblock_threads=unblock_threads)
         self._helper_class = None
         self.static_decl = False
+        self.method = method
 
     def set_class(self, class_):
         "Set the class wrapper object (CppClass)"
@@ -447,15 +446,12 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
     Class that generates a proxy virtual method that calls a similarly named python method.
     """
 
-    def __init__(self, return_value, method_name, parameters, is_const=False):
+    def __init__(self, method):
         """
-        return_value -- the method return value
-        method_name -- name of the virtual method
-        parameters -- the method parameters
         """
-        super(CppVirtualMethodProxy, self).__init__(return_value, parameters)
-        self.method_name = method_name
-        self.is_const = is_const
+        super(CppVirtualMethodProxy, self).__init__(method.return_value, method.parameters)
+        self.method_name = method.method_name
+        self.method = method
         self._class = None
         self._helper_class = None
 
@@ -493,7 +489,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         self.before_call.add_cleanup_code('Py_DECREF(py_retval);')
 
     def generate_declaration(self, code_sink):
-        if self.is_const:
+        if self.method.is_const:
             decl_post_modifiers = ' const'
         else:
             decl_post_modifiers = ''
@@ -507,7 +503,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
 
     def generate(self, code_sink):
         """generates the proxy virtual method"""
-        if self.is_const:
+        if self.method.is_const:
             decl_post_modifiers = ['const']
         else:
             decl_post_modifiers = []
@@ -530,7 +526,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
             '%s*' % self._class.full_name, 'self_obj_before')
         self.before_call.write_code("%s = reinterpret_cast< %s* >(m_pyself)->obj;" %
                                     (self_obj_before, self._class.pystruct))
-        if self.is_const:
+        if self.method.is_const:
             this_expression = ("const_cast< %s* >((const %s*) this)" %
                                (self._class.full_name, self._class.full_name))
         else:
