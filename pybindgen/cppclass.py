@@ -1066,7 +1066,7 @@ class CppClassRefParameter(CppClassParameterBase):
             ## that the python code directly manipulates the object
             ## received as parameter, instead of a copy.
             if self.is_const:
-                value = "const_cast<%s*>(&(%s))" % (self.cpp_class.full_name, self.value)
+                value = "const_cast< %s* >(&(%s))" % (self.cpp_class.full_name, self.value)
             else:
                 value = "&(%s)" % self.value
             wrapper.before_call.write_code(
@@ -1280,7 +1280,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                         ## that the python code directly manipulates the object
                         ## received as parameter, instead of a copy.
                         if self.is_const:
-                            unconst_value = "const_cast<%s*>(%s)" % (self.cpp_class.full_name, value)
+                            unconst_value = "const_cast< %s* >(%s)" % (self.cpp_class.full_name, value)
                         else:
                             unconst_value = value
                         wrapper.before_call.write_code(
@@ -1319,7 +1319,7 @@ class CppClassPtrParameter(CppClassParameterBase):
             wrapper.before_call.indent()
 
             wrapper.before_call.write_code(
-                "%s = reinterpret_cast<%s*>(reinterpret_cast<%s*>(%s)->m_pyself);"
+                "%s = reinterpret_cast< %s* >(reinterpret_cast< %s* >(%s)->m_pyself);"
                 % (py_name, self.cpp_class.pystruct,
                    self.cpp_class.helper_class.name, value))
 
@@ -1468,7 +1468,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             wrapper.after_call.indent()
 
             wrapper.after_call.write_code(
-                "%s = reinterpret_cast<%s*>(reinterpret_cast<%s*>(%s)->m_pyself);"
+                "%s = reinterpret_cast< %s* >(reinterpret_cast< %s* >(%s)->m_pyself);"
                 % (py_name, self.cpp_class.pystruct,
                    self.cpp_class.helper_class.name, value))
 
