@@ -486,14 +486,16 @@ class ModuleParser(object):
         have_trivial_constructor = False
         have_copy_constructor = False
 
-        ## look for protected pure virtual functions; if any is found,
-        ## then the class cannot be constructed (because protected
+        ## look for protected or private pure virtual functions; if any is found,
+        ## then the class cannot be constructed (because private/protected
         ## virtual functions not yet implemented.
-        for member in cls.get_members('protected'):
+        for member in cls.get_members():
             if isinstance(member, calldef.member_function_t):
+                if member.access_type not in ['protected', 'private']:
+                    continue
                 pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
                 if pure_virtual:
-                    warnings.warn_explicit("%s: protected virtual functions not yet implemented "
+                    warnings.warn_explicit("%s: protected/private virtual functions not yet implemented "
                                            "by PyBindGen, so the constructor for the class will "
                                            "have to be disabled to avoid compilation errors."
                                            % member,
