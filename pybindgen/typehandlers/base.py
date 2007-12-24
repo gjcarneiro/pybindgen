@@ -422,6 +422,23 @@ class DeclarationsScope(object):
         self._declarations.writeln(decl + ';')
         return varname
 
+    def reserve_variable(self, name):
+        """Reserve a variable name, to be used later.
+        name -- base name of the variable; actual name used can be
+                slightly different in case of name conflict.
+        """
+        try:
+            num = self.declared_variables[name]
+        except KeyError:
+            num = 0
+        num += 1
+        self.declared_variables[name] = num
+        if num == 1:
+            varname = name
+        else:
+            varname = "%s%i" % (name, num)
+        return varname
+
     def get_code_sink(self):
         """Returns the internal MemoryCodeSink that holds all declararions."""
         return self._declarations
@@ -511,7 +528,8 @@ class ReverseWrapperBase(object):
         assert all([isinstance(mod, str) for mod in decl_modifiers])
 
         self.declarations.declare_variable('PyObject*', 'py_retval')
-        if self.return_value.ctype != 'void':
+        if self.return_value.ctype != 'void' \
+                and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
             self.declarations.declare_variable(self.return_value.ctype, 'retval')
 
         ## convert the input parameters
@@ -673,7 +691,8 @@ class ForwardWrapperBase(object):
         if self.return_value is not None:
             self.declarations.declare_variable('PyObject*', 'py_retval')
         if (not self.no_c_retval and self.return_value is not None
-            and self.return_value.ctype != 'void'):
+            and self.return_value.ctype != 'void'
+            and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR):
             self.declarations.declare_variable(self.return_value.ctype, 'retval')
         
 

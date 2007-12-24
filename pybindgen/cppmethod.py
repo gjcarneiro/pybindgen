@@ -378,7 +378,7 @@ class CppVirtualMethodParentCaller(CppMethod):
     def generate_declaration(self, code_sink, extra_wrapper_parameters=()):
         ## We need to fake generate the code (and throw away the
         ## result) only in order to obtain correct method signature.
-        tmp_sink = codesink.MemoryCodeSink()
+        tmp_sink = codesink.NullCodeSink()
         self.generate_body(tmp_sink, gen_call_params=[self.class_])
 
         if self.overload_index is None:

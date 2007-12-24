@@ -335,7 +335,6 @@ class CppClass(object):
                 """Register this C++ class as value return"""
                 CTYPES = [name]
                 cpp_class = self
-                REQUIRES_ASSIGNMENT_CONSTRUCTOR = True
 
             self.ThisClassReturn = ThisClassReturn
             self.ThisClassRefReturn = ThisClassReturn
@@ -1115,6 +1114,7 @@ class CppClassReturnValue(CppClassReturnValueBase):
     "Class return handlers"
     CTYPES = []
     cpp_class = CppClass('dummy') # CppClass instance
+    REQUIRES_ASSIGNMENT_CONSTRUCTOR = True
 
     def __init__(self, ctype):
         """override to fix the ctype parameter with namespace information"""
@@ -1151,7 +1151,8 @@ class CppClassReturnValue(CppClassReturnValueBase):
             self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
         wrapper.parse_params.add_parameter(
             'O!', ['&'+self.cpp_class.pytypestruct, '&'+name])
-        wrapper.after_call.write_code('%s = *%s->obj;' % (self.value, name))
+        wrapper.after_call.write_code('%s %s = *%s->obj;' %
+                                      (self.cpp_class.full_name, self.value, name))
     
 
 

@@ -136,7 +136,10 @@ class CppInstanceAttributeSetter(PySetter):
 
         if self.setter is not None:
             ## if we have a setter method, redirect the value to a temporary variable
-            value_var = self.declarations.declare_variable(self.return_value.ctype, 'tmp_value')
+            if not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
+                value_var = self.declarations.declare_variable(self.return_value.ctype, 'tmp_value')
+            else:
+                value_var = self.declarations.reserve_variable('tmp_value')
             self.return_value.value = value_var
         else:
             ## else the value is written directly to a C++ instance attribute
