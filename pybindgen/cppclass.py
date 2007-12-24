@@ -90,6 +90,7 @@ class CppHelperClass(object):
         code_sink.writeln("""
 void set_pyobj(PyObject *pyobj)
 {
+    Py_XDECREF(m_pyself);
     Py_INCREF(pyobj);
     m_pyself = pyobj;
 }
