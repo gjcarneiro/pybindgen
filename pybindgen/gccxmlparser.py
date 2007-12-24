@@ -484,6 +484,7 @@ class ModuleParser(object):
 
     def _scan_methods(self, cls, class_wrapper):
         have_trivial_constructor = False
+        have_copy_constructor = False
 
         ## look for protected pure virtual functions; if any is found,
         ## then the class cannot be constructed (because protected
@@ -582,6 +583,10 @@ class ModuleParser(object):
                 constructor_wrapper.gccxml_definition = member
                 class_wrapper.add_constructor(constructor_wrapper)
 
+                if (len(arguments) == 1
+                    and isinstance(arguments[0], class_wrapper.ThisClassRefParameter)):
+                    have_copy_constructor = True
+
             ## ------------ attribute --------------------
             elif isinstance(member, variable_t):
                 try:
@@ -604,6 +609,11 @@ class ModuleParser(object):
         if not have_trivial_constructor:
             if type_traits.has_trivial_constructor(cls):
                 class_wrapper.add_constructor(CppConstructor([]))
+        if not have_copy_constructor:
+            if type_traits.has_copy_constructor(cls):
+                class_wrapper.add_constructor(CppConstructor([
+                            class_wrapper.ThisClassRefParameter("%s const &" % class_wrapper.full_name,
+                                                                'ctor_arg', is_const=True)]))
 
             
     def _scan_namespace_functions(self, module, module_namespace):
