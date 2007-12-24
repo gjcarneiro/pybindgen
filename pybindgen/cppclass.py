@@ -74,18 +74,26 @@ class CppHelperClass(object):
         code_sink.indent()
         code_sink.writeln("PyObject *m_pyself;")
 
-        ## write the constructors
+        ## replicate the parent constructors in the helper class
         for cons in self.class_.constructors:
-            params = ['PyObject *pyself']
-            params.extend([join_ctype_and_name(param.ctype, param.name)
-                           for param in cons.parameters])
+            params = [join_ctype_and_name(param.ctype, param.name)
+                      for param in cons.parameters]
             code_sink.writeln("%s(%s)" % (self.name, ', '.join(params)))
             code_sink.indent()
-            code_sink.writeln(": %s(%s), m_pyself((Py_INCREF(pyself), pyself))\n{}" %
+            code_sink.writeln(": %s(%s), m_pyself(NULL)\n{}" %
                               (self.class_.name,
                                ', '.join([param.name for param in cons.parameters])))
             code_sink.unindent()
             code_sink.writeln()
+
+        ## add the set_pyobj method
+        code_sink.writeln("""
+void set_pyobj(PyObject *pyobj)
+{
+    Py_INCREF(pyobj);
+    m_pyself = pyobj;
+}
+""")
 
         ## write a destructor
         code_sink.writeln("~%s()\n{" % self.name)

@@ -240,11 +240,12 @@ class CppConstructor(ForwardWrapperBase):
             call_params = self.call_params
         else:
             class_name = class_.helper_class.name
-            call_params = ['(PyObject *)self'] + self.call_params
         #self.before_call.write_code(r'fprintf(stderr, "creating a %s class instance\n");' % class_name)
         self.before_call.write_code(
             'self->obj = new %s(%s);' %
-            (class_name, ", ".join(call_params)))
+            (class_name, ", ".join(self.call_params)))
+        if class_.helper_class is not None:
+            self.before_call.write_code('((%s*) self->obj)->set_pyobj((PyObject *)self);' % class_name)
 
     def _before_return_hook(self):
         "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
