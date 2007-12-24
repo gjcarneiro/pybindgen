@@ -513,7 +513,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         ## just chain to parent class and don't do anything else
         call_params = ', '.join([param.name for param in self.parameters])
         self.before_call.write_code(
-            r'if (!PyObject_HasAttrString(m_pyself, "_%s"))' % self.method_name)
+            r'if (!PyObject_HasAttrString(m_pyself, "_%s")) {' % self.method_name)
         if self.return_value.ctype == 'void':
             self.before_call.write_code(r'    %s::%s(%s);'
                                         % (self._class.full_name, self.method_name, call_params))
@@ -521,6 +521,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         else:
             self.before_call.write_code(r'    return %s::%s(%s);'
                                         % (self._class.full_name, self.method_name, call_params))
+        self.before_call.write_code('}')
 
         ## Set "m_pyself->obj = this" around virtual method call invocation
         self_obj_before = self.declarations.declare_variable(
