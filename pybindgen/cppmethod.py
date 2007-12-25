@@ -527,8 +527,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
                     self.set_error_return('''
 PyErr_Print();
 Py_Fatal("Error detected, but parent virtual is pure virtual, "
-         "and return is a class without trival constructor");'''
-                    % (self._class.full_name, self.method_name, call_params))
+         "and return is a class without trival constructor");''')
             else:
                 self.set_error_return("PyErr_Print();\nreturn %s::%s(%s);"
                                       % (self._class.full_name, self.method_name, call_params))
