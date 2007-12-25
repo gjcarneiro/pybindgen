@@ -69,7 +69,7 @@ class GccXmlTypeRegistry(object):
             class_name = '::' + class_name
         return self.classes[class_name]           
 
-    def _get_class_type_traits(self, type_info):
+    def get_class_type_traits(self, type_info):
         assert isinstance(type_info, cpptypes.type_t)
 
         decomposed = type_traits.decompose_type(type_info)
@@ -125,7 +125,7 @@ class GccXmlTypeRegistry(object):
     def lookup_return(self, type_info, annotations={}):
         assert isinstance(type_info, cpptypes.type_t)
         cpp_class, is_const, is_pointer, is_reference, pointer_is_const = \
-            self._get_class_type_traits(type_info)
+            self.get_class_type_traits(type_info)
 
         kwargs = {}
         for name, value in annotations.iteritems():
@@ -181,7 +181,7 @@ class GccXmlTypeRegistry(object):
                 warnings.warn("invalid annotation name %r" % name)
 
         cpp_class, is_const, is_pointer, is_reference, pointer_is_const = \
-            self._get_class_type_traits(type_info)
+            self.get_class_type_traits(type_info)
         if is_const:
             kwargs['is_const'] = True
         if cpp_class is None:
@@ -486,13 +486,13 @@ class ModuleParser(object):
         have_trivial_constructor = False
         have_copy_constructor = False
 
-        ## look for protected or private pure virtual functions; if any is found,
-        ## then the class cannot be constructed (because private/protected
-        ## virtual functions not yet implemented.
         for member in cls.get_members():
             if isinstance(member, calldef.member_function_t):
                 if member.access_type not in ['protected', 'private']:
                     continue
+                ## look for protected or private pure virtual functions; if any is found,
+                ## then the class cannot be constructed (because private/protected
+                ## virtual functions not yet implemented.
                 pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
                 if pure_virtual:
                     warnings.warn_explicit("%s: protected/private virtual functions not yet implemented "
@@ -503,6 +503,19 @@ class ModuleParser(object):
                     class_wrapper.set_cannot_be_constructed(True)
                     break
 
+            elif isinstance(member, calldef.constructor_t):
+                if member.access_type not in ['protected', 'private']:
+                    continue
+
+                if len(member.arguments) == 0:
+                    have_trivial_constructor = True
+
+                elif len(member.arguments) == 1:
+                    (cpp_class, dummy_is_const, dummy_is_pointer,
+                     is_reference, dummy_pointer_is_const) = \
+                        type_registry.get_class_type_traits(member.arguments[0].type)
+                    if cpp_class is class_wrapper and is_reference:
+                        have_copy_constructor = True
 
         for member in cls.get_members('public'):
             if member.name in [class_wrapper.incref_method, class_wrapper.decref_method]:
