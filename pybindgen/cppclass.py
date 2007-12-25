@@ -5,7 +5,8 @@ Wrap C++ classes and methods
 import warnings
 
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, Parameter, ReturnValue, \
-    join_ctype_and_name, CodeGenerationError, TypeConfigurationError
+    join_ctype_and_name, CodeGenerationError, TypeConfigurationError, \
+    param_type_matcher, return_type_matcher
 
 from typehandlers.codesink import NullCodeSink, MemoryCodeSink
 
@@ -435,6 +436,33 @@ class CppClass(object):
                 self.full_name = module.cpp_namespace_prefix + '::' + self.name
         else:
             self.full_name = self.name
+
+        ## re-register the class type handlers, now with class full name
+
+        self.ThisClassParameter.CTYPES.append(self.full_name)
+        try:
+            param_type_matcher.register(self.full_name, self.ThisClassParameter)
+        except ValueError: pass
+        
+        self.ThisClassRefParameter.CTYPES.append(self.full_name+'&')
+        try:
+            param_type_matcher.register(self.full_name+'&', self.ThisClassRefParameter)
+        except ValueError: pass
+
+        self.ThisClassReturn.CTYPES.append(self.full_name)
+        try:
+            return_type_matcher.register(self.full_name, self.ThisClassReturn)
+        except ValueError: pass
+
+        self.ThisClassPtrParameter.CTYPES.append(self.full_name+'*')
+        try:
+            param_type_matcher.register(self.full_name+'*', self.ThisClassPtrParameter)
+        except ValueError: pass
+
+        self.ThisClassPtrReturn.CTYPES.append(self.full_name+'*')
+        try:
+            return_type_matcher.register(self.full_name+'*', self.ThisClassPtrReturn)
+        except ValueError: pass
 
     module = property(get_module, set_module)
 
