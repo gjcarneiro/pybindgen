@@ -192,6 +192,7 @@ class CppStaticAttributeSetter(PySetter):
         self.c_function_name = "_wrap_%s__set_%s" % (self.class_.pystruct,
                                                      self.attribute_name)
         value_type.value =  "%s::%s" % (self.class_.full_name, self.attribute_name)
+        value_type.REQUIRES_ASSIGNMENT_CONSTRUCTOR = False
 
     def generate(self, code_sink):
         """

@@ -1151,10 +1151,12 @@ class CppClassReturnValue(CppClassReturnValueBase):
             self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
         wrapper.parse_params.add_parameter(
             'O!', ['&'+self.cpp_class.pytypestruct, '&'+name])
-        wrapper.after_call.write_code('%s %s = *%s->obj;' %
-                                      (self.cpp_class.full_name, self.value, name))
+        if self.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
+            wrapper.after_call.write_code('%s %s = *%s->obj;' %
+                                          (self.cpp_class.full_name, self.value, name))
+        else:
+            wrapper.after_call.write_code('%s = *%s->obj;' % (self.value, name))
     
-
 
 class CppClassPtrParameter(CppClassParameterBase):
     "Class* handlers"
