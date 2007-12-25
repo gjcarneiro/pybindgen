@@ -612,9 +612,11 @@ class ModuleParser(object):
                                            Warning, member.location.file_name, member.location.line)
                     continue
                 if member.type_qualifiers.has_static:
-                    class_wrapper.add_static_attribute(return_type, member.name)
+                    class_wrapper.add_static_attribute(return_type, member.name,
+                                                       is_const=type_traits.is_const(member.type))
                 else:
-                    class_wrapper.add_instance_attribute(return_type, member.name)
+                    class_wrapper.add_instance_attribute(return_type, member.name,
+                                                         is_const=type_traits.is_const(member.type))
             
             elif isinstance(member, calldef.destructor_t):
                 pass
