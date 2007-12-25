@@ -1350,7 +1350,11 @@ class CppClassPtrParameter(CppClassParameterBase):
                     ## The PyObject gets a new reference to the same obj
                     wrapper.before_call.write_code(
                         "%s->%s();" % (value, self.cpp_class.incref_method))
-                    wrapper.before_call.write_code("%s->obj = %s;" % (py_name, value))
+                    if self.is_const:
+                        wrapper.before_call.write_code("%s->obj = const_cast< %s*>(%s);" %
+                                                       (py_name, self.cpp_class.full_name, value))
+                    else:
+                        wrapper.before_call.write_code("%s->obj = %s;" % (py_name, value))
                     wrapper.build_params.add_parameter("N", [py_name])
         ## closes def write_create_new_wrapper():
 
@@ -1408,7 +1412,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
     SUPPORTS_TRANSFORMATIONS = True
     cpp_class = CppClass('dummy') # CppClass instance
 
-    def __init__(self, ctype, caller_owns_return=None, custodian=None):
+    def __init__(self, ctype, caller_owns_return=None, custodian=None, is_const=False):
         """
         ctype -- C type, normally 'MyClass*'
         caller_owns_return -- if true, ownership of the object pointer
@@ -1428,6 +1432,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassPtrReturnValue, self).__init__(ctype)
+        self.is_const = is_const
         if custodian is None and caller_owns_return is None:
             raise TypeConfigurationError("caller_owns_return not given")
         self.custodian = custodian
@@ -1505,7 +1510,11 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                     ## The PyObject gets a new reference to the same obj
                     wrapper.after_call.write_code(
                         "%s->%s();" % (value, self.cpp_class.incref_method))
-                    wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
+                    if self.is_const:
+                        wrapper.after_call.write_code("%s->obj = const_cast< %s* >(%s);" %
+                                                      (py_name, self.cpp_class.full_name, value))
+                    else:
+                        wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
         ## closes def write_create_new_wrapper():
 
         if self.cpp_class.helper_class is None:
@@ -1565,8 +1574,13 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                 ## the caller gets a new reference to the same obj
                 wrapper.after_call.write_code(
                     "%s->%s();" % (value, self.cpp_class.incref_method))
-                wrapper.after_call.write_code(
-                    "%s = %s;" % (self.value, value))
+                if self.is_const:
+                    wrapper.after_call.write_code(
+                        "%s = const_cass< %s* >(%s);" %
+                        (self.value, self.cpp_class.full_name, value))
+                else:
+                    wrapper.after_call.write_code(
+                        "%s = %s;" % (self.value, value))
         else:
             ## caller gets a shared pointer
             ## but this is dangerous, avoid at all cost!!!
