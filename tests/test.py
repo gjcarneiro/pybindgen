@@ -51,7 +51,7 @@ class ParamLookupTests(unittest.TestCase):
     def testLookup(self):
         handler = typehandlers.Parameter.new('testtype*', 'name')
         self.assert_(isinstance(handler, TestParam))
-        self.assertRaises(KeyError, typehandlers.Parameter.new, 'non_existent_type', 'name')
+        self.assertRaises(typehandlers.TypeLookupError, typehandlers.Parameter.new, 'non_existent_type', 'name')
 
     def testLookupTransformed(self):
         transformed = typehandlers.Parameter.new('MySmartPointer<testtype>', 'name')
