@@ -1144,11 +1144,12 @@ class CppClassReturnValue(CppClassReturnValueBase):
     cpp_class = CppClass('dummy') # CppClass instance
     REQUIRES_ASSIGNMENT_CONSTRUCTOR = True
 
-    def __init__(self, ctype):
+    def __init__(self, ctype, is_const=False):
         """override to fix the ctype parameter with namespace information"""
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassReturnValue, self).__init__(ctype)
+        self.is_const = is_const
 
     def get_c_error_return(self): # only used in reverse wrappers
         """See ReturnValue.get_c_error_return"""
