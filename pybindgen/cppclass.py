@@ -7,7 +7,7 @@ import warnings
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, Parameter, ReturnValue, \
     join_ctype_and_name, CodeGenerationError
 
-from typehandlers.codesink import NullCodeSink
+from typehandlers.codesink import NullCodeSink, MemoryCodeSink
 
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor, \
     CppOverloadedMethod, CppOverloadedConstructor, \
@@ -64,9 +64,22 @@ class CppHelperClass(object):
         assert isinstance(virtual_proxy, CppVirtualMethodProxy)
         self.virtual_proxies.append(virtual_proxy)
 
-    def generate_forward_declarations(self, code_sink):
+    def generate_forward_declarations(self, code_sink_param):
         """
         Generate the proxy class (declaration only) to a given code sink
+        """
+        code_sink = MemoryCodeSink()
+        if self._generate_forward_declarations(code_sink):
+            code_sink.flush_to(code_sink_param)
+        else:
+            self.cannot_be_constructed = True
+
+    def _generate_forward_declarations(self, code_sink):
+        """
+        Generate the proxy class (declaration only) to a given code sink.
+
+        Returns True if all is well, False if a pure virtual method
+        was found that could not be generated.
         """
         code_sink.writeln("class %s : public %s\n{\npublic:" %
                           (self.name, self.class_.full_name))
@@ -133,8 +146,7 @@ void set_pyobj(PyObject *pyobj)
                                                (NullCodeSink(),), {}, virtual_proxy)
             except utils.SkipWrapper:
                 if virtual_proxy.method.is_pure_virtual:
-                    self.cannot_be_constructed = True
-                continue
+                    return False
             finally:
                 virtual_proxy.reset_code_generation_state()
                 
@@ -143,6 +155,7 @@ void set_pyobj(PyObject *pyobj)
 
         code_sink.unindent()
         code_sink.writeln("};\n")
+        return True
 
     def generate(self, code_sink):
         """
@@ -267,6 +280,9 @@ class CppClass(object):
         self.constructors = [] # (name, wrapper) pairs
         self.slots = dict()
         self.helper_class = None
+        ## set to True when we become aware generating the helper
+        ## class is not going to be possible
+        self.helper_class_disabled = False
         self.cannot_be_constructed = False
         self.has_trivial_constructor = False
         self.have_pure_virtual_methods = False
@@ -437,6 +453,8 @@ class CppClass(object):
 
     def get_helper_class(self):
         """gets the "helper class" for this class wrapper, creating it if necessary"""
+        if self.helper_class_disabled:
+            return None
         if self.helper_class is None:
             self.helper_class = CppHelperClass(self)
         return self.helper_class
@@ -558,22 +576,23 @@ public:
 
         method.class_ = self
         overload.add(method)
+        if method.is_pure_virtual:
+            self.have_pure_virtual_methods = True
         if method.is_virtual:
             if not self.allow_subclassing:
                 raise ValueError("Cannot add virtual methods if subclassing "
                                  "support was not enabled for this class")
             helper_class = self.get_helper_class()
+            if helper_class is not None:
+                parent_caller = CppVirtualMethodParentCaller(method)
+                parent_caller.main_wrapper = method
+                helper_class.add_virtual_parent_caller(parent_caller)
 
-            parent_caller = CppVirtualMethodParentCaller(method)
-            parent_caller.main_wrapper = method
-            helper_class.add_virtual_parent_caller(parent_caller)
-
-            proxy = CppVirtualMethodProxy(method)
-            proxy.main_wrapper = method
-            helper_class.add_virtual_proxy(proxy)
-
-        if method.is_pure_virtual:
-            self.have_pure_virtual_methods = True
+                proxy = CppVirtualMethodProxy(method)
+                proxy.main_wrapper = method
+                helper_class.add_virtual_proxy(proxy)
+        if self.have_pure_virtual_methods and self.helper_class is None:
+            self.cannot_be_constructed = True
 
     def set_cannot_be_constructed(self, flag=True):
         self.cannot_be_constructed = flag
@@ -652,7 +671,13 @@ typedef struct {
         code_sink.writeln()
 
         if self.helper_class is not None:
-            self.helper_class.generate_forward_declarations(code_sink)       
+            self.helper_class.generate_forward_declarations(code_sink)
+            if self.helper_class.cannot_be_constructed:
+                self.helper_class = None
+                self.helper_class_disabled = True
+        if self.have_pure_virtual_methods and self.helper_class is None:
+            self.cannot_be_constructed = True
+
 
     def generate(self, code_sink, module, docstring=None):
         """Generates the class to a code sink"""
@@ -785,7 +810,7 @@ typedef struct {
                 continue
             method_defs.append(overload.get_py_method_def(meth_name))
             code_sink.writeln()
-        if self.helper_class is not None:
+        if self.helper_class is not None and not self.helper_class.cannot_be_constructed:
             for meth_name, meth in self.helper_class.virtual_parent_callers.iteritems():
                 method_defs.append(meth.get_py_method_def(meth_name))
         ## generate the method table
