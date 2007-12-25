@@ -8,7 +8,7 @@ from pygccxml import parser
 from pygccxml import declarations
 from module import Module
 from typehandlers.codesink import FileCodeSink
-from typehandlers.base import ReturnValue, Parameter
+from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError
 from enum import Enum
 from function import Function
 from cppclass import CppClass, CppConstructor, CppMethod
@@ -535,7 +535,7 @@ class ModuleParser(object):
                 try:
                     return_type = type_registry.lookup_return(member.return_type,
                                                               parameter_annotations.get('return', {}))
-                except (TypeError, KeyError), ex:
+                except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                            % (member.return_type.decl_string, member, ex),
                                            Warning, member.location.file_name, member.location.line)
@@ -548,7 +548,7 @@ class ModuleParser(object):
                     try:
                         arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
                                                                         parameter_annotations.get(arg.name, {})))
-                    except (TypeError, KeyError), ex:
+                    except (TypeLookupError, TypeConfigurationError), ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                                % (arg.type.decl_string, arg.name, member, ex),
                                                Warning, member.location.file_name, member.location.line)
@@ -584,7 +584,7 @@ class ModuleParser(object):
                 for arg in member.arguments:
                     try:
                         arguments.append(type_registry.lookup_parameter(arg.type, arg.name))
-                    except (TypeError, KeyError), ex:
+                    except (TypeLookupError, TypeConfigurationError), ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                                % (arg.type.decl_string, arg.name, member, ex),
                                                Warning, member.location.file_name, member.location.line)
@@ -606,7 +606,7 @@ class ModuleParser(object):
             elif isinstance(member, variable_t):
                 try:
                     return_type = type_registry.lookup_return(member.type)
-                except (TypeError, KeyError), ex:
+                except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                            % (member.type.decl_string, member, ex),
                                            Warning, member.location.file_name, member.location.line)
@@ -644,7 +644,7 @@ class ModuleParser(object):
                                                     fun.location.line)
             try:
                 return_type = type_registry.lookup_return(fun.return_type, parameter_annotations.get('return', {}))
-            except (TypeError, KeyError), ex:
+            except (TypeLookupError, TypeConfigurationError), ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                        % (fun.return_type.decl_string, fun, ex),
                                        Warning, fun.location.file_name, fun.location.line)
@@ -654,7 +654,7 @@ class ModuleParser(object):
                 try:
                     arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
                                                                     parameter_annotations.get(arg.name, {})))
-                except (TypeError, KeyError), ex:
+                except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                            % (arg.type.decl_string, arg.name, fun, ex),
                                            Warning, fun.location.file_name, fun.location.line)

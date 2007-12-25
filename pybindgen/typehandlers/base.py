@@ -19,8 +19,18 @@ except NameError: # for compatibility with Python < 2.5
                 return False
         return True
 
-class CodeGenerationError(Exception):
+class CodegenErrorBase(Exception):
+    pass
+
+class CodeGenerationError(CodegenErrorBase):
     """Exception that is raised when wrapper generation fails for some reason."""
+
+class TypeLookupError(CodegenErrorBase):
+    """Exception that is raised when lookup of a type handler fails"""
+
+class TypeConfigurationError(CodegenErrorBase):
+    """Exception that is raised when a type handler does not find some
+    information it needs, such as owernship transfer semantics."""
 
 
 def join_ctype_and_name(ctype, name):
@@ -1137,7 +1147,7 @@ class TypeMatcher(object):
                 except KeyError:
                     continue
             else:
-                raise KeyError(name)
+                raise TypeLookupError(name)
     
 
     def items(self):

@@ -5,7 +5,7 @@ Wrap C++ classes and methods
 import warnings
 
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, Parameter, ReturnValue, \
-    join_ctype_and_name, CodeGenerationError
+    join_ctype_and_name, CodeGenerationError, TypeConfigurationError
 
 from typehandlers.codesink import NullCodeSink, MemoryCodeSink
 
@@ -1222,12 +1222,12 @@ class CppClassPtrParameter(CppClassParameterBase):
 
         if custodian is None:
             if transfer_ownership is None:
-                raise TypeError("transfer_ownership parameter missing")
+                raise TypeConfigurationError("transfer_ownership parameter missing")
             self.transfer_ownership = transfer_ownership
         else:
             if transfer_ownership is not None:
-                raise TypeError("the transfer_ownership parameter should "
-                                "not be given when there is a custodian")
+                raise TypeConfigurationError("the transfer_ownership parameter should "
+                                             "not be given when there is a custodian")
             self.transfer_ownership = False
         self.custodian = custodian
 
@@ -1428,7 +1428,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             ctype = self.cpp_class.full_name
         super(CppClassPtrReturnValue, self).__init__(ctype)
         if custodian is None and caller_owns_return is None:
-            raise TypeError("caller_owns_return not given")
+            raise TypeConfigurationError("caller_owns_return not given")
         self.custodian = custodian
         if custodian is None:
             self.caller_owns_return = caller_owns_return
