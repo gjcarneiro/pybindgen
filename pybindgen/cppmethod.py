@@ -413,7 +413,9 @@ class CppVirtualMethodParentCaller(CppMethod):
     def get_py_method_def(self, method_name=None):
         "Get the PyMethodDef entry suitable for this method"
 
-        assert self.wrapper_actual_name == self.wrapper_base_name
+        assert self.wrapper_actual_name == self.wrapper_base_name, \
+            "wrapper_actual_name=%r but wrapper_base_name=%r" % \
+            (self.wrapper_actual_name, self.wrapper_base_name)
         assert self._helper_class is not None
         if method_name is None:
             method_name = self.method_name

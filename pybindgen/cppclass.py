@@ -160,10 +160,12 @@ void set_pyobj(PyObject *pyobj)
 
     def generate(self, code_sink):
         """
-        Generate the proxy class (virtual method bodies only) to a given code sink
+        Generate the proxy class (virtual method bodies only) to a given code sink.
+        returns pymethodef list of parent callers
         """
         ## write the parent callers (_name)
-        for parent_caller in self.virtual_parent_callers.itervalues():
+        method_defs = []
+        for name, parent_caller in self.virtual_parent_callers.iteritems():
             parent_caller.class_ = self.class_
             parent_caller.helper_class = self
             code_sink.writeln()
@@ -174,6 +176,7 @@ void set_pyobj(PyObject *pyobj)
                                                (code_sink,), {}, parent_caller)
             except utils.SkipWrapper:
                 continue
+            method_defs.append(parent_caller.get_py_method_def(name))
                 
         ## write the virtual proxies
         for virtual_proxy in self.virtual_proxies:
@@ -187,6 +190,8 @@ void set_pyobj(PyObject *pyobj)
                                                (code_sink,), {}, virtual_proxy)
             except utils.SkipWrapper:
                 continue
+        
+        return method_defs
 
 
 
@@ -711,7 +716,9 @@ typedef struct {
         """Generates the class to a code sink"""
 
         if self.helper_class is not None:
-            self.helper_class.generate(code_sink)       
+            parent_caller_methods = self.helper_class.generate(code_sink)       
+        else:
+            parent_caller_methods = []
 
         ## generate getsets
         instance_getsets = self.instance_attributes.generate(code_sink)
@@ -751,7 +758,7 @@ typedef struct {
 
         have_constructor = self._generate_constructor(code_sink)
 
-        self._generate_methods(code_sink)
+        self._generate_methods(code_sink, parent_caller_methods)
 
         if self.allow_subclassing:
             self._generate_gc_methods(code_sink)
@@ -826,7 +833,7 @@ typedef struct {
                                           or constructor))
         return have_constructor
 
-    def _generate_methods(self, code_sink):
+    def _generate_methods(self, code_sink, parent_caller_methods):
         """generate the method wrappers"""
         method_defs = []
         for meth_name, overload in self.methods.iteritems():
@@ -838,9 +845,7 @@ typedef struct {
                 continue
             method_defs.append(overload.get_py_method_def(meth_name))
             code_sink.writeln()
-        if self.helper_class is not None and not self.helper_class.cannot_be_constructed:
-            for meth_name, meth in self.helper_class.virtual_parent_callers.iteritems():
-                method_defs.append(meth.get_py_method_def(meth_name))
+        method_defs.extend(parent_caller_methods)
         ## generate the method table
         code_sink.writeln("static PyMethodDef %s_methods[] = {" % (self.name,))
         code_sink.indent()
