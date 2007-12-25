@@ -1,6 +1,6 @@
 import sys
 from typehandlers.codesink import CodeSink
-from typehandlers.base import CodeGenerationError
+from typehandlers.base import TypeConfigurationError, CodeGenerationError
 import version
 import settings
 
@@ -89,7 +89,7 @@ class SkipWrapper(Exception):
     for internal pybindgen use"""
 
 def call_with_error_handling(callable, args, kwargs, wrapper,
-                             exceptions_to_handle=(ValueError,TypeError,CodeGenerationError)):
+                             exceptions_to_handle=(TypeConfigurationError,CodeGenerationError)):
     """for internal pybindgen use"""
     if settings.error_handler is None:
         return callable(*args, **kwargs)
