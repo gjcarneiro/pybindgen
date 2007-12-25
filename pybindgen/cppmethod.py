@@ -519,8 +519,22 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
                                         % (self._class.full_name, self.method_name, call_params))
             self.before_call.write_code(r'    return;')
         else:
-            self.before_call.write_code(r'    return %s::%s(%s);'
-                                        % (self._class.full_name, self.method_name, call_params))
+            if self.method.is_pure_virtual:
+                if isinstance(self.return_value, cppclass.CppClassReturnValue) \
+                        and self.return_value.cpp_class.has_trivial_constructor:
+                    pass
+                else:
+                    self.set_error_return('''
+PyErr_Print();
+Py_Fatal("Error detected, but parent virtual is pure virtual, "
+         "and return is a class without trival constructor");'''
+                    % (self._class.full_name, self.method_name, call_params))
+            else:
+                self.set_error_return("PyErr_Print();\nreturn %s::%s(%s);"
+                                      % (self._class.full_name, self.method_name, call_params))
+            self.before_call.indent()
+            self.before_call.write_code(self.error_return)
+            self.before_call.unindent()
         self.before_call.write_code('}')
 
         ## Set "m_pyself->obj = this" around virtual method call invocation

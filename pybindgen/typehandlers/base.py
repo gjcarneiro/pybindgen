@@ -494,7 +494,7 @@ class ReverseWrapperBase(object):
         self.parameters = parameters
 
         if error_return is None:
-            error_return = return_value.get_c_error_return()
+            error_return = "PyErr_Print();\n" + return_value.get_c_error_return()
         self.error_return = error_return
         self.declarations = DeclarationsScope()
         self.before_call = CodeBlock(error_return, self.declarations)
@@ -502,6 +502,11 @@ class ReverseWrapperBase(object):
                                     predecessor=self.before_call)
         self.build_params = BuildValueParameters()
         self.parse_params = ParseTupleParameters()
+
+    def set_error_return(self, error_return):
+        self.error_return = error_return
+        self.before_call.error_return = error_return
+        self.after_call.error_return = error_return
 
     def reset_code_generation_state(self):
         self.declarations.clear()

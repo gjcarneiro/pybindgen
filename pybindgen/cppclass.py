@@ -268,6 +268,7 @@ class CppClass(object):
         self.slots = dict()
         self.helper_class = None
         self.cannot_be_constructed = False
+        self.has_trivial_constructor = False
         self.have_pure_virtual_methods = False
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
@@ -586,6 +587,8 @@ public:
         assert isinstance(wrapper, CppConstructor)
         wrapper.set_class(self)
         self.constructors.append(wrapper)
+        if not wrapper.parameters:
+            self.has_trivial_constructor = True
 
     def add_static_attribute(self, value_type, name, is_const=False):
         """
