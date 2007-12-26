@@ -146,3 +146,33 @@ class UInt8Return(ReturnValue):
 
     def convert_c_to_python(self, wrapper):
         wrapper.build_params.add_parameter("i", [self.value], prepend=True)
+
+
+class UnsignedLongLongParam(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['unsigned long long', 'uint64_t']
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        wrapper.build_params.add_parameter('K', [self.value])
+
+    def convert_python_to_c(self, wrapper):
+        assert isinstance(wrapper, ForwardWrapperBase)
+        name = wrapper.declarations.declare_variable(self.ctype, self.name)
+        wrapper.parse_params.add_parameter('K', ['&'+name], self.name)
+        wrapper.call_params.append(name)
+
+class UnsignedLongLongReturn(ReturnValue):
+
+    CTYPES = ['unsigned long long', 'uint64_t']
+
+    def get_c_error_return(self):
+        return "return 0;"
+    
+    def convert_python_to_c(self, wrapper):
+        wrapper.parse_params.add_parameter("K", ["&"+self.value], prepend=True)
+
+    def convert_c_to_python(self, wrapper):
+        wrapper.build_params.add_parameter("K", [self.value], prepend=True)
+
