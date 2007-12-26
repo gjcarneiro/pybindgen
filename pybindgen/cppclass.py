@@ -148,6 +148,7 @@ void set_pyobj(PyObject *pyobj)
             except utils.SkipWrapper:
                 if virtual_proxy.method.is_pure_virtual:
                     return False
+                continue
             finally:
                 virtual_proxy.reset_code_generation_state()
                 
