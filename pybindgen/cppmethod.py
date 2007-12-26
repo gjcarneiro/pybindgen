@@ -517,8 +517,9 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         self.before_call.write_code(
             r'if (!PyObject_HasAttrString(m_pyself, "_%s")) {' % self.method_name)
         if self.return_value.ctype == 'void':
-            self.before_call.write_code(r'    %s::%s(%s);'
-                                        % (self._class.full_name, self.method_name, call_params))
+            if not self.method.is_pure_virtual:
+                self.before_call.write_code(r'    %s::%s(%s);'
+                                            % (self._class.full_name, self.method_name, call_params))
             self.before_call.write_code(r'    return;')
         else:
             if self.method.is_pure_virtual:
