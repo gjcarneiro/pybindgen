@@ -618,9 +618,10 @@ public:
                                  "support was not enabled for this class")
             helper_class = self.get_helper_class()
             if helper_class is not None:
-                parent_caller = CppVirtualMethodParentCaller(method)
-                parent_caller.main_wrapper = method
-                helper_class.add_virtual_parent_caller(parent_caller)
+                if not method.is_pure_virtual:
+                    parent_caller = CppVirtualMethodParentCaller(method)
+                    parent_caller.main_wrapper = method
+                    helper_class.add_virtual_parent_caller(parent_caller)
 
                 proxy = CppVirtualMethodProxy(method)
                 proxy.main_wrapper = method
