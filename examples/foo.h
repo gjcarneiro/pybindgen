@@ -453,7 +453,7 @@ inline CannotBeConstructed* get_cannot_be_constructed_ptr () {
 class AbstractBaseClass
 {
 public:
-    ~AbstractBaseClass () {}
+    virtual ~AbstractBaseClass () {}
 
 protected:
     // A pure virtual method with a parameter type so strange that it
@@ -469,7 +469,7 @@ protected:
 class AbstractBaseClassImpl : public AbstractBaseClass
 {
 public:
-    ~AbstractBaseClassImpl () {}
+    virtual ~AbstractBaseClassImpl () {}
 
     // -#- @return(caller_owns_return=true) -#-
     static AbstractBaseClass* get_abstract_base_class_ptr1 ()
