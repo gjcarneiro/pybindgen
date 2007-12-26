@@ -79,7 +79,7 @@ class OverloadedWrapper(object):
             implicit_conversion_classes = []
             implicit_conversion_positions = []
             for pos, param in enumerate(wrapper.parameters):
-                if not isinstance(param, CppClassParameter):
+                if not isinstance(param, (CppClassParameter, CppClassRefParameter)):
                     continue
                 conversion_sources = param.cpp_class.get_all_implicit_conversions()
                 if conversion_sources:
@@ -97,7 +97,11 @@ class OverloadedWrapper(object):
                 wrapper_clone = wrapper.clone()
                 for pos, cpp_class in zip(implicit_conversion_positions, combination):
                     ## now make this parameter handle a different C++ class
-                    wrapper_clone.parameters[pos].cpp_class = cpp_class
+                    param = wrapper_clone.parameters[pos]
+                    ref = (isinstance(param, CppClassRefParameter) and ' &' or '')
+                    const = (param.is_const and 'const ' or '')
+                    param.cpp_class = cpp_class
+                    param.ctype = '%s%s%s' % (const, cpp_class.full_name, ref)
                 self.all_wrappers.append(wrapper_clone)
                 
 
@@ -243,5 +247,5 @@ class OverloadedWrapper(object):
             wrapper.reset_code_generation_state()
 
 
-from cppclass import CppClassParameter
+from cppclass import CppClassParameter, CppClassRefParameter
 
