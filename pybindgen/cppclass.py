@@ -1593,7 +1593,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         wrapper.parse_params.add_parameter(
             'O!', ['&'+self.cpp_class.pytypestruct, '&'+name])
 
-        value = self.transformation.untransform(
+        value = self.transformation.transform(
             self, wrapper.declarations, wrapper.after_call, "%s->obj" % name)
 
         ## now the hairy part :)
