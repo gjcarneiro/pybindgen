@@ -129,6 +129,25 @@ class UInt16Return(ReturnValue):
     def convert_c_to_python(self, wrapper):
         wrapper.build_params.add_parameter("i", [self.value], prepend=True)
 
+
+class UInt16Param(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['uint16_t']
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        wrapper.build_params.add_parameter('i', [self.value])
+
+    def convert_python_to_c(self, wrapper):
+        assert isinstance(wrapper, ForwardWrapperBase)
+        name = wrapper.declarations.declare_variable("int", self.name)
+        wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
+        wrapper.before_call.write_error_check('%s > 0xffff' % name,
+                                              'PyErr_SetString(PyExc_ValueError, "Out of range");')
+        wrapper.call_params.append(name)
+
+
 class UInt8Return(ReturnValue):
 
     CTYPES = ['uint8_t']
