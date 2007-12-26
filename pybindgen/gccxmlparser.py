@@ -54,13 +54,15 @@ class GccXmlTypeRegistry(object):
         self.classes = {}  # value is a (return_handler, parameter_handler) tuple
         self._root_ns_rx = re.compile(r"(^|\s)(::)")
     
-    def register_class(self, cpp_class):
+    def register_class(self, cpp_class, alias=None):
         assert isinstance(cpp_class, CppClass)
         if cpp_class.full_name.startswith('::'):
             full_name = cpp_class.full_name
         else:
             full_name = '::' + cpp_class.full_name
         self.classes[full_name] = cpp_class
+        if alias is not None:
+            self.classes[alias] = cpp_class
 
     def find_class(self, class_name, module_namespace):
         if not class_name.startswith(module_namespace):
@@ -73,6 +75,7 @@ class GccXmlTypeRegistry(object):
         assert isinstance(type_info, cpptypes.type_t)
 
         decomposed = type_traits.decompose_type(type_info)
+
         base_type = decomposed.pop()
         is_const = False
         is_reference = False
@@ -373,14 +376,23 @@ class ModuleParser(object):
                                 module_namespace.classes(function=self.location_filter,
                                                          recursive=False, allow_empty=True)
                                 if not cls.name.startswith('__')]
+
         registered_classes = {} # class_t -> CppClass
         while unregistered_classes:
             cls = unregistered_classes.pop(0)
+            typedef = None
             if '<' in cls.name:
-                warnings.warn_explicit("Class %s ignored because it is templated; templates not yet supported"
-                                       % cls.decl_string,
-                                       Warning, cls.location.file_name, cls.location.line)
-                continue
+
+                for typedef in module_namespace.typedefs(function=self.location_filter,
+                                                         recursive=False, allow_empty=True):
+                    typedef_type = type_traits.remove_declarated(typedef.type)
+                    if typedef_type == cls:
+                        break
+                else:
+                    warnings.warn_explicit("Class %s ignored because it is templated; templates not yet supported"
+                                           % cls.decl_string,
+                                           Warning, cls.location.file_name, cls.location.line)
+                    continue
                 
             if len(cls.bases) > 1:
                 warnings.warn_explicit(("Class %s ignored because it uses multiple "
@@ -445,17 +457,24 @@ class ModuleParser(object):
             if not self._class_has_public_destructor(cls):
                 kwargs.setdefault('is_singleton', True)
 
-            class_wrapper = CppClass(cls.name, parent=base_class_wrapper, **kwargs)
+            if typedef is None:
+                name = cls.name
+                alias = None
+            else:
+                name = typedef.name
+                alias = '::'.join([module.cpp_namespace_prefix, cls.name])
+            class_wrapper = CppClass(name, parent=base_class_wrapper, **kwargs)
             module.add_class(class_wrapper)
             registered_classes[cls] = class_wrapper
-            type_registry.register_class(class_wrapper)
+            type_registry.register_class(class_wrapper, alias)
 
             for operator in cls.casting_operators(allow_empty=True):
                 other_class = type_registry.find_class(operator.return_type.decl_string, '::')
                 class_wrapper.implicitly_converts_to(other_class)
 
-            assert cls.decl_string in type_registry.classes\
-                and type_registry.classes[cls.decl_string] == class_wrapper
+            assert typedef is not None or \
+                (cls.decl_string in type_registry.classes\
+                     and type_registry.classes[cls.decl_string] == class_wrapper)
 
         for cls, class_wrapper in registered_classes.iteritems():
             self._scan_methods(cls, class_wrapper)
