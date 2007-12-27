@@ -78,7 +78,7 @@ def get_mangled_name(base_name, template_args):
 
     if template_args:
         return '%s__lt__%s__gt__' % (base_name, '_'.join(
-                [arg.replace(' ', '_') for arg in template_args]))
+                [arg.replace(' ', '_').replace(':', '_') for arg in template_args]))
     else:
         return base_name
 
