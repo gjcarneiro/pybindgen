@@ -18,7 +18,8 @@ class CppMethod(ForwardWrapperBase):
 
     def __init__(self, return_value, method_name, parameters, is_static=False,
                  template_parameters=(), is_virtual=False, is_const=False,
-                 unblock_threads=None, is_pure_virtual=False):
+                 unblock_threads=None, is_pure_virtual=False,
+                 custom_template_method_name=None):
         """
         return_value -- the method return value
         method_name -- name of the method
@@ -37,7 +38,10 @@ class CppMethod(ForwardWrapperBase):
         self.is_pure_virtual = is_pure_virtual
         self.is_const = is_const
         self.template_parameters = template_parameters
-        self.mangled_name = utils.get_mangled_name(self.method_name, self.template_parameters)
+        if custom_template_method_name is None:
+            self.mangled_name = utils.get_mangled_name(self.method_name, self.template_parameters)
+        else:
+            self.mangled_name = custom_template_method_name
 
         self._class = None
         self.docstring = None

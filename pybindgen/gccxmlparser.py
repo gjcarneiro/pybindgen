@@ -545,12 +545,22 @@ class ModuleParser(object):
                                                     member.location.line)
             if 'ignore' in global_annotations:
                 continue
+            for key, val in global_annotations.iteritems():
+                if key == 'ignore':
+                    pass
+                elif key == 'template_instance_names' \
+                        and templates.is_instantiation(member.demangled_name):
+                    pass
+                else:
+                    warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
+                                           % (key, val, member),
+                                           Warning, member.location.file_name, member.location.line)
             
             ## ------------ method --------------------
             if isinstance(member, calldef.member_function_t):
                 is_virtual = (member.virtuality != calldef.VIRTUALITY_TYPES.NOT_VIRTUAL)
                 pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
-
+                
                 try:
                     return_type = type_registry.lookup_return(member.return_type,
                                                               parameter_annotations.get('return', {}))
@@ -580,8 +590,16 @@ class ModuleParser(object):
                 if pure_virtual and not class_wrapper.allow_subclassing:
                     class_wrapper.set_cannot_be_constructed(True)
 
+                custom_template_method_name = None
                 if templates.is_instantiation(member.demangled_name):
                     template_parameters = templates.args(member.demangled_name)
+                    template_instance_names = global_annotations.get('template_instance_names', '')
+                    for mapping in template_instance_names.split('|'):
+                        type_names, name = mapping.split('=>')
+                        instance_types = type_names.split(',')
+                        if instance_types == template_parameters:
+                            custom_template_method_name = name
+                            break
                 else:
                     template_parameters = ()
 
@@ -590,7 +608,8 @@ class ModuleParser(object):
                                            is_static=member.has_static,
                                            is_virtual=(is_virtual and class_wrapper.allow_subclassing),
                                            is_pure_virtual=pure_virtual,
-                                           template_parameters=template_parameters)
+                                           template_parameters=template_parameters,
+                                           custom_template_method_name=custom_template_method_name)
                 method_wrapper.gccxml_definition = member
                 class_wrapper.add_method(method_wrapper)
 
