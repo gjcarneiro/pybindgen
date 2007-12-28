@@ -184,7 +184,7 @@ class UnsignedLongLongParam(Parameter):
 
 class UnsignedLongLongReturn(ReturnValue):
 
-    CTYPES = ['unsigned long long', 'uint64_t']
+    CTYPES = ['unsigned long long', 'uint64_t', 'long long unsigned int']
 
     def get_c_error_return(self):
         return "return 0;"
