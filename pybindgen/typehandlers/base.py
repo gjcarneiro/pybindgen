@@ -22,6 +22,10 @@ except NameError: # for compatibility with Python < 2.5
 class CodegenErrorBase(Exception):
     pass
 
+class NotSupportedError(CodegenErrorBase):
+    """Exception that is raised when declaring an interface configuration
+    that is not supported or not implemented."""
+
 class CodeGenerationError(CodegenErrorBase):
     """Exception that is raised when wrapper generation fails for some reason."""
 

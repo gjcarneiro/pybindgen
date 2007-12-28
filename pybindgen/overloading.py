@@ -1,7 +1,7 @@
 """
 C wrapper wrapper
 """
-from typehandlers.base import ForwardWrapperBase
+from typehandlers.base import ForwardWrapperBase, NotSupportedError
 import utils
 
 def isiterable(obj): 
@@ -58,6 +58,16 @@ class OverloadedWrapper(object):
         wrapper -- a Wrapper object
         """
         assert isinstance(wrapper, ForwardWrapperBase)
+
+        flags = None
+        for existing_wrapper in self.wrappers:
+            if flags is None:
+                flags = set(existing_wrapper.get_py_method_def_flags())
+            else:
+                assert flags == set(existing_wrapper.get_py_method_def_flags())
+        if flags is not None and (flags != set(wrapper.get_py_method_def_flags())):
+            raise NotSupportedError("attempting to overload methods of different kinds")
+
         self.wrappers.append(wrapper)
 
     def _compute_all_wrappers(self):

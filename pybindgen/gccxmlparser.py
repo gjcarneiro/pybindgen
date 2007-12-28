@@ -8,7 +8,7 @@ from pygccxml import parser
 from pygccxml import declarations
 from module import Module
 from typehandlers.codesink import FileCodeSink
-from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError
+from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
 from enum import Enum
 from function import Function
 from cppclass import CppClass, CppConstructor, CppMethod
@@ -616,7 +616,12 @@ class ModuleParser(object):
                                            template_parameters=template_parameters,
                                            custom_template_method_name=custom_template_method_name)
                 method_wrapper.gccxml_definition = member
-                class_wrapper.add_method(method_wrapper)
+                try:
+                    class_wrapper.add_method(method_wrapper)
+                except NotSupportedError, ex:
+                    warnings.warn_explicit("Error adding method %s: %r"
+                                           % (member, ex),
+                                           Warning, member.location.file_name, member.location.line)
 
             ## ------------ constructor --------------------
             elif isinstance(member, calldef.constructor_t):
