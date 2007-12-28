@@ -594,12 +594,13 @@ class ModuleParser(object):
                 if templates.is_instantiation(member.demangled_name):
                     template_parameters = templates.args(member.demangled_name)
                     template_instance_names = global_annotations.get('template_instance_names', '')
-                    for mapping in template_instance_names.split('|'):
-                        type_names, name = mapping.split('=>')
-                        instance_types = type_names.split(',')
-                        if instance_types == template_parameters:
-                            custom_template_method_name = name
-                            break
+                    if template_instance_names:
+                        for mapping in template_instance_names.split('|'):
+                            type_names, name = mapping.split('=>')
+                            instance_types = type_names.split(',')
+                            if instance_types == template_parameters:
+                                custom_template_method_name = name
+                                break
                 else:
                     template_parameters = ()
 
