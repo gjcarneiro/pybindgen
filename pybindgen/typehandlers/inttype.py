@@ -24,7 +24,7 @@ class IntParam(Parameter):
 class UnsignedIntParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['unsigned int', 'uint32_t']
+    CTYPES = ['unsigned int', 'uint32_t', 'uint32_t const']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -32,7 +32,7 @@ class UnsignedIntParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype, self.name)
+        name = wrapper.declarations.declare_variable('unsigned int', self.name)
         wrapper.parse_params.add_parameter('I', ['&'+name], self.name)
         wrapper.call_params.append(name)
 
@@ -69,7 +69,7 @@ class IntPtrParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['int*', 'const int*', 'int const*']
+    CTYPES = ['int*', 'int const *']
 
     def __init__(self, ctype, name, direction=None, is_const=None):
         if is_const is None:
@@ -148,17 +148,52 @@ class UInt16Return(ReturnValue):
 class UInt16Param(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['uint16_t']
+    CTYPES = ['uint16_t', 'uint16_t const']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
-        wrapper.build_params.add_parameter('i', [self.value])
+        wrapper.build_params.add_parameter('i', ["(int) "+self.value])
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
         name = wrapper.declarations.declare_variable("int", self.name)
         wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
         wrapper.before_call.write_error_check('%s > 0xffff' % name,
+                                              'PyErr_SetString(PyExc_ValueError, "Out of range");')
+        wrapper.call_params.append(name)
+
+class Int16Param(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['int16_t', 'int16_t const']
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        wrapper.build_params.add_parameter('i', ["(int) "+self.value])
+
+    def convert_python_to_c(self, wrapper):
+        assert isinstance(wrapper, ForwardWrapperBase)
+        name = wrapper.declarations.declare_variable("int", self.name)
+        wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
+        wrapper.before_call.write_error_check('%s > 0x7fff' % name,
+                                              'PyErr_SetString(PyExc_ValueError, "Out of range");')
+        wrapper.call_params.append(name)
+
+
+class UInt8Param(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['uint8_t', 'uint8_t const']
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        wrapper.build_params.add_parameter('i', ["(int) "+self.value])
+
+    def convert_python_to_c(self, wrapper):
+        assert isinstance(wrapper, ForwardWrapperBase)
+        name = wrapper.declarations.declare_variable("int", self.name)
+        wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
+        wrapper.before_call.write_error_check('%s > 0xff' % name,
                                               'PyErr_SetString(PyExc_ValueError, "Out of range");')
         wrapper.call_params.append(name)
 
@@ -245,7 +280,7 @@ class Int8PtrParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['int8_t*', 'const int8_t*', 'int8_t const*']
+    CTYPES = ['int8_t*', 'int8_t *', 'int8_t const *']
 
     def __init__(self, ctype, name, direction=None, is_const=None):
         if is_const is None:
@@ -280,7 +315,7 @@ class UInt8PtrParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['uint8_t*', 'const uint8_t*', 'uint8_t const*']
+    CTYPES = ['uint8_t*', 'uint8_t *', 'uint8_t const *']
 
     def __init__(self, ctype, name, direction=None, is_const=None):
         if is_const is None:
