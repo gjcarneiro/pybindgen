@@ -81,6 +81,8 @@ class OverloadedWrapper(object):
             for pos, param in enumerate(wrapper.parameters):
                 if not isinstance(param, (CppClassParameter, CppClassRefParameter)):
                     continue
+                if isinstance(param, (CppClassRefParameter)) and not param.is_const:
+                    continue
                 conversion_sources = param.cpp_class.get_all_implicit_conversions()
                 if conversion_sources:
                     conversion_sources.insert(0, param.cpp_class)

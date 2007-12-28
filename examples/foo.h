@@ -214,7 +214,7 @@ public:
     }
 
     // pass by reference, direction=in
-    void set_foo_by_ref (Foo& foo) {
+    void set_foo_by_ref (const Foo& foo) {
         m_foo_value = foo;
     }
 
