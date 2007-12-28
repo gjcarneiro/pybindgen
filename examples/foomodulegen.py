@@ -79,9 +79,9 @@ def my_module_gen(out_file):
 
 
     Bar = CppClass('Bar', parent=Foo)
+    mod.add_class(Bar)
     ## a static method..
     Bar.add_method(CppMethod(ReturnValue.new('std::string'), 'Hooray', [], is_static=True))
-    mod.add_class(Bar)
 
     ## to test RTTI with a hidden subclass
     mod.add_function(Function(ReturnValue.new('Foo*', caller_owns_return=True),
@@ -286,9 +286,9 @@ def my_module_gen(out_file):
     xpto.add_function(Function(ReturnValue.new('void'), 'set_foo_type', [Parameter.new("FooType", 'type')]))
 
 
-    SomeClass = CppClass('SomeClass')
-    xpto.add_class(SomeClass)
-    SomeClass.add_constructor(CppConstructor([]))
+    xpto_SomeClass = CppClass('SomeClass')
+    xpto.add_class(xpto_SomeClass)
+    xpto_SomeClass.add_constructor(CppConstructor([]))
 
     ## ---- some implicity conversion APIs
     mod.add_function(Function(ReturnValue.new('void'),
@@ -327,6 +327,20 @@ def my_module_gen(out_file):
                               'get_cannot_be_constructed_value', []))
     mod.add_function(Function(ReturnValue.new('CannotBeConstructed*', caller_owns_return=True),
                               'get_cannot_be_constructed_ptr', []))
+
+
+    ## A nested class
+    NestedClass = CppClass('NestedClass', automatic_type_narrowing=True, outer_class=SomeObject)
+    mod.add_class(NestedClass)
+    NestedClass.add_static_attribute(ReturnValue.new('int'), 'instance_count')
+    NestedClass.add_constructor(
+        CppConstructor([Parameter.new('std::string', 'datum')]))
+    NestedClass.add_constructor(CppConstructor([]))
+    NestedClass.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
+
+    ## A nested enum..
+    mod.add_enum(Enum('NestedEnum', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'],
+                      outer_class=SomeObject))
 
     class MyErrorHandler(pybindgen.settings.ErrorHandler):
         def __init__(self):

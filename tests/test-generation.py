@@ -52,7 +52,8 @@ public:
 
     ## Register type handlers for the class
     Foo = cppclass.CppClass('Foo')
-    Foo.full_name = Foo.name # normally adding the class to a module would take care of this
+    Foo.module = module
+    #Foo.full_name = Foo.name # normally adding the class to a module would take care of this
     Foo.generate_forward_declarations(code_out)
 
     wrapper_number = 0

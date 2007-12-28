@@ -3,13 +3,13 @@ Wraps enumerations
 """
 
 from typehandlers import inttype
-
+from cppclass import CppClass
 
 class Enum(object):
     """
     Class that adds support for a C/C++ enum type
     """
-    def __init__(self, name, values, values_prefix='', cpp_namespace=None):
+    def __init__(self, name, values, values_prefix='', cpp_namespace=None, outer_class=None):
         """
         Creates a new enum wrapper, which should be added to a module with module.add_enum().
 
@@ -25,6 +25,8 @@ class Enum(object):
         """
         assert isinstance(name, str)
         assert '::' not in name
+        assert outer_class is None or isinstance(outer_class, CppClass)
+        self.outer_class = outer_class
         for val in values:
             if not isinstance(val, str):
                 raise TypeError
@@ -44,15 +46,18 @@ class Enum(object):
         """Set the Module object this class belongs to; can only be set once"""
         assert self._module is None
         self._module = module
-        if module.cpp_namespace_prefix:
-            if module.cpp_namespace_prefix == '::':
-                self.full_name = self.name
+        if self.outer_class is None:
+            if module.cpp_namespace_prefix:
+                if module.cpp_namespace_prefix == '::':
+                    self.full_name = self.name
+                else:
+                    self.full_name = module.cpp_namespace_prefix + '::' + self.name
             else:
-                self.full_name = module.cpp_namespace_prefix + '::' + self.name
+                self.full_name = self.name
+            if self.full_name.startswith('::'):
+                self.full_name = self.full_name[2:]
         else:
-            self.full_name = self.name
-        if self.full_name.startswith('::'):
-            self.full_name = self.full_name[2:]
+            self.full_name = self.outer_class.full_name + '::' + self.name
 
         ## Register type handlers for the enum type
         class ThisEnumParameter(inttype.IntParam):
@@ -74,12 +79,28 @@ class Enum(object):
 
     def generate(self, unused_code_sink):
         module = self.module
-        namespace = []
-        if module.cpp_namespace_prefix:
-            namespace.append(module.cpp_namespace_prefix)
-        if self.cpp_namespace:
-            namespace.append(self.cpp_namespace)
-        for value in self.values:
-            module.after_init.write_code(
-                "PyModule_AddIntConstant(m, \"%s\", %s);"
-                % (value, '::'.join(namespace + [self.values_prefix + value])))
+        if self.outer_class is None:
+            namespace = []
+            if module.cpp_namespace_prefix:
+                namespace.append(module.cpp_namespace_prefix)
+            if self.cpp_namespace:
+                namespace.append(self.cpp_namespace)
+            for value in self.values:
+                module.after_init.write_code(
+                    "PyModule_AddIntConstant(m, \"%s\", %s);"
+                    % (value, '::'.join(namespace + [self.values_prefix + value])))
+        else:
+            module.after_init.write_code("{")
+            module.after_init.indent()
+            module.after_init.write_code("PyObject *tmp_value;")
+            for value in self.values:
+                value_str = "%s::%s" % (self.outer_class.full_name, value)
+                module.after_init.write_code(
+                    ' // %s\n'
+                    'tmp_value = PyInt_FromLong(%s);\n'
+                    'PyDict_SetItemString((PyObject*) %s.tp_dict, \"%s\", tmp_value);\n'
+                    'Py_DECREF(tmp_value);'
+                    % (
+                    value_str, value_str, self.outer_class.pytypestruct, value))
+            module.after_init.unindent()
+            module.after_init.write_code("}")

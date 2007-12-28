@@ -256,7 +256,7 @@ class CppClass(object):
 
     def __init__(self, name, parent=None, incref_method=None, decref_method=None,
                  automatic_type_narrowing=None, allow_subclassing=None,
-                 is_singleton=False):
+                 is_singleton=False, outer_class=None):
         """Constructor
         name -- class name
         parent -- optional parent class wrapper
@@ -279,6 +279,8 @@ class CppClass(object):
                         and so the python wrapper will never call the
                         C++ class destructor to free the value.
         """
+        assert outer_class is None or isinstance(outer_class, CppClass)
+        self.outer_class = outer_class
         self._module = None
         self.name = name
         self.is_singleton = is_singleton
@@ -298,10 +300,9 @@ class CppClass(object):
         ## operator ThisClass(); in the other class.
         self.implicitly_converts_from = []
 
-        prefix = settings.name_prefix.capitalize()
-        self.pystruct = "Py%s%s" % (prefix, self.name)
-        self.metaclass_name = "%sMeta" % self.pystruct
-        self.pytypestruct = "Py%s%s_Type" % (prefix, self.name)
+        self.pystruct = "***GIVE ME A NAME***"
+        self.metaclass_name = "***GIVE ME A NAME***"
+        self.pytypestruct = "***GIVE ME A NAME***"
 
         self.instance_attributes = PyGetSetDef("%s__getsets" % self.pystruct)
         self.static_attributes = PyGetSetDef("%s__getsets" % self.metaclass_name)
@@ -338,17 +339,9 @@ class CppClass(object):
 
         self.typeid_map = None
         self.typeid_map_name = None # name of C++ variable
-        if self.automatic_type_narrowing:
-            self._register_typeid()
 
         if name != 'dummy':
             ## register type handlers
-            class ThisClassParameter(CppClassParameter):
-                """Register this C++ class as pass-by-value parameter"""
-                CTYPES = [name]
-                cpp_class = self
-            self.ThisClassParameter = ThisClassParameter
-
             class ThisClassRefParameter(CppClassRefParameter):
                 """Register this C++ class as pass-by-reference parameter"""
                 CTYPES = [name+'&']
@@ -428,20 +421,35 @@ class CppClass(object):
             to_visit.extend(source.implicitly_converts_from)
         return classes
 
-    def get_module(self):
-        """Get the Module object this class belongs to"""
-        return self._module
+    def _update_names(self):
+        
+        prefix = settings.name_prefix.capitalize()
 
-    def set_module(self, module):
-        """Set the Module object this class belongs to"""
-        self._module = module
-        if module.cpp_namespace_prefix:
-            if module.cpp_namespace_prefix == '::':
-                self.full_name = '::' + self.name
+        if self.outer_class is None:
+            if self._module.cpp_namespace_prefix:
+                if self._module.cpp_namespace_prefix == '::':
+                    self.full_name = '::' + self.name
+                else:
+                    self.full_name = self._module.cpp_namespace_prefix + '::' + self.name
             else:
-                self.full_name = module.cpp_namespace_prefix + '::' + self.name
+                self.full_name = self.name
         else:
-            self.full_name = self.name
+            self.full_name = '::'.join([self.outer_class.full_name, self.name])
+
+        def make_upper(s):
+            if s and s[0].islower():
+                return s[0].upper()+s[1:]
+            else:
+                return s
+
+        flat_name = ''.join([make_upper(s) for s in  self.full_name.split('::')])
+
+        self.pystruct = "Py%s%s" % (prefix, flat_name)
+        self.metaclass_name = "%sMeta" % self.pystruct
+        self.pytypestruct = "Py%s%s_Type" % (prefix, flat_name)
+
+        self.instance_attributes.cname = "%s__getsets" % self.pystruct
+        self.static_attributes.cname = "%s__getsets" % self.metaclass_name
 
         ## re-register the class type handlers, now with class full name
 
@@ -469,6 +477,15 @@ class CppClass(object):
         try:
             return_type_matcher.register(self.full_name+'*', self.ThisClassPtrReturn)
         except ValueError: pass
+
+    def get_module(self):
+        """Get the Module object this class belongs to"""
+        return self._module
+
+    def set_module(self, module):
+        """Set the Module object this class belongs to"""
+        self._module = module
+        self._update_names()
 
     module = property(get_module, set_module)
 
@@ -704,6 +721,9 @@ typedef struct {
         code_sink.writeln('extern PyTypeObject %s;' % (self.pytypestruct,))
         code_sink.writeln()
 
+        if self.automatic_type_narrowing:
+            self._register_typeid()
+
         if self.helper_class is not None:
             self.helper_class.generate_forward_declarations(code_sink)
             if self.helper_class.cannot_be_constructed:
@@ -753,9 +773,14 @@ typedef struct {
 
         module.after_init.write_error_check('PyType_Ready(&%s)'
                                           % (self.pytypestruct,))
-        module.after_init.write_code(
-            'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
-            self.name, self.pytypestruct))
+        if self.outer_class is None:
+            module.after_init.write_code(
+                'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
+                self.name, self.pytypestruct))
+        else:
+            module.after_init.write_code(
+                'PyDict_SetItemString((PyObject*) %s.tp_dict, \"%s\", (PyObject *) &%s);' % (
+                self.outer_class.pytypestruct, self.name, self.pytypestruct))
 
         have_constructor = self._generate_constructor(code_sink)
 

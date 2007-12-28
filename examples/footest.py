@@ -584,5 +584,14 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(s2, "123")
         self.assertEqual(obj.arg, 123)
 
+    def test_nested_class(self):
+        if not hasattr(foo.SomeObject, "NestedClass"):
+            self.fail()
+        f = foo.SomeObject.NestedClass("hello")
+        self.assertEqual(f.get_datum(), "hello")
+
+    def test_nested_enum(self):
+        self.assert_(hasattr(foo.SomeObject, "FOO_TYPE_BBB"))
+
 if __name__ == '__main__':
     unittest.main()

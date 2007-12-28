@@ -364,18 +364,32 @@ class ModuleParser(object):
 
         return module
 
-    def _scan_namespace_types(self, module, module_namespace):
+    def _scan_namespace_types(self, module, module_namespace, outer_class=None):
         ## scan enumerations
-        for enum in module_namespace.enums(function=self.location_filter, recursive=False, allow_empty=True):
+        if outer_class is None:
+            enums = module_namespace.enums(function=self.location_filter,
+                                           recursive=False, allow_empty=True)
+        else:
+            enums = outer_class.gccxml_definition.enums(function=self.location_filter,
+                                                        recursive=False, allow_empty=True)
+
+        for enum in enums:
             if enum.name.startswith('__'):
                 continue
-            module.add_enum(Enum(enum.name, [name for name, dummy_val in enum.values]))
+            module.add_enum(Enum(enum.name, [name for name, dummy_val in enum.values],
+                                 outer_class=outer_class))
 
         ## scan classes
-        unregistered_classes = [cls for cls in
-                                module_namespace.classes(function=self.location_filter,
-                                                         recursive=False, allow_empty=True)
-                                if not cls.name.startswith('__')]
+        if outer_class is None:
+            unregistered_classes = [cls for cls in
+                                    module_namespace.classes(function=self.location_filter,
+                                                             recursive=False, allow_empty=True)
+                                    if not cls.name.startswith('__')]
+        else:
+            unregistered_classes = [cls for cls in
+                                    outer_class.gccxml_definition.classes(function=self.location_filter,
+                                                                          recursive=False, allow_empty=True)
+                                    if not cls.name.startswith('__')]
 
         registered_classes = {} # class_t -> CppClass
         while unregistered_classes:
@@ -468,10 +482,15 @@ class ModuleParser(object):
             else:
                 name = typedef.name
                 alias = '::'.join([module.cpp_namespace_prefix, cls.name])
-            class_wrapper = CppClass(name, parent=base_class_wrapper, **kwargs)
+            #print >> sys.stderr, "******** registering class %s" % cls
+            class_wrapper = CppClass(name, parent=base_class_wrapper, outer_class=outer_class, **kwargs)
+            class_wrapper.gccxml_definition = cls
             module.add_class(class_wrapper)
             registered_classes[cls] = class_wrapper
             type_registry.register_class(class_wrapper, alias)
+
+            ## scan for nested classes/enums
+            self._scan_namespace_types(module, module_namespace, outer_class=class_wrapper)
 
             for operator in cls.casting_operators(allow_empty=True):
                 other_class = type_registry.find_class(operator.return_type.decl_string, '::')
@@ -481,15 +500,18 @@ class ModuleParser(object):
                 (cls.decl_string in type_registry.classes\
                      and type_registry.classes[cls.decl_string] == class_wrapper)
 
+
+
         for cls, class_wrapper in registered_classes.iteritems():
             self._scan_methods(cls, class_wrapper)
             
-        ## scan nested namespaces (mapped as python submodules)
-        for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
-            if nested_namespace.name.startswith('__'):
-                continue
-            nested_module = Module(name=nested_namespace.name, parent=module, cpp_namespace=nested_namespace.name)
-            self._scan_namespace_types(nested_module, nested_namespace)
+        if outer_class is None:
+            ## scan nested namespaces (mapped as python submodules)
+            for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
+                if nested_namespace.name.startswith('__'):
+                    continue
+                nested_module = Module(name=nested_namespace.name, parent=module, cpp_namespace=nested_namespace.name)
+                self._scan_namespace_types(nested_module, nested_namespace)
 
     def _class_has_virtual_methods(self, cls):
         """return True if cls has at least one virtual method, else False"""

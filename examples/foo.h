@@ -138,6 +138,35 @@ public:
 
     static int instance_count;
 
+
+    // A nested class
+    class NestedClass
+    // -#- automatic_type_narrowing=True -#-
+    {
+        std::string m_datum;
+    public:
+        static int instance_count;
+
+        NestedClass () : m_datum ("")
+            { Foo::instance_count++; }
+        NestedClass (std::string datum) : m_datum (datum)
+            { Foo::instance_count++; }
+        std::string get_datum () const { return m_datum; }
+
+        NestedClass (NestedClass const & other) : m_datum (other.get_datum ())
+            { Foo::instance_count++; }
+
+        virtual ~NestedClass() { NestedClass::instance_count--; }
+    };
+
+    // A nested enum
+    enum NestedEnum {
+        FOO_TYPE_AAA,
+        FOO_TYPE_BBB,
+        FOO_TYPE_CCC,
+    };
+
+
 private:
     Foo m_foo_value;
     Foo *m_foo_ptr;
