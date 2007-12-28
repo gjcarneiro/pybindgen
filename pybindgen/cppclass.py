@@ -587,7 +587,7 @@ public:
         assert name is None or isinstance(name, str)
         if isinstance(method, CppMethod):
             if name is None:
-                name = method.method_name
+                name = method.mangled_name
         elif isinstance(method, function.Function):
             assert name is not None
             assert isinstance(method.parameters[0], CppClassParameterBase)
@@ -601,11 +601,11 @@ public:
             raise TypeError
             
         try:
-            overload = self.methods[method.mangled_name]
+            overload = self.methods[name]
         except KeyError:
-            overload = CppOverloadedMethod(method.mangled_name)
+            overload = CppOverloadedMethod(name)
             overload.pystruct = self.pystruct
-            self.methods[method.mangled_name] = overload
+            self.methods[name] = overload
 
         method.class_ = self
         overload.add(method)
