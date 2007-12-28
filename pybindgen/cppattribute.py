@@ -144,6 +144,7 @@ class CppInstanceAttributeSetter(PySetter):
         else:
             ## else the value is written directly to a C++ instance attribute
             self.return_value.value = "self->obj->%s" % self.attribute_name
+            self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR = False
 
         self.return_value.convert_python_to_c(self)
 
