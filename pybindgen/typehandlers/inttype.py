@@ -2,7 +2,7 @@
 # documented in base.py) pylint: disable-msg=C0111
 
 from base import ReturnValue, Parameter,\
-     ReverseWrapperBase, ForwardWrapperBase
+     ReverseWrapperBase, ForwardWrapperBase, TypeConfigurationError
 
 
 class IntParam(Parameter):
@@ -69,7 +69,22 @@ class IntPtrParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['int*']
+    CTYPES = ['int*', 'const int*', 'int const*']
+
+    def __init__(self, ctype, name, direction=None, is_const=None):
+        if is_const is None:
+            is_const = ('const' in ctype)
+        if is_const and 'const' not in ctype:
+            ctype = 'const ' + ctype
+
+        if direction is None:
+            if is_const:
+                direction = Parameter.DIRECTION_IN
+            else:
+                raise TypeConfigurationError("direction not given")
+        
+        super(IntPtrParam, self).__init__(ctype, name, direction, is_const)
+
     
     def convert_c_to_python(self, wrapper):
         if self.direction & self.DIRECTION_IN:
@@ -78,8 +93,8 @@ class IntPtrParam(Parameter):
             wrapper.parse_params.add_parameter("i", [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
-        assert self.ctype == 'int*'
-        name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
+        assert self.ctype.endswith('*')
+        name = wrapper.declarations.declare_variable('int', self.name)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
             wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
@@ -230,7 +245,21 @@ class Int8PtrParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['int8_t*']
+    CTYPES = ['int8_t*', 'const int8_t*', 'int8_t const*']
+
+    def __init__(self, ctype, name, direction=None, is_const=None):
+        if is_const is None:
+            is_const = ('const' in ctype)
+        if is_const and 'const' not in ctype:
+            ctype = 'const ' + ctype
+
+        if direction is None:
+            if is_const:
+                direction = Parameter.DIRECTION_IN
+            else:
+                raise TypeConfigurationError("direction not given")
+        
+        super(Int8PtrParam, self).__init__(ctype, name, direction, is_const)
     
     def convert_c_to_python(self, wrapper):
         if self.direction & self.DIRECTION_IN:
@@ -240,7 +269,7 @@ class Int8PtrParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert self.ctype.endswith('*')
-        name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
+        name = wrapper.declarations.declare_variable('int8_t', self.name)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
             wrapper.parse_params.add_parameter('b', ['&'+name], self.name)
@@ -251,7 +280,21 @@ class UInt8PtrParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['uint8_t*']
+    CTYPES = ['uint8_t*', 'const uint8_t*', 'uint8_t const*']
+
+    def __init__(self, ctype, name, direction=None, is_const=None):
+        if is_const is None:
+            is_const = ('const' in ctype)
+        if is_const and 'const' not in ctype:
+            ctype = 'const ' + ctype
+
+        if direction is None:
+            if is_const:
+                direction = Parameter.DIRECTION_IN
+            else:
+                raise TypeConfigurationError("direction not given")
+        
+        super(UInt8PtrParam, self).__init__(ctype, name, direction, is_const)
     
     def convert_c_to_python(self, wrapper):
         if self.direction & self.DIRECTION_IN:
@@ -261,7 +304,7 @@ class UInt8PtrParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert self.ctype.endswith('*')
-        name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
+        name = wrapper.declarations.declare_variable('uint8_t', self.name)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
             wrapper.parse_params.add_parameter('B', ['&'+name], self.name)
