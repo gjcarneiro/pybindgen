@@ -381,6 +381,14 @@ class ModuleParser(object):
         while unregistered_classes:
             cls = unregistered_classes.pop(0)
             typedef = None
+
+            kwargs = {}
+            global_annotations, dummy_param_annotations = \
+                annotations_scanner.get_annotations(cls.location.file_name,
+                                                    cls.location.line)
+            if 'ignore' in global_annotations:
+                continue
+
             if '<' in cls.name:
 
                 for typedef in module_namespace.typedefs(function=self.location_filter,
@@ -430,12 +438,9 @@ class ModuleParser(object):
             if not ok:
                 unregistered_classes.append(cls)
                 continue
+
             ##--
 
-            kwargs = {}
-            global_annotations, dummy_param_annotations = \
-                annotations_scanner.get_annotations(cls.location.file_name,
-                                                    cls.location.line)
             for name, value in global_annotations.iteritems():
                 if name == 'allow_subclassing':
                     kwargs.setdefault('allow_subclassing', annotations_scanner.parse_boolean(value))
