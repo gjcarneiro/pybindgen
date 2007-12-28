@@ -545,21 +545,20 @@ class ModuleParser(object):
                                                     member.location.line)
             if 'ignore' in global_annotations:
                 continue
-            for key, val in global_annotations.iteritems():
-                if key == 'ignore':
-                    pass
-                elif key == 'template_instance_names' \
-                        and templates.is_instantiation(member.demangled_name):
-                    pass
-                else:
-                    warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
-                                           % (key, val, member),
-                                           Warning, member.location.file_name, member.location.line)
-            
+
             ## ------------ method --------------------
             if isinstance(member, calldef.member_function_t):
                 is_virtual = (member.virtuality != calldef.VIRTUALITY_TYPES.NOT_VIRTUAL)
                 pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
+
+                for key, val in global_annotations.iteritems():
+                    if key == 'template_instance_names' \
+                            and templates.is_instantiation(member.demangled_name):
+                        pass
+                    else:
+                        warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
+                                               % (key, val, member),
+                                               Warning, member.location.file_name, member.location.line)
                 
                 try:
                     return_type = type_registry.lookup_return(member.return_type,
