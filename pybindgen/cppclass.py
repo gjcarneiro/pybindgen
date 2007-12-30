@@ -342,6 +342,13 @@ class CppClass(object):
 
         if name != 'dummy':
             ## register type handlers
+
+            class ThisClassParameter(CppClassParameter):
+                """Register this C++ class as pass-by-value parameter"""
+                CTYPES = [name]
+                cpp_class = self
+            self.ThisClassParameter = ThisClassParameter
+
             class ThisClassRefParameter(CppClassRefParameter):
                 """Register this C++ class as pass-by-reference parameter"""
                 CTYPES = [name+'&']
