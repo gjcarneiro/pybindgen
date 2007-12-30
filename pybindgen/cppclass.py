@@ -775,7 +775,7 @@ typedef struct {
         static_getsets = self.static_attributes.generate(code_sink)
 
         ## --- register the class type in the module ---
-        module.after_init.write_code("/* Register the '%s' class */" % self.name)
+        module.after_init.write_code("/* Register the '%s' class */" % self.full_name)
 
         ## generate a metaclass if needed
         if static_getsets == '0':
@@ -901,14 +901,14 @@ typedef struct {
             code_sink.writeln()
         method_defs.extend(parent_caller_methods)
         ## generate the method table
-        code_sink.writeln("static PyMethodDef %s_methods[] = {" % (self.name,))
+        code_sink.writeln("static PyMethodDef %s_methods[] = {" % (self.pystruct,))
         code_sink.indent()
         for methdef in method_defs:
             code_sink.writeln(methdef)
         code_sink.writeln("{NULL, NULL, 0, NULL}")
         code_sink.unindent()
         code_sink.writeln("};")
-        self.slots.setdefault("tp_methods", "%s_methods" % (self.name,))
+        self.slots.setdefault("tp_methods", "%s_methods" % (self.pystruct,))
 
     def _generate_gc_methods(self, code_sink):
         """Generate tp_clear and tp_traverse"""

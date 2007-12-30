@@ -72,7 +72,7 @@ class CppMethod(ForwardWrapperBase):
         """set the class object this method belongs to"""
         self._class = class_
         self.wrapper_base_name = "_wrap_%s_%s" % (
-            class_.name, self.mangled_name)
+            class_.pystruct, self.mangled_name)
     def get_class(self):
         """get the class object this method belongs to"""
         return self._class
@@ -230,7 +230,7 @@ class CppConstructor(ForwardWrapperBase):
         "Set the class wrapper object (CppClass)"
         self._class = class_
         self.wrapper_base_name = "_wrap_%s__tp_init" % (
-            class_.name,)
+            class_.pystruct,)
     def get_class(self):
         "Get the class wrapper object (CppClass)"
         return self._class
@@ -336,7 +336,7 @@ class CppNoConstructor(ForwardWrapperBase):
         #assert isinstance(class_, CppClass)
 
         wrapper_function_name = "_wrap_%s__tp_init" % (
-            class_.name,)
+            class_.pystruct,)
         code_sink.writeln("static int")
         code_sink.writeln("%s(void)" % wrapper_function_name)
         code_sink.writeln('{')
