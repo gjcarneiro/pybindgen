@@ -16,6 +16,7 @@ from pygccxml.declarations import type_traits
 from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
 from pygccxml.declarations import templates
+from pygccxml.declarations import class_declaration
 import settings
 
 #from pygccxml.declarations.calldef import \
@@ -370,17 +371,21 @@ class ModuleParser(object):
             enums = module_namespace.enums(function=self.location_filter,
                                            recursive=False, allow_empty=True)
         else:
-            enums = outer_class.gccxml_definition.enums(function=self.location_filter,
-                                                        recursive=False, allow_empty=True)
+            enums = []
+            for enum in outer_class.gccxml_definition.enums(function=self.location_filter,
+                                                            recursive=False, allow_empty=True):
+                if outer_class.gccxml_definition.find_out_member_access_type(enum) != 'public':
+                    continue
+                if enum.name.startswith('__'):
+                    continue
+                if not enum.name:
+                    warnings.warn_explicit("Enum %s ignored because it has no name"
+                                           % (enum, ),
+                                           Warning, enum.location.file_name, enum.location.line)
+                    continue
+                enums.append(enum)
 
         for enum in enums:
-            if enum.name.startswith('__'):
-                continue
-            if not enum.name:
-                warnings.warn_explicit("Enum %s ignored because it has no name"
-                                       % (enum, ),
-                                       Warning, enum.location.file_name, enum.location.line)
-                continue
             module.add_enum(Enum(enum.name, [name for name, dummy_val in enum.values],
                                  outer_class=outer_class))
 
@@ -391,10 +396,14 @@ class ModuleParser(object):
                                                              recursive=False, allow_empty=True)
                                     if not cls.name.startswith('__')]
         else:
-            unregistered_classes = [cls for cls in
-                                    outer_class.gccxml_definition.classes(function=self.location_filter,
-                                                                          recursive=False, allow_empty=True)
-                                    if not cls.name.startswith('__')]
+            unregistered_classes = []
+            for cls in outer_class.gccxml_definition.classes(function=self.location_filter,
+                                                             recursive=False, allow_empty=True):
+                if outer_class.gccxml_definition.find_out_member_access_type(cls) != 'public':
+                    continue
+                if cls.name.startswith('__'):
+                    continue
+                unregistered_classes.append(cls)
 
         registered_classes = {} # class_t -> CppClass
         while unregistered_classes:
