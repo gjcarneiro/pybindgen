@@ -80,6 +80,7 @@ def my_module_gen(out_file):
 
     Bar = CppClass('Bar', parent=Foo)
     mod.add_class(Bar)
+    Bar.inherit_default_constructors()
     ## a static method..
     Bar.add_method(CppMethod(ReturnValue.new('std::string'), 'Hooray', [], is_static=True))
 

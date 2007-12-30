@@ -300,11 +300,11 @@ class CppClass(object):
         ## operator ThisClass(); in the other class.
         self.implicitly_converts_from = []
 
-        self.pystruct = "***GIVE ME A NAME***"
+        self._pystruct = None #"***GIVE ME A NAME***"
         self.metaclass_name = "***GIVE ME A NAME***"
         self.pytypestruct = "***GIVE ME A NAME***"
 
-        self.instance_attributes = PyGetSetDef("%s__getsets" % self.pystruct)
+        self.instance_attributes = PyGetSetDef("%s__getsets" % self._pystruct)
         self.static_attributes = PyGetSetDef("%s__getsets" % self.metaclass_name)
 
         self.parent = parent
@@ -396,7 +396,12 @@ class CppClass(object):
             except ValueError:
                 pass
 
-        self._inherit_default_constructors()
+
+    def get_pystruct(self):
+        if self._pystruct is None:
+            raise ValueError
+        return self._pystruct
+    pystruct = property(get_pystruct)
 
     def get_construct_name(self):
         """Get a name usable for new %s construction, or raise
@@ -472,11 +477,11 @@ class CppClass(object):
 
         flat_name = ''.join([make_upper(s) for s in  self.full_name.split('::')])
 
-        self.pystruct = "Py%s%s" % (prefix, flat_name)
-        self.metaclass_name = "%sMeta" % self.pystruct
+        self._pystruct = "Py%s%s" % (prefix, flat_name)
+        self.metaclass_name = "%sMeta" % flat_name
         self.pytypestruct = "Py%s%s_Type" % (prefix, flat_name)
 
-        self.instance_attributes.cname = "%s__getsets" % self.pystruct
+        self.instance_attributes.cname = "%s__getsets" % self._pystruct
         self.static_attributes.cname = "%s__getsets" % self.metaclass_name
 
         ## re-register the class type handlers, now with class full name
@@ -518,7 +523,7 @@ class CppClass(object):
     module = property(get_module, set_module)
 
 
-    def _inherit_default_constructors(self):
+    def inherit_default_constructors(self):
         """inherit the default constructors from the parentclass according to C++
         language rules"""
         if self.parent is None:
