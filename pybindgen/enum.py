@@ -3,6 +3,7 @@ Wraps enumerations
 """
 
 from typehandlers import inttype
+from typehandlers.base import return_type_matcher, param_type_matcher
 from cppclass import CppClass
 
 class Enum(object):
@@ -31,12 +32,16 @@ class Enum(object):
             if not isinstance(val, str):
                 raise TypeError
 
+        if not name:
+            raise ValueError
         self.name = name
         self.full_name = None
         self.values = list(values)
         self.values_prefix = values_prefix
         self.cpp_namespace = cpp_namespace
         self._module = None
+        self.ThisEnumParameter = None
+        self.ThisEnumReturn = None
 
     def get_module(self):
         """Get the Module object this class belongs to"""
@@ -60,19 +65,32 @@ class Enum(object):
             self.full_name = self.outer_class.full_name + '::' + self.name
 
         ## Register type handlers for the enum type
+        assert self.name
+        assert self.full_name
         class ThisEnumParameter(inttype.IntParam):
-            CTYPES = [self.name, self.full_name]
+            CTYPES = []
             full_type_name = self.full_name
             def __init__(self, ctype, name):
                 super(ThisEnumParameter, self).__init__(self.full_type_name, name)
-        self.ThisEnumParameter = ThisEnumParameter
-        
         class ThisEnumReturn(inttype.IntReturn):
-            CTYPES = [self.name, self.full_name]
+            CTYPES = []
             full_type_name = self.full_name
             def __init__(self, ctype):
                 super(ThisEnumReturn, self).__init__(self.full_type_name)
+        self.ThisEnumParameter = ThisEnumParameter
         self.ThisEnumReturn = ThisEnumReturn
+        param_type_matcher.register(self.full_name, self.ThisEnumParameter)
+        return_type_matcher.register(self.full_name, self.ThisEnumReturn)
+
+        if self.name != self.full_name:
+            try:
+                param_type_matcher.register(self.name, self.ThisEnumParameter)
+            except ValueError:
+                pass
+            try:
+                return_type_matcher.register(self.name, self.ThisEnumReturn)
+            except ValueError:
+                pass
 
 
     module = property(get_module, set_module)

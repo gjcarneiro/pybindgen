@@ -345,35 +345,56 @@ class CppClass(object):
 
             class ThisClassParameter(CppClassParameter):
                 """Register this C++ class as pass-by-value parameter"""
-                CTYPES = [name]
+                CTYPES = []
                 cpp_class = self
             self.ThisClassParameter = ThisClassParameter
+            try:
+                param_type_matcher.register(name, self.ThisClassParameter)
+            except ValueError:
+                pass
+
 
             class ThisClassRefParameter(CppClassRefParameter):
                 """Register this C++ class as pass-by-reference parameter"""
-                CTYPES = [name+'&']
+                CTYPES = []
                 cpp_class = self
             self.ThisClassRefParameter = ThisClassRefParameter
+            try:
+                param_type_matcher.register(name+'&', self.ThisClassRefParameter)
+            except ValueError:
+                pass
 
             class ThisClassReturn(CppClassReturnValue):
                 """Register this C++ class as value return"""
-                CTYPES = [name]
+                CTYPES = []
                 cpp_class = self
-
             self.ThisClassReturn = ThisClassReturn
             self.ThisClassRefReturn = ThisClassReturn
+            try:
+                return_type_matcher.register(name, self.ThisClassReturn)
+                return_type_matcher.register(name, self.ThisClassRefReturn)
+            except ValueError:
+                pass
 
             class ThisClassPtrParameter(CppClassPtrParameter):
                 """Register this C++ class as pass-by-pointer parameter"""
-                CTYPES = [name+'*']
+                CTYPES = []
                 cpp_class = self
             self.ThisClassPtrParameter = ThisClassPtrParameter
+            try:
+                param_type_matcher.register(name+'*', self.ThisClassPtrParameter)
+            except ValueError:
+                pass
 
             class ThisClassPtrReturn(CppClassPtrReturnValue):
                 """Register this C++ class as pointer return"""
-                CTYPES = [name+'*']
+                CTYPES = []
                 cpp_class = self
             self.ThisClassPtrReturn = ThisClassPtrReturn
+            try:
+                return_type_matcher.register(name+'*', self.ThisClassPtrReturn)
+            except ValueError:
+                pass
 
         self._inherit_default_constructors()
 

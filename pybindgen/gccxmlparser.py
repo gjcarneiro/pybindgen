@@ -376,6 +376,11 @@ class ModuleParser(object):
         for enum in enums:
             if enum.name.startswith('__'):
                 continue
+            if not enum.name:
+                warnings.warn_explicit("Enum %s ignored because it has no name"
+                                       % (enum, ),
+                                       Warning, enum.location.file_name, enum.location.line)
+                continue
             module.add_enum(Enum(enum.name, [name for name, dummy_val in enum.values],
                                  outer_class=outer_class))
 
