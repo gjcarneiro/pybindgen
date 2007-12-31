@@ -205,7 +205,7 @@ class CppClass(object):
         'PyTypeObject %(typestruct)s = {\n'
         '    PyObject_HEAD_INIT(NULL)\n'
         '    0,                                 /* ob_size */\n'
-        '    "%(classname)s",                   /* tp_name */\n'
+        '    "%(tp_name)s",                   /* tp_name */\n'
         '    %(tp_basicsize)s,                  /* tp_basicsize */\n'
         '    0,                                 /* tp_itemsize */\n'
         '    /* methods */\n'
@@ -850,10 +850,16 @@ typedef struct {
             self.slots.setdefault("tp_dictoffset", "0")
         self.slots.setdefault("tp_doc", (docstring is None and 'NULL'
                                          or "\"%s\"" % (docstring,)))
-        dict_ = dict(self.slots)
+        dict_ = self.slots
         dict_.setdefault("typestruct", self.pytypestruct)
-        dict_.setdefault("classname", self.name)
-        
+
+        if self.outer_class is None:
+            mod_path = self._module.get_module_path()
+            mod_path.append(self.name)
+            dict_.setdefault("tp_name", '.'.join(mod_path))
+        else:
+            dict_.setdefault("tp_name", '%s.%s' % (self.outer_class.slots['tp_name'], self.name))
+            
         code_sink.writeln(self.TYPE_TMPL % dict_)
 
 
