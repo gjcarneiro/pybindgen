@@ -27,7 +27,7 @@ class Module(object):
 
         if parent is None:
             self.prefix = self.name
-            error_return = 'PyErr_Print();\nreturn;'
+            error_return = 'return;'
         else:
             parent.submodules.append(self)
             self.prefix = parent.prefix + "_" + self.name
