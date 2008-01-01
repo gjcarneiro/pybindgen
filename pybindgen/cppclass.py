@@ -935,7 +935,6 @@ typedef struct {
 static void
 %s(%s *self)
 {
-    // fprintf(stderr, "tp_clear >>> %%s at %%p <<<\n", self->ob_type->tp_name, self);
     Py_CLEAR(self->inst_dict);
     %s
     self->obj = 0;
@@ -958,7 +957,6 @@ static void
 static int
 %s(%s *self, visitproc visit, void *arg)
 {
-    // fprintf(stderr, "tp_traverse >>> %%s at %%p <<<\n", self->ob_type->tp_name, self);
     Py_VISIT(self->inst_dict);
     %s
     return 0;
@@ -996,7 +994,6 @@ static int
 static void
 %s(%s *self)
 {
-    // fprintf(stderr, "dealloc >>> %%s at %%p <<<\n", self->ob_type->tp_name, self);
     %s
     %s
     %s
