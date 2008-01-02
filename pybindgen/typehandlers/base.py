@@ -267,6 +267,9 @@ class ParseTupleParameters(object):
         else:
             self._parse_tuple_items.append(item)
 
+    def is_empty(self):
+        return self.get_parameters() == ['""']
+
     def get_parameters(self):
         """
         returns a list of parameters to pass into a
@@ -559,17 +562,21 @@ class ReverseWrapperBase(object):
         ## self.after_call.write_error_check('py_retval == NULL')
         self.generate_python_call()
 
-        ## parse the return value
-        ## this ensures that py_retval is always a tuple
-        self.before_call.write_code('py_retval = Py_BuildValue("(N)", py_retval);')
-
         ## convert the return value(s)
         self.return_value.convert_python_to_c(self)
 
-        parse_tuple_params = ['py_retval']
-        parse_tuple_params.extend(self.parse_params.get_parameters())
-        self.before_call.write_error_check('!PyArg_ParseTuple(%s)' %
-                                           (', '.join(parse_tuple_params),))
+        if self.parse_params.is_empty():
+            self.before_call.write_error_check('py_retval != Py_None',
+                                               'PyErr_SetString(PyExc_TypeError, "function/method should return None");')
+        else:
+            ## parse the return value
+            ## this ensures that py_retval is always a tuple
+            self.before_call.write_code('py_retval = Py_BuildValue("(N)", py_retval);')
+
+            parse_tuple_params = ['py_retval']
+            parse_tuple_params.extend(self.parse_params.get_parameters())
+            self.before_call.write_error_check('!PyArg_ParseTuple(%s)' %
+                                               (', '.join(parse_tuple_params),))
 
         ## cleanup and return
         self.after_call.write_cleanup()
