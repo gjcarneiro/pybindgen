@@ -680,6 +680,11 @@ public:
         if self.have_pure_virtual_methods and self.helper_class is None:
             self.cannot_be_constructed = True
 
+    def set_helper_class_disabled(self, flag=True):
+        self.helper_class_disabled = flag
+        if flag:
+            self.helper_class = None
+
     def set_cannot_be_constructed(self, flag=True):
         self.cannot_be_constructed = flag
 

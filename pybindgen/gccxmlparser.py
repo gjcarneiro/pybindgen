@@ -600,6 +600,7 @@ class ModuleParser(object):
                                            Warning, member.location.file_name, member.location.line)
                     if pure_virtual:
                         class_wrapper.set_cannot_be_constructed(True)
+                        class_wrapper.set_helper_class_disabled(True)
                     continue
                 arguments = []
                 ok = True
@@ -615,6 +616,7 @@ class ModuleParser(object):
                 if not ok:
                     if pure_virtual:
                         class_wrapper.set_cannot_be_constructed(True)
+                        class_wrapper.set_helper_class_disabled(True)
                     continue
 
                 if pure_virtual and not class_wrapper.allow_subclassing:
