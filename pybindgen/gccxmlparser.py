@@ -662,7 +662,7 @@ class ModuleParser(object):
 
             ## ------------ constructor --------------------
             elif isinstance(member, calldef.constructor_t):
-                if member.access_type != 'public':
+                if member.access_type not in ['public', 'protected']:
                     continue
 
                 if not member.arguments:
@@ -682,7 +682,7 @@ class ModuleParser(object):
                     ok = True
                 if not ok:
                     continue
-                constructor_wrapper = CppConstructor(arguments)
+                constructor_wrapper = CppConstructor(arguments, visibility=member.access_type)
                 constructor_wrapper.gccxml_definition = member
                 class_wrapper.add_constructor(constructor_wrapper)
 

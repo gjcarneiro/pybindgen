@@ -4,7 +4,7 @@ Wrap C++ class methods and constructods.
 
 from copy import copy
 
-from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, join_ctype_and_name
+from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, join_ctype_and_name, CodeGenerationError
 from typehandlers import codesink
 import overloading
 import settings
@@ -202,7 +202,7 @@ class CppConstructor(ForwardWrapperBase):
     wrapper is used as the python class __init__ method.
     """
 
-    def __init__(self, parameters, unblock_threads=None):
+    def __init__(self, parameters, unblock_threads=None, visibility='public'):
         """
         parameters -- the constructor parameters
         """
@@ -213,6 +213,8 @@ class CppConstructor(ForwardWrapperBase):
             "return -1;", "return -1;",
             force_parse=ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS,
             unblock_threads=unblock_threads)
+        assert visibility in ['public', 'protected', 'private']
+        self.visibility = visibility
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
         self._class = None
@@ -265,6 +267,12 @@ class CppConstructor(ForwardWrapperBase):
 
         Returns the wrapper function name.
         """
+        if self.visibility == 'private':
+            raise CodeGenerationError("private constructor")
+        elif self.visibility == 'protected':
+            if self._class.helper_class is None:
+                raise CodeGenerationError("protected constructor and no helper class")
+
         #assert isinstance(class_, CppClass)
         tmp_sink = codesink.MemoryCodeSink()
 

@@ -345,22 +345,22 @@ def my_module_gen(out_file):
 
 
 
-    SomeObject = CppClass('AbstractBaseClass2', allow_subclassing=True)
-    mod.add_class(SomeObject)
+    AbstractBaseClass2 = CppClass('AbstractBaseClass2', allow_subclassing=True)
+    mod.add_class(AbstractBaseClass2)
 
-    SomeObject.add_method(CppMethod(ReturnValue.new('int'), 'invoke_private_virtual',
-                                    [Parameter.new('int', 'x')]))
-    SomeObject.add_method(CppMethod(ReturnValue.new('int'), 'invoke_protected_virtual',
-                                    [Parameter.new('int', 'x')]))
-    SomeObject.add_constructor(CppConstructor([]))
+    AbstractBaseClass2.add_method(CppMethod(ReturnValue.new('int'), 'invoke_private_virtual',
+                                            [Parameter.new('int', 'x')], is_const=True))
+    AbstractBaseClass2.add_method(CppMethod(ReturnValue.new('int'), 'invoke_protected_virtual',
+                                            [Parameter.new('int', 'x')], is_const=True))
+    AbstractBaseClass2.add_constructor(CppConstructor([], visibility='protected'))
 
-    SomeObject.add_method(CppMethod(
-        ReturnValue.new('int'), 'protected_virtual', [Parameter.new('int', 'x')],
-        is_virtual=True, visibility='protected'))
-
-    SomeObject.add_method(CppMethod(
-        ReturnValue.new('int'), 'private_virtual', [Parameter.new('int', 'x')],
-        is_virtual=True, is_pure_virtual=True, visibility='private'))
+    AbstractBaseClass2.add_method(CppMethod(
+            ReturnValue.new('int'), 'protected_virtual', [Parameter.new('int', 'x')],
+            is_virtual=True, visibility='protected', is_const=True))
+    
+    AbstractBaseClass2.add_method(CppMethod(
+            ReturnValue.new('int'), 'private_virtual', [Parameter.new('int', 'x')],
+            is_virtual=True, is_pure_virtual=True, visibility='private', is_const=True))
 
 
     class MyErrorHandler(pybindgen.settings.ErrorHandler):

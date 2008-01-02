@@ -545,23 +545,27 @@ inline AbstractBaseClass* get_abstract_base_class_ptr2 ()
 // Class to test private/protected virtual methods
 class AbstractBaseClass2
 {
-public:
+protected:
     AbstractBaseClass2 () {}
+
+public:
     virtual ~AbstractBaseClass2 () {}
 
-    int invoke_private_virtual (int x) {
+    int invoke_private_virtual (int x) const {
         return private_virtual (x);
     }
 
-    int invoke_protected_virtual (int x) {
+    int invoke_protected_virtual (int x) const {
         return protected_virtual (x);
     }
 
 protected:
-    virtual int protected_virtual (int x) { return x+1; }
+    virtual int protected_virtual (int x) const { return x+1; }
 
 private:
-    virtual int private_virtual (int x) = 0;
+    virtual int private_virtual (int x) const = 0;
+
+    AbstractBaseClass2 (const AbstractBaseClass2 &other) { other.invoke_protected_virtual(0); }
 };
 
 
