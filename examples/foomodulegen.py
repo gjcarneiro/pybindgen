@@ -90,13 +90,22 @@ def my_module_gen(out_file):
 
 
     ## Zbr is a reference counted class
-    Zbr = CppClass('Zbr', incref_method='Ref', decref_method='Unref')
+    Zbr = CppClass('Zbr', incref_method='Ref', decref_method='Unref',
+                   peekref_method="GetReferenceCount", allow_subclassing=True)
     mod.add_class(Zbr)
     Zbr.add_constructor(
         CppConstructor([Parameter.new('std::string', 'datum')]))
     Zbr.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
+    Zbr.add_method(CppMethod(ReturnValue.new('int'), 'get_int', [Parameter.new('int', 'x')],
+                             is_virtual=True))
+    Zbr.add_static_attribute(ReturnValue.new('int'), 'instance_count')
     
-    
+    mod.add_function(Function(ReturnValue.new('void'), 'store_zbr',
+                              [Parameter.new('Zbr*', 'zbr', transfer_ownership=True)]))
+    mod.add_function(Function(ReturnValue.new('int'), 'invoke_zbr',
+                              [Parameter.new('int', 'x')]))
+    mod.add_function(Function(ReturnValue.new('void'), 'delete_stored_zbr', []))
+
 
     mod.add_function(Function(ReturnValue.new('int'), 'print_something',
                               [Parameter.new('const char*', 'message')]))

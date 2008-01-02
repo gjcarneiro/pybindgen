@@ -260,7 +260,8 @@ class CppClass(object):
 
     def __init__(self, name, parent=None, incref_method=None, decref_method=None,
                  automatic_type_narrowing=None, allow_subclassing=None,
-                 is_singleton=False, outer_class=None):
+                 is_singleton=False, outer_class=None,
+                 peekref_method=None):
         """Constructor
         name -- class name
         parent -- optional parent class wrapper
@@ -282,6 +283,8 @@ class CppClass(object):
         is_singleton -- if True, the class is considered a singleton,
                         and so the python wrapper will never call the
                         C++ class destructor to free the value.
+        peekref_method -- if the class supports reference counting, the
+                          name of the method that returns the current reference count.
         """
         assert outer_class is None or isinstance(outer_class, CppClass)
         self.outer_class = outer_class
@@ -318,9 +321,11 @@ class CppClass(object):
         if incref_method is None and parent is not None:
             self.incref_method = parent.incref_method
             self.decref_method = parent.decref_method
+            self.peekref_method = parent.peekref_method
         else:
             self.incref_method = incref_method
             self.decref_method = decref_method
+            self.peekref_method = peekref_method
 
         if automatic_type_narrowing is None:
             if parent is None:
@@ -962,10 +967,14 @@ static void
         if self.helper_class is None:
             visit_self = ''
         else:
+            if self.peekref_method is None:
+                peekref_code = ''
+            else:
+                peekref_code = " && self->obj->%s() == 1" % self.peekref_method
             visit_self = '''
-    if (self->obj && typeid(*self->obj) == typeid(%s))
+    if (self->obj && typeid(*self->obj) == typeid(%s)%s)
         Py_VISIT(self);
-''' % self.helper_class.name
+''' % (self.helper_class.name, peekref_code)
 
         code_sink.writeln(r'''
 static int

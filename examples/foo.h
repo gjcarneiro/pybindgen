@@ -91,21 +91,21 @@ public:
 Foo* get_hidden_subclass_pointer ();
 
 class Zbr
-// -#- incref_method=Ref; decref_method=Unref -#-
+// -#- incref_method=Ref; decref_method=Unref; peekref_method=GetReferenceCount -#-
 {
     int m_refcount;
     std::string m_datum;
 public:
     Zbr () : m_refcount (1), m_datum ("")
-        {}
+        { Zbr::instance_count++; }
     Zbr (std::string datum) :  m_refcount (1), m_datum (datum)
-        {}
+        { Zbr::instance_count++; }
 
     std::string get_datum () const { return m_datum; }
 
     Zbr (Zbr const & other) :
         m_refcount (1), m_datum (other.get_datum ())
-        {}
+        {Zbr::instance_count++;}
 
     void Ref () {
         // std::cerr << "Ref Zbr " << this << " from " << m_refcount << std::endl;
@@ -116,7 +116,23 @@ public:
         if (--m_refcount == 0)
             delete this;
     }
+    int GetReferenceCount () const { return m_refcount; }
+
+    virtual int get_int (int x) {
+        return x;
+    }
+    
+    static int instance_count;
+
+    virtual ~Zbr () {
+        --Zbr::instance_count;
+    }
 };
+
+// -#- @zbr(transfer_ownership=true) -#-
+void store_zbr (Zbr *zbr);
+int invoke_zbr (int x);
+void delete_stored_zbr (void);
 
 
 class Foobar

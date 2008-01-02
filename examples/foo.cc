@@ -174,3 +174,27 @@ template <> std::string TypeNameGet<int> (void)
 {
     return "int";
 }
+
+
+static Zbr *g_zbr = NULL;
+int Zbr::instance_count = 0;
+
+void store_zbr (Zbr *zbr)
+{
+    if (g_zbr)
+        g_zbr->Unref ();
+    g_zbr = zbr;
+}
+
+int invoke_zbr (int x)
+{
+    return g_zbr->get_int (x);
+}
+
+void delete_stored_zbr (void)
+{
+    if (g_zbr)
+        g_zbr->Unref ();
+    g_zbr = NULL;
+}
+

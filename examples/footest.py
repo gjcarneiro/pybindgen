@@ -252,9 +252,7 @@ class TestFoo(unittest.TestCase):
         while gc.collect():
             pass
         count_before = foo.SomeObject.instance_count
-        obj = Test("xxx", "yyy")
-        foo.store_some_object(obj)
-        del obj
+        foo.store_some_object(Test("xxx", "yyy"))
         while gc.collect():
             pass
 
@@ -611,6 +609,38 @@ class TestFoo(unittest.TestCase):
         c = Class()
         x = c.invoke_protected_virtual(2)
         self.assertEqual(x, 9)
+
+
+    def test_subclass_with_reference_counting(self):
+        class Test(foo.Zbr):
+            def __init__(self, y):
+                super(Test, self).__init__("foo")
+                self.y = y
+            def _get_int(self, x):
+                return getattr(self, 'y', 0) + x
+                
+        while gc.collect():
+            pass
+        count_before = foo.Zbr.instance_count
+        foo.store_zbr(Test(123))
+        while gc.collect():
+            pass
+
+        ## check that Zbr isn't prematurely deleted
+        self.assertEqual(foo.Zbr.instance_count, count_before + 1)
+
+        ## invoke the virtual method and check that it returns the correct value
+        value = foo.invoke_zbr(456)
+        self.assertEqual(value, 123+456)
+
+        ## now delete the object from the C side..
+        foo.delete_stored_zbr()
+        while gc.collect():
+            pass
+
+        ## check that Zbr was finally deleted
+        self.assertEqual(foo.Zbr.instance_count, count_before)
+
 
 if __name__ == '__main__':
     unittest.main()

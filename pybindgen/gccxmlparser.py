@@ -480,6 +480,8 @@ class ModuleParser(object):
                     kwargs.setdefault('incref_method', value)
                 elif name == 'decref_method':
                     kwargs.setdefault('decref_method', value)
+                elif name == 'peekref_method':
+                    kwargs.setdefault('peekref_method', value)
                 elif name == 'automatic_type_narrowing':
                     kwargs.setdefault('automatic_type_narrowing', annotations_scanner.parse_boolean(value))
                 else:
