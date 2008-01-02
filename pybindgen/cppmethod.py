@@ -19,7 +19,7 @@ class CppMethod(ForwardWrapperBase):
     def __init__(self, return_value, method_name, parameters, is_static=False,
                  template_parameters=(), is_virtual=False, is_const=False,
                  unblock_threads=None, is_pure_virtual=False,
-                 custom_template_method_name=None):
+                 custom_template_method_name=None, visibility='public'):
         """
         return_value -- the method return value
         method_name -- name of the method
@@ -32,6 +32,8 @@ class CppMethod(ForwardWrapperBase):
             return_value, parameters,
             "return NULL;", "return NULL;",
             unblock_threads=unblock_threads)
+        assert visibility in ['public', 'protected', 'private']
+        self.visibility = visibility
         self.method_name = method_name
         self.is_static = is_static
         self.is_virtual = is_virtual
@@ -393,13 +395,29 @@ class CppVirtualMethodParentCaller(CppMethod):
         retline, line = self.get_wrapper_signature(
             '_wrap_'+self.method_name+overload_str, extra_wrapper_parameters)
         code_sink.writeln(' '.join(['static', retline, line]) + ';')
-
         self.reset_code_generation_state()
+
+    def generate_parent_caller_method(self, code_sink):
+        ## generate a '%s__parent_caller' method (static methods
+        ## cannot "conquer" 'protected' access type, only regular
+        ## instance methods).
+        code_sink.writeln('inline %s %s__parent_caller(%s)' % (
+                self.return_value.ctype,
+                self.method_name,
+                ', '.join([join_ctype_and_name(param.ctype, param.name) for param in self.parameters])
+                ))
+        if self.return_value.ctype == 'void':
+            code_sink.writeln('{ %s::%s(%s); }' % (self._class.full_name, self.method_name,
+                                                   ', '.join([param.name for param in self.parameters])))
+        else:
+            code_sink.writeln('{ return %s::%s(%s); }' % (self._class.full_name, self.method_name,
+                                                          ', '.join([param.name for param in self.parameters])))        
+
 
     def generate_call(self, class_):
         "virtual method implementation; do not call"
         #assert isinstance(class_, CppClass)
-        method = 'self->obj->%s::%s' % (class_.full_name, self.method_name)
+        method = 'reinterpret_cast< %s* >(self->obj)->%s__parent_caller' % (self._helper_class.name, self.method_name)
         if self.return_value.ctype == 'void':
             self.before_call.write_code(
                 '%s(%s);' %

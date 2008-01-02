@@ -542,4 +542,27 @@ inline AbstractBaseClass* get_abstract_base_class_ptr2 ()
 }
 
 
+// Class to test private/protected virtual methods
+class AbstractBaseClass2
+{
+public:
+    AbstractBaseClass2 () {}
+    virtual ~AbstractBaseClass2 () {}
+
+    int invoke_private_virtual (int x) {
+        return private_virtual (x);
+    }
+
+    int invoke_protected_virtual (int x) {
+        return protected_virtual (x);
+    }
+
+protected:
+    virtual int protected_virtual (int x) { return x+1; }
+
+private:
+    virtual int private_virtual (int x) = 0;
+};
+
+
 #endif 	    /* !FOO_H_ */

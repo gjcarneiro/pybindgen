@@ -593,5 +593,24 @@ class TestFoo(unittest.TestCase):
     def test_nested_enum(self):
         self.assert_(hasattr(foo.SomeObject, "FOO_TYPE_BBB"))
 
+    def test_private_virtual(self):
+        class Class(foo.AbstractBaseClass2):
+            def _private_virtual(self, x):
+                return x*x
+        c = Class()
+        x = c.invoke_private_virtual(2)
+        self.assertEqual(x, 4)
+
+    def test_protected_virtual(self):
+        class Class(foo.AbstractBaseClass2):
+            def _private_virtual(self, x):
+                return x*x
+            def _protected_virtual(self, x):
+                y = super(Class, self)._protected_virtual(x)
+                return y*y
+        c = Class()
+        x = c.invoke_protected_virtual(2)
+        self.assertEqual(x, 9)
+
 if __name__ == '__main__':
     unittest.main()

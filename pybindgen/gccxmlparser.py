@@ -529,7 +529,7 @@ class ModuleParser(object):
 
     def _class_has_virtual_methods(self, cls):
         """return True if cls has at least one virtual method, else False"""
-        for member in cls.get_members('public'):
+        for member in cls.get_members():
             if isinstance(member, calldef.member_function_t):
                 if member.virtuality != calldef.VIRTUALITY_TYPES.NOT_VIRTUAL:
                     return True
@@ -553,15 +553,15 @@ class ModuleParser(object):
                 ## look for protected or private pure virtual functions; if any is found,
                 ## then the class cannot be constructed (because private/protected
                 ## virtual functions not yet implemented.
-                pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
-                if pure_virtual:
-                    warnings.warn_explicit("%s: protected/private virtual functions not yet implemented "
-                                           "by PyBindGen, so the constructor for the class will "
-                                           "have to be disabled to avoid compilation errors."
-                                           % member,
-                                           Warning, member.location.file_name, member.location.line)
-                    class_wrapper.set_cannot_be_constructed(True)
-                    break
+                #pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
+                #if pure_virtual:
+                #    warnings.warn_explicit("%s: protected/private virtual functions not yet implemented "
+                #                           "by PyBindGen, so the constructor for the class will "
+                #                           "have to be disabled to avoid compilation errors."
+                #                           % member,
+                #                           Warning, member.location.file_name, member.location.line)
+                #    class_wrapper.set_cannot_be_constructed(True)
+                #    break
 
             elif isinstance(member, calldef.constructor_t):
                 if member.access_type not in ['protected', 'private']:
@@ -577,7 +577,7 @@ class ModuleParser(object):
                     if cpp_class is class_wrapper and is_reference:
                         have_copy_constructor = True
 
-        for member in cls.get_members('public'):
+        for member in cls.get_members():
             if member.name in [class_wrapper.incref_method, class_wrapper.decref_method]:
                 continue
 
@@ -650,7 +650,8 @@ class ModuleParser(object):
                                            is_virtual=(is_virtual and class_wrapper.allow_subclassing),
                                            is_pure_virtual=pure_virtual,
                                            template_parameters=template_parameters,
-                                           custom_template_method_name=custom_template_method_name)
+                                           custom_template_method_name=custom_template_method_name,
+                                           visibility=member.access_type)
                 method_wrapper.gccxml_definition = member
                 try:
                     class_wrapper.add_method(method_wrapper)
@@ -661,6 +662,9 @@ class ModuleParser(object):
 
             ## ------------ constructor --------------------
             elif isinstance(member, calldef.constructor_t):
+                if member.access_type != 'public':
+                    continue
+
                 if not member.arguments:
                     have_trivial_constructor = True
 
@@ -688,6 +692,15 @@ class ModuleParser(object):
 
             ## ------------ attribute --------------------
             elif isinstance(member, variable_t):
+                if member.access_type == 'protected':
+                    warnings.warn_explicit("%s: protected member variables not yet implemented "
+                                           "by PyBindGen."
+                                           % member,
+                                           Warning, member.location.file_name, member.location.line)
+                    continue
+                if member.access_type == 'private':
+                    continue
+
                 try:
                     return_type = type_registry.lookup_return(member.type)
                 except (TypeLookupError, TypeConfigurationError), ex:

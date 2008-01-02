@@ -343,6 +343,26 @@ def my_module_gen(out_file):
     mod.add_enum(Enum('NestedEnum', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'],
                       outer_class=SomeObject))
 
+
+
+    SomeObject = CppClass('AbstractBaseClass2', allow_subclassing=True)
+    mod.add_class(SomeObject)
+
+    SomeObject.add_method(CppMethod(ReturnValue.new('int'), 'invoke_private_virtual',
+                                    [Parameter.new('int', 'x')]))
+    SomeObject.add_method(CppMethod(ReturnValue.new('int'), 'invoke_protected_virtual',
+                                    [Parameter.new('int', 'x')]))
+    SomeObject.add_constructor(CppConstructor([]))
+
+    SomeObject.add_method(CppMethod(
+        ReturnValue.new('int'), 'protected_virtual', [Parameter.new('int', 'x')],
+        is_virtual=True, visibility='protected'))
+
+    SomeObject.add_method(CppMethod(
+        ReturnValue.new('int'), 'private_virtual', [Parameter.new('int', 'x')],
+        is_virtual=True, is_pure_virtual=True, visibility='private'))
+
+
     class MyErrorHandler(pybindgen.settings.ErrorHandler):
         def __init__(self):
             self.num_errors = 0

@@ -134,6 +134,10 @@ void set_pyobj(PyObject *pyobj)
             code_sink.writeln()
             parent_caller.generate_declaration(code_sink)
 
+            for parent_caller_wrapper in parent_caller.wrappers:
+                parent_caller_wrapper.generate_parent_caller_method(code_sink)
+
+
         ## write the virtual proxies
         for virtual_proxy in self.virtual_proxies:
             virtual_proxy.class_ = self.class_
@@ -641,18 +645,20 @@ public:
             method.is_virtual = False
             method.is_pure_virtual = False
             method.self_parameter_pystruct = self.pystruct
+            method.visibility = 'public'
         else:
             raise TypeError
-            
-        try:
-            overload = self.methods[name]
-        except KeyError:
-            overload = CppOverloadedMethod(name)
-            overload.pystruct = self.pystruct
-            self.methods[name] = overload
+        
+        if method.visibility == 'public':
+            try:
+                overload = self.methods[name]
+            except KeyError:
+                overload = CppOverloadedMethod(name)
+                overload.pystruct = self.pystruct
+                self.methods[name] = overload
 
-        method.class_ = self
-        overload.add(method)
+            method.class_ = self
+            overload.add(method)
         if method.is_pure_virtual:
             self.have_pure_virtual_methods = True
         if method.is_virtual:
@@ -662,10 +668,11 @@ public:
             helper_class = self.get_helper_class()
             if helper_class is not None:
                 if not method.is_pure_virtual:
-                    parent_caller = CppVirtualMethodParentCaller(method)
-                    parent_caller.main_wrapper = method
-                    helper_class.add_virtual_parent_caller(parent_caller)
-
+                    if method.visibility in ['public', 'protected']:
+                        parent_caller = CppVirtualMethodParentCaller(method)
+                        parent_caller.main_wrapper = method
+                        helper_class.add_virtual_parent_caller(parent_caller)
+                        
                 proxy = CppVirtualMethodProxy(method)
                 proxy.main_wrapper = method
                 helper_class.add_virtual_proxy(proxy)
@@ -866,7 +873,8 @@ typedef struct {
     def _generate_constructor(self, code_sink):
         """generate the constructor, if any"""
         have_constructor = True
-        if self.constructors and not self.cannot_be_constructed:
+        if self.constructors and ((not self.cannot_be_constructed) or self.helper_class is not None
+                                  and not self.helper_class.cannot_be_constructed):
             code_sink.writeln()
             overload = CppOverloadedConstructor(None)
             self.constructors_overload = overload
@@ -880,7 +888,7 @@ typedef struct {
             ## In C++, and unlike Python, constructors with
             ## parameters are not automatically inheritted by
             ## subclasses.  We must generate a 'no constructor'
-            ## tp_init to prevent this type from inheriring a
+            ## tp_init to prevent this type from inheriting a
             ## tp_init that will allocate an instance of the
             ## parent class instead of this class.
             code_sink.writeln()
