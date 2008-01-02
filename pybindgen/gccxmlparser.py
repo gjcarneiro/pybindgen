@@ -552,18 +552,6 @@ class ModuleParser(object):
             if isinstance(member, calldef.member_function_t):
                 if member.access_type not in ['protected', 'private']:
                     continue
-                ## look for protected or private pure virtual functions; if any is found,
-                ## then the class cannot be constructed (because private/protected
-                ## virtual functions not yet implemented.
-                #pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
-                #if pure_virtual:
-                #    warnings.warn_explicit("%s: protected/private virtual functions not yet implemented "
-                #                           "by PyBindGen, so the constructor for the class will "
-                #                           "have to be disabled to avoid compilation errors."
-                #                           % member,
-                #                           Warning, member.location.file_name, member.location.line)
-                #    class_wrapper.set_cannot_be_constructed(True)
-                #    break
 
             elif isinstance(member, calldef.constructor_t):
                 if member.access_type not in ['protected', 'private']:
