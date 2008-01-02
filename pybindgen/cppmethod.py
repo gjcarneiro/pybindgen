@@ -547,19 +547,19 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         self.before_call.write_code(
             r'if (!PyObject_HasAttrString(m_pyself, "_%s")) {' % self.method_name)
         if self.return_value.ctype == 'void':
-            if not self.method.is_pure_virtual:
+            if not (self.method.is_pure_virtual or self.method.visibility == 'private'):
                 self.before_call.write_code(r'    %s::%s(%s);'
                                             % (self._class.full_name, self.method_name, call_params))
             self.before_call.write_code(r'    return;')
         else:
-            if self.method.is_pure_virtual:
+            if self.method.is_pure_virtual or self.method.visibility == 'private':
                 if isinstance(self.return_value, cppclass.CppClassReturnValue) \
                         and self.return_value.cpp_class.has_trivial_constructor:
                     pass
                 else:
                     self.set_error_return('''
 PyErr_Print();
-Py_FatalError("Error detected, but parent virtual is pure virtual, "
+Py_FatalError("Error detected, but parent virtual is pure virtual or private virtual, "
               "and return is a class without trival constructor");''')
             else:
                 self.set_error_return("PyErr_Print();\nreturn %s::%s(%s);"
