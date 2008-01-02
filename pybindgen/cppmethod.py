@@ -244,16 +244,39 @@ class CppConstructor(ForwardWrapperBase):
         "virtual method implementation; do not call"
         #assert isinstance(class_, CppClass)
         if class_.helper_class is None:
-            class_name = class_.full_name
-            call_params = self.call_params
+            self.before_call.write_code(
+                'self->obj = new %s(%s);' %
+                (class_.get_construct_name(), ", ".join(self.call_params)))
         else:
-            class_name = class_.helper_class.name
-        #self.before_call.write_code(r'fprintf(stderr, "creating a %s class instance\n");' % class_name)
-        self.before_call.write_code(
-            'self->obj = new %s(%s);' %
-            (class_name, ", ".join(self.call_params)))
-        if class_.helper_class is not None:
-            self.before_call.write_code('((%s*) self->obj)->set_pyobj((PyObject *)self);' % class_name)
+            ## We should only create a helper class instance when
+            ## being called from a user python subclass.
+            self.before_call.write_code("if (self->ob_type != &%s)" % class_.pytypestruct)
+            self.before_call.write_code("{")
+            self.before_call.indent()
+
+            self.before_call.write_code(
+                'self->obj = new %s(%s);' %
+                (class_.helper_class.name, ", ".join(self.call_params)))
+            self.before_call.write_code('((%s*) self->obj)->set_pyobj((PyObject *)self);'
+                                        % class_.helper_class.name)
+
+            self.before_call.unindent()
+            self.before_call.write_code("} else {")
+            self.before_call.indent()
+
+            try:
+                contruct_name = class_.get_construct_name()
+            except CodeGenerationError:
+                self.before_call.write_code('PyErr_SetString(PyExc_TypeError, "class \'%s\' '
+                                            'cannot be constructed");' % class_.name)
+                self.before_call.write_code('return -1;')
+            else:
+                self.before_call.write_code(
+                    'self->obj = new %s(%s);' %
+                    (contruct_name, ", ".join(self.call_params)))
+
+            self.before_call.unindent()
+            self.before_call.write_code("}")
 
     def _before_return_hook(self):
         "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
