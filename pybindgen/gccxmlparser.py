@@ -115,8 +115,10 @@ class GccXmlTypeRegistry(object):
                 if isinstance(type_tmp, cpptypes.const_t):
                     assert is_pointer
                     pointer_is_const = True
+                elif isinstance(type_tmp, cpptypes.pointer_t):
+                    return (None, is_const, is_pointer, is_reference, pointer_is_const)
                 else:
-                    raise AssertionError
+                    raise AssertionError, "found %r for type %s" % (type_tmp, type_info.decl_string)
             assert len(decomposed) == 0
             return (cpp_class, is_const, is_pointer, is_reference, pointer_is_const)
         return (None, is_const, is_pointer, is_reference, pointer_is_const)
