@@ -538,7 +538,8 @@ class CppClass(object):
         if self.helper_class_disabled:
             return None
         if self.helper_class is None:
-            self.helper_class = CppHelperClass(self)
+            if not self.is_singleton:
+                self.helper_class = CppHelperClass(self)
         return self.helper_class
     
     def get_type_narrowing_root(self):
