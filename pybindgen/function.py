@@ -4,7 +4,7 @@ C function wrapper
 
 from copy import copy
 
-from typehandlers.base import ForwardWrapperBase
+from typehandlers.base import ForwardWrapperBase, ReturnValue
 from typehandlers import codesink
 import overloading
 import settings
@@ -141,6 +141,33 @@ class Function(ForwardWrapperBase):
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
                (name, self.wrapper_actual_name, '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
+
+
+class CustomFunctionWrapper(Function):
+    """
+    Adds a custom function wrapper.  The custom wrapper must be
+    prepared to support overloading, i.e. it must have an additoional
+    "PyObject **return_exception" parameter, and raised exceptions
+    must be returned by this parameter.
+    """
+
+    NEEDS_OVERLOADING_INTERFACE = True
+
+    def __init__(self, function_name, wrapper_name, wrapper_body,
+                 flags=('METH_VARARGS', 'METH_KEYWORDS')):
+        super(CustomFunctionWrapper, self).__init__(ReturnValue.new('void'), function_name, [])
+        self.wrapper_base_name = wrapper_name
+        self.wrapper_actual_name = wrapper_name
+        self.meth_flags = list(flags)
+        self.wrapper_body = wrapper_body
+
+    def generate(self, code_sink, dummy_wrapper_name=None, extra_wrapper_params=()):
+        assert extra_wrapper_params == ["PyObject **return_exception"]
+        code_sink.writeln(self.wrapper_body)
+        return self.wrapper_base_name
+
+    def generate_call(self, *args, **kwargs):
+        pass
 
 
 class OverloadedFunction(overloading.OverloadedWrapper):

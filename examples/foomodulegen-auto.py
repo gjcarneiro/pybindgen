@@ -8,6 +8,7 @@ from pybindgen.typehandlers import base as typehandlers
 from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
 from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
 from pybindgen.gccxmlparser import ModuleParser
+from pybindgen.function import CustomFunctionWrapper
 
 
 
@@ -55,6 +56,34 @@ def my_module_gen(out_file):
     out.writeln("#include \"foo.h\"")
     module_parser = ModuleParser('foo2', '::')
     module = module_parser.parse(sys.argv[1:])
+
+    wrapper_body = '''
+static PyObject *
+_wrap_foofunction_that_takes_foo_from_string(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args,
+                                             PyObject *kwargs, PyObject **return_exception)
+{
+    PyObject *py_retval;
+    char *datum;
+    const char *keywords[] = {"foo", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", (char **) keywords, &datum)) {
+        {
+            PyObject *exc_type, *traceback;
+            PyErr_Fetch(&exc_type, return_exception, &traceback);
+            Py_XDECREF(exc_type);
+            Py_XDECREF(traceback);
+        }
+        return NULL;
+    }
+    function_that_takes_foo(Foo(datum));
+    py_retval = Py_BuildValue("");
+    return py_retval;
+}
+'''
+    module.add_function(CustomFunctionWrapper('function_that_takes_foo',
+                                              '_wrap_foofunction_that_takes_foo_from_string',
+                                              wrapper_body))
+
     module.generate(out)
 
 

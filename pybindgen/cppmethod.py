@@ -80,9 +80,11 @@ class CppMethod(ForwardWrapperBase):
         return self._class
     class_ = property(get_class, set_class)
 
-    def generate_call(self, class_):
+    def generate_call(self, class_=None):
         "virtual method implementation; do not call"
         #assert isinstance(class_, CppClass)
+        if class_ is None:
+            class_ = self._class
         if self.template_parameters:
             template_params = '< %s >' % ', '.join(self.template_parameters)
         else:
@@ -240,8 +242,10 @@ class CppConstructor(ForwardWrapperBase):
         return self._class
     class_ = property(get_class, set_class)
     
-    def generate_call(self, class_):
+    def generate_call(self, class_=None):
         "virtual method implementation; do not call"
+        if class_ is None:
+            class_ = self._class
         #assert isinstance(class_, CppClass)
         if class_.helper_class is None:
             self.before_call.write_code(
@@ -354,7 +358,7 @@ class CppNoConstructor(ForwardWrapperBase):
             None, [],
             "return -1;", "return -1;")
 
-    def generate_call(self, code_sink):
+    def generate_call(self):
         "dummy method, not really called"
         pass
     
@@ -445,9 +449,11 @@ class CppVirtualMethodParentCaller(CppMethod):
                                                           ', '.join([param.name for param in self.parameters])))        
 
 
-    def generate_call(self, class_):
+    def generate_call(self, class_=None):
         "virtual method implementation; do not call"
         #assert isinstance(class_, CppClass)
+        if class_ is None:
+            class_ = self._class
         method = 'reinterpret_cast< %s* >(self->obj)->%s__parent_caller' % (self._helper_class.name, self.method_name)
         if self.return_value.ctype == 'void':
             self.before_call.write_code(

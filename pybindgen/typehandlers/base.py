@@ -835,8 +835,19 @@ class ForwardWrapperBase(object):
         """
         Get a list of PyMethodDef flags that should be used for this wrapper.
         """
-        return self.meth_flags
+        flags = set(self.meth_flags)
+        if flags:
+            return list(flags)
 
+        tmp_sink = codesink.NullCodeSink()
+        try:
+            self.generate_body(tmp_sink)
+        except CodegenErrorBase:
+            return []
+        else:
+            return list(set(self.meth_flags))
+        finally:
+            self.reset_code_generation_state()
 
 
 class TypeTransformation(object):

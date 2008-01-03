@@ -642,5 +642,13 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(foo.Zbr.instance_count, count_before)
 
 
+    def test_custom_function_wrapper(self):
+        try:
+            foo.function_that_takes_foo("yellow")
+        except TypeError:
+            self.fail()
+        foo1 = foo.function_that_returns_foo()
+        self.assertEqual(foo1.get_datum(), "yellow")
+
 if __name__ == '__main__':
     unittest.main()

@@ -1,7 +1,8 @@
 """
 C wrapper wrapper
 """
-from typehandlers.base import ForwardWrapperBase, NotSupportedError
+from typehandlers.base import ForwardWrapperBase, NotSupportedError, CodegenErrorBase
+from typehandlers import codesink
 import utils
 
 def isiterable(obj): 
@@ -61,12 +62,27 @@ class OverloadedWrapper(object):
 
         flags = None
         for existing_wrapper in self.wrappers:
+            existing_flags = set(existing_wrapper.get_py_method_def_flags())
             if flags is None:
-                flags = set(existing_wrapper.get_py_method_def_flags())
+                flags = existing_flags
             else:
-                assert flags == set(existing_wrapper.get_py_method_def_flags())
+                assert flags == existing_flags
+
         if flags is not None and (flags != set(wrapper.get_py_method_def_flags())):
-            raise NotSupportedError("attempting to overload methods of different kinds")
+            if (set(['METH_KEYWORDS', 'METH_VARARGS']).issubset(set(wrapper.get_py_method_def_flags()))
+                and not set(['METH_KEYWORDS', 'METH_VARARGS']).issubset(existing_flags)):
+                ## Try to coerce existing wrappers into
+                ## METH_KEYWORDS|METH_VARARGS mode, then try again
+                modified = False
+                for existing_wrapper in self.wrappers:
+                    if existing_wrapper.force_parse != ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS:
+                        existing_wrapper.force_parse = ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS
+                        modified = True
+                if modified:
+                    return self.add(wrapper)
+            raise NotSupportedError("attempting to overload methods of different kinds"
+                                    " (adding %r vs existing %r)" %
+                                    (set(wrapper.get_py_method_def_flags()), flags))
 
         self.wrappers.append(wrapper)
 
@@ -124,7 +140,8 @@ class OverloadedWrapper(object):
 
         self._compute_all_wrappers()
 
-        if len(self.all_wrappers) == 1:
+        if len(self.all_wrappers) == 1 \
+                and not getattr(self.all_wrappers[0], 'NEEDS_OVERLOADING_INTERFACE', False):
             ## special case when there's only one wrapper; keep
             ## simple things simple
 
@@ -166,7 +183,7 @@ class OverloadedWrapper(object):
                 except utils.SkipWrapper:
                     continue
 
-                delegate_wrappers.append(wrapper_name)
+                delegate_wrappers.append(wrapper.wrapper_actual_name)
 
             ## if all wrappers did not generate, then the overload
             ## aggregator wrapper should not be generated either..
@@ -224,7 +241,8 @@ class OverloadedWrapper(object):
 
         name -- python wrapper/method name
         """
-        if len(self.all_wrappers) == 1:
+        if len(self.all_wrappers) == 1 \
+                and not getattr(self.all_wrappers[0], 'NEEDS_OVERLOADING_INTERFACE', False):
             return self.all_wrappers[0].get_py_method_def(name)
         else:
             flags = self.all_wrappers[0].get_py_method_def_flags()
