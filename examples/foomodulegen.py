@@ -9,6 +9,7 @@ from pybindgen.typehandlers import base as typehandlers
 from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
 from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
 from pybindgen.function import CustomFunctionWrapper
+from pybindgen.cppmethod import CustomCppMethodWrapper
 
 
 
@@ -383,6 +384,7 @@ def my_module_gen(out_file):
     pybindgen.settings.error_handler = MyErrorHandler()
 
 
+    ## test a custom function wrapper
     wrapper_body = '''
 static PyObject *
 _wrap_foofunction_that_takes_foo_from_string(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args,
@@ -409,6 +411,34 @@ _wrap_foofunction_that_takes_foo_from_string(PyObject * PYBINDGEN_UNUSED(dummy),
     mod.add_function(CustomFunctionWrapper('function_that_takes_foo',
                                            '_wrap_foofunction_that_takes_foo_from_string',
                                            wrapper_body))
+
+    ## test a custom method wrapper
+    wrapper_body = '''
+static PyObject *
+_wrap_PyBar_Hooray_lenx(PyBar *PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs,
+                        PyObject **return_exception)
+{
+    PyObject *py_retval;
+    int x;
+    const char *keywords[] = {"x", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i", (char **) keywords, &x)) {
+        PyObject *exc_type, *traceback;
+        PyErr_Fetch(&exc_type, return_exception, &traceback);
+        Py_XDECREF(exc_type);
+        Py_XDECREF(traceback);
+        return NULL;
+    }
+
+    std::string retval;
+    retval = Bar::Hooray();
+    py_retval = Py_BuildValue("i", int(retval.size() + x));
+    return py_retval;
+}
+'''
+    Bar.add_method(CustomCppMethodWrapper("Hooray", "_wrap_PyBar_Hooray_lenx",
+                                          wrapper_body,
+                                          flags=["METH_VARARGS", "METH_KEYWORDS", "METH_STATIC"]))
 
     ## ---- finally, generate the whole thing ----
     mod.generate(FileCodeSink(out_file))

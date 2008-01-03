@@ -4,7 +4,8 @@ Wrap C++ class methods and constructods.
 
 from copy import copy
 
-from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, join_ctype_and_name, CodeGenerationError
+from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
+    join_ctype_and_name, CodeGenerationError, ReturnValue
 from typehandlers import codesink
 import overloading
 import settings
@@ -617,6 +618,33 @@ Py_FatalError("Error detected, but parent virtual is pure virtual or private vir
             code_sink, '::'.join((self._helper_class.name, self.method_name)),
             decl_modifiers=[],
             decl_post_modifiers=decl_post_modifiers)
+
+
+
+class CustomCppMethodWrapper(CppMethod):
+    """
+    Adds a custom method wrapper.  The custom wrapper must be
+    prepared to support overloading, i.e. it must have an additional
+    "PyObject **return_exception" parameter, and raised exceptions
+    must be returned by this parameter.
+    """
+
+    NEEDS_OVERLOADING_INTERFACE = True
+
+    def __init__(self, method_name, wrapper_name, wrapper_body,
+                 flags=('METH_VARARGS', 'METH_KEYWORDS')):
+        super(CustomCppMethodWrapper, self).__init__(ReturnValue.new('void'), method_name, [])
+        self.wrapper_base_name = wrapper_name
+        self.wrapper_actual_name = wrapper_name
+        self.meth_flags = list(flags)
+        self.wrapper_body = wrapper_body
+
+    def generate(self, code_sink, dummy_wrapper_name=None, extra_wrapper_params=()):
+        assert extra_wrapper_params == ["PyObject **return_exception"]
+        code_sink.writeln(self.wrapper_body)
+
+    def generate_call(self, *args, **kwargs):
+        pass
 
 
 import cppclass

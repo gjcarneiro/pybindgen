@@ -650,5 +650,15 @@ class TestFoo(unittest.TestCase):
         foo1 = foo.function_that_returns_foo()
         self.assertEqual(foo1.get_datum(), "yellow")
 
+    def test_custom_method_wrapper(self):
+        v1 = foo.Bar.Hooray()
+        self.assertEqual(v1, "Hooray!")
+        try:
+            v2 = foo.Bar.Hooray(123) # this one is a fake method
+        except TypeError:
+            self.fail()
+        else:
+            self.assertEqual(v2, len("Hooray!") + 123)
+
 if __name__ == '__main__':
     unittest.main()

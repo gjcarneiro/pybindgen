@@ -146,7 +146,7 @@ class Function(ForwardWrapperBase):
 class CustomFunctionWrapper(Function):
     """
     Adds a custom function wrapper.  The custom wrapper must be
-    prepared to support overloading, i.e. it must have an additoional
+    prepared to support overloading, i.e. it must have an additional
     "PyObject **return_exception" parameter, and raised exceptions
     must be returned by this parameter.
     """
@@ -164,7 +164,6 @@ class CustomFunctionWrapper(Function):
     def generate(self, code_sink, dummy_wrapper_name=None, extra_wrapper_params=()):
         assert extra_wrapper_params == ["PyObject **return_exception"]
         code_sink.writeln(self.wrapper_body)
-        return self.wrapper_base_name
 
     def generate_call(self, *args, **kwargs):
         pass
