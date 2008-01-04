@@ -153,6 +153,7 @@ class OverloadedWrapper(object):
             assert self.wrapper_function_name is not None
         else:
             ## multiple overloaded wrappers case..
+            flags = self.all_wrappers[0].get_py_method_def_flags()
 
             ## Generate the individual "low level" wrappers that handle a single prototype
             self.wrapper_function_name = self.all_wrappers[0].wrapper_base_name
@@ -196,9 +197,12 @@ class OverloadedWrapper(object):
                 code_sink.writeln("static " + self.RETURN_TYPE)
             else:
                 code_sink.writeln(self.RETURN_TYPE)
-            code_sink.writeln("%s(%s *self,"
-                              " PyObject *args, PyObject *kwargs)"
-                              % (self.wrapper_function_name, self.pystruct))
+            main_args = ['%s *self' % self.pystruct]
+            if 'METH_VARARGS' in flags:
+                main_args.append('PyObject *args')
+            if 'METH_KEYWORDS' in flags:
+                main_args.append('PyObject *kwargs')
+            code_sink.writeln("%s(%s)" % (self.wrapper_function_name, ', '.join(main_args)))
             code_sink.writeln('{')
             code_sink.indent()
             code_sink.writeln(self.RETURN_TYPE + ' retval;')
@@ -206,8 +210,13 @@ class OverloadedWrapper(object):
             code_sink.writeln('PyObject *exceptions[%i] = {0,};' % len(delegate_wrappers))
             for number, delegate_wrapper in enumerate(delegate_wrappers):
                 ## call the delegate wrapper
-                code_sink.writeln("retval = %s(self, args, kwargs, &exceptions[%i]);"
-                                  % (delegate_wrapper, number))
+                args = ['self']
+                if 'METH_VARARGS' in flags:
+                    args.append('args')
+                if 'METH_KEYWORDS' in flags:
+                    args.append('kwargs')
+                args.append('&exceptions[%i]' % number)
+                code_sink.writeln("retval = %s(%s);" % (delegate_wrapper, ', '.join(args)))
                 ## if no parse exception, call was successful:
                 ## free previous exceptions and return the result
                 code_sink.writeln("if (!exceptions[%i]) {" % number)
