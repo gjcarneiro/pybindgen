@@ -291,6 +291,7 @@ class CppClass(object):
         self.outer_class = outer_class
         self._module = None
         self.name = name
+        self.mangled_name = None
         self.template_parameters = template_parameters
         self.custom_template_class_name = custom_template_class_name
         self.is_singleton = is_singleton
@@ -492,10 +493,12 @@ class CppClass(object):
             return ''.join([make_upper(mangle(s)) for s in name.split('::')])
 
         flat_name = flatten(self.full_name)
+        self.mangled_name = flatten(self.name)
 
         if self.template_parameters:
             self.full_name += "< %s >" % (', '.join(self.template_parameters))
             flat_name += '__' + '_'.join([flatten(s) for s in self.template_parameters])
+            self.mangled_name += '__' + '_'.join([flatten(s) for s in self.template_parameters])
 
         self._pystruct = "Py%s%s" % (prefix, flat_name)
         self.metaclass_name = "%sMeta" % flat_name
@@ -838,7 +841,7 @@ typedef struct {
 
         if self.template_parameters:
             if self.custom_template_class_name is None:
-                class_python_name = utils.get_mangled_name(self.name, self.template_parameters)
+                class_python_name = self.mangled_name
             else:
                 class_python_name = self.custom_template_class_name
         else:
@@ -899,7 +902,7 @@ typedef struct {
 
         if self.outer_class is None:
             mod_path = self._module.get_module_path()
-            mod_path.append(self.name)
+            mod_path.append(self.mangled_name)
             dict_.setdefault("tp_name", '.'.join(mod_path))
         else:
             dict_.setdefault("tp_name", '%s.%s' % (self.outer_class.slots['tp_name'], self.name))
