@@ -33,7 +33,7 @@ class CppHelperClass(object):
         class_ -- original CppClass wrapper object
         """
         self.class_ = class_
-        self.name = class_.name + "_PythonProxy"
+        self.name = class_.pystruct + "__PythonHelper"
         self.virtual_parent_callers = {}
         self.virtual_proxies = []
         self.cannot_be_constructed = False
@@ -95,7 +95,7 @@ class CppHelperClass(object):
             code_sink.writeln("%s(%s)" % (self.name, ', '.join(params)))
             code_sink.indent()
             code_sink.writeln(": %s(%s), m_pyself(NULL)\n{}" %
-                              (self.class_.name,
+                              (self.class_.full_name,
                                ', '.join([param.name for param in cons.parameters])))
             code_sink.unindent()
             code_sink.writeln()
@@ -261,7 +261,8 @@ class CppClass(object):
     def __init__(self, name, parent=None, incref_method=None, decref_method=None,
                  automatic_type_narrowing=None, allow_subclassing=None,
                  is_singleton=False, outer_class=None,
-                 peekref_method=None):
+                 peekref_method=None,
+                 template_parameters=(), custom_template_class_name=None):
         """Constructor
         name -- class name
         parent -- optional parent class wrapper
@@ -290,8 +291,10 @@ class CppClass(object):
         self.outer_class = outer_class
         self._module = None
         self.name = name
+        self.template_parameters = template_parameters
+        self.custom_template_class_name = custom_template_class_name
         self.is_singleton = is_singleton
-        self.full_name = None # full name with C++ namespaces attached
+        self.full_name = None # full name with C++ namespaces attached and template parameters
         self.methods = {} # name => OverloadedMethod
         self.constructors = [] # (name, wrapper) pairs
         self.slots = dict()
@@ -478,7 +481,21 @@ class CppClass(object):
             else:
                 return s
 
-        flat_name = ''.join([make_upper(s) for s in  self.full_name.split('::')])
+        def mangle(s):
+            "make a name Like<This,and,That> look Like__lt__This_and_That__gt__"
+            s = s.replace('<', '__lt__').replace('>', '__gt__').replace(',', '_')
+            s = s.replace(' ', '_').replace('&', '__amp__').replace('*', '__star__')
+            return s
+        
+        def flatten(name):
+            "make a name like::This look LikeThis"
+            return ''.join([make_upper(mangle(s)) for s in name.split('::')])
+
+        flat_name = flatten(self.full_name)
+
+        if self.template_parameters:
+            self.full_name += "< %s >" % (', '.join(self.template_parameters))
+            flat_name += '__' + '_'.join([flatten(s) for s in self.template_parameters])
 
         self._pystruct = "Py%s%s" % (prefix, flat_name)
         self.metaclass_name = "%sMeta" % flat_name
@@ -818,14 +835,23 @@ typedef struct {
 
         module.after_init.write_error_check('PyType_Ready(&%s)'
                                           % (self.pytypestruct,))
+
+        if self.template_parameters:
+            if self.custom_template_class_name is None:
+                class_python_name = utils.get_mangled_name(self.name, self.template_parameters)
+            else:
+                class_python_name = self.custom_template_class_name
+        else:
+            class_python_name = self.name
+
         if self.outer_class is None:
             module.after_init.write_code(
                 'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
-                self.name, self.pytypestruct))
+                class_python_name, self.pytypestruct))
         else:
             module.after_init.write_code(
                 'PyDict_SetItemString((PyObject*) %s.tp_dict, \"%s\", (PyObject *) &%s);' % (
-                self.outer_class.pytypestruct, self.name, self.pytypestruct))
+                self.outer_class.pytypestruct, class_python_name, self.pytypestruct))
 
         have_constructor = self._generate_constructor(code_sink)
 

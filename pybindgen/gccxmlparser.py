@@ -49,6 +49,21 @@ class ErrorHandler(settings.ErrorHandler):
         return True
 settings.error_handler = ErrorHandler()
 
+_digits = re.compile(r"\s*\d+\s*")
+def normalize_name(decl_string):
+    if templates.is_instantiation(decl_string):
+        cls_name, template_parameters = templates.split(decl_string)
+    else:
+        cls_name = decl_string
+        template_parameters = None
+    if not _digits.match(cls_name):
+        if not cls_name.startswith('::'):
+            cls_name = '::' + cls_name
+    if template_parameters is None:
+        return cls_name
+    else:
+        return "%s< %s >" % (cls_name, ', '.join([normalize_name(name) for name in template_parameters]))
+
 
 class GccXmlTypeRegistry(object):
     def __init__(self):
@@ -57,19 +72,23 @@ class GccXmlTypeRegistry(object):
     
     def register_class(self, cpp_class, alias=None):
         assert isinstance(cpp_class, CppClass)
-        if cpp_class.full_name.startswith('::'):
-            full_name = cpp_class.full_name
-        else:
-            full_name = '::' + cpp_class.full_name
+        full_name = normalize_name(cpp_class.full_name)
+        #print >> sys.stderr, "******** registering class %s as %s" \
+        #    % (cpp_class.gccxml_definition, full_name)
         self.classes[full_name] = cpp_class
         if alias is not None:
+            alias = normalize_name(alias)
             self.classes[alias] = cpp_class
+            #print >> sys.stderr, "******** registering class %s also as alias %s" \
+            #        % (cpp_class.gccxml_definition, alias)
 
     def find_class(self, class_name, module_namespace):
         if not class_name.startswith(module_namespace):
             class_name = module_namespace + class_name
-        if not class_name.startswith('::'):
-            class_name = '::' + class_name
+        class_name = normalize_name(class_name)
+        #if '<' in class_name:
+        #    print >> sys.stderr, "******** looking for class %s" \
+        #        % (class_name)
         return self.classes[class_name]           
 
     def get_class_type_traits(self, type_info):
@@ -83,8 +102,12 @@ class GccXmlTypeRegistry(object):
         is_pointer = False
         pointer_is_const = False
         if isinstance(base_type, cpptypes.declarated_t):
+            class_name = normalize_name(base_type.decl_string)
+            #if '<' in class_name:
+            #    print >> sys.stderr, "******** looking for class %s" \
+            #        % (class_name)
             try:
-                cpp_class = self.classes[base_type.decl_string]
+                cpp_class = self.classes[class_name]
             except KeyError:
                 return (None, is_const, is_pointer, is_reference, pointer_is_const)
 
@@ -427,10 +450,7 @@ class ModuleParser(object):
                     if typedef_type == cls:
                         break
                 else:
-                    warnings.warn_explicit("Class %s ignored because it is templated; templates not yet supported"
-                                           % cls.decl_string,
-                                           Warning, cls.location.file_name, cls.location.line)
-                    continue
+                    typedef = None
                 
             if len(cls.bases) > 1:
                 warnings.warn_explicit(("Class %s ignored because it uses multiple "
@@ -494,18 +514,41 @@ class ModuleParser(object):
             if not self._class_has_public_destructor(cls):
                 kwargs.setdefault('is_singleton', True)
 
+            custom_template_class_name = None
+            template_parameters = ()
             if typedef is None:
-                name = cls.name
                 alias = None
+                if templates.is_instantiation(cls.decl_string):
+                    cls_name, template_parameters = templates.split(cls.name)
+                    assert template_parameters
+                    a1 = 1
+                    if '::' in cls_name:
+                        cls_name = cls_name.split('::')[-1]
+                    template_instance_names = global_annotations.get('template_instance_names', '')
+                    if template_instance_names:
+                        for mapping in template_instance_names.split('|'):
+                            type_names, name = mapping.split('=>')
+                            instance_types = type_names.split(',')
+                            if instance_types == template_parameters:
+                                custom_template_class_name = name
+                                break
+                else:
+                    a2 = 1
+                    cls_name = cls.name
             else:
-                name = typedef.name
+                cls_name = typedef.name
                 alias = '::'.join([module.cpp_namespace_prefix, cls.name])
-            #print >> sys.stderr, "******** registering class %s" % cls
-            class_wrapper = CppClass(name, parent=base_class_wrapper, outer_class=outer_class, **kwargs)
+
+            class_wrapper = CppClass(cls_name, parent=base_class_wrapper, outer_class=outer_class,
+                                     template_parameters=template_parameters,
+                                     custom_template_class_name=custom_template_class_name,
+                                     **kwargs)
             class_wrapper.gccxml_definition = cls
             module.add_class(class_wrapper)
             registered_classes[cls] = class_wrapper
             type_registry.register_class(class_wrapper, alias)
+
+            del cls_name
 
             ## scan for nested classes/enums
             self._scan_namespace_types(module, module_namespace, outer_class=class_wrapper)
@@ -513,12 +556,6 @@ class ModuleParser(object):
             for operator in cls.casting_operators(allow_empty=True):
                 other_class = type_registry.find_class(operator.return_type.decl_string, '::')
                 class_wrapper.implicitly_converts_to(other_class)
-
-            assert typedef is not None or \
-                (cls.decl_string in type_registry.classes\
-                     and type_registry.classes[cls.decl_string] == class_wrapper)
-
-
 
         for cls, class_wrapper in registered_classes.iteritems():
             self._scan_methods(cls, class_wrapper)
