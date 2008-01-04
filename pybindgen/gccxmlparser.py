@@ -607,7 +607,8 @@ class ModuleParser(object):
                         have_copy_constructor = True
 
         for member in cls.get_members():
-            if member.name in [class_wrapper.incref_method, class_wrapper.decref_method]:
+            if member.name in [class_wrapper.incref_method, class_wrapper.decref_method,
+                               class_wrapper.peekref_method]:
                 continue
 
             global_annotations, parameter_annotations = \
