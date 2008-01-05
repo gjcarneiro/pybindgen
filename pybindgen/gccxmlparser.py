@@ -521,7 +521,6 @@ class ModuleParser(object):
                 if templates.is_instantiation(cls.decl_string):
                     cls_name, template_parameters = templates.split(cls.name)
                     assert template_parameters
-                    a1 = 1
                     if '::' in cls_name:
                         cls_name = cls_name.split('::')[-1]
                     template_instance_names = global_annotations.get('template_instance_names', '')
@@ -533,7 +532,6 @@ class ModuleParser(object):
                                 custom_template_class_name = name
                                 break
                 else:
-                    a2 = 1
                     cls_name = cls.name
             else:
                 cls_name = typedef.name
