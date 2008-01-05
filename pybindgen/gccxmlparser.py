@@ -16,7 +16,6 @@ from pygccxml.declarations import type_traits
 from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
 from pygccxml.declarations import templates
-from pygccxml.declarations import class_declaration
 import settings
 
 #from pygccxml.declarations.calldef import \
@@ -67,7 +66,8 @@ def normalize_name(decl_string):
 
 class GccXmlTypeRegistry(object):
     def __init__(self):
-        self.classes = {}  # value is a (return_handler, parameter_handler) tuple
+        self.classes = {}  # registered classes dictionary
+        self.ordered_classes = [] # registered classes list, by registration order
         self._root_ns_rx = re.compile(r"(^|\s)(::)")
     
     def register_class(self, cpp_class, alias=None):
@@ -76,6 +76,7 @@ class GccXmlTypeRegistry(object):
         #print >> sys.stderr, "******** registering class %s as %s" \
         #    % (cpp_class.gccxml_definition, full_name)
         self.classes[full_name] = cpp_class
+        self.ordered_classes.append(cpp_class)
         if alias is not None:
             alias = normalize_name(alias)
             self.classes[alias] = cpp_class
@@ -350,6 +351,10 @@ class ModuleParser(object):
         self.header_files = None
         self.gccxml_config = None
         self.whitelist_paths = []
+        self.module_namespace = None # pygccxml module C++ namespace
+        self.module = None # the toplevel pybindgen.module.Module instance (module being generated)
+        self.declarations = None # pygccxml.declarations.namespace.namespace_t (as returned by pygccxml.parser.parse)
+        self._types_scanned = False
 
     def __location_match(self, decl):
         if decl.location.file_name in self.header_files:
@@ -362,6 +367,29 @@ class ModuleParser(object):
     def parse(self, header_files, include_paths=None, whitelist_paths=None):
         """
         parses a set of header files and returns a pybindgen Module instance.
+        It is equivalent to calling the following methods:
+        1. parse_init(header_files, include_paths, whitelist_paths)
+        2. scan_types()
+        3. scan_methods()
+        4. scan_functions()
+        5. parse_finalize()
+        """
+        self.parse_init(header_files, include_paths, whitelist_paths)
+        self.scan_types()
+        self.scan_methods()
+        self.scan_functions()
+        self.parse_finalize()
+        return self.module
+
+    def parse_init(self, header_files, include_paths=None, whitelist_paths=None):
+        """
+        Prepares to parse a set of header files.  The following
+        methods should then be called in order to finish the rest of
+        scanning process:
+        1. scan_types()
+        2. scan_methods()
+        2. scan_functions()
+        3. parse_finalize()
         """
         assert isinstance(header_files, list)
         self.header_files = [os.path.abspath(f) for f in header_files]
@@ -377,18 +405,30 @@ class ModuleParser(object):
         else:
             self.gccxml_config = parser.config_t()
 
-        decls = parser.parse(header_files, self.gccxml_config)
+        self.declarations = parser.parse(header_files, self.gccxml_config)
         if self.module_namespace_name == '::':
-            module_namespace = declarations.get_global_namespace(decls)
+            self.module_namespace = declarations.get_global_namespace(self.declarations)
         else:
-            module_namespace = declarations.get_global_namespace(decls).namespace(self.module_namespace_name)
-        module = Module(self.module_name, cpp_namespace=module_namespace.decl_string)
-        self._scan_namespace_types(module, module_namespace)
-        self._scan_namespace_functions(module, module_namespace)
+            self.module_namespace = declarations.get_global_namespace(self.declarations).\
+                namespace(self.module_namespace_name)
+        self.module = Module(self.module_name, cpp_namespace=self.module_namespace.decl_string)
 
+    def scan_types(self):
+        self._scan_namespace_types(self.module, self.module_namespace)
+        self._types_scanned = True
+
+    def scan_methods(self):
+        assert self._types_scanned
+        for class_wrapper in type_registry.ordered_classes:
+            self._scan_class_methods(class_wrapper.gccxml_definition, class_wrapper)
+
+    def scan_functions(self):
+        assert self._types_scanned
+        self._scan_namespace_functions(self.module, self.module_namespace)
+
+    def parse_finalize(self):
         annotations_scanner.warn_unused_annotations()
-
-        return module
+        return self.module
 
     def _scan_namespace_types(self, module, module_namespace, outer_class=None):
         ## scan enumerations
@@ -555,9 +595,6 @@ class ModuleParser(object):
                 other_class = type_registry.find_class(operator.return_type.decl_string, '::')
                 class_wrapper.implicitly_converts_to(other_class)
 
-        for cls, class_wrapper in registered_classes.iteritems():
-            self._scan_methods(cls, class_wrapper)
-            
         if outer_class is None:
             ## scan nested namespaces (mapped as python submodules)
             for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
@@ -581,7 +618,7 @@ class ModuleParser(object):
                 return True
         return False
 
-    def _scan_methods(self, cls, class_wrapper):
+    def _scan_class_methods(self, cls, class_wrapper):
         have_trivial_constructor = False
         have_copy_constructor = False
 
