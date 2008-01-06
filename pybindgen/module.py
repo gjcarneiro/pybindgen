@@ -24,6 +24,7 @@ class Module(object):
         self.docstring = docstring
         self.submodules = []
         self.enums = []
+        self._forward_declarations_declared = False
 
         if parent is None:
             self.prefix = self.name
@@ -175,6 +176,7 @@ class Module(object):
 
     def generate_forward_declarations(self, code_sink):
         """generate forward declarations for types"""
+        assert not self._forward_declarations_declared
         if self.classes:
             code_sink.writeln('/* --- forward declarations --- */')
             code_sink.writeln()
@@ -183,6 +185,7 @@ class Module(object):
         ## recurse to submodules
         for submodule in self.submodules:
             submodule.generate_forward_declarations(code_sink)
+        self._forward_declarations_declared = True
 
     def get_module_path(self):
         """Get the full [module, submodule, submodule,...] path """
@@ -216,7 +219,8 @@ class Module(object):
     def do_generate(self, code_sink, includes_code_sink):
         """Generates the module"""
         if self.parent is None:
-            self.generate_forward_declarations(code_sink)
+            if not self._forward_declarations_declared:
+                self.generate_forward_declarations(code_sink)
 
         ## generate the submodules
         for submodule in self.submodules:
