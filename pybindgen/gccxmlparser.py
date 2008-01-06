@@ -78,6 +78,7 @@ class GccXmlTypeRegistry(object):
         if alias is not None:
             alias = normalize_name(alias)
             self.classes[alias] = cpp_class
+            cpp_class.register_alias(alias)
             #print >> sys.stderr, "******** registering class %s also as alias %s" \
             #        % (cpp_class.gccxml_definition, alias)
 

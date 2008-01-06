@@ -508,32 +508,37 @@ class CppClass(object):
         self.static_attributes.cname = "%s__getsets" % self.metaclass_name
 
         ## re-register the class type handlers, now with class full name
+        self.register_alias(self.full_name)
 
-        self.ThisClassParameter.CTYPES.append(self.full_name)
+
+    def register_alias(self, alias):
+        """Re-register the class with another base name, in addition to any
+        registrations that might have already been done."""
+        self.ThisClassParameter.CTYPES.append(alias)
         try:
-            param_type_matcher.register(self.full_name, self.ThisClassParameter)
+            param_type_matcher.register(alias, self.ThisClassParameter)
         except ValueError: pass
         
-        self.ThisClassRefParameter.CTYPES.append(self.full_name+'&')
+        self.ThisClassRefParameter.CTYPES.append(alias+'&')
         try:
-            param_type_matcher.register(self.full_name+'&', self.ThisClassRefParameter)
+            param_type_matcher.register(alias+'&', self.ThisClassRefParameter)
         except ValueError: pass
-
-        self.ThisClassReturn.CTYPES.append(self.full_name)
+        
+        self.ThisClassReturn.CTYPES.append(alias)
         try:
-            return_type_matcher.register(self.full_name, self.ThisClassReturn)
+            return_type_matcher.register(alias, self.ThisClassReturn)
         except ValueError: pass
-
-        self.ThisClassPtrParameter.CTYPES.append(self.full_name+'*')
+        
+        self.ThisClassPtrParameter.CTYPES.append(alias+'*')
         try:
-            param_type_matcher.register(self.full_name+'*', self.ThisClassPtrParameter)
+            param_type_matcher.register(alias+'*', self.ThisClassPtrParameter)
         except ValueError: pass
-
-        self.ThisClassPtrReturn.CTYPES.append(self.full_name+'*')
+        
+        self.ThisClassPtrReturn.CTYPES.append(alias+'*')
         try:
-            return_type_matcher.register(self.full_name+'*', self.ThisClassPtrReturn)
+            return_type_matcher.register(alias+'*', self.ThisClassPtrReturn)
         except ValueError: pass
-
+        
     def get_module(self):
         """Get the Module object this class belongs to"""
         return self._module
