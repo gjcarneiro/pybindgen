@@ -54,7 +54,7 @@ def normalize_name(decl_string):
         cls_name = decl_string
         template_parameters = None
     if not _digits.match(cls_name):
-        if not cls_name.startswith('::'):
+        if not cls_name.startswith('::') and cls_name not in cpptypes.FUNDAMENTAL_TYPES:
             cls_name = '::' + cls_name
     if template_parameters is None:
         return cls_name
