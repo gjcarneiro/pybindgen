@@ -181,7 +181,7 @@ class Module(object):
             code_sink.writeln('/* --- forward declarations --- */')
             code_sink.writeln()
             for class_ in self.classes:
-                class_.generate_forward_declarations(code_sink)
+                class_.generate_forward_declarations(code_sink, self)
         ## recurse to submodules
         for submodule in self.submodules:
             submodule.generate_forward_declarations(code_sink)

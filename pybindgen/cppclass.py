@@ -350,7 +350,6 @@ class CppClass(object):
                 "Cannot disable subclassing if the parent class allows it"
             self.allow_subclassing = allow_subclassing
 
-        self.typeid_map = None
         self.typeid_map_name = None # name of C++ variable
 
         if name != 'dummy':
@@ -582,16 +581,13 @@ class CppClass(object):
             root = root.parent
         return root
 
-    def _register_typeid(self):
+    def _register_typeid(self, module):
         """register this class with the typeid map root class"""
         root = self.get_type_narrowing_root()
-        if root is self:
-            ## since we are the root, we are responsible for creating
-            ## and managing the typeid table
-            self.typeid_map = [self] # list of registered subclasses
-            self.typeid_map_name = "%s__typeid_map" % self.pystruct
-        else:
-            root.typeid_map.append(self)
+        if root.typeid_map_name is None:
+            root.typeid_map_name = "%s__typeid_map" % root.pystruct
+        module.after_init.write_code("%s.register_wrapper(typeid(%s), &%s);"
+                                     % (root.typeid_map_name, self.full_name, self.pytypestruct))
 
     def _generate_typeid_map(self, code_sink, module):
         """generate the typeid map and fill it with values"""
@@ -600,7 +596,7 @@ class CppClass(object):
         except KeyError:
             pass
         else:
-            module.header.writeln('''
+            code_sink.writeln('''
 
 #include <map>
 #include <typeinfo>
@@ -649,11 +645,7 @@ public:
 
 }
 ''')
-        module.header.writeln("\npybindgen::TypeMap %s;\n" % self.typeid_map_name)
-        for subclass in self.typeid_map:
-            module.after_init.write_code("%s.register_wrapper(typeid(%s), &%s);"
-                                         % (self.typeid_map_name, subclass.full_name,
-                                            subclass.pytypestruct))
+        code_sink.writeln("\npybindgen::TypeMap %s;\n" % self.typeid_map_name)
 
     def add_method(self, method, name=None):
         """
@@ -763,7 +755,7 @@ public:
             setter_wrapper = CppInstanceAttributeSetter(value_type, self, name, setter=setter)
         self.instance_attributes.add_attribute(name, getter_wrapper, setter_wrapper)
 
-    def generate_forward_declarations(self, code_sink):
+    def generate_forward_declarations(self, code_sink, module):
         """
         Generates forward declarations for the instance and type
         structures.
@@ -792,7 +784,7 @@ typedef struct {
         code_sink.writeln()
 
         if self.automatic_type_narrowing:
-            self._register_typeid()
+            self._register_typeid(module)
 
         if self.helper_class is not None:
             self.helper_class.generate_forward_declarations(code_sink)
@@ -801,6 +793,9 @@ typedef struct {
                 self.helper_class_disabled = True
         if self.have_pure_virtual_methods and self.helper_class is None:
             self.cannot_be_constructed = True
+
+        if self.typeid_map_name is not None:
+            self._generate_typeid_map(code_sink, module)
 
 
     def generate(self, code_sink, module, docstring=None):
@@ -870,9 +865,6 @@ typedef struct {
 
         self._generate_destructor(code_sink, have_constructor)
         self._generate_type_structure(code_sink, docstring)
-        if self.typeid_map is not None:
-            self._generate_typeid_map(code_sink, module)
-
         
     def _generate_type_structure(self, code_sink, docstring):
         """generate the type structure"""

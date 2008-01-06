@@ -54,7 +54,7 @@ public:
     Foo = cppclass.CppClass('Foo')
     Foo.module = module
     #Foo.full_name = Foo.name # normally adding the class to a module would take care of this
-    Foo.generate_forward_declarations(code_out)
+    Foo.generate_forward_declarations(code_out, module)
 
     wrapper_number = 0
 
