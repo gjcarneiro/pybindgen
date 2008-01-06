@@ -350,7 +350,7 @@ class CppClass(object):
                 "Cannot disable subclassing if the parent class allows it"
             self.allow_subclassing = allow_subclassing
 
-        self.typeid_map_name = None # name of C++ variable
+        self.typeid_map_name = None
 
         if name != 'dummy':
             ## register type handlers
@@ -509,6 +509,11 @@ class CppClass(object):
         ## re-register the class type handlers, now with class full name
         self.register_alias(self.full_name)
 
+        if self.get_type_narrowing_root() is self:
+            self.typeid_map_name = "%s__typeid_map" % self.pystruct
+        else:
+            self.typeid_map_name = None
+
 
     def register_alias(self, alias):
         """Re-register the class with another base name, in addition to any
@@ -584,8 +589,6 @@ class CppClass(object):
     def _register_typeid(self, module):
         """register this class with the typeid map root class"""
         root = self.get_type_narrowing_root()
-        if root.typeid_map_name is None:
-            root.typeid_map_name = "%s__typeid_map" % root.pystruct
         module.after_init.write_code("%s.register_wrapper(typeid(%s), &%s);"
                                      % (root.typeid_map_name, self.full_name, self.pytypestruct))
 
