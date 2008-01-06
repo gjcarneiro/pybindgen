@@ -22,8 +22,6 @@ import settings
 #    destructor_t, constructor_t, member_function_t
 from pygccxml.declarations.variable import variable_t
 
-__all__ = ['ModuleScanner']
-
 ## ------------------------
 
 class ErrorHandler(settings.ErrorHandler):
