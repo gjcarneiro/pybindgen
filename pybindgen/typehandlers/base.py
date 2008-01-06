@@ -546,7 +546,7 @@ class ReverseWrapperBase(object):
         wrapper_name -- C/C++ identifier of the function/method to generate
         decl_modifiers -- list of C/C++ declaration modifiers, e.g. 'static'
         """
-        assert isinstance(decl_modifiers, list)
+        assert isinstance(decl_modifiers, (list, tuple))
         assert all([isinstance(mod, str) for mod in decl_modifiers])
 
         self.declarations.declare_variable('PyObject*', 'py_retval')
