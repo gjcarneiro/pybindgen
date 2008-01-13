@@ -9,6 +9,7 @@ from pygccxml import declarations
 from module import Module
 from typehandlers.codesink import FileCodeSink
 from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
+from pygccxml.declarations.enumeration import enumeration_t
 from enum import Enum
 from function import Function
 from cppclass import CppClass, CppConstructor, CppMethod
@@ -169,7 +170,10 @@ class GccXmlTypeRegistry(object):
             kwargs['is_const'] = True
 
         if cpp_class is None:
-            return ReturnValue.new(self._fixed_std_type_name(type_info), **kwargs)
+            if isinstance(type_traits.remove_declarated(type_info), enumeration_t):
+                return ReturnValue.new(normalize_name(type_info.decl_string), **kwargs)
+            else:
+                return ReturnValue.new(self._fixed_std_type_name(type_info), **kwargs)
 
         if not is_pointer and not is_reference:
             return cpp_class.ThisClassReturn(type_info.decl_string)
@@ -214,7 +218,10 @@ class GccXmlTypeRegistry(object):
         if is_const:
             kwargs['is_const'] = True
         if cpp_class is None:
-            return Parameter.new(self._fixed_std_type_name(type_info), param_name, **kwargs)
+            if isinstance(type_traits.remove_declarated(type_info), enumeration_t):
+                return Parameter.new(normalize_name(type_info.decl_string), param_name, **kwargs)
+            else:
+                return Parameter.new(self._fixed_std_type_name(type_info), param_name, **kwargs)
         if not is_pointer and not is_reference:
             return cpp_class.ThisClassParameter(type_info.decl_string, param_name, **kwargs)
         if is_pointer and not is_reference:
@@ -722,6 +729,9 @@ class ModuleParser(object):
                 try:
                     class_wrapper.add_method(method_wrapper)
                 except NotSupportedError, ex:
+                    if pure_virtual:
+                        class_wrapper.set_cannot_be_constructed(True)
+                        class_wrapper.set_helper_class_disabled(True)
                     warnings.warn_explicit("Error adding method %s: %r"
                                            % (member, ex),
                                            Warning, member.location.file_name, member.location.line)
