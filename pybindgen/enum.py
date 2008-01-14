@@ -59,8 +59,8 @@ class Enum(object):
                     self.full_name = module.cpp_namespace_prefix + '::' + self.name
             else:
                 self.full_name = self.name
-            if self.full_name.startswith('::'):
-                self.full_name = self.full_name[2:]
+            if not self.full_name.startswith('::'):
+                self.full_name = '::' + self.full_name
         else:
             self.full_name = self.outer_class.full_name + '::' + self.name
 
