@@ -124,10 +124,11 @@ void set_pyobj(PyObject *pyobj)
             parent_caller.reset_code_generation_state()
             ## test code generation
             try:
-                utils.call_with_error_handling(parent_caller.generate,
-                                               (NullCodeSink(),), {}, parent_caller)
-            except utils.SkipWrapper:
-                continue
+                try:
+                    utils.call_with_error_handling(parent_caller.generate,
+                                                   (NullCodeSink(),), {}, parent_caller)
+                except utils.SkipWrapper:
+                    continue
             finally:
                 parent_caller.reset_code_generation_state()
 
@@ -147,12 +148,13 @@ void set_pyobj(PyObject *pyobj)
             virtual_proxy.helper_class = self
             virtual_proxy.reset_code_generation_state()
             try:
-                utils.call_with_error_handling(virtual_proxy.generate,
-                                               (NullCodeSink(),), {}, virtual_proxy)
-            except utils.SkipWrapper:
-                if virtual_proxy.method.is_pure_virtual:
-                    return False
-                continue
+                try:
+                    utils.call_with_error_handling(virtual_proxy.generate,
+                                                   (NullCodeSink(),), {}, virtual_proxy)
+                except utils.SkipWrapper:
+                    if virtual_proxy.method.is_pure_virtual:
+                        return False
+                    continue
             finally:
                 virtual_proxy.reset_code_generation_state()
                 
