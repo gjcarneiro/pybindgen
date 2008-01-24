@@ -24,12 +24,12 @@ class Enum(object):
                          be used when wrapping enums declared inside
                          C++ classes.
         """
-        assert isinstance(name, str)
+        assert isinstance(name, basestring)
         assert '::' not in name
         assert outer_class is None or isinstance(outer_class, CppClass)
         self.outer_class = outer_class
         for val in values:
-            if not isinstance(val, str):
+            if not isinstance(val, basestring):
                 raise TypeError
 
         if not name:

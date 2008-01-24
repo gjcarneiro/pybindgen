@@ -1004,7 +1004,7 @@ static void
                 peekref_code = " && self->obj->%s() == 1" % self.peekref_method
             visit_self = '''
     if (self->obj && typeid(*self->obj) == typeid(%s)%s)
-        Py_VISIT(self);
+        Py_VISIT((PyObject *) self);
 ''' % (self.helper_class.name, peekref_code)
 
         code_sink.writeln(r'''

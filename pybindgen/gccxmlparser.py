@@ -800,7 +800,11 @@ class ModuleParser(object):
             if type_traits.has_trivial_constructor(cls):
                 class_wrapper.add_constructor(CppConstructor([]))
         if not have_copy_constructor:
-            if type_traits.has_copy_constructor(cls):
+            try: # pygccxml > 0.9
+                has_copy_constructor = type_traits.has_copy_constructor(cls)
+            except AttributeError: # pygccxml <= 0.9
+                has_copy_constructor = type_traits.has_trivial_copy(cls)
+            if has_copy_constructor:
                 class_wrapper.add_constructor(CppConstructor([
                             class_wrapper.ThisClassRefParameter("%s const &" % class_wrapper.full_name,
                                                                 'ctor_arg', is_const=True)]))

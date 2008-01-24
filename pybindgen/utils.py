@@ -33,7 +33,18 @@ def write_preamble(code_sink, min_python_version=(2, 3)):
                 }				\
         } while (0)
 
+
+#define Py_VISIT(op)							\
+        do { 								\
+                if (op) {						\
+                        int vret = visit((PyObject *)(op), arg);	\
+                        if (vret)					\
+                                return vret;				\
+                }							\
+        } while (0)
+
 #endif
+
 ''')
 
     if min_python_version < (2, 5):
@@ -46,15 +57,6 @@ typedef int Py_ssize_t;
 typedef inquiry lenfunc;
 typedef intargfunc ssizeargfunc;
 typedef intobjargproc ssizeobjargproc;
-
-#define Py_VISIT(op)							\
-        do { 								\
-                if (op) {						\
-                        int vret = visit((PyObject *)(op), arg);	\
-                        if (vret)					\
-                                return vret;				\
-                }							\
-        } while (0)
 
 #endif
 ''')
@@ -73,7 +75,7 @@ typedef intobjargproc ssizeobjargproc;
 
 def get_mangled_name(base_name, template_args):
     """for internal pybindgen use"""
-    assert isinstance(base_name, str)
+    assert isinstance(base_name, basestring)
     assert isinstance(template_args, (tuple, list))
 
     if template_args:

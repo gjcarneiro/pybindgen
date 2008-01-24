@@ -243,8 +243,8 @@ class PyMetaclass(object):
         getsets -- name of a PyGetSetDef C array variable, or None
         """
         assert getsets is None or isinstance(getsets, PyGetSetDef)
-        assert isinstance(name, str)
-        assert isinstance(parent_metaclass_expr, str)
+        assert isinstance(name, basestring)
+        assert isinstance(parent_metaclass_expr, basestring)
 
         self.name = name
         prefix = settings.name_prefix.capitalize()
