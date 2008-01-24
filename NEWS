@@ -1,3 +1,22 @@
+=== pybindgen 0.9 ===
+    - Fix GCC 4.2 compilation warnings;
+    - Works with GCCXML 0.9/cvs (in addition to stable 0.7);
+    - Support for overloaded virtual methods;
+    - Add 'ignore' annotation support, allowing to ignore functions
+      and methods;
+    - Generally work hard to make sure the generated code at least
+      always compiles, even if we have to disable generation of
+      certain wrappers;
+    - Add support for protected methods and constructors;
+    - Preliminary support for templated classes/methods/functions;
+    - Add more type conversions, such as uint64_t and uint16_t;
+    - Support implicit conversions also for pass-by-reference parameters;
+    - Add supported for nested (i.e. defined inside a class) enums and classes;
+    - Add support for adding manually written custom method or function wrappers;
+    - Split the gccxmlparser.ModuleParser.parse() method into several
+      smaller methods, to allow greater customization and flexibility.
+    - Lots of small bug fixes
+
 === pybindgen 0.8 ===
     - Support C++ instance attributes through getter/setter methods
     - Support functions as methods of C++ classes
