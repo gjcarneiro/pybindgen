@@ -145,11 +145,12 @@ def build(bld):
 
 def shutdown():
     if Params.g_commands['check']:
+        env = Params.g_build.env()
         print "Testing foo (manually generated PyBindGen API calls)"
-        retval1 = subprocess.Popen(['python', 'examples/footest.py']).wait()
+        retval1 = subprocess.Popen([env['PYTHON'], 'examples/footest.py']).wait()
 
         print "Testing foo2 (automatically scanned)"
-        retval2 = subprocess.Popen(['python', 'examples/footest.py', 'x']).wait()
+        retval2 = subprocess.Popen([env['PYTHON'], 'examples/footest.py', 'x']).wait()
 
         if retval1 or retval2:
             raise SystemExit(1)

@@ -13,9 +13,9 @@ def build(bld):
     gen.command = 'test-generation.py'
     gen.stdout = 'test.cc'
     gen.argv = [gen.input_file('test-generation.py'), top_srcdir]
-    gen.command = 'python'
+    gen.command = bld.env()['PYTHON']
     gen.command_is_external = True
-    gen.prio = 5
+    gen.prio = 55
     
     obj = bld.create_obj('cpp', 'objects', 'pyext')
     obj.source = 'test.cc'
@@ -25,7 +25,7 @@ def build(bld):
     cwd = os.getcwd()
     os.chdir(top_srcdir)
     try:
-        if subprocess.Popen(['python', 'tests/test.py']).wait():
+        if subprocess.Popen([bld.env()['PYTHON'], 'tests/test.py']).wait():
             raise SystemExit(1)
     finally:
         os.chdir(cwd)

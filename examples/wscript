@@ -9,9 +9,9 @@ def build(bld):
     bindgen = bld.create_obj('command-output')
     bindgen.stdout = 'foomodule.cc'
     bindgen.argv = [bindgen.input_file('foomodulegen.py')]
-    bindgen.command = 'python'
+    bindgen.command = bindgen.env['PYTHON']
     bindgen.command_is_external = True
-    bindgen.prio = 3 # must run after the 'py' objects in ../pybindgen
+    bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
     obj = bld.create_obj('cpp', 'shlib', 'pyext')
     obj.source = [
@@ -30,9 +30,9 @@ def build(bld):
         bindgen = bld.create_obj('command-output')
         bindgen.stdout = 'foomodule2.cc'
         bindgen.argv = [bindgen.input_file('foomodulegen-auto.py'), bindgen.input_file('foo.h')]
-        bindgen.command = 'python'
+        bindgen.command = bindgen.env['PYTHON']
         bindgen.command_is_external = True
-        bindgen.prio = 3 # must run after the 'py' objects in ../pybindgen
+        bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
         obj = bld.create_obj('cpp', 'shlib', 'pyext')
         obj.source = [
