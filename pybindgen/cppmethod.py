@@ -482,7 +482,7 @@ class CppVirtualMethodParentCaller(CppMethod):
         flags = self.get_py_method_def_flags()
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
                ('_'+method_name,
-                '::'.join((self._helper_class.name, self.wrapper_actual_name)),
+                self.wrapper_actual_name,#'::'.join((self._helper_class.name, self.wrapper_actual_name)),
                 '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
 
