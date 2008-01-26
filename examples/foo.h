@@ -434,7 +434,7 @@ private:
 public:
     // -#- @return(caller_owns_return=true) -#-
     static SingletonClass *GetInstance () {
-            if (not m_instance)
+            if (!m_instance)
                 m_instance = new SingletonClass;
             return m_instance;
         }
@@ -528,7 +528,7 @@ public:
     static AbstractBaseClass* get_abstract_base_class_ptr2 ()
         {
             static AbstractBaseClassImpl *singleton = NULL;
-            if (not singleton)
+            if (!singleton)
                 singleton = new AbstractBaseClassImpl;
             return singleton;
         }
@@ -552,7 +552,7 @@ inline AbstractBaseClass* get_abstract_base_class_ptr1 ()
 inline AbstractBaseClass* get_abstract_base_class_ptr2 ()
 {
     static AbstractBaseClass *singleton = NULL;
-    if (not singleton)
+    if (!singleton)
         singleton = AbstractBaseClassImpl::get_abstract_base_class_ptr1 ();
     return singleton;
 }

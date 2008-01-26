@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys
+import sys, os
 
 import pybindgen
 from pybindgen import typehandlers
@@ -10,6 +10,9 @@ from pybindgen.function import Function
 from pybindgen.module import Module
 from pybindgen import cppclass
 
+import re
+
+stdint_rx = re.compile(".*int\\d+_t.*")
 
 class MyReverseWrapper(typehandlers.base.ReverseWrapperBase):
     def generate_python_call(self):
@@ -60,6 +63,9 @@ public:
 
     ## test return type handlers of reverse wrappers
     for return_type, return_handler in typehandlers.base.return_type_matcher.items():
+        if os.name == 'nt':
+            if stdint_rx.search(return_type):
+                continue # win32 does not support the u?int\d+_t types (defined in <stdint.h>)
         if issubclass(return_handler, (cppclass.CppClassPtrReturnValue,
                                        typehandlers.pyobjecttype.PyObjectReturnValue)):
             for caller_owns_return in True, False:
@@ -92,6 +98,9 @@ public:
 
     ## test parameter type handlers of reverse wrappers
     for param_type, param_handler in typehandlers.base.param_type_matcher.items():
+        if os.name == 'nt':
+            if stdint_rx.search(param_type):
+                continue # win32 does not support the u?int\d+_t types (defined in <stdint.h>)
         for direction in param_handler.DIRECTIONS:
             if direction == (Parameter.DIRECTION_IN):
                 param_name = 'param'
@@ -118,6 +127,9 @@ public:
     ## test generic forward wrappers, and module
 
     for return_type, return_handler in typehandlers.base.return_type_matcher.items():
+        if os.name == 'nt':
+            if stdint_rx.search(return_type):
+                continue # win32 does not support the u?int\d+_t types (defined in <stdint.h>)
         wrapper_number += 1
         function_name = 'foo_function_%i' % (wrapper_number,)
         ## declare a fake prototype
@@ -134,6 +146,9 @@ public:
         module.add_function(wrapper)
     
     for param_type, param_handler in typehandlers.base.param_type_matcher.items():
+        if os.name == 'nt':
+            if stdint_rx.search(param_type):
+                continue # win32 does not support the u?int\d+_t types (defined in <stdint.h>)
         for direction in param_handler.DIRECTIONS:
             if direction == (Parameter.DIRECTION_IN):
                 param_name = 'param'
