@@ -138,10 +138,10 @@ def build(bld):
     if Params.g_options.generate_version:
         generate_version_py(force=True)
 
+    bld.add_subdirs('pybindgen')
+    bld.add_subdirs('examples')
     if Params.g_commands['check']:
         bld.add_subdirs('tests')
-    bld.add_subdirs('examples')
-    bld.add_subdirs('pybindgen')
 
 def shutdown():
     if Params.g_commands['check']:
