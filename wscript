@@ -145,16 +145,17 @@ def build(bld):
 
 def shutdown():
     if Params.g_commands['check']:
+
+        print "Running pure python unit tests..."
+        retval1 = subprocess.Popen([Params.g_build.env()['PYTHON'], 'tests/test.py']).wait()
+
         env = Params.g_build.env()
-        print "Testing foo (manually generated PyBindGen API calls)"
-        retval1 = subprocess.Popen([env['PYTHON'], 'examples/footest.py']).wait()
+        print "Running manual module generation unit tests (module foo)..."
+        retval2 = subprocess.Popen([env['PYTHON'], 'examples/footest.py']).wait()
 
-        print "Testing foo2 (automatically scanned)"
-        retval2 = subprocess.Popen([env['PYTHON'], 'examples/footest.py', 'x']).wait()
+        print "Running automatically scanned module generation unit tests (module foo2)..."
+        retval3 = subprocess.Popen([env['PYTHON'], 'examples/footest.py', 'x']).wait()
 
-        if retval1 or retval2:
-            raise SystemExit(1)
-
-        if subprocess.Popen([Params.g_build.env()['PYTHON'], 'tests/test.py']).wait():
-            raise SystemExit(1)
+        if retval1 or retval2 or retval3:
+            raise Params.fatal("Unit test failures")
 
