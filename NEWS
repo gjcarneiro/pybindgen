@@ -14,8 +14,9 @@
     - Add supported for nested (i.e. defined inside a class) enums and classes;
     - Add support for adding manually written custom method or function wrappers;
     - Split the gccxmlparser.ModuleParser.parse() method into several
-      smaller methods, to allow greater customization and flexibility.
-    - Lots of small bug fixes
+      smaller methods, to allow greater customization and flexibility;
+    - Add support for customising C++ class instance creation code;
+    - Lots of small bug fixes.
 
 === pybindgen 0.8 ===
     - Support C++ instance attributes through getter/setter methods
