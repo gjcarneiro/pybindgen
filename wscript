@@ -154,3 +154,7 @@ def shutdown():
 
         if retval1 or retval2:
             raise SystemExit(1)
+
+        if subprocess.Popen([Params.g_build.env()['PYTHON'], 'tests/test.py']).wait():
+            raise SystemExit(1)
+

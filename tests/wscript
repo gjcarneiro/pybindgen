@@ -22,11 +22,3 @@ def build(bld):
     if os.path.basename(obj.env['CXX']).startswith("g++"):
         obj.env.append_value('CXXFLAGS', ['-Werror', '-Wno-unused'])
 
-    cwd = os.getcwd()
-    os.chdir(top_srcdir)
-    try:
-        if subprocess.Popen([bld.env()['PYTHON'], 'tests/test.py']).wait():
-            raise SystemExit(1)
-    finally:
-        os.chdir(cwd)
-
