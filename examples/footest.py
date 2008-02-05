@@ -660,5 +660,12 @@ class TestFoo(unittest.TestCase):
         else:
             self.assertEqual(v2, len("Hooray!") + 123)
 
+    def test_instance_creation_function(self):
+        f = foo.Foo()
+        self.assert_(f.is_initialized())
+
+        b = foo.Bar()
+        self.assert_(b.is_initialized())
+
 if __name__ == '__main__':
     unittest.main()

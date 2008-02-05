@@ -249,9 +249,7 @@ class CppConstructor(ForwardWrapperBase):
             class_ = self._class
         #assert isinstance(class_, CppClass)
         if class_.helper_class is None:
-            self.before_call.write_code(
-                'self->obj = new %s(%s);' %
-                (class_.get_construct_name(), ", ".join(self.call_params)))
+            class_.write_create_instance(self.before_call, "self->obj", ", ".join(self.call_params))
         else:
             ## We should only create a helper class instance when
             ## being called from a user python subclass.
@@ -259,9 +257,8 @@ class CppConstructor(ForwardWrapperBase):
             self.before_call.write_code("{")
             self.before_call.indent()
 
-            self.before_call.write_code(
-                'self->obj = new %s(%s);' %
-                (class_.helper_class.name, ", ".join(self.call_params)))
+            class_.write_create_instance(self.before_call, "self->obj", ", ".join(self.call_params),
+                                         class_.helper_class.name)
             self.before_call.write_code('((%s*) self->obj)->set_pyobj((PyObject *)self);'
                                         % class_.helper_class.name)
 
@@ -270,15 +267,13 @@ class CppConstructor(ForwardWrapperBase):
             self.before_call.indent()
 
             try:
-                contruct_name = class_.get_construct_name()
+                class_.get_construct_name()
             except CodeGenerationError:
                 self.before_call.write_code('PyErr_SetString(PyExc_TypeError, "class \'%s\' '
                                             'cannot be constructed");' % class_.name)
                 self.before_call.write_code('return -1;')
             else:
-                self.before_call.write_code(
-                    'self->obj = new %s(%s);' %
-                    (contruct_name, ", ".join(self.call_params)))
+                class_.write_create_instance(self.before_call, "self->obj", ", ".join(self.call_params))
 
             self.before_call.unindent()
             self.before_call.write_code("}")

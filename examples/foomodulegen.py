@@ -60,11 +60,20 @@ def my_module_gen(out_file):
 
     Foo = CppClass('Foo', automatic_type_narrowing=True)
     mod.add_class(Foo)
+
+    def Foo_instance_creation_function(dummy_cpp_class, code_block, lvalue,
+                                       parameters, construct_type_name):
+        code_block.write_code(
+            "%s = new %s(%s);" % (lvalue, construct_type_name, parameters))
+        code_block.write_code("%s->initialize();" % (lvalue,))
+    Foo.set_instance_creation_function(Foo_instance_creation_function)
+
     Foo.add_static_attribute(ReturnValue.new('int'), 'instance_count')
     Foo.add_constructor(
         CppConstructor([Parameter.new('std::string', 'datum')]))
     Foo.add_constructor(CppConstructor([]))
     Foo.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
+    Foo.add_method(CppMethod(ReturnValue.new('bool'), 'is_initialized', [], is_const=True))
 
     Zoo = CppClass('Zoo', automatic_type_narrowing=True)
     mod.add_class(Zoo)
@@ -73,7 +82,6 @@ def my_module_gen(out_file):
     Zoo.add_constructor(CppConstructor([]))
     Zoo.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
     Zoo.implicitly_converts_to(Foo)
-
 
     Foobar = CppClass('Foobar')
     mod.add_class(Foobar)

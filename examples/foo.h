@@ -30,20 +30,25 @@ class Foo
 // -#- automatic_type_narrowing=True -#-
 {
     std::string m_datum;
+    bool m_initialized;
 public:
     static int instance_count;
 
-    Foo () : m_datum ("")
+    Foo () : m_datum (""), m_initialized (false)
         { Foo::instance_count++; }
-    Foo (std::string datum) : m_datum (datum)
+    Foo (std::string datum) : m_datum (datum), m_initialized (false)
         { Foo::instance_count++; }
     std::string get_datum () const { return m_datum; }
 
-    Foo (Foo const & other) : m_datum (other.get_datum ())
+    Foo (Foo const & other) : m_datum (other.get_datum ()), m_initialized (false)
         { Foo::instance_count++; }
+
+    void initialize () { m_initialized = true; }
+    bool is_initialized () const { return m_initialized; }
 
     virtual ~Foo() { Foo::instance_count--; }
 };
+
 
 class Zoo
 // -#- automatic_type_narrowing=True -#-

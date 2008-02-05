@@ -115,6 +115,15 @@ _wrap_PyBar_Hooray_lenx(PyBar *PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject
                                           wrapper_body,
                                           flags=["METH_VARARGS", "METH_KEYWORDS", "METH_STATIC"]))
 
+
+    Foo, = [cls for cls in module.classes if cls.name == 'Foo']
+    def Foo_instance_creation_function(dummy_cpp_class, code_block, lvalue,
+                                       parameters, construct_type_name):
+        code_block.write_code(
+            "%s = new %s(%s);" % (lvalue, construct_type_name, parameters))
+        code_block.write_code("%s->initialize();" % (lvalue,))
+    Foo.set_instance_creation_function(Foo_instance_creation_function)
+
     module.generate(out)
 
 

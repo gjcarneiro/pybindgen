@@ -22,6 +22,27 @@ import settings
 import utils
 
 
+def default_instance_creation_function(cpp_class, code_block, lvalue,
+                                       parameters, construct_type_name):
+    """
+    Default "instance creation function"; it is called whenever a new
+    C++ class instance needs to be created; this default
+    implementation uses a standard C++ new allocator.
+
+    cpp_class -- the CppClass object whose instance is to be created
+    code_block -- CodeBlock object on which the instance creation code should be generated
+    lvalue -- lvalue expression that should hold the result in the end
+    contruct_type_name -- actual name of type to be constructed (it is
+                          not always the class name, sometimes it's
+                          the python helper class)
+    parameters -- stringified list of parameters
+    """
+    assert lvalue
+    assert not lvalue.startswith('None')
+    code_block.write_code(
+        "%s = new %s(%s);" % (lvalue, construct_type_name, parameters))
+
+
 class CppHelperClass(object):
     """
     Generates code for a C++ proxy subclass that takes care of
@@ -302,6 +323,7 @@ class CppClass(object):
         self.constructors = [] # (name, wrapper) pairs
         self.slots = dict()
         self.helper_class = None
+        self.instance_creation_function = None
         ## set to True when we become aware generating the helper
         ## class is not going to be possible
         self.helper_class_disabled = False
@@ -410,6 +432,30 @@ class CppClass(object):
             except ValueError:
                 pass
 
+    def set_instance_creation_function(self, instance_creation_function):
+        """Set a custom function to be called to create instances of this
+        class and its subclasses.
+
+        instance_creation_function -- instance creation function; see
+                                      default_instance_creation_function()
+                                      for signature and example.
+        """
+        self.instance_creation_function = instance_creation_function
+
+    def get_instance_creation_function(self):
+        if self.instance_creation_function is None:
+            if self.parent is None:
+                return default_instance_creation_function
+            else:
+                return self.parent.get_instance_creation_function()
+        else:
+            return self.instance_creation_function
+
+    def write_create_instance(self, code_block, lvalue, parameters, construct_type_name=None):
+        instance_creation_func = self.get_instance_creation_function()
+        if construct_type_name is None:
+            construct_type_name = self.get_construct_name()
+        instance_creation_func(self, code_block, lvalue, parameters, construct_type_name)
 
     def get_pystruct(self):
         if self._pystruct is None:
@@ -1151,8 +1197,9 @@ class CppClassParameter(CppClassParameterBase):
             wrapper.before_call.write_code(
                 "%s->inst_dict = NULL;" % (self.py_name,))
 
-        wrapper.before_call.write_code(
-            "%s->obj = new %s(%s);" % (self.py_name, self.cpp_class.get_construct_name(), self.value))
+        self.cpp_class.write_create_instance(wrapper.before_call,
+                                             "%s->obj" % self.py_name,
+                                             self.value)
 
         wrapper.build_params.add_parameter("N", [self.py_name])
 
@@ -1208,8 +1255,10 @@ class CppClassRefParameter(CppClassParameterBase):
             if self.cpp_class.allow_subclassing:
                 wrapper.after_call.write_code(
                     "%s->inst_dict = NULL;" % (self.py_name,))
-            wrapper.before_call.write_code(
-                "%s->obj = new %s;" % (self.py_name, self.cpp_class.get_construct_name()))
+
+            self.cpp_class.write_create_instance(wrapper.before_call,
+                                                 "%s->obj" % self.py_name,
+                                                 '')
             wrapper.call_params.append('*%s->obj' % (self.py_name,))
             wrapper.build_params.add_parameter("N", [self.py_name])
 
@@ -1248,8 +1297,9 @@ class CppClassRefParameter(CppClassParameterBase):
                 "%s->inst_dict = NULL;" % (self.py_name,))
 
         if self.direction == Parameter.DIRECTION_IN:
-            wrapper.before_call.write_code(
-                "%s->obj = new %s(%s);" % (self.py_name, self.cpp_class.get_construct_name(), self.value))
+            self.cpp_class.write_create_instance(wrapper.before_call,
+                                                 "%s->obj" % self.py_name,
+                                                 self.value)
             wrapper.build_params.add_parameter("N", [self.py_name])
         else:
             ## out/inout case:
@@ -1274,11 +1324,13 @@ class CppClassRefParameter(CppClassParameterBase):
             wrapper.after_call.write_code(
                 "if (%s->ob_refcnt == 1)\n"
                 "    %s->obj = NULL;\n"
-                "else\n"
-                "    %s->obj = new %s(%s);" %
-                (self.py_name, self.py_name, self.py_name,
-                 self.cpp_class.get_construct_name(), self.value))
-            
+                "else{\n" % (self.py_name, self.py_name))
+            wrapper.after_call.indent()
+            self.cpp_class.write_create_instance(wrapper.after_call,
+                                                 "%s->obj" % self.py_name,
+                                                 self.value)
+            wrapper.after_call.unindent()
+            wrapper.after_call.write_code('}')
 
 
 class CppClassReturnValue(CppClassReturnValueBase):
@@ -1313,8 +1365,11 @@ class CppClassReturnValue(CppClassReturnValueBase):
         if self.cpp_class.allow_subclassing:
             wrapper.after_call.write_code(
                 "%s->inst_dict = NULL;" % (py_name,))
-        wrapper.after_call.write_code(
-            "%s->obj = new %s(%s);" % (py_name, self.cpp_class.get_construct_name(), self.value))
+
+        self.cpp_class.write_create_instance(wrapper.after_call,
+                                             "%s->obj" % py_name,
+                                             self.value)
+
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
     def convert_python_to_c(self, wrapper):
@@ -1456,10 +1511,9 @@ class CppClassPtrParameter(CppClassParameterBase):
                     ## the object after the call.
 
                     if self.direction == Parameter.DIRECTION_IN:
-                        wrapper.before_call.write_code(
-                            "%s->obj = new %s(*%s);" %
-                            (self.py_name, self.cpp_class.get_construct_name(), self.value))
-
+                        self.cpp_class.write_create_instance(wrapper.before_call,
+                                                             "%s->obj" % self.py_name,
+                                                             '*'+self.value)
                         wrapper.build_params.add_parameter("N", [self.py_name])
                     else:
                         ## out/inout case:
@@ -1484,11 +1538,13 @@ class CppClassPtrParameter(CppClassParameterBase):
                         wrapper.after_call.write_code(
                             "if (%s->ob_refcnt == 1)\n"
                             "    %s->obj = NULL;\n"
-                            "else\n"
-                            "    %s->obj = new %s(*%s);" %
-                            (self.py_name, self.py_name, self.py_name,
-                             self.cpp_class.get_construct_name(), value))
-
+                            "else {\n" % (self.py_name, self.py_name))
+                        wrapper.after_call.indent()
+                        self.cpp_class.write_create_instance(wrapper.after_call,
+                                                             "%s->obj" % self.py_name,
+                                                             '*'+value)
+                        wrapper.after_call.unindent()
+                        wrapper.after_call.write_code('}')
                 else:
                     ## The PyObject gets a new reference to the same obj
                     wrapper.before_call.write_code(
@@ -1646,9 +1702,9 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             else:
                 if self.cpp_class.incref_method is None:
                     ## The PyObject creates its own copy
-                    wrapper.after_call.write_code(
-                        "%s->obj = new %s(*%s);"
-                        % (py_name, self.cpp_class.get_construct_name(), value))
+                    self.cpp_class.write_create_instance(wrapper.after_call,
+                                                         "%s->obj" % py_name,
+                                                         '*'+value)
                 else:
                     ## The PyObject gets a new reference to the same obj
                     wrapper.after_call.write_code(
@@ -1710,9 +1766,9 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         if self.caller_owns_return:
             if self.cpp_class.incref_method is None:
                 ## the caller receives a copy
-                wrapper.after_call.write_code(
-                    "%s = new %s(*%s);"
-                    % (self.value, self.cpp_class.get_construct_name(), value))
+                self.cpp_class.write_create_instance(wrapper.after_call,
+                                                     "%s" % self.value,
+                                                     '*'+value)
             else:
                 ## the caller gets a new reference to the same obj
                 wrapper.after_call.write_code(
