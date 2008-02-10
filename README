@@ -2,34 +2,26 @@
 PyBindGen is (surprise!) a python bindings generator.  The main features are:
 
  * Is written in clean, PEP 8 compliant, and pylint checked, Python code;
-
  * Generates clean C or C++ code, nearly as readable as code written
    manually by a developer;
-
  * Generated code is self contained and does not require any external
    libraries or macros; after generating the python module only python
    header files are required, nothing else.
-
  * Does not require Boost.Python (no C++ template magic, also works in C);
-
  * The interface for code generation is a simple Python API, not some
    obscure interface definition language.  Additionally PyBindGen can
-   use parse header files with gccxml, if gccxml and pygccxml are
+   parse header files with gccxml, if gccxml and pygccxml are
    installed in the system.
-
  * Can be easily extended with new type handlers;
-
  * Type handlers can allocate memory and register cleanup code to free;
-
  * Supports in, out, and inout parameters (e.g. with pointers or C++ references);
-
  * Supports multiple return values (e.g. due to out/inout parameters);
-
  * Supports wrapping of simple C++ classes;
-
  * Supports virtual methods in classes;
-
  * Supports reference counted classes and smart pointers;
+
+Notable features NOT implemented:
+ * Multiple inheritance
 
 == Installation ==
 
@@ -38,7 +30,7 @@ Before proceeding make sure the system requirements are met.  PyBindGen requires
 1- Python (http://www.python.org)
 2- Python development files
 3- A C/C++ Compilation tool chain
-4- (optional) GCCXML and PyGCCXML (http://www.language-binding.net/pygccxml/download.html)
+4- (optional) GCCXML and PyGCCXML (0.9.5 recommended) (http://www.language-binding.net/pygccxml/download.html)
 
 PyBindGen uses WAF (http://code.google.com/p/waf/) as build system.
 However, WAF does not have to be previously installed, as it is shipped
@@ -50,8 +42,6 @@ To install PyBindGen, issue the following commands:
 2. ./waf             # possible options: -jN for parallel build, -p for progress bar
 3. ./waf check       # optional step, runs the unit tests
 4. ./waf install     # may require sudo
-
-Note: 
 
 
 == Documentation ==
