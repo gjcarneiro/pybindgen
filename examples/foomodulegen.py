@@ -103,6 +103,19 @@ def my_module_gen(out_file):
     Zbr = CppClass('Zbr', incref_method='Ref', decref_method='Unref',
                    peekref_method="GetReferenceCount", allow_subclassing=True)
     mod.add_class(Zbr)
+
+    def helper_class_hook(helper_class):
+        helper_class.add_custom_method(
+            declaration="static int custom_method_added_by_a_hook(int x);",
+            body="""
+int %s::custom_method_added_by_a_hook(int x)
+{
+  return x + 1;
+}
+""" % helper_class.name)
+        helper_class.add_post_generation_code("// this comment was written by a helper class hook function")
+    Zbr.add_helper_class_hook(helper_class_hook)
+
     Zbr.add_constructor(
         CppConstructor([Parameter.new('std::string', 'datum')]))
     Zbr.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))

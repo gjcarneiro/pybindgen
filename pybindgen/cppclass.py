@@ -58,6 +58,8 @@ class CppHelperClass(object):
         self.virtual_parent_callers = {}
         self.virtual_proxies = []
         self.cannot_be_constructed = False
+        self.custom_methods = []
+        self.post_generation_code = []
         
     def add_virtual_parent_caller(self, parent_caller):
         """Add a new CppVirtualMethodParentCaller object to this helper class"""
@@ -80,6 +82,20 @@ class CppHelperClass(object):
         parent_caller.helper_class = self
         overload.add(parent_caller)
 
+    def add_custom_method(self, declaration, body=None):
+        """
+        Add a custom method to the helper class, given by a
+        declaration line and a body.  The body can be None, in case
+        the whole method definition is included in the declaration
+        itself.
+        """
+        self.custom_methods.append((declaration, body))
+
+    def add_post_generation_code(self, code):
+        """
+        Add custom code to be included right after the helper class is generated.
+        """
+        self.post_generation_code.append(code)
 
     def add_virtual_proxy(self, virtual_proxy):
         """Add a new CppVirtualMethodProxy object to this class"""
@@ -182,8 +198,14 @@ void set_pyobj(PyObject *pyobj)
             code_sink.writeln()
             virtual_proxy.generate_declaration(code_sink)
 
+        for custom_declaration, dummy in self.custom_methods:
+            code_sink.writeln(custom_declaration)
+
         code_sink.unindent()
         code_sink.writeln("};\n")
+        for code in self.post_generation_code:
+            code_sink.writeln(code)
+            code_sink.writeln()
         return True
 
     def generate(self, code_sink):
@@ -218,6 +240,10 @@ void set_pyobj(PyObject *pyobj)
                                                (code_sink,), {}, virtual_proxy)
             except utils.SkipWrapper:
                 continue
+
+        for dummy, custom_body in self.custom_methods:
+            if custom_body:
+                code_sink.writeln(custom_body)
         
         return method_defs
 
@@ -335,6 +361,10 @@ class CppClass(object):
         ## operator ThisClass(); in the other class.
         self.implicitly_converts_from = []
 
+        ## list of hook functions to call just prior to helper class
+        ## code generation.
+        self.helper_class_hooks = []
+
         self._pystruct = None #"***GIVE ME A NAME***"
         self.metaclass_name = "***GIVE ME A NAME***"
         self.pytypestruct = "***GIVE ME A NAME***"
@@ -431,6 +461,31 @@ class CppClass(object):
                 return_type_matcher.register(name+'*', self.ThisClassPtrReturn)
             except ValueError:
                 pass
+
+    def add_helper_class_hook(self, hook):
+        """
+        Add a hook function to be called just prior to a helper class
+        being generated.  The hook function applies to this class and
+        all subclasses.  The hook function is called like this:
+
+           hook_function(helper_class)
+        """
+        if not callable(hook):
+            raise TypeError("hook function must be callable")
+        self.helper_class_hooks.append(hook)
+        
+    def _get_all_helper_class_hooks(self):
+        """
+        Returns a list of all helper class hook functions, including
+        the ones registered with parent classes.  Parent hooks will
+        appear first in the list.
+        """
+        cls = self
+        l = []
+        while cls is not None:
+            l = cls.helper_class_hooks + l
+            cls = cls.parent
+        return l
 
     def set_instance_creation_function(self, instance_creation_function):
         """Set a custom function to be called to create instances of this
@@ -838,6 +893,8 @@ typedef struct {
             self._register_typeid(module)
 
         if self.helper_class is not None:
+            for hook in self._get_all_helper_class_hooks():
+                hook(self.helper_class)
             self.helper_class.generate_forward_declarations(code_sink)
             if self.helper_class.cannot_be_constructed:
                 self.helper_class = None
