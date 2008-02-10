@@ -13,7 +13,7 @@ def build(bld):
     bindgen.command_is_external = True
     bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
-    obj = bld.create_obj('cpp', 'shlib', 'pyext')
+    obj = bld.create_obj('cpp', 'plugin', 'pyext')
     obj.source = [
         'foo.cc',
         'foomodule.cc'
@@ -34,7 +34,7 @@ def build(bld):
         bindgen.command_is_external = True
         bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
-        obj = bld.create_obj('cpp', 'shlib', 'pyext')
+        obj = bld.create_obj('cpp', 'plugin', 'pyext')
         obj.source = [
             'foo.cc',
             'foomodule2.cc'
