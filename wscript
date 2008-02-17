@@ -100,6 +100,7 @@ def dist_hook():
 def set_options(opt):
     opt.tool_options('python')
     opt.tool_options('compiler_cxx')
+    opt.tool_options('compiler_cc')
 
     opt.add_option('--generate-version',
                    help=('Generate a new pybindgen/version.py file from version control'
@@ -114,6 +115,7 @@ def configure(conf):
 
     conf.check_tool('misc')
     conf.check_tool('compiler_cxx')
+    conf.check_tool('compiler_cc')
     if os.path.basename(conf.env['CXX']).startswith("g++"):
         conf.env.append_value('CXXFLAGS', ['-Wall', '-fno-strict-aliasing'])
         if Params.g_options.debug_level == 'ultradebug':

@@ -1,0 +1,30 @@
+## -*- python -*-
+import Action
+import Object
+import Params
+import Task
+
+
+def build(bld):
+    if not bld.env()['ENABLE_PYGCCXML']:
+        print "gccxml not available; skipping the C hello demo"
+        return
+
+    bindgen = bld.create_obj('command-output')
+    bindgen.stdout = 'hellomodule.c'
+    bindgen.argv = [bindgen.input_file('hellomodulegen.py'),
+                    bindgen.input_file('hello.h')]
+    bindgen.command = bindgen.env['PYTHON']
+    bindgen.command_is_external = True
+    bindgen.prio = 55 # must run after the 'py' objects in ../../pybindgen
+
+    obj = bld.create_obj('cpp', 'plugin', 'pyext')
+    obj.source = [
+        'hello.c',
+        'hellomodule.c'
+        ]
+    obj.target = 'hello'
+    obj.install_var = 0 # do not install
+
+    ## Workaround a WAF bug (http://code.google.com/p/waf/issues/detail?id=37)
+    obj.env.append_value("CPPPATH", bld.m_curdirnode.srcpath(obj.env))

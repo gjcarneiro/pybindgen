@@ -46,3 +46,4 @@ def build(bld):
         obj.env.append_value("CPPPATH", bld.m_curdirnode.srcpath(obj.env))
 
 
+    bld.add_subdirs('c-hello')
