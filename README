@@ -21,7 +21,8 @@ PyBindGen is (surprise!) a python bindings generator.  The main features are:
  * Supports reference counted classes and smart pointers;
 
 Notable features NOT implemented:
- * Multiple inheritance
+ * Multiple inheritance; # relatively hard to support, little motivation
+ * Exceptions.           # moderate difficulty, likely to be implemented sometime in the future
 
 == Installation ==
 
@@ -46,5 +47,5 @@ To install PyBindGen, issue the following commands:
 
 == Documentation ==
 
-There is no documentatation yet.  For now, there is only an example,
+There is no documentation yet.  For now there is only an example,
 in the 'examples' directory.
