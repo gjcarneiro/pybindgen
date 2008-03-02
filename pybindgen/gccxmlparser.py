@@ -512,6 +512,8 @@ class ModuleParser(object):
                 kwargs.setdefault('incref_function', value)
             elif name == 'decref_function':
                 kwargs.setdefault('decref_function', value)
+            elif name == 'python_name':
+                kwargs.setdefault('python_name', value)
             else:
                 warnings.warn_explicit("Class annotation %r ignored" % name,
                                        Warning, cls.location.file_name, cls.location.line)

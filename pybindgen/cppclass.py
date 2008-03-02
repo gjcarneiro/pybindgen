@@ -316,7 +316,8 @@ class CppClass(object):
                  peekref_method=None,
                  template_parameters=(), custom_template_class_name=None,
                  incomplete_type=False, free_function=None,
-                 incref_function=None, decref_function=None,):
+                 incref_function=None, decref_function=None,
+                 python_name=None):
         """Constructor
         name -- class name
         parent -- optional parent class wrapper
@@ -343,12 +344,14 @@ class CppClass(object):
         free_function -- name of C function used to deallocate class instances
         incref_function -- same as incref_method, but as a function instead of method
         decref_method -- same as decref_method, but as a function instead of method
+        python_name -- name of the class as it will appear from Python side
         """
         assert outer_class is None or isinstance(outer_class, CppClass)
         self.incomplete_type = incomplete_type
         self.outer_class = outer_class
         self._module = None
         self.name = name
+        self.python_name = python_name
         self.mangled_name = None
         self.template_parameters = template_parameters
         self.custom_template_class_name = custom_template_class_name
@@ -1015,7 +1018,10 @@ typedef struct {
             else:
                 class_python_name = self.custom_template_class_name
         else:
-            class_python_name = self.name
+            if self.python_name is None:
+                class_python_name = self.name
+            else:
+                class_python_name = self.python_name
 
         if self.outer_class is None:
             module.after_init.write_code(
