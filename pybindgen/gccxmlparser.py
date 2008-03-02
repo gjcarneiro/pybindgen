@@ -361,6 +361,59 @@ class ModuleParser(object):
         self.module = None # the toplevel pybindgen.module.Module instance (module being generated)
         self.declarations = None # pygccxml.declarations.namespace.namespace_t (as returned by pygccxml.parser.parse)
         self._types_scanned = False
+        self._pre_scan_hooks = []
+        self._post_scan_hooks = []
+
+    def add_pre_scan_hook(self, hook):
+        """
+        Add a function to be called right before converting a gccxml
+        definition to a PyBindGen wrapper object.  This hook function
+        will be called for every scanned type, function, or method,
+        and given the a chance to modify the annotations for that
+        definition.  It will be called like this:
+
+        pre_scan_hook(module_parser, pygccxml_definition, global_annotations,
+                      parameter_annotations)
+        
+        where:
+
+           module_parser -- the ModuleParser (this class) instance
+           pygccxml_definition -- the definition reported by pygccxml
+           global_annotations -- a dicionary containing the "global annotations"
+                                 for the definition, i.e. a set of key=value
+                                 pairs not associated with any particular
+                                 parameter
+           parameter_annotations -- a dicionary containing the "parameter
+                                    annotations" for the definition.  It is a
+                                    dict whose keys are parameter names and
+                                    whose values are dicts containing the
+                                    annotations for that parameter.  Annotations
+                                    pertaining the return value of functions or
+                                    methods are denoted by a annotation for a
+                                    parameter named 'return'.
+        """
+        if not callable(hook):
+            raise TypeError("hook must be callable")
+        self._pre_scan_hooks.append(hook)
+
+    def add_post_scan_hook(self, hook):
+        """
+        Add a function to be called right after converting a gccxml definition
+        to a PyBindGen wrapper object.  This hook function will be called for
+        every scanned type, function, or method.  It will be called like this:
+
+        post_scan_hook(module_parser, pygccxml_definition, pybindgen_wrapper)
+        
+        where:
+
+           module_parser -- the ModuleParser (this class) instance
+           pygccxml_definition -- the definition reported by pygccxml
+           pybindgen_wrapper -- a pybindgen object that generates a wrapper,
+                                such as CppClass, Function, or CppMethod.
+        """
+        if not callable(hook):
+            raise TypeError("hook must be callable")
+        self._post_scan_hooks.append(hook)
 
     def __location_match(self, decl):
         if decl.location.file_name in self.header_files:
@@ -482,9 +535,11 @@ class ModuleParser(object):
             typedef = None
 
             kwargs = {}
-            global_annotations, dummy_param_annotations = \
+            global_annotations, param_annotations = \
                 annotations_scanner.get_annotations(cls.location.file_name,
                                                     cls.location.line)
+            for hook in self._pre_scan_hooks:
+                hook(self, cls, global_annotations, param_annotations)
             if 'ignore' in global_annotations:
                 continue
 
@@ -592,6 +647,9 @@ class ModuleParser(object):
             registered_classes[cls] = class_wrapper
             type_registry.register_class(class_wrapper, alias)
 
+            for hook in self._post_scan_hooks:
+                hook(self, cls, class_wrapper)
+
             del cls_name
 
             ## scan for nested classes/enums
@@ -655,6 +713,9 @@ class ModuleParser(object):
             global_annotations, parameter_annotations = \
                 annotations_scanner.get_annotations(member.location.file_name,
                                                     member.location.line)
+            for hook in self._pre_scan_hooks:
+                hook(self, member, global_annotations, parameter_annotations)
+
             if 'ignore' in global_annotations:
                 continue
 
@@ -735,6 +796,9 @@ class ModuleParser(object):
                     warnings.warn_explicit("Error adding method %s: %r"
                                            % (member, ex),
                                            Warning, member.location.file_name, member.location.line)
+                else:
+                    for hook in self._post_scan_hooks:
+                        hook(self, member, method_wrapper)
 
             ## ------------ constructor --------------------
             elif isinstance(member, calldef.constructor_t):
@@ -761,6 +825,8 @@ class ModuleParser(object):
                 constructor_wrapper = CppConstructor(arguments, visibility=member.access_type)
                 constructor_wrapper.gccxml_definition = member
                 class_wrapper.add_constructor(constructor_wrapper)
+                for hook in self._post_scan_hooks:
+                    hook(self, member, constructor_wrapper)
 
                 if (len(arguments) == 1
                     and isinstance(arguments[0], class_wrapper.ThisClassRefParameter)):
@@ -790,7 +856,7 @@ class ModuleParser(object):
                 else:
                     class_wrapper.add_instance_attribute(return_type, member.name,
                                                          is_const=type_traits.is_const(member.type))
-            
+                ## TODO: invoke post_scan_hooks
             elif isinstance(member, calldef.destructor_t):
                 pass
 
@@ -819,6 +885,9 @@ class ModuleParser(object):
             global_annotations, parameter_annotations = \
                 annotations_scanner.get_annotations(fun.location.file_name,
                                                     fun.location.line)
+            for hook in self._pre_scan_hooks:
+                hook(self, fun, global_annotations, parameter_annotations)
+
             try:
                 return_type = type_registry.lookup_return(fun.return_type, parameter_annotations.get('return', {}))
             except (TypeLookupError, TypeConfigurationError), ex:
@@ -879,6 +948,8 @@ class ModuleParser(object):
                                     template_parameters=template_parameters)
             func_wrapper.gccxml_definition = fun
             module.add_function(func_wrapper, name=alt_name)
+            for hook in self._post_scan_hooks:
+                hook(self, fun, func_wrapper)
 
         ## scan nested namespaces (mapped as python submodules)
         for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
