@@ -4,17 +4,13 @@ import sys
 import re
 
 import pybindgen
-from pybindgen.typehandlers import base as typehandlers
-from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
-from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
+from pybindgen import FileCodeSink
 from pybindgen.gccxmlparser import ModuleParser
-from pybindgen.function import CustomFunctionWrapper
-from pybindgen.cppmethod import CustomCppMethodWrapper
 
 constructor_rx = re.compile("hello_foo_new(_.*)?")
 method_rx = re.compile("hello_foo(_.*)?")
 
-def pre_scan_hook(module_parser,
+def pre_scan_hook(dummy_module_parser,
                   pygccxml_definition,
                   global_annotations,
                   parameter_annotations):
