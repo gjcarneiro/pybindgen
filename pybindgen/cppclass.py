@@ -10,7 +10,7 @@ from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, Parameter,
 
 from typehandlers.codesink import NullCodeSink, MemoryCodeSink
 
-from cppmethod import CppMethod, CppConstructor, CppNoConstructor, \
+from cppmethod import CppMethod, CppConstructor, CppNoConstructor, CppFunctionAsConstructor, \
     CppOverloadedMethod, CppOverloadedConstructor, \
     CppVirtualMethodParentCaller, CppVirtualMethodProxy
 
@@ -832,6 +832,7 @@ public:
             method.is_pure_virtual = False
             method.self_parameter_pystruct = self.pystruct
             method.visibility = 'public'
+            method.force_parse = method.PARSE_TUPLE_AND_KEYWORDS
         else:
             raise TypeError
         
@@ -879,7 +880,11 @@ public:
 
         wrapper -- a CppConstructor instance
         """
-        assert isinstance(wrapper, CppConstructor)
+        if isinstance(wrapper, function.Function):
+            wrapper = CppFunctionAsConstructor(wrapper.parameters, wrapper.function_name)
+            wrapper.module = self.module
+        else:
+            assert isinstance(wrapper, CppConstructor)
         wrapper.set_class(self)
         self.constructors.append(wrapper)
         if not wrapper.parameters:

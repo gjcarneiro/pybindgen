@@ -331,6 +331,25 @@ class CppConstructor(ForwardWrapperBase):
         code_sink.writeln('}')
 
 
+class CppFunctionAsConstructor(CppConstructor):
+    """
+    Class that generates a wrapper to a C/C++ function that appears as a contructor.
+    """
+    def __init__(self, parameters, c_function_name, unblock_threads=None):
+        if unblock_threads is None:
+            unblock_threads = settings.unblock_threads
+        super(CppFunctionAsConstructor, self).__init__(parameters)
+        self.c_function_name = c_function_name
+
+    def generate_call(self, class_=None):
+        "virtual method implementation; do not call"
+        if class_ is None:
+            class_ = self._class
+        #assert isinstance(class_, CppClass)
+        assert class_.helper_class is None
+        self.before_call.write_code("self->obj = %s(%s);" %
+                                    (self.c_function_name, ", ".join(self.call_params)))
+
 
 class CppOverloadedConstructor(overloading.OverloadedWrapper):
     "Support class for overloaded constructors"
@@ -481,9 +500,9 @@ class CppVirtualMethodParentCaller(CppMethod):
                 '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
 
-
     def clone(self):
-        """Creates a semi-deep copy of this method wrapper.  The returned
+        """
+        Creates a semi-deep copy of this method wrapper.  The returned
         method wrapper clone contains copies of all parameters, so
         they can be modified at will.
         """
@@ -506,6 +525,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
 
     def __init__(self, method):
         """
+        xxx
         """
         super(CppVirtualMethodProxy, self).__init__(method.return_value, method.parameters)
         self.method_name = method.method_name
