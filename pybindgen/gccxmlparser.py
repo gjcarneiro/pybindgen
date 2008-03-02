@@ -17,6 +17,7 @@ from pygccxml.declarations import type_traits
 from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
 from pygccxml.declarations import templates
+from pygccxml.declarations.class_declaration import class_declaration_t, class_t
 import settings
 
 #from pygccxml.declarations.calldef import \
@@ -479,6 +480,8 @@ class ModuleParser(object):
     def scan_methods(self):
         assert self._types_scanned
         for class_wrapper in type_registry.ordered_classes:
+            if isinstance(class_wrapper.gccxml_definition, class_declaration_t):
+                continue # skip classes not fully defined
             self._scan_class_methods(class_wrapper.gccxml_definition, class_wrapper)
 
     def scan_functions(self):
@@ -488,6 +491,38 @@ class ModuleParser(object):
     def parse_finalize(self):
         annotations_scanner.warn_unused_annotations()
         return self.module
+
+    def _apply_class_annotations(self, cls, annotations, kwargs):
+        for name, value in annotations.iteritems():
+            if name == 'allow_subclassing':
+                kwargs.setdefault('allow_subclassing', annotations_scanner.parse_boolean(value))
+            elif name == 'is_singleton':
+                kwargs.setdefault('is_singleton', annotations_scanner.parse_boolean(value))
+            elif name == 'incref_method':
+                kwargs.setdefault('incref_method', value)
+            elif name == 'decref_method':
+                kwargs.setdefault('decref_method', value)
+            elif name == 'peekref_method':
+                kwargs.setdefault('peekref_method', value)
+            elif name == 'automatic_type_narrowing':
+                kwargs.setdefault('automatic_type_narrowing', annotations_scanner.parse_boolean(value))
+            elif name == 'free_function':
+                kwargs.setdefault('free_function', value)
+            elif name == 'incref_function':
+                kwargs.setdefault('incref_function', value)
+            elif name == 'decref_function':
+                kwargs.setdefault('decref_function', value)
+            else:
+                warnings.warn_explicit("Class annotation %r ignored" % name,
+                                       Warning, cls.location.file_name, cls.location.line)
+                
+        if isinstance(cls, class_t):
+            if self._class_has_virtual_methods(cls):
+                kwargs.setdefault('allow_subclassing', True)
+
+            if not self._class_has_public_destructor(cls):
+                kwargs.setdefault('is_singleton', True)
+
 
     def _scan_namespace_types(self, module, module_namespace, outer_class=None):
         ## scan enumerations
@@ -513,6 +548,37 @@ class ModuleParser(object):
             module.add_enum(Enum(enum.name, [name for name, dummy_val in enum.values],
                                  outer_class=outer_class))
 
+        registered_classes = {} # class_t -> CppClass
+
+        ## Look for forward declarations of class/structs like
+        ## "typedef struct _Foo Foo"; these are represented in
+        ## pygccxml by a typedef whose .type.declaration is a
+        ## class_declaration_t instead of class_t.
+        for alias in module_namespace.typedefs(function=self.location_filter,
+                                              recursive=False, allow_empty=True):
+            cls = alias.type.declaration
+            if not isinstance(cls, class_declaration_t):
+                continue # fully defined classes handled further below
+
+            global_annotations, param_annotations = \
+                annotations_scanner.get_annotations(cls.location.file_name,
+                                                    cls.location.line)
+            for hook in self._pre_scan_hooks:
+                hook(self, cls, global_annotations, param_annotations)
+            if 'ignore' in global_annotations:
+                continue
+
+            kwargs = dict()
+            self._apply_class_annotations(cls, global_annotations, kwargs)
+            kwargs.setdefault("incomplete_type", True)
+            kwargs.setdefault("automatic_type_narrowing", False)
+            kwargs.setdefault("allow_subclassing", False)
+            class_wrapper = CppClass(alias.name, **kwargs)
+            class_wrapper.gccxml_definition = cls
+            module.add_class(class_wrapper)
+            registered_classes[cls] = class_wrapper
+            type_registry.register_class(class_wrapper, alias=cls.name)
+
         ## scan classes
         if outer_class is None:
             unregistered_classes = [cls for cls in
@@ -529,7 +595,6 @@ class ModuleParser(object):
                     continue
                 unregistered_classes.append(cls)
 
-        registered_classes = {} # class_t -> CppClass
         while unregistered_classes:
             cls = unregistered_classes.pop(0)
             typedef = None
@@ -590,30 +655,7 @@ class ModuleParser(object):
                 unregistered_classes.append(cls)
                 continue
 
-            ##--
-
-            for name, value in global_annotations.iteritems():
-                if name == 'allow_subclassing':
-                    kwargs.setdefault('allow_subclassing', annotations_scanner.parse_boolean(value))
-                elif name == 'is_singleton':
-                    kwargs.setdefault('is_singleton', annotations_scanner.parse_boolean(value))
-                elif name == 'incref_method':
-                    kwargs.setdefault('incref_method', value)
-                elif name == 'decref_method':
-                    kwargs.setdefault('decref_method', value)
-                elif name == 'peekref_method':
-                    kwargs.setdefault('peekref_method', value)
-                elif name == 'automatic_type_narrowing':
-                    kwargs.setdefault('automatic_type_narrowing', annotations_scanner.parse_boolean(value))
-                else:
-                    warnings.warn_explicit("Class annotation %r ignored" % name,
-                                           Warning, cls.location.file_name, cls.location.line)
-
-            if self._class_has_virtual_methods(cls):
-                kwargs.setdefault('allow_subclassing', True)
-
-            if not self._class_has_public_destructor(cls):
-                kwargs.setdefault('is_singleton', True)
+            self._apply_class_annotations(cls, global_annotations, kwargs)
 
             custom_template_class_name = None
             template_parameters = ()

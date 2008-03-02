@@ -39,6 +39,9 @@ def default_instance_creation_function(cpp_class, code_block, lvalue,
     """
     assert lvalue
     assert not lvalue.startswith('None')
+    if cpp_class.incomplete_type:
+        raise CodeGenerationError("%s cannot be constructed (incomplete type)"
+                                  % cpp_class.full_name)
     code_block.write_code(
         "%s = new %s(%s);" % (lvalue, construct_type_name, parameters))
 
@@ -311,7 +314,9 @@ class CppClass(object):
                  automatic_type_narrowing=None, allow_subclassing=None,
                  is_singleton=False, outer_class=None,
                  peekref_method=None,
-                 template_parameters=(), custom_template_class_name=None):
+                 template_parameters=(), custom_template_class_name=None,
+                 incomplete_type=False, free_function=None,
+                 incref_function=None, decref_function=None,):
         """Constructor
         name -- class name
         parent -- optional parent class wrapper
@@ -335,8 +340,12 @@ class CppClass(object):
                         C++ class destructor to free the value.
         peekref_method -- if the class supports reference counting, the
                           name of the method that returns the current reference count.
+        free_function -- name of C function used to deallocate class instances
+        incref_function -- same as incref_method, but as a function instead of method
+        decref_method -- same as decref_method, but as a function instead of method
         """
         assert outer_class is None or isinstance(outer_class, CppClass)
+        self.incomplete_type = incomplete_type
         self.outer_class = outer_class
         self._module = None
         self.name = name
@@ -374,6 +383,7 @@ class CppClass(object):
 
         self.parent = parent
         assert parent is None or isinstance(parent, CppClass)
+
         assert (incref_method is None and decref_method is None) \
                or (incref_method is not None and decref_method is not None)
         if incref_method is None and parent is not None:
@@ -385,6 +395,20 @@ class CppClass(object):
             self.decref_method = decref_method
             self.peekref_method = peekref_method
 
+        self.free_function = free_function
+
+        assert (incref_function is None and decref_function is None) \
+               or (incref_function is not None and decref_function is not None)
+        if incref_function is None and parent is not None:
+            self.incref_function = parent.incref_function
+            self.decref_function = parent.decref_function
+        else:
+            self.incref_function = incref_function
+            self.decref_function = decref_function
+
+        self.has_reference_counting = (self.incref_function is not None
+                                       or self.incref_method is not None)
+            
         if automatic_type_narrowing is None:
             if parent is None:
                 self.automatic_type_narrowing = settings.automatic_type_narrowing
@@ -461,6 +485,38 @@ class CppClass(object):
                 return_type_matcher.register(name+'*', self.ThisClassPtrReturn)
             except ValueError:
                 pass
+
+    def write_incref(self, code_block, obj_expr):
+        """
+        Write code to increase the reference code of an object of this
+        class (the real C++ class, not the wrapper).  Should only be
+        called if the class supports reference counting, as reported
+        by the attribute `has_reference_counting'.
+        """
+        if self.incref_method is not None:
+            assert self.incref_function is None
+            code_block.write_code('%s->%s();' % (obj_expr, self.incref_method))
+        elif self.incref_function is not None:
+            assert self.incref_method is None
+            code_block.write_code('%s(%s);' % (self.incref_function, obj_expr))
+        else:
+            raise AssertionError
+
+    def write_decref(self, code_block, obj_expr):
+        """
+        Write code to decrease the reference code of an object of this
+        class (the real C++ class, not the wrapper).  Should only be
+        called if the class supports reference counting, as reported
+        by the attribute `has_reference_counting'.
+        """
+        if self.decref_method is not None:
+            assert self.decref_function is None
+            code_block.write_code('%s->%s();' % (obj_expr, self.decref_method))
+        elif self.decref_function is not None:
+            assert self.decref_method is None
+            code_block.write_code('%s(%s);' % (self.decref_function, obj_expr))
+        else:
+            raise AssertionError
 
     def add_helper_class_hook(self, hook):
         """
@@ -617,7 +673,6 @@ class CppClass(object):
         else:
             self.typeid_map_name = None
 
-
     def register_alias(self, alias):
         """Re-register the class with another base name, in addition to any
         registrations that might have already been done."""
@@ -683,6 +738,8 @@ class CppClass(object):
         """Find the root CppClass along the subtree of all parent classes that
         have automatic_type_narrowing=True Note: multiple inheritance
         not implemented"""
+        if not self.automatic_type_narrowing:
+            return None
         root = self
         while (root.parent is not None
                and root.parent.automatic_type_narrowing):
@@ -1068,22 +1125,37 @@ typedef struct {
         code_sink.writeln("};")
         self.slots.setdefault("tp_methods", "%s_methods" % (self.pystruct,))
 
+    def _get_delete_code(self, clear_pointer):
+        if self.is_singleton:
+            delete_code = ''
+        else:
+            if self.decref_method is not None:
+                delete_code = ("if (self->obj)\n        self->obj->%s();"
+                               % (self.decref_method,))
+            elif self.decref_function is not None:
+                delete_code = ("if (self->obj)\n        %s(self->obj);"
+                               % (self.decref_function,))
+            elif self.free_function is not None:
+                delete_code = ("if (self->obj)\n        %s(self->obj);"
+                               % (self.free_function,))
+            else:
+                if self.incomplete_type:
+                    raise CodeGenerationError("Cannot finish generating class %s: "
+                                              "type is incomplete, but no free/unref_function defined")
+                delete_code = "delete self->obj;"
+
+            if clear_pointer:
+                delete_code += "\n    self->obj = NULL;"
+
+        return delete_code
+
     def _generate_gc_methods(self, code_sink):
         """Generate tp_clear and tp_traverse"""
 
         ## --- tp_clear ---
         tp_clear_function_name = "%s__tp_clear" % (self.pystruct,)
         self.slots.setdefault("tp_clear", tp_clear_function_name )
-
-        if self.is_singleton:
-            delete_code = ''
-        else:
-            if self.decref_method is None:
-                delete_code = "delete self->obj;"
-            else:
-                delete_code = ("if (self->obj)\n        self->obj->%s();"
-                               % (self.decref_method,))
-
+        delete_code = self._get_delete_code(clear_pointer=False)
         code_sink.writeln(r'''
 static void
 %s(%s *self)
@@ -1135,16 +1207,7 @@ static int
             delete_code = ""
         else:
             clear_code = ""
-            if self.is_singleton:
-                delete_code = ''
-            else:
-                if self.decref_method is None:
-                    delete_code = "delete tmp; self->obj = NULL;"
-                else:
-                    delete_code = ("if (tmp)\n"
-                                   "    tmp->%s();\n"
-                                   "self->obj = NULL;"
-                                   % (self.decref_method,))
+            delete_code = self._get_delete_code(clear_pointer=True)
 
         if have_constructor:
             code_sink.writeln(r'''
@@ -1505,11 +1568,10 @@ class CppClassPtrParameter(CppClassParameterBase):
         wrapper.call_params.append(value)
         
         if self.transfer_ownership:
-            if self.cpp_class.incref_method is None:
+            if not self.cpp_class.has_reference_counting:
                 wrapper.after_call.write_code('%s->obj = NULL;' % (self.py_name,))
             else:
-                wrapper.before_call.write_code('%s->obj->%s();' % (
-                    self.py_name, self.cpp_class.incref_method,))
+                self.cpp_class.write_incref(wrapper.before_call, "%s->obj" % self.py_name)
 
 
     def convert_c_to_python(self, wrapper):
@@ -1531,7 +1593,7 @@ class CppClassPtrParameter(CppClassParameterBase):
             ## automatic_type_narrowing is active and we are not forced to
             ## make a copy of the object
             if (self.cpp_class.automatic_type_narrowing
-                and (self.transfer_ownership or self.cpp_class.incref_method is not None)):
+                and (self.transfer_ownership or self.cpp_class.has_reference_counting)):
 
                 typeid_map_name = self.cpp_class.get_type_narrowing_root().typeid_map_name
                 wrapper_type = wrapper.declarations.declare_variable(
@@ -1561,7 +1623,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                 wrapper.before_call.write_code("%s->obj = %s;" % (py_name, value))
                 wrapper.build_params.add_parameter("N", [py_name])
             else:
-                if self.cpp_class.incref_method is None:
+                if not self.cpp_class.has_reference_counting:
                     ## The PyObject gets a temporary pointer to the
                     ## original value; the pointer is converted to a
                     ## copy in case the callee retains a reference to
@@ -1604,8 +1666,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                         wrapper.after_call.write_code('}')
                 else:
                     ## The PyObject gets a new reference to the same obj
-                    wrapper.before_call.write_code(
-                        "%s->%s();" % (value, self.cpp_class.incref_method))
+                    self.cpp_class.write_incref(wrapper.before_call, value)
                     if self.is_const:
                         wrapper.before_call.write_code("%s->obj = const_cast< %s*>(%s);" %
                                                        (py_name, self.cpp_class.full_name, value))
@@ -1726,7 +1787,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             ## automatic_type_narrowing is active and we are not forced to
             ## make a copy of the object
             if (self.cpp_class.automatic_type_narrowing
-                and (self.caller_owns_return or self.cpp_class.incref_method is not None)):
+                and (self.caller_owns_return or self.cpp_class.has_reference_counting)):
 
                 typeid_map_name = self.cpp_class.get_type_narrowing_root().typeid_map_name
                 wrapper_type = wrapper.declarations.declare_variable(
@@ -1757,15 +1818,14 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             if self.caller_owns_return:
                 wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
             else:
-                if self.cpp_class.incref_method is None:
+                if not self.cpp_class.has_reference_counting:
                     ## The PyObject creates its own copy
                     self.cpp_class.write_create_instance(wrapper.after_call,
                                                          "%s->obj" % py_name,
                                                          '*'+value)
                 else:
                     ## The PyObject gets a new reference to the same obj
-                    wrapper.after_call.write_code(
-                        "%s->%s();" % (value, self.cpp_class.incref_method))
+                    self.cpp_class.write_incref(wrapper.after_call, value)
                     if self.is_const:
                         wrapper.after_call.write_code("%s->obj = const_cast< %s* >(%s);" %
                                                       (py_name, self.cpp_class.full_name, value))
@@ -1821,15 +1881,14 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
 
         ## now the hairy part :)
         if self.caller_owns_return:
-            if self.cpp_class.incref_method is None:
+            if not self.cpp_class.has_reference_counting:
                 ## the caller receives a copy
                 self.cpp_class.write_create_instance(wrapper.after_call,
                                                      "%s" % self.value,
                                                      '*'+value)
             else:
                 ## the caller gets a new reference to the same obj
-                wrapper.after_call.write_code(
-                    "%s->%s();" % (value, self.cpp_class.incref_method))
+                self.cpp_class.write_incref(wrapper.after_call, value)
                 if self.is_const:
                     wrapper.after_call.write_code(
                         "%s = const_cass< %s* >(%s);" %

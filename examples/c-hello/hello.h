@@ -11,7 +11,6 @@ void   hello_print_message (const char *message);
 double hello_sum           (double      x,
                             double      y);
 
-
 typedef struct _HelloFoo HelloFoo;
 
 
