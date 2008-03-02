@@ -120,7 +120,7 @@ class CharReturn(ReturnValue):
 
 class CStringReturn(ReturnValue):
 
-    CTYPES = ['char*', 'const char*']
+    CTYPES = ['char*', 'const char*', 'char const *']
 
     def get_c_error_return(self):
         return "return NULL;"

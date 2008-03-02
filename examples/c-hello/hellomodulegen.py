@@ -34,14 +34,12 @@ def pre_scan_hook(module_parser,
     if m:
         method_name = m.group(1)[1:]
         if method_name in ['ref', 'unref']:
+            global_annotations['ignore'] = 'true'
             return
-        print >> sys.stderr, ">>>>>>>>", m.group(1)[1:]
         global_annotations['as_method'] = m.group(1)[1:]
         global_annotations['of_class'] = 'HelloFoo'
         parameter_annotations['foo'] = {'transfer_ownership': 'false'}
 
-       
-    #print >> sys.stderr, ">>>>>>>>>>>>", pygccxml_definition
 
 
 def my_module_gen(out_file):

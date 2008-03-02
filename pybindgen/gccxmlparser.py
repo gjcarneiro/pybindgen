@@ -930,8 +930,15 @@ class ModuleParser(object):
             for hook in self._pre_scan_hooks:
                 hook(self, fun, global_annotations, parameter_annotations)
 
+            if global_annotations.get("ignore", False):
+                continue
+
+            is_constructor_of = global_annotations.get("is_constructor_of", None)
+            return_annotations = parameter_annotations.get('return', {})
+            if is_constructor_of:
+                return_annotations['caller_owns_return'] = 'true'
             try:
-                return_type = type_registry.lookup_return(fun.return_type, parameter_annotations.get('return', {}))
+                return_type = type_registry.lookup_return(fun.return_type, return_annotations)
             except (TypeLookupError, TypeConfigurationError), ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                        % (fun.return_type.decl_string, fun, ex),
@@ -967,8 +974,10 @@ class ModuleParser(object):
                     alt_name = value
                 elif name == 'ignore':
                     ignore = True
+                elif name == 'is_constructor_of':
+                    pass
                 else:
-                    warnings.warn_explicit("Incorrect annotation",
+                    warnings.warn_explicit("Incorrect annotation %s=%s" % (name, value),
                                            Warning, fun.location.file_name, fun.location.line)
             if ignore:
                 continue
@@ -978,6 +987,12 @@ class ModuleParser(object):
                 cpp_class = type_registry.find_class(of_class, (self.module_namespace_name or '::'))
                 function_wrapper = Function(return_type, fun.name, arguments)
                 cpp_class.add_method(function_wrapper, name=as_method)
+                function_wrapper.gccxml_definition = fun
+                continue
+            if is_constructor_of is not None:
+                cpp_class = type_registry.find_class(is_constructor_of, (self.module_namespace_name or '::'))
+                function_wrapper = Function(return_type, fun.name, arguments)
+                cpp_class.add_constructor(function_wrapper)
                 function_wrapper.gccxml_definition = fun
                 continue
 
