@@ -1136,28 +1136,39 @@ typedef struct {
         code_sink.writeln("};")
         self.slots.setdefault("tp_methods", "%s_methods" % (self.pystruct,))
 
-    def _get_delete_code(self, clear_pointer):
+    def _get_delete_code(self):
         if self.is_singleton:
             delete_code = ''
         else:
             if self.decref_method is not None:
-                delete_code = ("if (self->obj)\n        self->obj->%s();"
-                               % (self.decref_method,))
+                delete_code = ("if (self->obj) {\n"
+                               "    %s *tmp = self->obj;\n"
+                               "    self->obj = NULL;\n"
+                               "    tmp->%s();\n"
+                               "}"
+                               % (self.full_name, self.decref_method,))
             elif self.decref_function is not None:
-                delete_code = ("if (self->obj)\n        %s(self->obj);"
-                               % (self.decref_function,))
+                delete_code = ("if (self->obj) {\n"
+                               "    %s *tmp = self->obj;\n"
+                               "    self->obj = NULL;\n"
+                               "    %s(tmp);\n"
+                               "}"
+                               % (self.full_name, self.decref_function,))
             elif self.free_function is not None:
-                delete_code = ("if (self->obj)\n        %s(self->obj);"
-                               % (self.free_function,))
+                delete_code = ("if (self->obj) {\n"
+                               "    %s *tmp = self->obj;\n"
+                               "    self->obj = NULL;\n"
+                               "    %s(tmp);\n"
+                               "}"
+                               % (self.full_name, self.free_function,))
             else:
                 if self.incomplete_type:
                     raise CodeGenerationError("Cannot finish generating class %s: "
                                               "type is incomplete, but no free/unref_function defined")
-                delete_code = "delete self->obj;"
-
-            if clear_pointer:
-                delete_code += "\n    self->obj = NULL;"
-
+                delete_code = ("    %s *tmp = self->obj;\n"
+                               "    self->obj = NULL;\n"
+                               "    delete tmp;"
+                               % (self.full_name,))
         return delete_code
 
     def _generate_gc_methods(self, code_sink):
@@ -1166,14 +1177,13 @@ typedef struct {
         ## --- tp_clear ---
         tp_clear_function_name = "%s__tp_clear" % (self.pystruct,)
         self.slots.setdefault("tp_clear", tp_clear_function_name )
-        delete_code = self._get_delete_code(clear_pointer=False)
+        delete_code = self._get_delete_code()
         code_sink.writeln(r'''
 static void
 %s(%s *self)
 {
     Py_CLEAR(self->inst_dict);
     %s
-    self->obj = 0;
 }
 ''' % (tp_clear_function_name, self.pystruct, delete_code))
 
@@ -1218,7 +1228,7 @@ static int
             delete_code = ""
         else:
             clear_code = ""
-            delete_code = self._get_delete_code(clear_pointer=True)
+            delete_code = self._get_delete_code()
 
         if have_constructor:
             code_sink.writeln(r'''
@@ -1227,11 +1237,9 @@ static void
 {
     %s
     %s
-    %s
     self->ob_type->tp_free((PyObject*)self);
 }
 ''' % (tp_dealloc_function_name, self.pystruct,
-       (delete_code and ("%s *tmp = self->obj;" % self.full_name) or ''),
        delete_code, clear_code))
 
         else: # don't have constructor
@@ -1242,11 +1250,9 @@ static void
 {
     %s
     %s
-    %s
     self->ob_type->tp_free((PyObject*)self);
 }
 ''' % (tp_dealloc_function_name, self.pystruct,
-       (delete_code and ("%s *tmp = self->obj;" % self.full_name) or ''),
        clear_code, delete_code))
         code_sink.writeln()
         self.slots.setdefault("tp_dealloc", tp_dealloc_function_name )
