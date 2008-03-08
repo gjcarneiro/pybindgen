@@ -8,6 +8,7 @@ from pygccxml import parser
 from pygccxml import declarations
 from module import Module
 from typehandlers.codesink import FileCodeSink
+import typehandlers.base
 from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
 from pygccxml.declarations.enumeration import enumeration_t
 from enum import Enum
@@ -558,6 +559,19 @@ class ModuleParser(object):
         ## class_declaration_t instead of class_t.
         for alias in module_namespace.typedefs(function=self.location_filter,
                                               recursive=False, allow_empty=True):
+
+            ## handle "typedef int Something;"
+            if isinstance(alias.type, cpptypes.int_t):
+                param_cls, dummy_transf = typehandlers.base.param_type_matcher.lookup('int')
+                for ctype in param_cls.CTYPES:
+                    #print >> sys.stderr, "%s -> int" % ctype.replace('int', alias.name)
+                    typehandlers.base.param_type_matcher.register(ctype.replace('int', alias.name), param_cls)
+                return_cls, dummy_transf = typehandlers.base.return_type_matcher.lookup('int')
+                for ctype in return_cls.CTYPES:
+                    #print >> sys.stderr, "%s -> int" % ctype.replace('int', alias.name)
+                    typehandlers.base.return_type_matcher.register(ctype.replace('int', alias.name), return_cls)
+                continue
+
             if not isinstance(alias.type, cpptypes.declarated_t):
                 continue
             cls = alias.type.declaration
