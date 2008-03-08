@@ -558,6 +558,8 @@ class ModuleParser(object):
         ## class_declaration_t instead of class_t.
         for alias in module_namespace.typedefs(function=self.location_filter,
                                               recursive=False, allow_empty=True):
+            if not isinstance(alias.type, cpptypes.declarated_t):
+                continue
             cls = alias.type.declaration
             if not isinstance(cls, class_declaration_t):
                 continue # fully defined classes handled further below

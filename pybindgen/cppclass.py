@@ -1164,7 +1164,8 @@ typedef struct {
             else:
                 if self.incomplete_type:
                     raise CodeGenerationError("Cannot finish generating class %s: "
-                                              "type is incomplete, but no free/unref_function defined")
+                                              "type is incomplete, but no free/unref_function defined"
+                                              % self.full_name)
                 delete_code = ("    %s *tmp = self->obj;\n"
                                "    self->obj = NULL;\n"
                                "    delete tmp;"
