@@ -3,9 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-void hello_print_message(const char *message)
+Bool hello_print_message(const char *message)
 {
     printf("Hello: %s\n", message);
+    return 0;
 }
 
 double hello_sum(double x, double y)

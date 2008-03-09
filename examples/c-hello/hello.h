@@ -6,8 +6,9 @@ extern "C"
 {
 #endif
 
+typedef int Bool;
 
-void   hello_print_message (const char *message);
+Bool   hello_print_message (const char *message);
 double hello_sum           (double      x,
                             double      y);
 
