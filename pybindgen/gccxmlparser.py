@@ -57,8 +57,8 @@ def normalize_name(decl_string):
         cls_name = decl_string
         template_parameters = None
     if not _digits.match(cls_name):
-        if not cls_name.startswith('::') and cls_name not in cpptypes.FUNDAMENTAL_TYPES:
-            cls_name = '::' + cls_name
+        if cls_name.startswith('::'):
+            cls_name = cls_name[2:]
     if template_parameters is None:
         return cls_name
     else:
@@ -948,37 +948,6 @@ class ModuleParser(object):
             for hook in self._pre_scan_hooks:
                 hook(self, fun, global_annotations, parameter_annotations)
 
-            if global_annotations.get("ignore", False):
-                continue
-
-            is_constructor_of = global_annotations.get("is_constructor_of", None)
-            return_annotations = parameter_annotations.get('return', {})
-            if is_constructor_of:
-                return_annotations['caller_owns_return'] = 'true'
-            try:
-                return_type = type_registry.lookup_return(fun.return_type, return_annotations)
-            except (TypeLookupError, TypeConfigurationError), ex:
-                warnings.warn_explicit("Return value '%s' error (used in %s): %r"
-                                       % (fun.return_type.decl_string, fun, ex),
-                                       Warning, fun.location.file_name, fun.location.line)
-                continue
-            arguments = []
-            for arg in fun.arguments:
-                try:
-                    arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
-                                                                    parameter_annotations.get(arg.name, {})))
-                except (TypeLookupError, TypeConfigurationError), ex:
-                    warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
-                                           % (arg.type.decl_string, arg.name, fun, ex),
-                                           Warning, fun.location.file_name, fun.location.line)
-
-                    ok = False
-                    break
-            else:
-                ok = True
-            if not ok:
-                continue
-
             as_method = None
             of_class = None
             alt_name = None
@@ -998,6 +967,49 @@ class ModuleParser(object):
                     warnings.warn_explicit("Incorrect annotation %s=%s" % (name, value),
                                            Warning, fun.location.file_name, fun.location.line)
             if ignore:
+                continue
+
+
+            is_constructor_of = global_annotations.get("is_constructor_of", None)
+            return_annotations = parameter_annotations.get('return', {})
+            if is_constructor_of:
+                return_annotations['caller_owns_return'] = 'true'
+            try:
+                return_type = type_registry.lookup_return(fun.return_type, return_annotations)
+            except (TypeLookupError, TypeConfigurationError), ex:
+                warnings.warn_explicit("Return value '%s' error (used in %s): %r"
+                                       % (fun.return_type.decl_string, fun, ex),
+                                       Warning, fun.location.file_name, fun.location.line)
+                continue
+            except TypeError, ex:
+                warnings.warn_explicit("Return value '%s' error (used in %s): %r"
+                                       % (fun.return_type.decl_string, fun, ex),
+                                       Warning, fun.location.file_name, fun.location.line)
+                raise
+            arguments = []
+            for argnum, arg in enumerate(fun.arguments):
+                annotations = parameter_annotations.get(arg.name, {})
+                if argnum == 0 and as_method is not None \
+                        and isinstance(arg.type, cpptypes.pointer_t):
+                    annotations.setdefault("transfer_ownership", "false")
+                try:
+                    arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
+                                                                    annotations))
+                except (TypeLookupError, TypeConfigurationError), ex:
+                    warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
+                                           % (arg.type.decl_string, arg.name, fun, ex),
+                                           Warning, fun.location.file_name, fun.location.line)
+
+                    ok = False
+                    break
+                except TypeError, ex:
+                    warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
+                                           % (arg.type.decl_string, arg.name, fun, ex),
+                                           Warning, fun.location.file_name, fun.location.line)
+                    raise
+            else:
+                ok = True
+            if not ok:
                 continue
 
             if as_method is not None:

@@ -51,18 +51,17 @@ class Enum(object):
         """Set the Module object this class belongs to; can only be set once"""
         assert self._module is None
         self._module = module
+
         if self.outer_class is None:
-            if module.cpp_namespace_prefix:
-                if module.cpp_namespace_prefix == '::':
-                    self.full_name = self.name
+            if self._module.cpp_namespace_prefix:
+                if self._module.cpp_namespace_prefix == '::':
+                    self.full_name = '::' + self.name
                 else:
-                    self.full_name = module.cpp_namespace_prefix + '::' + self.name
+                    self.full_name = self._module.cpp_namespace_prefix + '::' + self.name
             else:
                 self.full_name = self.name
-            if not self.full_name.startswith('::'):
-                self.full_name = '::' + self.full_name
         else:
-            self.full_name = self.outer_class.full_name + '::' + self.name
+            self.full_name = '::'.join([self.outer_class.full_name, self.name])
 
         ## Register type handlers for the enum type
         assert self.name

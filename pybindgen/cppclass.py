@@ -828,7 +828,9 @@ public:
         elif isinstance(method, function.Function):
             assert name is not None
             assert isinstance(method.parameters[0], CppClassParameterBase)
-            assert method.parameters[0].cpp_class is self
+            assert method.parameters[0].cpp_class is self, \
+                "expected first parameter to be of class %s, but it is of class %s" % \
+                (self.full_name, method.parameters[0].cpp_class.full_name)
             method.parameters[0].take_value_from_python_self = True
             method.module = self.module
             method.is_virtual = False
