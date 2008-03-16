@@ -1,8 +1,7 @@
 """
 C wrapper wrapper
 """
-from typehandlers.base import ForwardWrapperBase, NotSupportedError, CodegenErrorBase
-from typehandlers import codesink
+from typehandlers.base import ForwardWrapperBase, NotSupportedError
 import utils
 
 def isiterable(obj): 

@@ -489,6 +489,9 @@ class CppClass(object):
             except ValueError:
                 pass
 
+    def __repr__(self):
+        return "<pybindgen.CppClass '%s'>" % self.full_name
+
     def write_incref(self, code_block, obj_expr):
         """
         Write code to increase the reference code of an object of this
