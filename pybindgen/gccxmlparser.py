@@ -577,6 +577,8 @@ class ModuleParser(object):
             cls = alias.type.declaration
             if not isinstance(cls, class_declaration_t):
                 continue # fully defined classes handled further below
+            if templates.is_instantiation(cls.decl_string):
+                continue # typedef to template instantiations, must be fully defined
 
             global_annotations, param_annotations = \
                 annotations_scanner.get_annotations(cls.location.file_name,
