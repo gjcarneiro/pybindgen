@@ -662,6 +662,9 @@ class ModuleParser(object):
             ## If this class implicitly converts to another class, but
             ## that other class is not yet registered, postpone.
             for operator in cls.casting_operators(allow_empty=True):
+                target_type = type_traits.remove_declarated(operator.return_type)
+                if not isinstance(target_type, class_t):
+                    continue
                 try:
                     type_registry.find_class(operator.return_type.decl_string, '::')
                 except KeyError:
@@ -716,6 +719,9 @@ class ModuleParser(object):
             self._scan_namespace_types(module, module_namespace, outer_class=class_wrapper)
 
             for operator in cls.casting_operators(allow_empty=True):
+                target_type = type_traits.remove_declarated(operator.return_type)
+                if not isinstance(target_type, class_t):
+                    continue
                 other_class = type_registry.find_class(operator.return_type.decl_string, '::')
                 class_wrapper.implicitly_converts_to(other_class)
 
