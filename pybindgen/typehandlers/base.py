@@ -203,8 +203,7 @@ class CodeBlock(object):
         self.sink.indent()
         if failure_cleanup is not None:
             self.sink.writeln(failure_cleanup)
-        self.write_cleanup()
-        self.sink.writeln(self.error_return)
+        self.write_error_return()
         self.sink.unindent()
         self.sink.writeln("}")
 
@@ -212,6 +211,13 @@ class CodeBlock(object):
         """Write the current cleanup code."""
         for cleanup_action in self.get_cleanup_code():
             self.sink.writeln(cleanup_action)
+
+    def write_error_return(self):
+        '''Add a chunk of code that cleans up and returns an error.
+        '''
+        self.write_cleanup()
+        self.sink.writeln(self.error_return)
+
 
 
 class ParseTupleParameters(object):
