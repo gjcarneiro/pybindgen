@@ -613,17 +613,18 @@ class CppClass(object):
         >>> l = Foo.get_all_implicit_conversions()
         >>> l.sort(lambda cls1, cls2: cmp(cls1.name, cls2.name))
         >>> [cls.name for cls in l]
-        ['Bar', 'Zbr']
+        ['Bar']
         """
-        classes = []
-        to_visit = list(self.implicitly_converts_from)
-        while to_visit:
-            source = to_visit.pop(0)
-            if source in classes or source is self:
-                continue
-            classes.append(source)
-            to_visit.extend(source.implicitly_converts_from)
-        return classes
+        return list(self.implicitly_converts_from)
+#         classes = []
+#         to_visit = list(self.implicitly_converts_from)
+#         while to_visit:
+#             source = to_visit.pop(0)
+#             if source in classes or source is self:
+#                 continue
+#             classes.append(source)
+#             to_visit.extend(source.implicitly_converts_from)
+#         return classes
 
     def _update_names(self):
         
