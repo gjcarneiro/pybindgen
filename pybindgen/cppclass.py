@@ -585,7 +585,12 @@ class CppClass(object):
         CodeGenerationError if none found"""
         if self.cannot_be_constructed:
             raise CodeGenerationError("%s cannot be constructed" % self.full_name)
-        if self.have_pure_virtual_methods:
+        have_pure_virtual_methods = False
+        cls = self
+        while cls is not None:
+            have_pure_virtual_methods = (have_pure_virtual_methods or cls.have_pure_virtual_methods)
+            cls = cls.parent
+        if have_pure_virtual_methods:
             raise CodeGenerationError("%s cannot be constructed" % self.full_name)
         else:
             return self.full_name
