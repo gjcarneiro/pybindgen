@@ -1109,9 +1109,14 @@ typedef struct {
                 except CodegenErrorBase:
                     continue
             if overload.wrappers:
-                overload.generate(code_sink)
-                constructor = overload.wrapper_function_name
-                code_sink.writeln()
+                try:
+                    overload.generate(code_sink)
+                except utils.SkipWrapper:
+                    constructor = None
+                    have_constructor = False
+                else:
+                    constructor = overload.wrapper_function_name
+                    code_sink.writeln()
             else:
                 constructor = None
                 have_constructor = False
