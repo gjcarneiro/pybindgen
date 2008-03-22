@@ -68,17 +68,18 @@ class OverloadedWrapper(object):
                 assert flags == existing_flags
 
         if flags is not None and (flags != set(wrapper.get_py_method_def_flags())):
-            if (set(['METH_KEYWORDS', 'METH_VARARGS']).issubset(set(wrapper.get_py_method_def_flags()))
-                and not set(['METH_KEYWORDS', 'METH_VARARGS']).issubset(existing_flags)):
-                ## Try to coerce existing wrappers into
-                ## METH_KEYWORDS|METH_VARARGS mode, then try again
-                modified = False
-                for existing_wrapper in self.wrappers:
-                    if existing_wrapper.force_parse != ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS:
-                        existing_wrapper.force_parse = ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS
-                        modified = True
-                if modified:
-                    return self.add(wrapper)
+            ## Try to coerce all wrappers into
+            ## METH_KEYWORDS|METH_VARARGS mode, then try again
+            modified = False
+            if wrapper.force_parse != ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS:
+                wrapper.force_parse = ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS
+                modified = True
+            for existing_wrapper in self.wrappers:
+                if existing_wrapper.force_parse != ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS:
+                    existing_wrapper.force_parse = ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS
+                    modified = True
+            if modified:
+                return self.add(wrapper)
             raise NotSupportedError("attempting to overload methods of different kinds"
                                     " (adding %r vs existing %r)" %
                                     (set(wrapper.get_py_method_def_flags()), flags))

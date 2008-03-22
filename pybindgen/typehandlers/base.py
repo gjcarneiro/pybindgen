@@ -847,12 +847,14 @@ class ForwardWrapperBase(object):
 
         tmp_sink = codesink.NullCodeSink()
         try:
-            try:
-                self.generate_body(tmp_sink)
-            except CodegenErrorBase:
-                return []
-            else:
-                return list(set(self.meth_flags))
+#             try:
+#                 self.generate_body(tmp_sink)
+#             except CodegenErrorBase:
+#                 return []
+#             else:
+#                 return list(set(self.meth_flags))
+            self.generate_body(tmp_sink)
+            return list(set(self.meth_flags))
         finally:
             self.reset_code_generation_state()
 

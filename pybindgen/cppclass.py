@@ -6,7 +6,7 @@ import warnings
 
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, Parameter, ReturnValue, \
     join_ctype_and_name, CodeGenerationError, TypeConfigurationError, \
-    param_type_matcher, return_type_matcher
+    param_type_matcher, return_type_matcher, CodegenErrorBase
 
 from typehandlers.codesink import NullCodeSink, MemoryCodeSink
 
@@ -1099,10 +1099,17 @@ typedef struct {
             self.constructors_overload = overload
             overload.pystruct = self.pystruct
             for constructor in self.constructors:
-                overload.add(constructor)
-            overload.generate(code_sink)
-            constructor = overload.wrapper_function_name
-            code_sink.writeln()
+                try:
+                    overload.add(constructor)
+                except CodegenErrorBase:
+                    continue
+            if overload.wrappers:
+                overload.generate(code_sink)
+                constructor = overload.wrapper_function_name
+                code_sink.writeln()
+            else:
+                constructor = None
+                have_constructor = False
         else:
             ## In C++, and unlike Python, constructors with
             ## parameters are not automatically inheritted by
