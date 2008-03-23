@@ -492,6 +492,18 @@ class CppClass(object):
     def __repr__(self):
         return "<pybindgen.CppClass '%s'>" % self.full_name
 
+    def is_subclass(self, other):
+        """Return True if this CppClass instance represents a class that is a
+        subclass of another class represented by the CppClasss object `other'."""
+        if not isinstance(other, CppClass):
+            raise TypeError
+        cls = self
+        while cls is not None:
+            if cls is other:
+                return True
+            cls = cls.parent
+        return False
+
     def write_incref(self, code_block, obj_expr):
         """
         Write code to increase the reference code of an object of this
