@@ -227,7 +227,7 @@ class CppConstructor(ForwardWrapperBase):
         constructor wrapper clone contains copies of all parameters, so
         they can be modified at will.
         """
-        meth = CppConstructor([copy(param) for param in self.parameters])
+        meth = type(self)([copy(param) for param in self.parameters])
         meth._class = self._class
         meth.wrapper_base_name = self.wrapper_base_name
         meth.wrapper_actual_name = self.wrapper_actual_name
@@ -652,6 +652,31 @@ class CustomCppMethodWrapper(CppMethod):
         self.wrapper_base_name = wrapper_name
         self.wrapper_actual_name = wrapper_name
         self.meth_flags = list(flags)
+        self.wrapper_body = wrapper_body
+
+    def generate(self, code_sink, dummy_wrapper_name=None, extra_wrapper_params=()):
+        assert extra_wrapper_params == ["PyObject **return_exception"]
+        code_sink.writeln(self.wrapper_body)
+
+    def generate_call(self, *args, **kwargs):
+        pass
+
+
+
+class CustomCppConstructorWrapper(CppConstructor):
+    """
+    Adds a custom constructor wrapper.  The custom wrapper must be
+    prepared to support overloading, i.e. it must have an additional
+    "PyObject **return_exception" parameter, and raised exceptions
+    must be returned by this parameter.
+    """
+
+    NEEDS_OVERLOADING_INTERFACE = True
+
+    def __init__(self, wrapper_name, wrapper_body):
+        super(CustomCppConstructorWrapper, self).__init__([])
+        self.wrapper_base_name = wrapper_name
+        self.wrapper_actual_name = wrapper_name
         self.wrapper_body = wrapper_body
 
     def generate(self, code_sink, dummy_wrapper_name=None, extra_wrapper_params=()):
