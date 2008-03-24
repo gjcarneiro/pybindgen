@@ -21,6 +21,15 @@ from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter
 import settings
 import utils
 
+try:
+    all
+except NameError: # for compatibility with Python < 2.5
+    def all(iterable):
+        "Returns True if all elements are true"
+        for element in iterable:
+            if not element:
+                return False
+        return True
 
 def default_instance_creation_function(cpp_class, code_block, lvalue,
                                        parameters, construct_type_name):
@@ -358,6 +367,7 @@ class CppClass(object):
         self.is_singleton = is_singleton
         self.full_name = None # full name with C++ namespaces attached and template parameters
         self.methods = {} # name => OverloadedMethod
+        self.nonpublic_methods = []
         self.constructors = [] # (name, wrapper) pairs
         self.slots = dict()
         self.helper_class = None
@@ -365,9 +375,9 @@ class CppClass(object):
         ## set to True when we become aware generating the helper
         ## class is not going to be possible
         self.helper_class_disabled = False
-        self.cannot_be_constructed = False
+        self.cannot_be_constructed = '' # reason
         self.has_trivial_constructor = False
-        self.have_pure_virtual_methods = False
+        self._have_pure_virtual_methods = None
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
         ## operator ThisClass(); in the other class.
@@ -492,6 +502,68 @@ class CppClass(object):
     def __repr__(self):
         return "<pybindgen.CppClass '%s'>" % self.full_name
 
+    def get_all_methods(self):
+        """Returns an iterator to iterate over all methods of the class"""
+        for overload in self.methods.itervalues():
+            for method in overload.wrappers:
+                yield method
+        for method in self.nonpublic_methods:
+            yield method
+
+    def get_have_pure_virtual_methods(self):
+        """
+        Returns True if the class has pure virtual methods with no
+        implementation (which would mean the type is not instantiable
+        directly, only through a helper class).
+        """
+        if self._have_pure_virtual_methods is not None:
+            return self._have_pure_virtual_methods
+        mro = []
+        cls = self
+        while cls is not None:
+            mro.append(cls)
+            cls = cls.parent
+        mro_reversed = list(mro)
+        mro_reversed.reverse()
+
+        def method_matches_signature(meth1, meth2):
+            return (meth1.mangled_name == meth2.mangled_name
+                    and meth1.return_value.ctype == meth2.return_value.ctype
+                    and all([param1.ctype == param2.ctype
+                             for param1, param2 in zip(meth1.parameters, meth2.parameters)])
+                    and ((not not meth1.is_const) == (not not meth2.is_const)))
+        self._have_pure_virtual_methods = False
+        for pos, cls in enumerate(mro_reversed):
+            for method in cls.get_all_methods():
+                if not isinstance(method, CppMethod):
+                    continue
+
+                if method.is_pure_virtual:
+                    ## found a pure virtual method; now go see in the
+                    ## child classes, check if any of them implements
+                    ## this pure virtual method.
+                    implemented = False
+                    for child_cls in mro_reversed[pos+1:]:
+                        for child_method in child_cls.get_all_methods():
+                            if not isinstance(child_method, CppMethod):
+                                continue
+                            if not child_method.is_virtual:
+                                continue
+                            if not method_matches_signature(child_method, method):
+                                continue
+                            if not child_method.is_pure_virtual:
+                                implemented = True
+                            break
+                        if implemented:
+                            break
+                    if not implemented:
+                        self._have_pure_virtual_methods = True
+
+        return self._have_pure_virtual_methods
+                            
+    have_pure_virtual_methods = property(get_have_pure_virtual_methods)
+
+
     def is_subclass(self, other):
         """Return True if this CppClass instance represents a class that is a
         subclass of another class represented by the CppClasss object `other'."""
@@ -596,14 +668,9 @@ class CppClass(object):
         """Get a name usable for new %s construction, or raise
         CodeGenerationError if none found"""
         if self.cannot_be_constructed:
-            raise CodeGenerationError("%s cannot be constructed" % self.full_name)
-        have_pure_virtual_methods = False
-        cls = self
-        while cls is not None:
-            have_pure_virtual_methods = (have_pure_virtual_methods or cls.have_pure_virtual_methods)
-            cls = cls.parent
-        if have_pure_virtual_methods:
-            raise CodeGenerationError("%s cannot be constructed" % self.full_name)
+            raise CodeGenerationError("%s cannot be constructed (%s)" % (self.full_name, self.cannot_be_constructed))
+        if self.have_pure_virtual_methods:
+            raise CodeGenerationError("%s cannot be constructed (class has pure virtual methods)" % self.full_name)
         else:
             return self.full_name
         
@@ -843,6 +910,7 @@ public:
                 from Python side
         """
         assert name is None or isinstance(name, str)
+
         if isinstance(method, CppMethod):
             if name is None:
                 name = method.mangled_name
@@ -872,9 +940,10 @@ public:
 
             method.class_ = self
             overload.add(method)
-        if method.is_pure_virtual:
-            self.have_pure_virtual_methods = True
+        else:
+            self.nonpublic_methods.append(method)
         if method.is_virtual:
+            self._have_pure_virtual_methods = None
             if not self.allow_subclassing:
                 raise ValueError("Cannot add virtual methods if subclassing "
                                  "support was not enabled for this class")
@@ -889,16 +958,15 @@ public:
                 proxy = CppVirtualMethodProxy(method)
                 proxy.main_wrapper = method
                 helper_class.add_virtual_proxy(proxy)
-        if self.have_pure_virtual_methods and self.helper_class is None:
-            self.cannot_be_constructed = True
 
     def set_helper_class_disabled(self, flag=True):
         self.helper_class_disabled = flag
         if flag:
             self.helper_class = None
 
-    def set_cannot_be_constructed(self, flag=True):
-        self.cannot_be_constructed = flag
+    def set_cannot_be_constructed(self, reason):
+        assert isinstance(reason, basestring)
+        self.cannot_be_constructed = reason
 
     def add_constructor(self, wrapper):
         """
@@ -988,7 +1056,7 @@ typedef struct {
                 self.helper_class = None
                 self.helper_class_disabled = True
         if self.have_pure_virtual_methods and self.helper_class is None:
-            self.cannot_be_constructed = True
+            self.cannot_be_constructed = "have pure virtual methods but no helper class"
 
         if self.typeid_map_name is not None:
             self._generate_typeid_map(code_sink, module)
@@ -1140,7 +1208,7 @@ typedef struct {
             ## tp_init that will allocate an instance of the
             ## parent class instead of this class.
             code_sink.writeln()
-            constructor = CppNoConstructor().generate(code_sink, self)
+            constructor = CppNoConstructor(self.cannot_be_constructed).generate(code_sink, self)
             have_constructor = False
             code_sink.writeln()
 

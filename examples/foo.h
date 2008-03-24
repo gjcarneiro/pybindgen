@@ -589,5 +589,21 @@ private:
     AbstractBaseClass2 (const AbstractBaseClass2 &other) { other.invoke_protected_virtual(0); }
 };
 
+class AbstractXpto
+// -#- allow_subclassing=true -#-
+{
+public:
+    AbstractXpto () {}
+
+    virtual void something (int x) const = 0;
+};
+
+class AbstractXptoImpl : public AbstractXpto
+{
+public:
+    AbstractXptoImpl () {}
+
+    virtual void something (int x) const {}
+};
 
 #endif 	    /* !FOO_H_ */

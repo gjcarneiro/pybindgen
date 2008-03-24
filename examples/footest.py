@@ -667,5 +667,12 @@ class TestFoo(unittest.TestCase):
         b = foo.Bar()
         self.assert_(b.is_initialized())
 
+    def test_pure_virtual(self):
+        self.assertRaises(TypeError, foo.AbstractXpto)
+        try:
+            foo.AbstractXptoImpl()
+        except TypeError, ex:
+            self.fail(str(ex))
+
 if __name__ == '__main__':
     unittest.main()

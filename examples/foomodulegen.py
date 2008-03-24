@@ -351,7 +351,7 @@ int %s::custom_method_added_by_a_hook(int x)
     ## A class the cannot be constructed; this will cause late CodeGenerationError's
     cls = CppClass('CannotBeConstructed')
     mod.add_class(cls)
-    cls.set_cannot_be_constructed(True)
+    cls.set_cannot_be_constructed("no reason")
     cls.add_method(CppMethod(ReturnValue.new('CannotBeConstructed'),
                              'get_value', [], is_static=True))
     cls.add_method(CppMethod(ReturnValue.new('CannotBeConstructed*', caller_owns_return=True),
@@ -395,10 +395,29 @@ int %s::custom_method_added_by_a_hook(int x)
             is_virtual=True, is_pure_virtual=True, visibility='private', is_const=True))
 
 
+
+
+    AbstractXpto = CppClass('AbstractXpto', allow_subclassing=True)
+    mod.add_class(AbstractXpto)
+    AbstractXpto.add_method(CppMethod(ReturnValue.new('void'), 'something',
+                                      [Parameter.new('int', 'x')], is_const=True,
+                                      is_virtual=True, is_pure_virtual=True))
+    AbstractXpto.add_constructor(CppConstructor([]))
+
+    AbstractXptoImpl = CppClass('AbstractXptoImpl', parent=AbstractXpto)
+    mod.add_class(AbstractXptoImpl)
+    AbstractXptoImpl.add_method(CppMethod(ReturnValue.new('void'), 'something',
+                                          [Parameter.new('int', 'x')], is_const=True,
+                                          is_virtual=True, is_pure_virtual=False))
+    AbstractXptoImpl.add_constructor(CppConstructor([]))
+
+
+    #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):
         def __init__(self):
+            super(MyErrorHandler, self).__init__()
             self.num_errors = 0
-        def handle_error(self, wrapper, exception, traceback_):
+        def handle_error(self, wrapper, exception, dummy_traceback_):
             print >> sys.stderr, "exception %s in wrapper %s" % (exception, wrapper)
             self.num_errors += 1
             return True

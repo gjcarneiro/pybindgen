@@ -809,7 +809,7 @@ class ModuleParser(object):
                                            % (member.return_type.decl_string, member, ex),
                                            Warning, member.location.file_name, member.location.line)
                     if pure_virtual:
-                        class_wrapper.set_cannot_be_constructed(True)
+                        class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
                         class_wrapper.set_helper_class_disabled(True)
                     continue
                 arguments = []
@@ -825,12 +825,12 @@ class ModuleParser(object):
                         ok = False
                 if not ok:
                     if pure_virtual:
-                        class_wrapper.set_cannot_be_constructed(True)
+                        class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
                         class_wrapper.set_helper_class_disabled(True)
                     continue
 
                 if pure_virtual and not class_wrapper.allow_subclassing:
-                    class_wrapper.set_cannot_be_constructed(True)
+                    class_wrapper.set_cannot_be_constructed("pure virtual method and subclassing disabled")
 
                 custom_template_method_name = None
                 if templates.is_instantiation(member.demangled_name):
@@ -849,7 +849,7 @@ class ModuleParser(object):
                 method_wrapper = CppMethod(return_type, member.name, arguments,
                                            is_const=member.has_const,
                                            is_static=member.has_static,
-                                           is_virtual=(is_virtual and class_wrapper.allow_subclassing),
+                                           is_virtual=is_virtual,
                                            is_pure_virtual=pure_virtual,
                                            template_parameters=template_parameters,
                                            custom_template_method_name=custom_template_method_name,
@@ -859,7 +859,7 @@ class ModuleParser(object):
                     class_wrapper.add_method(method_wrapper)
                 except NotSupportedError, ex:
                     if pure_virtual:
-                        class_wrapper.set_cannot_be_constructed(True)
+                        class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
                         class_wrapper.set_helper_class_disabled(True)
                     warnings.warn_explicit("Error adding method %s: %r"
                                            % (member, ex),

@@ -365,13 +365,14 @@ class CppNoConstructor(ForwardWrapperBase):
 
     """
 
-    def __init__(self):
+    def __init__(self, reason):
         """
-        Constructor.
+        reason -- string indicating reason why the class cannot be constructed.
         """
         super(CppNoConstructor, self).__init__(
             None, [],
             "return -1;", "return -1;")
+        self.reason = reason
 
     def generate_call(self):
         "dummy method, not really called"
@@ -394,7 +395,7 @@ class CppNoConstructor(ForwardWrapperBase):
         code_sink.writeln('{')
         code_sink.indent()
         code_sink.writeln('PyErr_SetString(PyExc_TypeError, "class \'%s\' '
-                          'cannot be constructed");' % class_.name)
+                          'cannot be constructed (%s)");' % (class_.name, self.reason))
         code_sink.writeln('return -1;')
         code_sink.unindent()
         code_sink.writeln('}')
