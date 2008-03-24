@@ -944,9 +944,6 @@ public:
             self.nonpublic_methods.append(method)
         if method.is_virtual:
             self._have_pure_virtual_methods = None
-            if not self.allow_subclassing:
-                raise ValueError("Cannot add virtual methods if subclassing "
-                                 "support was not enabled for this class")
             helper_class = self.get_helper_class()
             if helper_class is not None:
                 if not method.is_pure_virtual:
