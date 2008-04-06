@@ -1,5 +1,6 @@
-# docstrings not neede here (the type handler interfaces are fully
-# documented in base.py) pylint: disable-msg=C0111
+# docstrings not needed here (the type handler interfaces are fully
+# documented in base.py)
+# pylint: disable-msg=C0111
 
 from base import ReturnValue, Parameter,\
      ReverseWrapperBase, ForwardWrapperBase, TypeConfigurationError
@@ -16,8 +17,8 @@ class IntParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype, self.name)
-        wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
+        name = wrapper.declarations.declare_variable(self.ctype, self.name, self.default_value)
+        wrapper.parse_params.add_parameter('i', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.call_params.append(name)
 
 
@@ -32,8 +33,8 @@ class UnsignedIntParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable('unsigned int', self.name)
-        wrapper.parse_params.add_parameter('I', ['&'+name], self.name)
+        name = wrapper.declarations.declare_variable('unsigned int', self.name, self.default_value)
+        wrapper.parse_params.add_parameter('I', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.call_params.append(name)
 
 
@@ -156,8 +157,8 @@ class UInt16Param(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable("int", self.name)
-        wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
+        name = wrapper.declarations.declare_variable("int", self.name, self.default_value)
+        wrapper.parse_params.add_parameter('i', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.before_call.write_error_check('%s > 0xffff' % name,
                                               'PyErr_SetString(PyExc_ValueError, "Out of range");')
         wrapper.call_params.append(name)
@@ -173,8 +174,8 @@ class Int16Param(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable("int", self.name)
-        wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
+        name = wrapper.declarations.declare_variable("int", self.name, self.default_value)
+        wrapper.parse_params.add_parameter('i', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.before_call.write_error_check('%s > 0x7fff' % name,
                                               'PyErr_SetString(PyExc_ValueError, "Out of range");')
         wrapper.call_params.append(name)
@@ -191,8 +192,8 @@ class UInt8Param(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable("int", self.name)
-        wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
+        name = wrapper.declarations.declare_variable("int", self.name, self.default_value)
+        wrapper.parse_params.add_parameter('i', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.before_call.write_error_check('%s > 0xff' % name,
                                               'PyErr_SetString(PyExc_ValueError, "Out of range");')
         wrapper.call_params.append(name)
@@ -228,8 +229,8 @@ class UnsignedLongLongParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype, self.name)
-        wrapper.parse_params.add_parameter('K', ['&'+name], self.name)
+        name = wrapper.declarations.declare_variable(self.ctype, self.name, self.default_value)
+        wrapper.parse_params.add_parameter('K', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.call_params.append(name)
 
 class UnsignedLongLongReturn(ReturnValue):
@@ -258,8 +259,8 @@ class LongLongParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype, self.name)
-        wrapper.parse_params.add_parameter('L', ['&'+name], self.name)
+        name = wrapper.declarations.declare_variable(self.ctype, self.name, self.default_value)
+        wrapper.parse_params.add_parameter('L', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.call_params.append(name)
 
 class LongLongReturn(ReturnValue):
@@ -282,7 +283,7 @@ class Int8PtrParam(Parameter):
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
     CTYPES = ['int8_t*', 'int8_t *', 'int8_t const *']
 
-    def __init__(self, ctype, name, direction=None, is_const=None):
+    def __init__(self, ctype, name, direction=None, is_const=None, default_value=None):
         if is_const is None:
             is_const = ('const' in ctype)
         if is_const and 'const' not in ctype:
@@ -294,7 +295,7 @@ class Int8PtrParam(Parameter):
             else:
                 raise TypeConfigurationError("direction not given")
         
-        super(Int8PtrParam, self).__init__(ctype, name, direction, is_const)
+        super(Int8PtrParam, self).__init__(ctype, name, direction, is_const, default_value)
     
     def convert_c_to_python(self, wrapper):
         if self.direction & self.DIRECTION_IN:
@@ -317,7 +318,7 @@ class UInt8PtrParam(Parameter):
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
     CTYPES = ['uint8_t*', 'uint8_t *', 'uint8_t const *']
 
-    def __init__(self, ctype, name, direction=None, is_const=None):
+    def __init__(self, ctype, name, direction=None, is_const=None, default_value=None):
         if is_const is None:
             is_const = ('const' in ctype)
         if is_const and 'const' not in ctype:
@@ -329,7 +330,7 @@ class UInt8PtrParam(Parameter):
             else:
                 raise TypeConfigurationError("direction not given")
         
-        super(UInt8PtrParam, self).__init__(ctype, name, direction, is_const)
+        super(UInt8PtrParam, self).__init__(ctype, name, direction, is_const, default_value)
     
     def convert_c_to_python(self, wrapper):
         if self.direction & self.DIRECTION_IN:

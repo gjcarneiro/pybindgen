@@ -12,7 +12,7 @@ int print_something(const char *message);
 int print_something_else(const char *message2);
 
 /* -#- name=get_int -#- */
-int get_int_from_string(const char *from_string);
+int get_int_from_string(const char *from_string, int multiplier=1);
 // -#- name=get_int -#-
 int get_int_from_float(double from_float);
 

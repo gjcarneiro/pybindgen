@@ -15,9 +15,9 @@ int print_something_else(const char *message2)
     return strlen(message2);
 }
 
-int get_int_from_string(const char *from_string)
+int get_int_from_string(const char *from_string, int multiplier)
 {
-    return atoi(from_string);
+    return atoi(from_string)*multiplier;
 }
 
 int get_int_from_float(double from_float)

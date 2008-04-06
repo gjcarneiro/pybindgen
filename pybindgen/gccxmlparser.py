@@ -194,7 +194,7 @@ class GccXmlTypeRegistry(object):
             return cpp_class.ThisClassRefReturn(type_info.decl_string, **kwargs)
         assert 0, "this line should not be reached"
 
-    def lookup_parameter(self, type_info, param_name, annotations={}):
+    def lookup_parameter(self, type_info, param_name, annotations={}, default_value=None):
         assert isinstance(type_info, cpptypes.type_t)
 
         kwargs = {}
@@ -219,6 +219,8 @@ class GccXmlTypeRegistry(object):
             self.get_class_type_traits(type_info)
         if is_const:
             kwargs['is_const'] = True
+        if default_value:
+            kwargs['default_value'] = default_value
         if cpp_class is None:
             if isinstance(type_traits.remove_declarated(type_info), enumeration_t):
                 return Parameter.new(normalize_name(type_info.decl_string), param_name, **kwargs)
@@ -817,7 +819,8 @@ class ModuleParser(object):
                 for arg in member.arguments:
                     try:
                         arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
-                                                                        parameter_annotations.get(arg.name, {})))
+                                                                        parameter_annotations.get(arg.name, {}),
+                                                                        arg.default_value))
                     except (TypeLookupError, TypeConfigurationError), ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                                % (arg.type.decl_string, arg.name, member, ex),
@@ -879,7 +882,8 @@ class ModuleParser(object):
                 arguments = []
                 for arg in member.arguments:
                     try:
-                        arguments.append(type_registry.lookup_parameter(arg.type, arg.name))
+                        arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
+                                                                        default_value=arg.default_value))
                     except (TypeLookupError, TypeConfigurationError), ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                                % (arg.type.decl_string, arg.name, member, ex),
@@ -1002,7 +1006,8 @@ class ModuleParser(object):
                     annotations.setdefault("transfer_ownership", "false")
                 try:
                     arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
-                                                                    annotations))
+                                                                    annotations,
+                                                                    default_value=arg.default_value))
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                            % (arg.type.decl_string, arg.name, fun, ex),

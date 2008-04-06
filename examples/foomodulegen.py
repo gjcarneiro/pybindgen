@@ -137,7 +137,8 @@ int %s::custom_method_added_by_a_hook(int x)
 
     ## test overloaded functions
     mod.add_function(Function(ReturnValue.new('int'), 'get_int_from_string',
-                              [Parameter.new('const char*', 'from_string')]),
+                              [Parameter.new('const char*', 'from_string'),
+                               Parameter.new('int', 'multiplier', default_value='1')]),
                      name="get_int")
     mod.add_function(Function(ReturnValue.new('int'), 'get_int_from_float',
                               [Parameter.new('double', 'from_float')]),

@@ -674,5 +674,11 @@ class TestFoo(unittest.TestCase):
         except TypeError, ex:
             self.fail(str(ex))
 
+    def test_parameter_default_value(self):
+        x = foo.get_int("123")
+        self.assertEqual(x, 123)
+        y = foo.get_int("123", 2)
+        self.assertEqual(y, 246)
+
 if __name__ == '__main__':
     unittest.main()

@@ -1089,7 +1089,7 @@ class Parameter(object):
             return cls(*args, **kwargs)
 
 
-    def __init__(self, ctype, name, direction=DIRECTION_IN, is_const=False):
+    def __init__(self, ctype, name, direction=DIRECTION_IN, is_const=False, default_value=None):
         '''
         Creates a parameter object
 
@@ -1113,6 +1113,7 @@ class Parameter(object):
         self.is_const = is_const
         self.transformation = NullTypeTransformation()
         self.value = name
+        self.default_value = default_value
 
     def set_tranformation(self, transformation, untransformed_ctype):
         "Set the type transformation to use in this type handler"
