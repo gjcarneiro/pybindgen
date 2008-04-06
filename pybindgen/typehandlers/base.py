@@ -7,6 +7,7 @@ and base interfaces for wrapper generators.
 """
 
 import codesink
+import warnings
 
 
 try:
@@ -972,7 +973,11 @@ class ReturnValue(object):
                 return_type_matcher.lookup(ctype)
             assert type_handler_class is not None
             if transformation is None:
-                return type_handler_class(*args, **kwargs)
+                try:
+                    return type_handler_class(*args, **kwargs)
+                except TypeError, ex:
+                    warnings.warn("Exception %r in type handler %s constructor" % (str(ex), type_handler_class))
+                    raise
             else:
                 return transformation.create_type_handler(type_handler_class, *args, **kwargs)
         else:
@@ -1073,7 +1078,11 @@ class Parameter(object):
                 param_type_matcher.lookup(ctype)
             assert type_handler_class is not None
             if transformation is None:
-                return type_handler_class(*args, **kwargs)
+                try:
+                    return type_handler_class(*args, **kwargs)
+                except TypeError, ex:
+                    warnings.warn("Exception %r in type handler %s constructor" % (str(ex), type_handler_class))
+                    raise
             else:
                 return transformation.create_type_handler(type_handler_class, *args, **kwargs)
         else:
