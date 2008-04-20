@@ -241,7 +241,11 @@ class GccXmlTypeRegistry(object):
                 ## here is a Bad Idea™
                 return cpp_class.ThisClassPtrParameter(type_info.decl_string, param_name, **kwargs)
         if not is_pointer and is_reference:
-            return cpp_class.ThisClassRefParameter(type_info.decl_string, param_name, **kwargs)
+            try:
+                return cpp_class.ThisClassRefParameter(type_info.decl_string, param_name, **kwargs)
+            except TypeError:
+                print >> sys.stderr, "** Error in %s class ref parameter" % cpp_class.full_name
+                raise
         assert 0, "this line should not be reached"
 
 type_registry = GccXmlTypeRegistry()

@@ -1490,7 +1490,7 @@ class CppClassRefParameter(CppClassParameterBase):
                   Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_INOUT]
 
-    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False):
+    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False, default_value=None):
         """
         ctype -- C type, normally 'MyClass*'
         name -- parameter name
@@ -1498,7 +1498,7 @@ class CppClassRefParameter(CppClassParameterBase):
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassRefParameter, self).__init__(
-            ctype, name, direction, is_const)
+            ctype, name, direction, is_const, default_value)
     
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
@@ -1514,13 +1514,25 @@ class CppClassRefParameter(CppClassParameterBase):
             else:
                 implicit_conversion_sources = self.cpp_class.get_all_implicit_conversions()
                 if not (implicit_conversion_sources and self.is_const):
-                    self.py_name = wrapper.declarations.declare_variable(
-                        self.cpp_class.pystruct+'*', self.name)
-                    wrapper.parse_params.add_parameter(
-                        'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
-                    wrapper.call_params.append(
-                        '*((%s *) %s)->obj' % (self.cpp_class.pystruct, self.py_name))
+                    if self.default_value:
+                        self.py_name = wrapper.declarations.declare_variable(
+                            self.cpp_class.pystruct+'*', self.name, 'NULL')
+                        wrapper.parse_params.add_parameter(
+                            'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name, optional=True)
+                        wrapper.call_params.append(
+                            '(%s ? (*((%s *) %s)->obj) : %s)' % (self.py_name, self.cpp_class.pystruct,
+                                                                 self.py_name, self.default_value))
+                    else:
+                        self.py_name = wrapper.declarations.declare_variable(
+                            self.cpp_class.pystruct+'*', self.name)
+                        wrapper.parse_params.add_parameter(
+                            'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
+                        wrapper.call_params.append(
+                            '*((%s *) %s)->obj' % (self.cpp_class.pystruct, self.py_name))
                 else:
+                    if self.default_value:
+                        warnings.warn("with implicit conversions, default value "
+                                      "in C++ class reference parameters is ignored.")
                     self.py_name = wrapper.declarations.declare_variable(
                         'PyObject*', self.name)
                     tmp_value_variable = wrapper.declarations.declare_variable(
