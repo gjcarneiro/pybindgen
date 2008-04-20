@@ -155,11 +155,15 @@ def shutdown():
         print "Running manual module generation unit tests (module foo)..."
         retval2 = subprocess.Popen([env['PYTHON'], 'examples/footest.py']).wait()
 
-        print "Running automatically scanned module generation unit tests (module foo2)..."
-        retval3 = subprocess.Popen([env['PYTHON'], 'examples/footest.py', 'x']).wait()
-
-        print "Running semi-automatically scanned c-hello module ('hello')..."
-        retval4 = subprocess.Popen([env['PYTHON'], 'examples/c-hello/hellotest.py']).wait()
+        if env['ENABLE_PYGCCXML']:
+            print "Running automatically scanned module generation unit tests (module foo2)..."
+            retval3 = subprocess.Popen([env['PYTHON'], 'examples/footest.py', 'x']).wait()
+            print "Running semi-automatically scanned c-hello module ('hello')..."
+            retval4 = subprocess.Popen([env['PYTHON'], 'examples/c-hello/hellotest.py']).wait()
+        else:
+            print "Skipped automatically scanned module generation unit tests (pygccxml not available)."
+            print "Skipped semi-automatically scanned c-hello module (pygccxml not available)."
+            retval3 = retval4 = 0
 
         if retval1 or retval2 or retval3 or retval4:
             raise Params.fatal("Unit test failures")
