@@ -5,6 +5,14 @@ import Params
 import Task
 
 
+def create_pyext_obj(bld, c_or_cpp_type):
+    waf_version = [int (s) for s in Params.g_version.split('.')]
+    if waf_version >= [1.4]:
+        return bld.create_obj(c_or_cpp_type, 'shlib', 'pyext')
+    else:
+        return bld.create_obj(c_or_cpp_type, 'plugin', 'pyext')
+
+
 def build(bld):
     bindgen = bld.create_obj('command-output')
     bindgen.stdout = 'foomodule.cc'
@@ -13,7 +21,7 @@ def build(bld):
     bindgen.command_is_external = True
     bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
-    obj = bld.create_obj('cpp', 'shlib', 'pyext')
+    obj = create_pyext_obj(bld, 'cpp')
     obj.source = [
         'foo.cc',
         'foomodule.cc'
@@ -34,7 +42,7 @@ def build(bld):
         bindgen.command_is_external = True
         bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
-        obj = bld.create_obj('cpp', 'shlib', 'pyext')
+        obj = create_pyext_obj(bld, 'cpp')
         obj.source = [
             'foo.cc',
             'foomodule2.cc'

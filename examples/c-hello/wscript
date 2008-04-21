@@ -4,6 +4,13 @@ import Object
 import Params
 import Task
 
+def create_pyext_obj(bld, c_or_cpp_type):
+    waf_version = [int (s) for s in Params.g_version.split('.')]
+    if waf_version >= [1.4]:
+        return bld.create_obj(c_or_cpp_type, 'shlib', 'pyext')
+    else:
+        return bld.create_obj(c_or_cpp_type, 'plugin', 'pyext')
+
 
 def build(bld):
     if not bld.env()['ENABLE_PYGCCXML']:
@@ -18,7 +25,7 @@ def build(bld):
     bindgen.command_is_external = True
     bindgen.prio = 55 # must run after the 'py' objects in ../../pybindgen
 
-    obj = bld.create_obj('cc', 'shlib', 'pyext')
+    obj = create_pyext_obj(bld, 'cc')
     obj.source = [
         'hello.c',
         'hellomodule.c'

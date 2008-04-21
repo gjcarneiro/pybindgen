@@ -37,6 +37,8 @@ PyBindGen uses WAF (http://code.google.com/p/waf/) as build system.
 However, WAF does not have to be previously installed, as it is shipped
 with PyBindGen in a single 'waf' script.
 
+However, if you are checking out the bzr branch from launchpad then the waf script is not included. and you should get it from http://code.google.com/p/waf/downloads/list.  WAF version 1.3.2 is known to work with PyBindGen.  WAF 1.4.0 is known _not_ to work.  WAF svn trunk may or not work.
+
 To install PyBindGen, issue the following commands:
 
 1. ./waf configure   # optionally you may add the option --prefix /foo/bar 
@@ -47,5 +49,5 @@ To install PyBindGen, issue the following commands:
 
 == Documentation ==
 
-There is no documentation yet.  For now there is only an example,
-in the 'examples' directory.
+There is no documentation yet.  For now there are some examples, in the 'examples' directory.
+
