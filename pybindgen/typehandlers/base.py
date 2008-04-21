@@ -287,7 +287,9 @@ class ParseTupleParameters(object):
         last_was_optional = False
         for (param_template, dummy,
              dummy, optional) in self._parse_tuple_items:
-            assert last_was_optional and optional or not last_was_optional
+            if not (last_was_optional and optional or not last_was_optional):
+                raise ValueError("Error: optional parameter followed by a non-optional one"
+                                 " (debug: self._parse_tuple_parameters=%r)" % self._parse_tuple_items)
             if not last_was_optional and optional:
                 template.append('|')
             last_was_optional = optional

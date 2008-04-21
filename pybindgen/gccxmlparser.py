@@ -871,6 +871,11 @@ class ModuleParser(object):
                     warnings.warn_explicit("Error adding method %s: %r"
                                            % (member, ex),
                                            Warning, member.location.file_name, member.location.line)
+                except ValueError, ex:
+                    warnings.warn_explicit("Error adding method %s: %r"
+                                           % (member, ex),
+                                           Warning, member.location.file_name, member.location.line)
+                    raise
                 else:
                     for hook in self._post_scan_hooks:
                         hook(self, member, method_wrapper)
