@@ -53,10 +53,17 @@ class StdStringParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable("const char *", self.name)
-        name_len = wrapper.declarations.declare_variable("Py_ssize_t", self.name+'_len')
-        wrapper.parse_params.add_parameter('s#', ['&'+name, '&'+name_len], self.value)
-        wrapper.call_params.append('std::string(%s, %s)' % (name, name_len))
+        if self.default_value is None:
+            name = wrapper.declarations.declare_variable("const char *", self.name)
+            name_len = wrapper.declarations.declare_variable("Py_ssize_t", self.name+'_len')
+            wrapper.parse_params.add_parameter('s#', ['&'+name, '&'+name_len], self.value)
+            wrapper.call_params.append('std::string(%s, %s)' % (name, name_len))
+        else:
+            name = wrapper.declarations.declare_variable("const char *", self.name, 'NULL')
+            name_len = wrapper.declarations.declare_variable("Py_ssize_t", self.name+'_len')
+            wrapper.parse_params.add_parameter('s#', ['&'+name, '&'+name_len], self.value, optional=True)
+            wrapper.call_params.append('(%s ? std::string(%s, %s) : %s)'
+                                       % (name, name, name_len, self.default_value))
 
 
 class StdStringRefParam(Parameter):
