@@ -1431,17 +1431,36 @@ class CppClassParameter(CppClassParameterBase):
                     wrapper.call_params.append(
                         '*((%s *) %s)->obj' % (self.cpp_class.pystruct, self.py_name))
             else:
-                self.py_name = wrapper.declarations.declare_variable(
-                    'PyObject*', self.name)
-                tmp_value_variable = wrapper.declarations.declare_variable(
-                    self.cpp_class.full_name, self.name)
-                wrapper.parse_params.add_parameter('O', ['&'+self.py_name], self.name)
+                if self.default_value is None:
+                    self.py_name = wrapper.declarations.declare_variable(
+                        'PyObject*', self.name)
+                    tmp_value_variable = wrapper.declarations.declare_variable(
+                        self.cpp_class.full_name, self.name)
+                    wrapper.parse_params.add_parameter('O', ['&'+self.py_name], self.name)
+                else:
+                    self.py_name = wrapper.declarations.declare_variable(
+                        'PyObject*', self.name, 'NULL')
+                    tmp_value_variable = wrapper.declarations.declare_variable(
+                        self.cpp_class.full_name, self.name)
+                    wrapper.parse_params.add_parameter('O', ['&'+self.py_name], self.name, optional=True)
 
-                wrapper.before_call.write_code("if (PyObject_IsInstance(%s, (PyObject*) &%s)) {\n"
-                                               "    %s = *((%s *) %s)->obj;" %
-                                               (self.py_name, self.cpp_class.pytypestruct,
-                                                tmp_value_variable,
-                                                self.cpp_class.pystruct, self.py_name))
+                if self.default_value is None:
+                    wrapper.before_call.write_code("if (PyObject_IsInstance(%s, (PyObject*) &%s)) {\n"
+                                                   "    %s = *((%s *) %s)->obj;" %
+                                                   (self.py_name, self.cpp_class.pytypestruct,
+                                                    tmp_value_variable,
+                                                    self.cpp_class.pystruct, self.py_name))
+                else:
+                    wrapper.before_call.write_code(
+                        "if (%s == NULL) {\n"
+                        "    %s = %s;" %
+                        (self.py_name, tmp_value_variable, self.default_value))
+                    wrapper.before_call.write_code(
+                        "} else if (PyObject_IsInstance(%s, (PyObject*) &%s)) {\n"
+                                                   "    %s = *((%s *) %s)->obj;" %
+                                                   (self.py_name, self.cpp_class.pytypestruct,
+                                                    tmp_value_variable,
+                                                    self.cpp_class.pystruct, self.py_name))
                 for conversion_source in implicit_conversion_sources:
                     wrapper.before_call.write_code("} else if (PyObject_IsInstance(%s, (PyObject*) &%s)) {\n"
                                                    "    %s = *((%s *) %s)->obj;" %
