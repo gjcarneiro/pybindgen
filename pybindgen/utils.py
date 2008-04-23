@@ -109,3 +109,22 @@ def call_with_error_handling(callable, args, kwargs, wrapper,
                     raise
             else:
                 raise
+
+
+def ascii(value):
+    """
+    ascii(str_or_unicode_or_None) -> str_or_None
+
+    Make sure the value is either str or unicode object, and if it is
+    unicode convert it to ascii.  Also, None is an accepted value, and
+    returns itself.
+    """
+    if value is None:
+        return value
+    elif isinstance(value, str):
+        return value
+    elif isinstance(value, unicode):
+        return value.encode('ascii')
+    else:
+        raise TypeError("value must be str or ascii string contained in a unicode object")
+

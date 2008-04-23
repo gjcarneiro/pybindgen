@@ -93,7 +93,7 @@ class Module(object):
         include -- the name of the header file to include, including
                    surrounding "" or <>.
         """
-        assert isinstance(include, str)
+        include = utils.ascii(include)
         assert include.startswith('"') or include.startswith('<')
         assert include.endswith('"') or include.endswith('>')
         if include not in self.includes:
@@ -109,7 +109,7 @@ class Module(object):
                 c_function_name_transformer callback, or strip_prefix,
                 will be used to guess the Python name.
         """
-        assert name is None or isinstance(name, str)
+        name = utils.ascii(name)
         assert isinstance(wrapper, Function)
         if name is None:
             name = self.c_function_name_transformer(wrapper.function_name)
@@ -138,7 +138,7 @@ class Module(object):
         Add a nested module namespace corresponding to a C++ namespace.
         Returns a Module object that maps to this namespace.
         """
-        assert isinstance(name, str)
+        name = utils.ascii(name)
         return Module(name, parent=self, cpp_namespace=name)
 
     def add_enum(self, enum):
@@ -169,7 +169,7 @@ class Module(object):
         KeyError
         >>> module.declare_one_time_definition("bar")
         """
-        assert isinstance(definition_name, str)
+        definition_name = utils.ascii(definition_name)
         if definition_name in self.one_time_definitions:
             raise KeyError
         self.one_time_definitions[definition_name] = None

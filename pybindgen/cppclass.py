@@ -909,7 +909,7 @@ public:
         name -- optional name of the class method as it will appear
                 from Python side
         """
-        assert name is None or isinstance(name, str)
+        name = utils.ascii(name)
 
         if isinstance(method, CppMethod):
             if name is None:
