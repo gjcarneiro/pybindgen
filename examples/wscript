@@ -7,7 +7,7 @@ import Task
 
 def create_pyext_obj(bld, c_or_cpp_type):
     waf_version = [int (s) for s in Params.g_version.split('.')]
-    if waf_version >= [1.4]:
+    if waf_version >= [1,4]:
         return bld.create_obj(c_or_cpp_type, 'shlib', 'pyext')
     else:
         return bld.create_obj(c_or_cpp_type, 'plugin', 'pyext')
