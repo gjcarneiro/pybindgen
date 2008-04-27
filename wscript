@@ -11,7 +11,16 @@ import shutil
 import sys
 import Configure
 
-os.environ['PYTHONPATH'] = os.path.join(os.getcwd(), 'build', 'default')
+
+## Add the pybindgen dir to PYTHONPATH, so that the examples and tests are properly built before pybindgen is installed.
+waf_version = [int (s) for s in Params.g_version.split('.')]
+if waf_version >= [1,4,1]:
+    ## Since WAF 1.4.1, WAF does not byte-compile python files during
+    ## build, so we add the source dir instead of the build dir.
+    os.environ['PYTHONPATH'] = os.getcwd()
+else:
+    os.environ['PYTHONPATH'] = os.path.join(os.getcwd(), 'build', 'default')
+del waf_version
 
 
 _version = None
