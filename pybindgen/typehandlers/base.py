@@ -51,15 +51,17 @@ def join_ctype_and_name(ctype, name):
     'void **foo'
     >>> join_ctype_and_name("void **", "foo")
     'void **foo'
+    >>> join_ctype_and_name('C*', 'foo')
+    'C *foo'
     """
     if ctype[-1] == '*':
-        for i in range(-1, -len(ctype), -1):
+        for i in range(-1, -len(ctype) - 1, -1):
             if ctype[i] != '*':
                 if ctype[i] == ' ':
                     return "".join([ctype[:i+1], ctype[i+1:], name])
                 else:
                     return "".join([ctype[:i+1], ' ', ctype[i+1:], name])
-        raise ValueError
+        raise ValueError((ctype, name))
     else:
         return " ".join([ctype, name])
 
