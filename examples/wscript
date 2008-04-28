@@ -1,5 +1,5 @@
 ## -*- python -*-
 
 def build(bld):
-    pass # TODO
+    bld.add_subdirs('a')
 
