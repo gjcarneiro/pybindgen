@@ -1,5 +1,5 @@
 ## -*- python -*-
 
 def build(bld):
-    bld.add_subdirs('a b')
+    bld.add_subdirs('a b c')
 
