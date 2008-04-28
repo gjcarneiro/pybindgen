@@ -50,5 +50,10 @@ def my_module_gen(out_file):
 
 
 if __name__ == '__main__':
-    my_module_gen(sys.stdout)
-
+    try:
+        import cProfile as profile
+    except ImportError:
+        my_module_gen(sys.stdout)
+    else:
+        print >> sys.stderr, "** running under profiler"
+        profile.run('my_module_gen(sys.stdout)', 'hellomodulegen.pstat')

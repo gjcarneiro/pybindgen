@@ -485,5 +485,11 @@ _wrap_PyBar_Hooray_lenx(PyBar *PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject
     mod.generate(FileCodeSink(out_file))
 
 if __name__ == '__main__':
-    my_module_gen(sys.stdout)
+    try:
+        import cProfile as profile
+    except ImportError:
+        my_module_gen(sys.stdout)
+    else:
+        print >> sys.stderr, "** running under profiler"
+        profile.run('my_module_gen(sys.stdout)', 'foomodulegen.pstat')
 

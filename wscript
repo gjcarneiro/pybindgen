@@ -1,5 +1,5 @@
 ## -*- python -*-
-## (C) 2007 Gustavo J. A. M. Carneiro
+## (C) 2007,2008 Gustavo J. A. M. Carneiro
 
 import Params
 Params.g_autoconfig = True
@@ -10,6 +10,7 @@ import pproc as subprocess
 import shutil
 import sys
 import Configure
+import tarfile
 
 
 ## Add the pybindgen dir to PYTHONPATH, so that the examples and tests are properly built before pybindgen is installed.
@@ -86,6 +87,7 @@ def generate_version_py(force=False):
     
 
 def dist_hook():
+    version = get_version()
     blddir = '../build'
     srcdir = '..'
     subprocess.Popen([os.path.join(srcdir, "generate-ChangeLog")],  shell=True).wait()
@@ -105,6 +107,16 @@ def dist_hook():
     assert os.path.basename(sys.argv[0]) == 'waf'
     shutil.copy(sys.argv[0], '.')
 
+    ## Package the api docs in a separate tarball
+    apidocs = 'apidocs'
+    if not os.path.isdir('apidocs'):
+        Params.warning("Not creating apidocs archive: the `apidocs' directory does not exist")
+    else:
+        tar = tarfile.open(os.path.join("..", "pybindgen-%s-apidocs.tar.bz2" % version), 'w:bz2')
+        tar.add('apidocs', "pybindgen-%s-apidocs" % version)
+        tar.close()
+        shutil.rmtree('apidocs', True)
+
 
 def set_options(opt):
     opt.tool_options('python')
@@ -117,6 +129,11 @@ def set_options(opt):
                          ' meant to be used by pybindgen developers only.'),
                    action="store_true", default=False,
                    dest='generate_version')
+
+    opt.add_option('--generate-api-docs',
+                   help=('Generate API html documentation, using epydoc.'),
+                   action="store_true", default=False,
+                   dest='generate_api_docs')
 
 def configure(conf):
     ## Write a pybindgen/version.py file containing the project version
@@ -177,3 +194,12 @@ def shutdown():
         if retval1 or retval2 or retval3 or retval4:
             raise Params.fatal("Unit test failures")
 
+    if Params.g_options.generate_api_docs:
+        retval = subprocess.Popen(["epydoc", "-v", "--html", "--graph=all",  "pybindgen",
+                                   "-o", "apidocs",
+                                   "--pstat=build/foomodulegen-auto.pstat",
+                                   "--pstat=build/foomodulegen.pstat",
+                                   "--pstat=build/hellomodulegen.pstat",
+                                   ]).wait()
+        if retval:
+            raise Params.fatal("epydoc returned with code %i" % retval)
