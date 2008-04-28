@@ -1,0 +1,30 @@
+## -*- python -*-
+import Params
+
+def create_pyext_obj(bld, c_or_cpp_type):
+    waf_version = [int (s) for s in Params.g_version.split('.')]
+    if waf_version >= [1,4]:
+        return bld.create_obj(c_or_cpp_type, 'shlib', 'pyext')
+    else:
+        return bld.create_obj(c_or_cpp_type, 'plugin', 'pyext')
+
+
+def build(bld):
+    ## manual code generation using simple pybindgen API calls
+    bindgen = bld.create_obj('command-output')
+    bindgen.stdout = 'bmodule.cc'
+    bindgen.argv = [bindgen.input_file('modulegen.py')]
+    bindgen.command = bindgen.env['PYTHON']
+    bindgen.command_is_external = True
+    bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
+
+    obj = create_pyext_obj(bld, 'cpp')
+    obj.source = [
+        'b.cc',
+        'bmodule.cc'
+        ]
+    obj.target = 'b'
+    obj.inst_var = 0 # do not install
+
+    ## Workaround a WAF bug (http://code.google.com/p/waf/issues/detail?id=37)
+    obj.env.append_value("CPPPATH", bld.m_curdirnode.srcpath(obj.env))
