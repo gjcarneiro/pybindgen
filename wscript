@@ -78,9 +78,9 @@ def generate_version_py(force=False):
     version = get_version_from_bzr(srcdir)
     dest = open(filename, 'w')
     if isinstance(version, list):
-        dest.write('# [major, minor, micro, revno], '
-                   'revno omitted in official releases\n')
         dest.write('__version__ = %r\n' % (version,))
+        dest.write('"""[major, minor, micro, revno], '
+                   'revno omitted in official releases"""\n')
     else:
         dest.write('__version__ = "%s"\n' % (version,))
     dest.close()
