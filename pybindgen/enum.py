@@ -14,10 +14,10 @@ class Enum(object):
         """
         Creates a new enum wrapper, which should be added to a module with module.add_enum().
 
-        cname -- C name of the enum type
-        values -- a list of strings with all enumeration value names
-        values_prefix -- prefix to add to value names, or None
-        cpp_namespace -- optional C++ namespace identifier, or None.
+        @param name: C name of the enum type
+        @param values: a list of strings with all enumeration value names
+        @param values_prefix: prefix to add to value names, or None
+        @param cpp_namespace: optional C++ namespace identifier, or None.
                          Note: this namespace is *in addition to*
                          whatever namespace of the module the enum
                          belongs to.  Typically this parameter is to

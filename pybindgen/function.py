@@ -132,10 +132,11 @@ class Function(ForwardWrapperBase):
         
 
     def get_py_method_def(self, name):
-        """Returns an array element to use in a PyMethodDef table.
-         Should only be called after code generation.
+        """
+        Returns an array element to use in a PyMethodDef table.
+        Should only be called after code generation.
 
-        name -- python function/method name
+        @param name: python function/method name
         """
         flags = self.get_py_method_def_flags()
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \

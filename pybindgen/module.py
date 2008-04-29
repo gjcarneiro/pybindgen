@@ -80,9 +80,9 @@ class Module(object):
     def set_c_function_name_transformer(self, transformer):
         """Sets the function to be used when transforming a C function
         name into the python function name; the given given function
-        is called like this:
+        is called like this::
 
-        python_name = transformer(c_name)
+          python_name = transformer(c_name)
         """
         self.c_function_name_transformer = transformer
 
@@ -90,7 +90,7 @@ class Module(object):
         """
         Adds an additional include directive, needed to compile this python module
 
-        include -- the name of the header file to include, including
+        @param include: the name of the header file to include, including
                    surrounding "" or <>.
         """
         include = utils.ascii(include)
@@ -103,8 +103,8 @@ class Module(object):
         """
         Add a function to the module.
 
-        wrapper -- a Function instance that can generate the wrapper
-        name -- name of the module function as it will appear from
+        @param wrapper: a Function instance that can generate the wrapper
+        @param name: name of the module function as it will appear from
                 Python side; if not given, the
                 c_function_name_transformer callback, or strip_prefix,
                 will be used to guess the Python name.
@@ -127,7 +127,7 @@ class Module(object):
         """
         Add a class to the module.
 
-        class_ -- a CppClass object
+        @param class_: a CppClass object
         """
         assert isinstance(class_, CppClass)
         class_.module = self
@@ -157,7 +157,7 @@ class Module(object):
         (note: assuming here one-to-one mapping between 'module' and
         'compilation unit').
 
-        definition_name -- a string that uniquely identifies the code
+        @param definition_name: a string that uniquely identifies the code
         definition that will be added.  If the given definition was
         already declared KeyError is raised.
         

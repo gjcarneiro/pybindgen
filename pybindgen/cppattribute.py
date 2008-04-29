@@ -235,12 +235,12 @@ class PyMetaclass(object):
     """
     def __init__(self, name, parent_metaclass_expr, getsets=None):
         """
-        name -- name of the metaclass (should normally end with Meta)
-        parent_metaclass_expr -- C expression that should give a
+        @param name: name of the metaclass (should normally end with Meta)
+        @param parent_metaclass_expr: C expression that should give a
                                  pointer to the parent metaclass
                                  (should have a C type of
                                  PyTypeObject*)
-        getsets -- name of a PyGetSetDef C array variable, or None
+        @param getsets: name of a PyGetSetDef C array variable, or None
         """
         assert getsets is None or isinstance(getsets, PyGetSetDef)
         assert isinstance(name, basestring)

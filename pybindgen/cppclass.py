@@ -38,13 +38,13 @@ def default_instance_creation_function(cpp_class, code_block, lvalue,
     C++ class instance needs to be created; this default
     implementation uses a standard C++ new allocator.
 
-    cpp_class -- the CppClass object whose instance is to be created
-    code_block -- CodeBlock object on which the instance creation code should be generated
-    lvalue -- lvalue expression that should hold the result in the end
-    contruct_type_name -- actual name of type to be constructed (it is
+    @param cpp_class: the CppClass object whose instance is to be created
+    @param code_block: CodeBlock object on which the instance creation code should be generated
+    @param lvalue: lvalue expression that should hold the result in the end
+    @param parameters: stringified list of parameters
+    @param construct_type_name: actual name of type to be constructed (it is
                           not always the class name, sometimes it's
                           the python helper class)
-    parameters -- stringified list of parameters
     """
     assert lvalue
     assert not lvalue.startswith('None')
@@ -327,33 +327,33 @@ class CppClass(object):
                  incomplete_type=False, free_function=None,
                  incref_function=None, decref_function=None,
                  python_name=None):
-        """Constructor
-        name -- class name
-        parent -- optional parent class wrapper
-        incref_method -- if the class supports reference counting, the
+        """
+        @param name: class name
+        @param parent: optional parent class wrapper
+        @param incref_method: if the class supports reference counting, the
                          name of the method that increments the
                          reference count (may be inherited from parent
                          if not given)
-        decref_method -- if the class supports reference counting, the
+        @param decref_method: if the class supports reference counting, the
                          name of the method that decrements the
                          reference count (may be inherited from parent
                          if not given)
-        automatic_type_narrowing -- if True, automatic return type
+        @param automatic_type_narrowing: if True, automatic return type
                                     narrowing will be done on objects
                                     of this class and its descendants
                                     when returned by pointer from a
                                     function or method.
-        allow_subclassing -- if True, generated class wrappers will
+        @param allow_subclassing: if True, generated class wrappers will
                              allow subclassing in Python.
-        is_singleton -- if True, the class is considered a singleton,
+        @param is_singleton: if True, the class is considered a singleton,
                         and so the python wrapper will never call the
                         C++ class destructor to free the value.
-        peekref_method -- if the class supports reference counting, the
+        @param peekref_method: if the class supports reference counting, the
                           name of the method that returns the current reference count.
-        free_function -- name of C function used to deallocate class instances
-        incref_function -- same as incref_method, but as a function instead of method
-        decref_method -- same as decref_method, but as a function instead of method
-        python_name -- name of the class as it will appear from Python side
+        @param free_function: name of C function used to deallocate class instances
+        @param incref_function: same as incref_method, but as a function instead of method
+        @param decref_method: same as decref_method, but as a function instead of method
+        @param python_name: name of the class as it will appear from Python side
         """
         assert outer_class is None or isinstance(outer_class, CppClass)
         self.incomplete_type = incomplete_type
@@ -612,9 +612,8 @@ class CppClass(object):
         """
         Add a hook function to be called just prior to a helper class
         being generated.  The hook function applies to this class and
-        all subclasses.  The hook function is called like this:
-
-           hook_function(helper_class)
+        all subclasses.  The hook function is called like this::
+          hook_function(helper_class)
         """
         if not callable(hook):
             raise TypeError("hook function must be callable")
@@ -637,7 +636,7 @@ class CppClass(object):
         """Set a custom function to be called to create instances of this
         class and its subclasses.
 
-        instance_creation_function -- instance creation function; see
+        @param instance_creation_function: instance creation function; see
                                       default_instance_creation_function()
                                       for signature and example.
         """
@@ -905,8 +904,8 @@ public:
         """
         Add a method to the class.
 
-        method -- a CppMethod instance that can generate the method wrapper
-        name -- optional name of the class method as it will appear
+        @param method: a CppMethod instance that can generate the method wrapper
+        @param name: optional name of the class method as it will appear
                 from Python side
         """
         name = utils.ascii(name)
@@ -969,7 +968,7 @@ public:
         """
         Add a constructor to the class.
 
-        wrapper -- a CppConstructor instance
+        @param wrapper: a CppConstructor instance
         """
         if isinstance(wrapper, function.Function):
             wrapper = CppFunctionAsConstructor(wrapper.parameters, wrapper.function_name)
@@ -983,10 +982,9 @@ public:
 
     def add_static_attribute(self, value_type, name, is_const=False):
         """
-        Caveat: static attributes cannot be changed from Python; not implemented.
-        value_type -- a ReturnValue object
-        name -- attribute name (i.e. the name of the class member variable)
-        is_const -- True if the attribute is const, i.e. cannot be modified
+        @param value_type: a ReturnValue object
+        @param name: attribute name (i.e. the name of the class member variable)
+        @param is_const: True if the attribute is const, i.e. cannot be modified
         """
         assert isinstance(value_type, ReturnValue)
         getter = CppStaticAttributeGetter(value_type, self, name)
@@ -999,11 +997,11 @@ public:
     def add_instance_attribute(self, value_type, name, is_const=False,
                                getter=None, setter=None):
         """
-        value_type -- a ReturnValue object
-        name -- attribute name (i.e. the name of the class member variable)
-        is_const -- True if the attribute is const, i.e. cannot be modified
-        getter -- None, or name of a method of this class used to get the value
-        setter -- None, or name of a method of this class used to set the value
+        @param value_type: a ReturnValue object
+        @param name: attribute name (i.e. the name of the class member variable)
+        @param is_const: True if the attribute is const, i.e. cannot be modified
+        @param getter: None, or name of a method of this class used to get the value
+        @param setter: None, or name of a method of this class used to set the value
         """
         assert isinstance(value_type, ReturnValue)
         getter_wrapper = CppInstanceAttributeGetter(value_type, self, name, getter=getter)
@@ -1511,8 +1509,8 @@ class CppClassRefParameter(CppClassParameterBase):
 
     def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False, default_value=None):
         """
-        ctype -- C type, normally 'MyClass*'
-        name -- parameter name
+        @param ctype: C type, normally 'MyClass*'
+        @param name: parameter name
         """
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
@@ -1735,14 +1733,14 @@ class CppClassPtrParameter(CppClassParameterBase):
 
     def __init__(self, ctype, name, transfer_ownership=None, custodian=None, is_const=False):
         """
-        ctype -- C type, normally 'MyClass*'
-        name -- parameter name
+        @param ctype: C type, normally 'MyClass*'
+        @param name: parameter name
 
-        transfer_ownership -- this parameter transfer the ownership of
+        @param transfer_ownership: this parameter transfer the ownership of
                               the pointed-to object to the called
                               function; should be omitted if custodian
                               is given.
-        custodian -- the object (custodian) that is responsible for
+        @param custodian: the object (custodian) that is responsible for
                      managing the life cycle of the parameter.
                      Possible values are: None: no object is
                      custodian; the integer -1: the return value; the
@@ -1753,7 +1751,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                      custodian.  Note: only C++ class parameters can
                      be used as custodians, not parameters of builtin
                      Python types.
-        is_const -- if true, the parameter has a const attached to the leftmost
+        @param is_const: if true, the parameter has a const attached to the leftmost
         """
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
@@ -1952,11 +1950,11 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
 
     def __init__(self, ctype, caller_owns_return=None, custodian=None, is_const=False):
         """
-        ctype -- C type, normally 'MyClass*'
-        caller_owns_return -- if true, ownership of the object pointer
+        @param ctype: C type, normally 'MyClass*'
+        @param caller_owns_return: if true, ownership of the object pointer
                               is transferred to the caller; should be
                               omitted when custodian is given.
-        custodian -- the object (custodian) that is responsible for
+        @param custodian: the object (custodian) that is responsible for
                      managing the life cycle of the return value.
                      Possible values are: None: no object is
                      custodian; the integer 0: the instance of the

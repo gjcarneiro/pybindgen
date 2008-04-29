@@ -353,8 +353,8 @@ class ModuleParser(object):
         Creates an object that will be able parse header files and
         create a pybindgen module definition.
 
-        module_name -- name of the Python module
-        module_namespace_name -- optional C++ namespace name; if
+        @param module_name: name of the Python module
+        @param module_namespace_name: optional C++ namespace name; if
                                  given, only definitions of this
                                  namespace will be included in the
                                  python module
@@ -378,20 +378,20 @@ class ModuleParser(object):
         definition to a PyBindGen wrapper object.  This hook function
         will be called for every scanned type, function, or method,
         and given the a chance to modify the annotations for that
-        definition.  It will be called like this:
+        definition.  It will be called like this:::
 
-        pre_scan_hook(module_parser, pygccxml_definition, global_annotations,
-                      parameter_annotations)
+          pre_scan_hook(module_parser, pygccxml_definition, global_annotations,
+                        parameter_annotations)
         
         where:
 
-           module_parser -- the ModuleParser (this class) instance
-           pygccxml_definition -- the definition reported by pygccxml
-           global_annotations -- a dicionary containing the "global annotations"
+           - module_parser -- the ModuleParser (this class) instance
+           - pygccxml_definition -- the definition reported by pygccxml
+           - global_annotations -- a dicionary containing the "global annotations"
                                  for the definition, i.e. a set of key=value
                                  pairs not associated with any particular
                                  parameter
-           parameter_annotations -- a dicionary containing the "parameter
+           - parameter_annotations -- a dicionary containing the "parameter
                                     annotations" for the definition.  It is a
                                     dict whose keys are parameter names and
                                     whose values are dicts containing the
@@ -408,15 +408,15 @@ class ModuleParser(object):
         """
         Add a function to be called right after converting a gccxml definition
         to a PyBindGen wrapper object.  This hook function will be called for
-        every scanned type, function, or method.  It will be called like this:
+        every scanned type, function, or method.  It will be called like this::
 
-        post_scan_hook(module_parser, pygccxml_definition, pybindgen_wrapper)
+          post_scan_hook(module_parser, pygccxml_definition, pybindgen_wrapper)
         
         where:
 
-           module_parser -- the ModuleParser (this class) instance
-           pygccxml_definition -- the definition reported by pygccxml
-           pybindgen_wrapper -- a pybindgen object that generates a wrapper,
+           - module_parser -- the ModuleParser (this class) instance
+           - pygccxml_definition -- the definition reported by pygccxml
+           - pybindgen_wrapper -- a pybindgen object that generates a wrapper,
                                 such as CppClass, Function, or CppMethod.
         """
         if not callable(hook):
@@ -435,11 +435,11 @@ class ModuleParser(object):
         """
         parses a set of header files and returns a pybindgen Module instance.
         It is equivalent to calling the following methods:
-        1. parse_init(header_files, include_paths, whitelist_paths)
-        2. scan_types()
-        3. scan_methods()
-        4. scan_functions()
-        5. parse_finalize()
+         1. parse_init(header_files, include_paths, whitelist_paths)
+         2. scan_types()
+         3. scan_methods()
+         4. scan_functions()
+         5. parse_finalize()
         """
         self.parse_init(header_files, include_paths, whitelist_paths)
         self.scan_types()
@@ -453,10 +453,10 @@ class ModuleParser(object):
         Prepares to parse a set of header files.  The following
         methods should then be called in order to finish the rest of
         scanning process:
-        1. scan_types()
-        2. scan_methods()
-        2. scan_functions()
-        3. parse_finalize()
+         1. scan_types()
+         2. scan_methods()
+         2. scan_functions()
+         3. parse_finalize()
         """
         assert isinstance(header_files, list)
         self.header_files = [os.path.abspath(f) for f in header_files]

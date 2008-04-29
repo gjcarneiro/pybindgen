@@ -12,9 +12,9 @@ class PyObjectParam(Parameter):
 
     def __init__(self, ctype, name, transfer_ownership):
         """
-        ctype -- C type, normally 'PyObject*'
-        name -- parameter name
-        transfer_ownership -- this parameter transfer the ownership of
+        @param ctype: C type, normally 'PyObject*'
+        @param name: parameter name
+        @param transfer_ownership: this parameter transfer the ownership of
                               the pointed-to object to the called
                               function
         """
@@ -44,8 +44,8 @@ class PyObjectReturnValue(ReturnValue):
 
     def __init__(self, ctype, caller_owns_return):
         """
-        ctype -- C type, normally 'MyClass*'
-        caller_owns_return -- if true, ownership of the object pointer
+        @param ctype: C type, normally 'MyClass*'
+        @param caller_owns_return: if true, ownership of the object pointer
                               is transferred to the caller
         """
         super(PyObjectReturnValue, self).__init__(ctype)

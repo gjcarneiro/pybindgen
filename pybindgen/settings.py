@@ -24,6 +24,7 @@ Allow generated classes to be subclassed by default.
 
 unblock_threads = False
 """
+Generate code to support threads.
 When True, by default methods/functions/constructors will unblock
 threads around the funcion call, i.e. allows other Python threads to
 run during the call.
@@ -42,6 +43,7 @@ class ErrorHandler(object):
 
 error_handler = None
 """
+Custom error handling.
 Error handler, or None.  When it is None, code generation exceptions
 propagate to the caller.  Else it can be a
 pybindgen.utils.ErrorHandler subclass instance that handles the error.
