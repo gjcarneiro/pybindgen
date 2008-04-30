@@ -19,10 +19,15 @@ class Module(dict):
       >>> from enum import Enum
       >>> from cppclass import CppClass
       >>> m = Module("foo", cpp_namespace="foo")
+      >>> subm = m.add_cpp_namespace("subm")
       >>> c1 = CppClass("Bar")
       >>> m.add_class(c1)
+      >>> c2 = CppClass("Zbr")
+      >>> subm.add_class(c2)
       >>> e1 = Enum("En1", ["XX"])
       >>> m.add_enum(e1)
+      >>> e2 = Enum("En2", ["XX"])
+      >>> subm.add_enum(e2)
       >>> m["Bar"] is c1
       True
       >>> m["foo::Bar"] is c1
@@ -35,6 +40,10 @@ class Module(dict):
       Traceback (most recent call last):
         File "<stdin>", line 1, in <module>
       KeyError: 'badname'
+      >>> m["foo::subm::Zbr"] is c2
+      True
+      >>> m["foo::subm::En2"] is e2
+      True
 
     """
 
@@ -156,8 +165,11 @@ class Module(dict):
         assert isinstance(class_, CppClass)
         class_.module = self
         self.classes.append(class_)
+        module = self
         self[class_.name] = class_
-        self[class_.full_name] = class_
+        while module is not None:
+            module[class_.full_name] = class_
+            module = module.parent
 
     def add_cpp_namespace(self, name):
         """
@@ -175,7 +187,10 @@ class Module(dict):
         self.enums.append(enum)
         enum.module = self
         self[enum.name] = enum
-        self[enum.full_name] = enum
+        module = self
+        while module is not None:
+            module[enum.full_name] = enum
+            module = module.parent
 
     def declare_one_time_definition(self, definition_name):
         """
