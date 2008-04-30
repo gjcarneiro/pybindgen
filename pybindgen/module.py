@@ -10,15 +10,39 @@ from enum import Enum
 import utils
 
 
-class Module(object):
+class Module(dict):
     """
     A Module object takes care of generating the code for a Python module.
+
+    Module objects can be indexed dictionary style to access contained types.  Example::
+
+      >>> from enum import Enum
+      >>> from cppclass import CppClass
+      >>> m = Module("foo", cpp_namespace="foo")
+      >>> c1 = CppClass("Bar")
+      >>> m.add_class(c1)
+      >>> e1 = Enum("En1", ["XX"])
+      >>> m.add_enum(e1)
+      >>> m["Bar"] is c1
+      True
+      >>> m["foo::Bar"] is c1
+      True
+      >>> m["En1"] is e1
+      True
+      >>> m["foo::En1"] is e1
+      True
+      >>> m["badname"]
+      Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+      KeyError: 'badname'
+
     """
 
     def __init__(self, name, parent=None, docstring=None, cpp_namespace=None):
         """Constructor
         name -- module name
         """
+        super(Module, self).__init__()
         self.name = name
         self.parent = parent
         self.docstring = docstring
@@ -132,6 +156,8 @@ class Module(object):
         assert isinstance(class_, CppClass)
         class_.module = self
         self.classes.append(class_)
+        self[class_.name] = class_
+        self[class_.full_name] = class_
 
     def add_cpp_namespace(self, name):
         """
@@ -148,6 +174,8 @@ class Module(object):
         assert isinstance(enum, Enum)
         self.enums.append(enum)
         enum.module = self
+        self[enum.name] = enum
+        self[enum.full_name] = enum
 
     def declare_one_time_definition(self, definition_name):
         """
