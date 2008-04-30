@@ -195,6 +195,7 @@ def shutdown():
             raise Params.fatal("Unit test failures")
 
     if Params.g_options.generate_api_docs:
+        generate_version_py(force=True)
         retval = subprocess.Popen(["epydoc", "-v", "--html", "--graph=all",  "pybindgen",
                                    "-o", "apidocs",
                                    "--pstat=build/foomodulegen-auto.pstat",
