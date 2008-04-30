@@ -168,7 +168,7 @@ def build(bld):
 
     bld.add_subdirs('pybindgen')
     bld.add_subdirs('examples')
-    if Params.g_commands['check']:
+    if Params.g_commands['check'] or Params.g_commands['clean']:
         bld.add_subdirs('tests')
 
 def shutdown():
