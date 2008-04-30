@@ -32,6 +32,5 @@ def build(bld):
         ]
     obj.target = 'hello'
     obj.inst_var = 0 # do not install
+    obj.includes = '.'
 
-    ## Workaround a WAF bug (http://code.google.com/p/waf/issues/detail?id=37)
-    obj.env.append_value("CPPPATH", bld.m_curdirnode.srcpath(obj.env))

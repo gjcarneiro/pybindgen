@@ -49,9 +49,7 @@ def build(bld):
         ]
     obj.target = 'foo'
     obj.inst_var = 0 # do not install
-
-    ## Workaround a WAF bug (http://code.google.com/p/waf/issues/detail?id=37)
-    obj.env.append_value("CPPPATH", bld.m_curdirnode.srcpath(obj.env))
+    obj.includes = '.'
 
     ## automatic code scanning using gccxml
     if bld.env()['ENABLE_PYGCCXML']:
@@ -70,9 +68,7 @@ def build(bld):
             ]
         obj.target = 'foo2'
         obj.inst_var = 0 # do not install
-
-        ## Workaround a WAF bug (http://code.google.com/p/waf/issues/detail?id=37)
-        obj.env.append_value("CPPPATH", bld.m_curdirnode.srcpath(obj.env))
+        obj.includes = '.'
 
     ## pure C tests
     bld.add_subdirs('c-hello')
