@@ -9,9 +9,9 @@ from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
 
 def my_module_gen(out_file):
     pybindgen.write_preamble(FileCodeSink(out_file))
-    print >> out_file, "#include \"b.h\""
 
     mod = Module('b')
+    mod.add_include('"b.h"')
 
     B = CppClass('B')
     mod.add_class(B)
