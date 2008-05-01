@@ -48,8 +48,11 @@ class Module(dict):
     """
 
     def __init__(self, name, parent=None, docstring=None, cpp_namespace=None):
-        """Constructor
-        name -- module name
+        """
+        @param name: module name
+        @param parent: parent L{module<Module>} (i.e. the one that contains this submodule) or None if this is a root module
+        @param docstring: docstring to use for this module
+        @param cpp_namespace: C++ namespace prefix associated with this module
         """
         super(Module, self).__init__()
         self.name = name
@@ -91,11 +94,19 @@ class Module(dict):
             self.includes = parent.includes
 
     def get_submodule(self, submodule_name):
+        "get a submodule by its name"
         for submodule in self.submodules:
             if submodule.name == submodule_name:
                 return submodule
         raise ValueError("submodule %s not found" % submodule_name)
         
+    def get_root(self):
+        "returns the root module (even it is self)"
+        root = self
+        while root.parent is not None:
+            root = root.parent
+        return root
+
     def set_strip_prefix(self, prefix):
         """Sets the prefix string to be used when transforming a C
         function name into the python function name; the given prefix
@@ -241,14 +252,22 @@ class Module(dict):
 
     def get_namespace_path(self):
         """Get the full [root_namespace, namespace, namespace,...] path """
-        if self.cpp_namespace is None:
+        if not self.cpp_namespace:
             names = []
         else:
-            names = [self.cpp_namespace]
+            if self.cpp_namespace == '::':
+                names = []
+            else:
+                names = self.cpp_namespace.split('::')
+                if not names[0]:
+                    del names[0]
         parent = self.parent
         while parent is not None:
-            if parent.cpp_namespace is not None:
-                names.insert(0, parent.cpp_namespace)
+            if parent.cpp_namespace and parent.cpp_namespace != '::':
+                parent_names = parent.cpp_namespace.split('::')
+                if not parent_names[0]:
+                    del parent_names[0]
+                names = parent_names + names
             parent = parent.parent
         return names
 
