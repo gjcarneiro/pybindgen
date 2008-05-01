@@ -7,7 +7,7 @@ import re
 from pygccxml import parser
 from pygccxml import declarations
 from module import Module
-from typehandlers.codesink import FileCodeSink
+from typehandlers.codesink import FileCodeSink, CodeSink, NullCodeSink
 import typehandlers.base
 from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
 from pygccxml.declarations.enumeration import enumeration_t
@@ -64,35 +64,27 @@ def normalize_name(decl_string):
     else:
         return "%s< %s >" % (cls_name, ', '.join([normalize_name(name) for name in template_parameters]))
 
+def normalize_class_name(class_name, module_namespace):
+    if not class_name.startswith(module_namespace):
+        class_name = module_namespace + class_name
+    class_name = normalize_name(class_name)
+    return class_name
+
 
 class GccXmlTypeRegistry(object):
-    def __init__(self):
-        self.classes = {}  # registered classes dictionary
+    def __init__(self, root_module):
+        """
+        @root_module: the root L{Module} object
+        """
+        assert isinstance(root_module, Module)
+        assert root_module.parent is None
+        self.root_module = root_module
         self.ordered_classes = [] # registered classes list, by registration order
         self._root_ns_rx = re.compile(r"(^|\s)(::)")
     
-    def register_class(self, cpp_class, alias=None):
+    def class_registered(self, cpp_class):
         assert isinstance(cpp_class, CppClass)
-        full_name = normalize_name(cpp_class.full_name)
-        #print >> sys.stderr, "******** registering class %s as %s" \
-        #    % (cpp_class.gccxml_definition, full_name)
-        self.classes[full_name] = cpp_class
         self.ordered_classes.append(cpp_class)
-        if alias is not None:
-            alias = normalize_name(alias)
-            self.classes[alias] = cpp_class
-            cpp_class.register_alias(alias)
-            #print >> sys.stderr, "******** registering class %s also as alias %s" \
-            #        % (cpp_class.gccxml_definition, alias)
-
-    def find_class(self, class_name, module_namespace):
-        if not class_name.startswith(module_namespace):
-            class_name = module_namespace + class_name
-        class_name = normalize_name(class_name)
-        #if '<' in class_name:
-        #    print >> sys.stderr, "******** looking for class %s" \
-        #        % (class_name)
-        return self.classes[class_name]           
 
     def get_class_type_traits(self, type_info):
         assert isinstance(type_info, cpptypes.type_t)
@@ -106,12 +98,12 @@ class GccXmlTypeRegistry(object):
         pointer_is_const = False
         if isinstance(base_type, cpptypes.declarated_t):
             class_name = normalize_name(base_type.decl_string)
-            #if '<' in class_name:
-            #    print >> sys.stderr, "******** looking for class %s" \
-            #        % (class_name)
             try:
-                cpp_class = self.classes[class_name]
+                cpp_class = self.root_module[class_name]
             except KeyError:
+                return (None, is_const, is_pointer, is_reference, pointer_is_const)
+
+            if not isinstance(cpp_class, CppClass):
                 return (None, is_const, is_pointer, is_reference, pointer_is_const)
 
             try:
@@ -226,6 +218,7 @@ class GccXmlTypeRegistry(object):
                 return Parameter.new(normalize_name(type_info.decl_string), param_name, **kwargs)
             else:
                 return Parameter.new(self._fixed_std_type_name(type_info), param_name, **kwargs)
+        assert isinstance(cpp_class, CppClass)#, cpp_class.full_name
         if not is_pointer and not is_reference:
             return cpp_class.ThisClassParameter(type_info.decl_string, param_name, **kwargs)
         if is_pointer and not is_reference:
@@ -247,8 +240,6 @@ class GccXmlTypeRegistry(object):
                 print >> sys.stderr, "** Error in %s class ref parameter" % cpp_class.full_name
                 raise
         assert 0, "this line should not be reached"
-
-type_registry = GccXmlTypeRegistry()
 
 
 class AnnotationsScanner(object):
@@ -371,6 +362,8 @@ class ModuleParser(object):
         self._types_scanned = False
         self._pre_scan_hooks = []
         self._post_scan_hooks = []
+        self.pygen_sink = NullCodeSink()
+        self.type_registry = None
 
     def add_pre_scan_hook(self, hook):
         """
@@ -431,7 +424,7 @@ class ModuleParser(object):
                 return True
         return False
 
-    def parse(self, header_files, include_paths=None, whitelist_paths=None):
+    def parse(self, header_files, include_paths=None, whitelist_paths=None, pygen_sink=None):
         """
         parses a set of header files and returns a pybindgen Module instance.
         It is equivalent to calling the following methods:
@@ -441,14 +434,14 @@ class ModuleParser(object):
          4. scan_functions()
          5. parse_finalize()
         """
-        self.parse_init(header_files, include_paths, whitelist_paths)
+        self.parse_init(header_files, include_paths, whitelist_paths, pygen_sink)
         self.scan_types()
         self.scan_methods()
         self.scan_functions()
         self.parse_finalize()
         return self.module
 
-    def parse_init(self, header_files, include_paths=None, whitelist_paths=None):
+    def parse_init(self, header_files, include_paths=None, whitelist_paths=None, pygen_sink=None):
         """
         Prepares to parse a set of header files.  The following
         methods should then be called in order to finish the rest of
@@ -459,8 +452,11 @@ class ModuleParser(object):
          3. parse_finalize()
         """
         assert isinstance(header_files, list)
+        assert pygen_sink is None or isinstance(pygen_sink, CodeSink)
         self.header_files = [os.path.abspath(f) for f in header_files]
         self.location_filter = declarations.custom_matcher_t(self.__location_match)
+        if pygen_sink is not None:
+            self.pygen_sink = pygen_sink
 
         if whitelist_paths is not None:
             assert isinstance(whitelist_paths, list)
@@ -479,14 +475,30 @@ class ModuleParser(object):
             self.module_namespace = declarations.get_global_namespace(self.declarations).\
                 namespace(self.module_namespace_name)
         self.module = Module(self.module_name, cpp_namespace=self.module_namespace.decl_string)
+        self.pygen_sink.writeln("import sys")
+        self.pygen_sink.writeln("from pybindgen import CppClass, Module, FileCodeSink, write_preamble")
+        self.pygen_sink.writeln()
+        self.pygen_sink.writeln("def module_init():")
+        self.pygen_sink.indent()
+        self.pygen_sink.writeln("root_module = Module(%r, cpp_namespace=%r)"
+                                % (self.module_name, self.module_namespace.decl_string))
+        self.pygen_sink.writeln("return root_module")
+        self.pygen_sink.unindent()
+        self.pygen_sink.writeln()
+        self.type_registry = GccXmlTypeRegistry(self.module)
 
     def scan_types(self):
+        self.pygen_sink.writeln("def register_types(module):")
+        self.pygen_sink.indent()
+        self.pygen_sink.writeln("root_module = module.get_root()")
         self._scan_namespace_types(self.module, self.module_namespace)
         self._types_scanned = True
+        self.pygen_sink.unindent()
+        self.pygen_sink.writeln()
 
     def scan_methods(self):
         assert self._types_scanned
-        for class_wrapper in type_registry.ordered_classes:
+        for class_wrapper in self.type_registry.ordered_classes:
             if isinstance(class_wrapper.gccxml_definition, class_declaration_t):
                 continue # skip classes not fully defined
             self._scan_class_methods(class_wrapper.gccxml_definition, class_wrapper)
@@ -497,6 +509,19 @@ class ModuleParser(object):
 
     def parse_finalize(self):
         annotations_scanner.warn_unused_annotations()
+
+        self.pygen_sink.writeln("def main():")
+        self.pygen_sink.indent()
+        self.pygen_sink.writeln("out = FileCodeSink(sys.stdout)")
+        self.pygen_sink.writeln("root_module = module_init()")
+        self.pygen_sink.writeln("register_types(root_module)")
+        self.pygen_sink.writeln("write_preamble(out)")
+        self.pygen_sink.writeln("root_module.generate(out)")
+        self.pygen_sink.unindent()
+        self.pygen_sink.writeln()
+        self.pygen_sink.writeln("if __name__ == '__main__':\n    main()")
+        self.pygen_sink.writeln()
+
         return self.module
 
     def _apply_class_annotations(self, cls, annotations, kwargs):
@@ -532,8 +557,18 @@ class ModuleParser(object):
             if not self._class_has_public_destructor(cls):
                 kwargs.setdefault('is_singleton', True)
 
+    def _pygen_kwargs(self, kwargs):
+        l = []
+        for key, val in kwargs.iteritems():
+            if isinstance(val, CppClass):
+                l.append("%s=root_module[%r]" % (key, val.full_name))
+            else:
+                l.append("%s=%r" % (key, val))
+        return l
 
     def _scan_namespace_types(self, module, module_namespace, outer_class=None):
+        root_module = module.get_root()
+
         ## scan enumerations
         if outer_class is None:
             enums = module_namespace.enums(function=self.location_filter,
@@ -599,11 +634,17 @@ class ModuleParser(object):
             kwargs.setdefault("incomplete_type", True)
             kwargs.setdefault("automatic_type_narrowing", False)
             kwargs.setdefault("allow_subclassing", False)
+
             class_wrapper = CppClass(alias.name, **kwargs)
+            self.pygen_sink.writeln("module.add_class(CppClass(%s))" %
+                                    ", ".join([repr(alias.name)] + self._pygen_kwargs(kwargs)))
+
             class_wrapper.gccxml_definition = cls
             module.add_class(class_wrapper)
             registered_classes[cls] = class_wrapper
-            type_registry.register_class(class_wrapper, alias=cls.name)
+            if cls.name != alias.name:
+                class_wrapper.register_alias(normalize_name(cls.name))
+            self.type_registry.class_registered(class_wrapper)
 
         ## scan classes
         if outer_class is None:
@@ -620,6 +661,22 @@ class ModuleParser(object):
                 if cls.name.startswith('__'):
                     continue
                 unregistered_classes.append(cls)
+
+        def postpone_class(cls, reason):
+            ## detect the case of a class being postponed many times; that
+            ## is almost certainly an error and a sign of an infinite
+            ## loop.
+            count = getattr(cls, "_pybindgen_postpone_count", 0)
+            count += 1
+            cls._pybindgen_postpone_count = count
+            if count >= 100:
+                raise AssertionError("The class %s registration is being postponed for "
+                                     "the %ith time (last reason: %r, current reason: %r);"
+                                     " something is wrong, please file a bug report"
+                                     " (https://bugs.launchpad.net/pybindgen/+filebug) with a test case."
+                                     % (cls, cls._pybindgen_postpone_reason, reason))
+            cls._pybindgen_postpone_reason = reason
+            unregistered_classes.append(cls)
 
         while unregistered_classes:
             cls = unregistered_classes.pop(0)
@@ -662,7 +719,7 @@ class ModuleParser(object):
                                                % (cls.decl_string, base_cls.decl_string),
                                                Warning, cls.location.file_name, cls.location.line)
                         continue
-                    unregistered_classes.append(cls)
+                    postpone_class(cls, "waiting for base class %s to be registered first" % base_cls)
                     continue
             else:
                 base_class_wrapper = None
@@ -674,14 +731,15 @@ class ModuleParser(object):
                 if not isinstance(target_type, class_t):
                     continue
                 try:
-                    type_registry.find_class(operator.return_type.decl_string, '::')
+                    root_module[normalize_class_name(operator.return_type.decl_string, '::')]
                 except KeyError:
                     ok = False
                     break
             else:
                 ok = True
             if not ok:
-                unregistered_classes.append(cls)
+                postpone_class(cls, ("waiting for implicit conversion target class %s to be registered first"
+                                     % (operator.return_type.decl_string,)))
                 continue
 
             self._apply_class_annotations(cls, global_annotations, kwargs)
@@ -709,14 +767,25 @@ class ModuleParser(object):
                 cls_name = typedef.name
                 alias = '::'.join([module.cpp_namespace_prefix, cls.name])
 
-            class_wrapper = CppClass(cls_name, parent=base_class_wrapper, outer_class=outer_class,
-                                     template_parameters=template_parameters,
-                                     custom_template_class_name=custom_template_class_name,
-                                     **kwargs)
+            if base_class_wrapper is not None:
+                kwargs["parent"] = base_class_wrapper
+            if outer_class is not None:
+                kwargs["outer_class"] = outer_class
+            if template_parameters:
+                kwargs["template_parameters"] = template_parameters
+            if custom_template_class_name:
+                kwargs["custom_template_class_name"] = custom_template_class_name
+            class_wrapper = CppClass(cls_name, **kwargs)
+
+            self.pygen_sink.writeln("module.add_class(CppClass(%s))" %
+                                    ", ".join([repr(cls_name)] + self._pygen_kwargs(kwargs)))
+
             class_wrapper.gccxml_definition = cls
             module.add_class(class_wrapper)
             registered_classes[cls] = class_wrapper
-            type_registry.register_class(class_wrapper, alias)
+            if alias:
+                class_wrapper.register_alias(normalize_name(alias))
+            self.type_registry.class_registered(class_wrapper)
 
             for hook in self._post_scan_hooks:
                 hook(self, cls, class_wrapper)
@@ -730,7 +799,8 @@ class ModuleParser(object):
                 target_type = type_traits.remove_declarated(operator.return_type)
                 if not isinstance(target_type, class_t):
                     continue
-                other_class = type_registry.find_class(operator.return_type.decl_string, '::')
+                #other_class = type_registry.find_class(operator.return_type.decl_string, '::')
+                other_class = root_module[normalize_class_name(operator.return_type.decl_string, '::')]
                 class_wrapper.implicitly_converts_to(other_class)
 
         if outer_class is None:
@@ -775,7 +845,7 @@ class ModuleParser(object):
                 elif len(member.arguments) == 1:
                     (cpp_class, dummy_is_const, dummy_is_pointer,
                      is_reference, dummy_pointer_is_const) = \
-                        type_registry.get_class_type_traits(member.arguments[0].type)
+                        self.type_registry.get_class_type_traits(member.arguments[0].type)
                     if cpp_class is class_wrapper and is_reference:
                         have_copy_constructor = True
 
@@ -808,8 +878,8 @@ class ModuleParser(object):
                                                Warning, member.location.file_name, member.location.line)
                 
                 try:
-                    return_type = type_registry.lookup_return(member.return_type,
-                                                              parameter_annotations.get('return', {}))
+                    return_type = self.type_registry.lookup_return(member.return_type,
+                                                                   parameter_annotations.get('return', {}))
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                            % (member.return_type.decl_string, member, ex),
@@ -822,9 +892,9 @@ class ModuleParser(object):
                 ok = True
                 for arg in member.arguments:
                     try:
-                        arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
-                                                                        parameter_annotations.get(arg.name, {}),
-                                                                        arg.default_value))
+                        arguments.append(self.type_registry.lookup_parameter(arg.type, arg.name,
+                                                                             parameter_annotations.get(arg.name, {}),
+                                                                             arg.default_value))
                     except (TypeLookupError, TypeConfigurationError), ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                                % (arg.type.decl_string, arg.name, member, ex),
@@ -891,8 +961,8 @@ class ModuleParser(object):
                 arguments = []
                 for arg in member.arguments:
                     try:
-                        arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
-                                                                        default_value=arg.default_value))
+                        arguments.append(self.type_registry.lookup_parameter(arg.type, arg.name,
+                                                                             default_value=arg.default_value))
                     except (TypeLookupError, TypeConfigurationError), ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                                % (arg.type.decl_string, arg.name, member, ex),
@@ -925,7 +995,7 @@ class ModuleParser(object):
                     continue
 
                 try:
-                    return_type = type_registry.lookup_return(member.type)
+                    return_type = self.type_registry.lookup_return(member.type)
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                            % (member.type.decl_string, member, ex),
@@ -958,6 +1028,7 @@ class ModuleParser(object):
 
             
     def _scan_namespace_functions(self, module, module_namespace):
+        root_module = module.get_root()
         for fun in module_namespace.free_functions(function=self.location_filter,
                                                    allow_empty=True, recursive=False):
             if fun.name.startswith('__'):
@@ -996,7 +1067,7 @@ class ModuleParser(object):
             if is_constructor_of:
                 return_annotations['caller_owns_return'] = 'true'
             try:
-                return_type = type_registry.lookup_return(fun.return_type, return_annotations)
+                return_type = self.type_registry.lookup_return(fun.return_type, return_annotations)
             except (TypeLookupError, TypeConfigurationError), ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                        % (fun.return_type.decl_string, fun, ex),
@@ -1014,7 +1085,7 @@ class ModuleParser(object):
                         and isinstance(arg.type, cpptypes.pointer_t):
                     annotations.setdefault("transfer_ownership", "false")
                 try:
-                    arguments.append(type_registry.lookup_parameter(arg.type, arg.name,
+                    arguments.append(self.type_registry.lookup_parameter(arg.type, arg.name,
                                                                     annotations,
                                                                     default_value=arg.default_value))
                 except (TypeLookupError, TypeConfigurationError), ex:
@@ -1036,13 +1107,16 @@ class ModuleParser(object):
 
             if as_method is not None:
                 assert of_class is not None
-                cpp_class = type_registry.find_class(of_class, (self.module_namespace_name or '::'))
+                #cpp_class = type_registry.find_class(of_class, (self.module_namespace_name or '::'))
+                cpp_class = root_module[normalize_class_name(of_class, (self.module_namespace_name or '::'))]
+
                 function_wrapper = Function(return_type, fun.name, arguments)
                 cpp_class.add_method(function_wrapper, name=as_method)
                 function_wrapper.gccxml_definition = fun
                 continue
             if is_constructor_of is not None:
-                cpp_class = type_registry.find_class(is_constructor_of, (self.module_namespace_name or '::'))
+                #cpp_class = type_registry.find_class(is_constructor_of, (self.module_namespace_name or '::'))
+                cpp_class = root_module[normalize_class_name(is_constructor_of, (self.module_namespace_name or '::'))]
                 function_wrapper = Function(return_type, fun.name, arguments)
                 cpp_class.add_constructor(function_wrapper)
                 function_wrapper.gccxml_definition = fun

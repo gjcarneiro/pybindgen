@@ -56,7 +56,9 @@ def build(bld):
         ### Same thing, but using gccxml autoscanning
         bindgen = bld.create_obj('command-output')
         bindgen.stdout = 'foomodule2.cc'
-        bindgen.argv = [bindgen.input_file('foomodulegen-auto.py'), bindgen.input_file('foo.h')]
+        bindgen.argv = [bindgen.input_file('foomodulegen-auto.py'),
+                        bindgen.input_file('foo.h'),
+                        bindgen.output_file('foomodulegen-generated.py')]
         bindgen.command = bindgen.env['PYTHON']
         bindgen.command_is_external = True
         bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen

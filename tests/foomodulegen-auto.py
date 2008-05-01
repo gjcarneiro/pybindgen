@@ -51,12 +51,14 @@ del transf
 
 
 
-def my_module_gen(out_file):
-    out = FileCodeSink(out_file)
+def my_module_gen():
+    out = FileCodeSink(sys.stdout)
+    pygen_file = open(sys.argv[2], "wt")
     pybindgen.write_preamble(out)
     out.writeln("#include \"foo.h\"")
     module_parser = ModuleParser('foo2', '::')
-    module = module_parser.parse(sys.argv[1:])
+    module = module_parser.parse([sys.argv[1]], pygen_sink=FileCodeSink(pygen_file))
+    pygen_file.close()
 
     wrapper_body = '''
 static PyObject *
@@ -131,9 +133,9 @@ if __name__ == '__main__':
     try:
         import cProfile as profile
     except ImportError:
-        my_module_gen(sys.stdout)
+        my_module_gen()
     else:
         print >> sys.stderr, "** running under profiler"
-        profile.run('my_module_gen(sys.stdout)', 'foomodulegen-auto.pstat')
+        profile.run('my_module_gen()', 'foomodulegen-auto.pstat')
 
 
