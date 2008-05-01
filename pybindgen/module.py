@@ -166,6 +166,23 @@ class Module(dict):
         wrapper.module = self
         overload.add(wrapper)
 
+    def register_type(self, name, full_name, type_wrapper):
+        """
+        Register a type wrapper with the module, for easy access in
+        the future.  Normally should not be called by the programmer,
+        as it is meant for internal pybindgen use and called automatically.
+        
+        @param name: type name without any C++ namespace prefix, or None
+        @param full_name: type name with a C++ namespace prefix, or None
+        @param type_wrapper: the wrapper object for the type (e.g. L{CppClass} or L{Enum})
+        """
+        module = self
+        if name:
+            module[name] = type_wrapper
+        if full_name:
+            while module is not None:
+                module[full_name] = type_wrapper
+                module = module.parent
 
     def add_class(self, class_):
         """
@@ -176,11 +193,7 @@ class Module(dict):
         assert isinstance(class_, CppClass)
         class_.module = self
         self.classes.append(class_)
-        module = self
-        self[class_.name] = class_
-        while module is not None:
-            module[class_.full_name] = class_
-            module = module.parent
+        self.register_type(class_.name, class_.full_name, class_)
 
     def add_cpp_namespace(self, name):
         """
@@ -197,11 +210,7 @@ class Module(dict):
         assert isinstance(enum, Enum)
         self.enums.append(enum)
         enum.module = self
-        self[enum.name] = enum
-        module = self
-        while module is not None:
-            module[enum.full_name] = enum
-            module = module.parent
+        self.register_type(enum.name, enum.full_name, enum)
 
     def declare_one_time_definition(self, definition_name):
         """
