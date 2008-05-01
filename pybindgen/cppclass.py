@@ -766,6 +766,9 @@ class CppClass(object):
     def register_alias(self, alias):
         """Re-register the class with another base name, in addition to any
         registrations that might have already been done."""
+
+        self.module.register_type(None, alias, self)
+
         self.ThisClassParameter.CTYPES.append(alias)
         try:
             param_type_matcher.register(alias, self.ThisClassParameter)
