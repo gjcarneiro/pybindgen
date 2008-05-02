@@ -731,7 +731,7 @@ class ModuleParser(object):
                 if not isinstance(target_type, class_t):
                     continue
                 try:
-                    root_module[normalize_class_name(operator.return_type.decl_string, '::')]
+                    dummy = root_module[normalize_class_name(operator.return_type.decl_string, '::')]
                 except KeyError:
                     ok = False
                     break
