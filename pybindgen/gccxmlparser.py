@@ -488,13 +488,8 @@ class ModuleParser(object):
         self.type_registry = GccXmlTypeRegistry(self.module)
 
     def scan_types(self):
-        self.pygen_sink.writeln("def register_types(module):")
-        self.pygen_sink.indent()
-        self.pygen_sink.writeln("root_module = module.get_root()")
-        self._scan_namespace_types(self.module, self.module_namespace)
+        self._scan_namespace_types(self.module, self.module_namespace, pygen_register_function_name="register_types")
         self._types_scanned = True
-        self.pygen_sink.unindent()
-        self.pygen_sink.writeln()
 
     def scan_methods(self):
         assert self._types_scanned
@@ -566,7 +561,7 @@ class ModuleParser(object):
                 l.append("%s=%r" % (key, val))
         return l
 
-    def _scan_namespace_types(self, module, module_namespace, outer_class=None):
+    def _scan_namespace_types(self, module, module_namespace, outer_class=None, pygen_register_function_name=None):
         root_module = module.get_root()
 
         ## scan enumerations
@@ -677,6 +672,12 @@ class ModuleParser(object):
                                      % (cls, cls._pybindgen_postpone_reason, reason))
             cls._pybindgen_postpone_reason = reason
             unregistered_classes.append(cls)
+
+        if pygen_register_function_name:
+            self.pygen_sink.writeln("def %s(module):" % pygen_register_function_name)
+            self.pygen_sink.indent()
+            self.pygen_sink.writeln("root_module = module.get_root()")
+            self.pygen_sink.writeln()
 
         while unregistered_classes:
             cls = unregistered_classes.pop(0)
@@ -803,13 +804,47 @@ class ModuleParser(object):
                 other_class = root_module[normalize_class_name(operator.return_type.decl_string, '::')]
                 class_wrapper.implicitly_converts_to(other_class)
 
+        pygen_function_closed = False
         if outer_class is None:
+            ## scan nested namespaces (mapped as python submodules)
+            nested_modules = []
+            for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
+                if nested_namespace.name.startswith('__'):
+                    continue
+
+                if pygen_register_function_name:
+                    self.pygen_sink.writeln()
+                    self.pygen_sink.writeln("## Register a nested module for the namespace %s" % nested_namespace.name)
+                    self.pygen_sink.writeln()
+                    nested_module = Module(name=nested_namespace.name, parent=module, cpp_namespace=nested_namespace.name)
+                    nested_modules.append(nested_module)
+                    self.pygen_sink.writeln(
+                        "nested_module = Module(name=%r, parent=module, cpp_namespace=%r)"
+                        % (nested_namespace.name, nested_namespace.name))
+                    nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
+                    self.pygen_sink.writeln("%s(nested_module)" % nested_module_type_init_func)
+                    self.pygen_sink.writeln()
+
+            self.pygen_sink.unindent()
+            self.pygen_sink.writeln()
+            pygen_function_closed = True
+
             ## scan nested namespaces (mapped as python submodules)
             for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
                 if nested_namespace.name.startswith('__'):
                     continue
-                nested_module = Module(name=nested_namespace.name, parent=module, cpp_namespace=nested_namespace.name)
-                self._scan_namespace_types(nested_module, nested_namespace)
+
+                if pygen_register_function_name:
+                    nested_module = nested_modules.pop(0)
+                    nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
+                    self._scan_namespace_types(nested_module, nested_namespace,
+                                               pygen_register_function_name=nested_module_type_init_func)
+            assert not nested_modules # make sure all have been consumed by the second for loop
+
+        if pygen_register_function_name and not pygen_function_closed:
+            self.pygen_sink.unindent()
+            self.pygen_sink.writeln()
+
 
     def _class_has_virtual_methods(self, cls):
         """return True if cls has at least one virtual method, else False"""
