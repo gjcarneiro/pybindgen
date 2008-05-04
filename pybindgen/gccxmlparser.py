@@ -524,7 +524,7 @@ class ModuleParser(object):
         self.pygen_sink.writeln("from pybindgen import Module, FileCodeSink, write_preamble")
         self.pygen_sink.writeln("from pybindgen.cppclass import CppClass")
         self.pygen_sink.writeln("from pybindgen.cppmethod import CppMethod, CppConstructor, CppNoConstructor")
-        self.pygen_sink.writeln("from pybindgen import ReturnValue, Parameter")
+        self.pygen_sink.writeln("from pybindgen import ReturnValue, Parameter, Function")
         self.pygen_sink.writeln()
         self.pygen_sink.writeln("def module_init():")
         self.pygen_sink.indent()
@@ -567,10 +567,6 @@ class ModuleParser(object):
             self.pygen_sink.writeln()
 
 
-    def scan_functions(self):
-        assert self._types_scanned
-        self._scan_namespace_functions(self.module, self.module_namespace)
-
     def parse_finalize(self):
         annotations_scanner.warn_unused_annotations()
 
@@ -580,6 +576,7 @@ class ModuleParser(object):
         self.pygen_sink.writeln("root_module = module_init()")
         self.pygen_sink.writeln("register_types(root_module)")
         self.pygen_sink.writeln("register_methods(root_module)")
+        self.pygen_sink.writeln("register_functions(root_module)")
         self.pygen_sink.writeln("write_preamble(out)")
         self.pygen_sink.writeln("root_module.generate(out)")
         self.pygen_sink.unindent()
@@ -1160,9 +1157,17 @@ class ModuleParser(object):
                             class_wrapper.ThisClassRefParameter("%s const &" % class_wrapper.full_name,
                                                                 'ctor_arg', is_const=True)]))
 
+
+    def scan_functions(self):
+        assert self._types_scanned
+        self.pygen_sink.writeln("def register_functions(root_module):")
+        self.pygen_sink.indent()
+        self.pygen_sink.writeln("module = root_module")
+        self._scan_namespace_functions(self.module, self.module_namespace)
             
     def _scan_namespace_functions(self, module, module_namespace):
         root_module = module.get_root()
+
         for fun in module_namespace.free_functions(function=self.location_filter,
                                                    allow_empty=True, recursive=False):
             if fun.name.startswith('__'):
@@ -1259,25 +1264,53 @@ class ModuleParser(object):
                 function_wrapper.gccxml_definition = fun
                 continue
 
+            kwargs = {}
+
             if templates.is_instantiation(fun.demangled_name):
-                template_parameters = templates.args(fun.demangled_name)
-            else:
-                template_parameters = ()
-                    
-            func_wrapper = Function(return_type, fun.name, arguments,
-                                    template_parameters=template_parameters)
+                kwargs['template_parameters'] = templates.args(fun.demangled_name)
+            
+            func_wrapper = Function(return_type, fun.name, arguments, **kwargs)
             func_wrapper.gccxml_definition = fun
             module.add_function(func_wrapper, name=alt_name)
+
+            arglist_repr = ("[" + ', '.join([arg._pygen_repr for arg in arguments]) +  "]")
+            if alt_name is None:
+                _pygen_altname_arg = ''
+            else:
+                _pygen_altname_arg = ', name=%r' % alt_name
+            self.pygen_sink.writeln("module.add_function(Function(%s)%s)" %
+                                    (", ".join([return_type._pygen_repr, repr(fun.name), arglist_repr] + _pygen_kwargs(kwargs)),
+                                     _pygen_altname_arg))
+
             for hook in self._post_scan_hooks:
                 hook(self, fun, func_wrapper)
+
 
         ## scan nested namespaces (mapped as python submodules)
         for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
             if nested_namespace.name.startswith('__'):
                 continue
             nested_module = module.get_submodule(nested_namespace.name)
-            self._scan_namespace_functions(nested_module, nested_namespace)
+            
+            nested_module_pygen_func = "register_functions_" + "_".join(nested_module.get_namespace_path())
+            self.pygen_sink.writeln("%s(module.get_submodule(%r), root_module)" %
+                                    (nested_module_pygen_func, nested_namespace.name))
+
+        self.pygen_sink.writeln("return")
+        self.pygen_sink.unindent()
+        self.pygen_sink.writeln()
     
+        for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
+            if nested_namespace.name.startswith('__'):
+                continue
+            nested_module = module.get_submodule(nested_namespace.name)
+
+            nested_module_pygen_func = "register_functions_" + "_".join(nested_module.get_namespace_path())
+            self.pygen_sink.writeln("def %s(module, root_module):" % nested_module_pygen_func)
+            self.pygen_sink.indent()
+
+            self._scan_namespace_functions(nested_module, nested_namespace)
+
 
 def _test():
     module_parser = ModuleParser('foo', '::')
