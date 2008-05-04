@@ -524,7 +524,7 @@ class ModuleParser(object):
         self.pygen_sink.writeln("from pybindgen import Module, FileCodeSink, write_preamble")
         self.pygen_sink.writeln("from pybindgen.cppclass import CppClass")
         self.pygen_sink.writeln("from pybindgen.cppmethod import CppMethod, CppConstructor, CppNoConstructor")
-        self.pygen_sink.writeln("from pybindgen import ReturnValue, Parameter, Function")
+        self.pygen_sink.writeln("from pybindgen import ReturnValue, Parameter, Function, Enum")
         self.pygen_sink.writeln()
         self.pygen_sink.writeln("def module_init():")
         self.pygen_sink.indent()
@@ -622,6 +622,13 @@ class ModuleParser(object):
     def _scan_namespace_types(self, module, module_namespace, outer_class=None, pygen_register_function_name=None):
         root_module = module.get_root()
 
+        if pygen_register_function_name:
+            self.pygen_sink.writeln("def %s(module):" % pygen_register_function_name)
+            self.pygen_sink.indent()
+            self.pygen_sink.writeln("root_module = module.get_root()")
+            self.pygen_sink.writeln()
+
+
         ## scan enumerations
         if outer_class is None:
             enums = module_namespace.enums(function=self.location_filter,
@@ -644,6 +651,12 @@ class ModuleParser(object):
         for enum in enums:
             module.add_enum(Enum(enum.name, [name for name, dummy_val in enum.values],
                                  outer_class=outer_class))
+
+            enum_values_repr = '[' + ', '.join([repr(name) for name, dummy_val in enum.values]) + ']'
+            l = [repr(enum.name), enum_values_repr]
+            if outer_class is not None:
+                l.append('outer_class=root_module[%r]' % outer_class.full_name)
+            self.pygen_sink.writeln('module.add_enum(Enum(%s))' % ', '.join(l))
 
         registered_classes = {} # class_t -> CppClass
 
@@ -730,12 +743,6 @@ class ModuleParser(object):
                                      % (cls, cls._pybindgen_postpone_reason, reason))
             cls._pybindgen_postpone_reason = reason
             unregistered_classes.append(cls)
-
-        if pygen_register_function_name:
-            self.pygen_sink.writeln("def %s(module):" % pygen_register_function_name)
-            self.pygen_sink.indent()
-            self.pygen_sink.writeln("root_module = module.get_root()")
-            self.pygen_sink.writeln()
 
         while unregistered_classes:
             cls = unregistered_classes.pop(0)
