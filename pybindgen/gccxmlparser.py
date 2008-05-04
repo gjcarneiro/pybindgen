@@ -579,6 +579,7 @@ class ModuleParser(object):
         self.pygen_sink.writeln("out = FileCodeSink(sys.stdout)")
         self.pygen_sink.writeln("root_module = module_init()")
         self.pygen_sink.writeln("register_types(root_module)")
+        self.pygen_sink.writeln("register_methods(root_module)")
         self.pygen_sink.writeln("write_preamble(out)")
         self.pygen_sink.writeln("root_module.generate(out)")
         self.pygen_sink.unindent()
