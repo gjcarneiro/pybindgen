@@ -983,6 +983,8 @@ class ModuleParser(object):
                     if pure_virtual:
                         class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
                         class_wrapper.set_helper_class_disabled(True)
+                        self.pygen_sink.writeln('cls.set_cannot_be_constructed("pure virtual method not wrapped")')
+                        self.pygen_sink.writeln('cls.set_helper_class_disabled(True)')
                     continue
                 arguments = []
                 ok = True
@@ -1001,10 +1003,13 @@ class ModuleParser(object):
                     if pure_virtual:
                         class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
                         class_wrapper.set_helper_class_disabled(True)
+                        self.pygen_sink.writeln('cls.set_cannot_be_constructed("pure virtual method not wrapped")')
+                        self.pygen_sink.writeln('cls.set_helper_class_disabled(True)')
                     continue
 
                 if pure_virtual and not class_wrapper.allow_subclassing:
                     class_wrapper.set_cannot_be_constructed("pure virtual method and subclassing disabled")
+                    self.pygen_sink.writeln('cls.set_cannot_be_constructed("pure virtual method not wrapped")')
 
                 custom_template_method_name = None
                 if templates.is_instantiation(member.demangled_name):
@@ -1038,12 +1043,25 @@ class ModuleParser(object):
 
                 method_wrapper = CppMethod(return_type, member.name, arguments, **kwargs)
                 method_wrapper.gccxml_definition = member
+
+                def _pygen_method():
+                    arglist_repr = ("[" + ', '.join([arg._pygen_repr for arg in arguments]) +  "]")
+                    self.pygen_sink.writeln("cls.add_method(CppMethod(%s))" %
+                                            ", ".join(
+                            [return_type._pygen_repr, repr(member.name), arglist_repr]
+                            + _pygen_kwargs(kwargs)))
+
                 try:
                     class_wrapper.add_method(method_wrapper)
                 except NotSupportedError, ex:
+                    _pygen_method()
                     if pure_virtual:
-                        class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
+                        class_wrapper.set_cannot_be_constructed("pure virtual method %r not wrapped" % member.name)
                         class_wrapper.set_helper_class_disabled(True)
+                        self.pygen_sink.writeln('cls.set_cannot_be_constructed("pure virtual method %%r not wrapped" %% %r)'
+                                                % member.name)
+                        self.pygen_sink.writeln('cls.set_helper_class_disabled(True)')
+
                     warnings.warn_explicit("Error adding method %s: %r"
                                            % (member, ex),
                                            Warning, member.location.file_name, member.location.line)
@@ -1052,15 +1070,11 @@ class ModuleParser(object):
                                            % (member, ex),
                                            Warning, member.location.file_name, member.location.line)
                     raise
-                else:
+                else: # no exception, add method succeeded
+                    _pygen_method()
                     for hook in self._post_scan_hooks:
                         hook(self, member, method_wrapper)
                 
-                arglist_repr = ("[" + ', '.join([arg._pygen_repr for arg in arguments]) +  "]")
-                self.pygen_sink.writeln("cls.add_method(CppMethod(%s))" %
-                                        ", ".join(
-                        [return_type._pygen_repr, repr(member.name), arglist_repr]
-                        + _pygen_kwargs(kwargs)))
 
             ## ------------ constructor --------------------
             elif isinstance(member, calldef.constructor_t):
