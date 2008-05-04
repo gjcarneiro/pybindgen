@@ -362,6 +362,7 @@ class CppClass(object):
         self.name = name
         self.python_name = python_name
         self.mangled_name = None
+        self.mangled_full_name = None
         self.template_parameters = template_parameters
         self.custom_template_class_name = custom_template_class_name
         self.is_singleton = is_singleton
@@ -740,17 +741,18 @@ class CppClass(object):
             "make a name like::This look LikeThis"
             return ''.join([make_upper(mangle(s)) for s in name.split('::')])
 
-        flat_name = flatten(self.full_name)
         self.mangled_name = flatten(self.name)
+        self.mangled_full_name = flatten(self.full_name)
 
         if self.template_parameters:
             self.full_name += "< %s >" % (', '.join(self.template_parameters))
-            flat_name += '__' + '_'.join([flatten(s) for s in self.template_parameters])
-            self.mangled_name += '__' + '_'.join([flatten(s) for s in self.template_parameters])
+            mangled_template_params = '__' + '_'.join([flatten(s) for s in self.template_parameters])
+            self.mangled_name += mangled_template_params
+            self.mangled_full_name += mangled_template_params
 
-        self._pystruct = "Py%s%s" % (prefix, flat_name)
-        self.metaclass_name = "%sMeta" % flat_name
-        self.pytypestruct = "Py%s%s_Type" % (prefix, flat_name)
+        self._pystruct = "Py%s%s" % (prefix, self.mangled_full_name)
+        self.metaclass_name = "%sMeta" % self.mangled_full_name
+        self.pytypestruct = "Py%s%s_Type" % (prefix,  self.mangled_full_name)
 
         self.instance_attributes.cname = "%s__getsets" % self._pystruct
         self.static_attributes.cname = "%s__getsets" % self.metaclass_name
