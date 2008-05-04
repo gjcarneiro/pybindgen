@@ -55,28 +55,29 @@ class Module(dict):
         @param cpp_namespace: C++ namespace prefix associated with this module
         """
         super(Module, self).__init__()
-        self.name = name
         self.parent = parent
         self.docstring = docstring
         self.submodules = []
         self.enums = []
         self._forward_declarations_declared = False
 
-        if parent is None:
-            self.prefix = self.name
+        self.cpp_namespace = cpp_namespace
+        if self.parent is None:
             error_return = 'return;'
         else:
-            parent.submodules.append(self)
-            self.prefix = parent.prefix + "_" + self.name
+            self.parent.submodules.append(self)
             error_return = 'return NULL;'
 
-        self.cpp_namespace = cpp_namespace
+        self.prefix = None
+        self.init_function_name = None
+        self._name = None
+        self.name = name
+
         path = self.get_namespace_path()
         if path and path[0] == '::':
             del path[0]
         self.cpp_namespace_prefix = '::'.join(path)
 
-        self.init_function_name = "init%s" % self.prefix
         self.declarations = DeclarationsScope()
         self.functions = {} # name => OverloadedFunction
         self.classes = []
@@ -92,6 +93,22 @@ class Module(dict):
         else:
             self.one_time_definitions = parent.one_time_definitions
             self.includes = parent.includes
+
+    def get_name(self):
+        return self._name
+
+    def set_name(self, name):
+        self._name = name
+
+        if self.parent is None:
+            self.prefix = self.name
+        else:
+            self.prefix = self.parent.prefix + "_" + self.name
+
+        self.init_function_name = "init%s" % self.prefix
+
+    
+    name = property(get_name, set_name)
 
     def get_submodule(self, submodule_name):
         "get a submodule by its name"
