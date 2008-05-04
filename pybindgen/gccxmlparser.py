@@ -1086,6 +1086,13 @@ class ModuleParser(object):
                 if member.access_type != 'public':
                     kwargs['visibility'] = member.access_type
 
+                ## ignore methods that are private and not virtual or
+                ## pure virtual, as they do not affect the bindings in
+                ## any way and only clutter the generated python script.
+                if (kwargs.get('visibility', 'public') == 'private'
+                    and not (kwargs.get('is_virtual', False) or kwargs.get('is_pure_virtual', False))):
+                    continue
+
                 method_wrapper = CppMethod(return_type, member.name, arguments, **kwargs)
                 method_wrapper.gccxml_definition = member
 
