@@ -4,11 +4,17 @@ import gc
 import os.path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '..', 'build', 'default', 'tests'))
-if len(sys.argv) > 1:
-    import foo2 as foo
-    del sys.argv[1]
-else:
+which = int(sys.argv[1])
+del sys.argv[1]
+if which == 1:
     import foo
+elif which == 2:
+    import foo2 as foo
+elif which == 3:
+    import foo3 as foo
+else:
+    raise AssertionError("bad command line arguments")
+
 import unittest
 
 

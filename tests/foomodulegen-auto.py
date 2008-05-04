@@ -55,9 +55,8 @@ def my_module_gen():
     out = FileCodeSink(sys.stdout)
     pygen_file = open(sys.argv[2], "wt")
     pybindgen.write_preamble(out)
-    out.writeln("#include \"foo.h\"")
     module_parser = ModuleParser('foo2', '::')
-    module = module_parser.parse([sys.argv[1]], pygen_sink=FileCodeSink(pygen_file))
+    module = module_parser.parse([sys.argv[1]], includes=['"foo.h"'], pygen_sink=FileCodeSink(pygen_file))
     pygen_file.close()
 
     wrapper_body = '''

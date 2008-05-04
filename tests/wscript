@@ -72,6 +72,25 @@ def build(bld):
         obj.inst_var = 0 # do not install
         obj.includes = '.'
 
+
+        ### Now using the generated python script
+        bindgen = bld.create_obj('command-output')
+        bindgen.stdout = 'foomodule3.cc'
+        bindgen.argv = [bindgen.input_file('foomodulegen-generated.py'),
+                        bindgen.output_file('foomodule3.cc')]
+        bindgen.command = bindgen.env['PYTHON']
+        bindgen.command_is_external = True
+        bindgen.prio = 56 # run after the previous bindgen
+
+        obj = create_pyext_obj(bld, 'cpp')
+        obj.source = [
+            'foo.cc',
+            'foomodule3.cc'
+            ]
+        obj.target = 'foo3'
+        obj.inst_var = 0 # do not install
+        obj.includes = '.'
+
     ## pure C tests
     bld.add_subdirs('c-hello')
 
