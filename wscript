@@ -193,7 +193,7 @@ def shutdown():
         else:
             print "Skipped automatically scanned module generation unit tests (pygccxml not available)."
             print "Skipped semi-automatically scanned c-hello module (pygccxml not available)."
-            retval3 = retval4 = 0
+            retval3 = retval3b = retval4 = 0
 
         if retval1 or retval2 or retval3 or retval3b or retval4:
             raise Params.fatal("Unit test failures")
