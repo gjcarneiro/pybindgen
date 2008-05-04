@@ -71,6 +71,17 @@ def normalize_class_name(class_name, module_namespace):
     return class_name
 
 
+def _pygen_kwargs(kwargs):
+    l = []
+    for key, val in kwargs.iteritems():
+        if isinstance(val, CppClass):
+            l.append("%s=root_module[%r]" % (key, val.full_name))
+        else:
+            l.append("%s=%r" % (key, val))
+    return l
+
+
+
 class GccXmlTypeRegistry(object):
     def __init__(self, root_module):
         """
@@ -165,25 +176,36 @@ class GccXmlTypeRegistry(object):
 
         if cpp_class is None:
             if isinstance(type_traits.remove_declarated(type_info), enumeration_t):
-                return ReturnValue.new(normalize_name(type_info.decl_string), **kwargs)
+                name = normalize_name(type_info.decl_string)
             else:
-                return ReturnValue.new(self._fixed_std_type_name(type_info), **kwargs)
+                name = self._fixed_std_type_name(type_info)
+            retval = ReturnValue.new(name, **kwargs)
+            retval._pygen_repr = ("ReturnValue.new(%s)"
+                                  % (", ".join([repr(name)] + _pygen_kwargs(kwargs))))
+            return retval
 
         if not is_pointer and not is_reference:
-            return cpp_class.ThisClassReturn(type_info.decl_string)
+            retval = cpp_class.ThisClassReturn(type_info.decl_string)
+            retval._pygen_repr = ("root_module[%r].ThisClassReturn(%r)" % (cpp_class.full_name, type_info.decl_string))
+            return retval
         if is_pointer and not is_reference:
-            if is_const:
-                ## a pointer to const object usually means caller_owns_return=False
-                return cpp_class.ThisClassPtrReturn(type_info.decl_string, caller_owns_return=False,
-                                                    **kwargs)
-            else:
-                ## This will fail, "missing caller_owns_return
-                ## parameter", but the lack of a const does not always
-                ## imply caller_owns_return=True, so trying to guess
-                ## here is a Bad Idea™
-                return cpp_class.ThisClassPtrReturn(type_info.decl_string, **kwargs)
+            if is_const and 'caller_owns_return' not in kwargs:
+                ## a pointer to const object "usually" means caller_owns_return=False
+                ## some guessing going on here, though..
+                kwargs['caller_owns_return'] = False
+            retval = cpp_class.ThisClassPtrReturn(type_info.decl_string, **kwargs)
+            retval._pygen_repr = ("root_module[%r].ThisClassPtrReturn(%s)"
+                                  % (cpp_class.full_name,
+                                     ", ".join([repr(type_info.decl_string)] + _pygen_kwargs(kwargs))))
+            return retval
+            
         if not is_pointer and is_reference:
-            return cpp_class.ThisClassRefReturn(type_info.decl_string, **kwargs)
+            retval = cpp_class.ThisClassRefReturn(type_info.decl_string, **kwargs)
+            retval._pygen_repr = ("root_module[%r].ThisClassRefReturn(%s)"
+                                  % (cpp_class.full_name,
+                                     ", ".join([repr(type_info.decl_string)] + _pygen_kwargs(kwargs))))
+            return retval
+
         assert 0, "this line should not be reached"
 
     def lookup_parameter(self, type_info, param_name, annotations={}, default_value=None):
@@ -207,35 +229,54 @@ class GccXmlTypeRegistry(object):
             else:
                 warnings.warn("invalid annotation name %r" % name)
 
-        cpp_class, is_const, is_pointer, is_reference, pointer_is_const = \
+        cpp_class, is_const, is_pointer, is_reference, dummy_pointer_is_const = \
             self.get_class_type_traits(type_info)
+
         if is_const:
             kwargs['is_const'] = True
         if default_value:
             kwargs['default_value'] = default_value
+
         if cpp_class is None:
             if isinstance(type_traits.remove_declarated(type_info), enumeration_t):
-                return Parameter.new(normalize_name(type_info.decl_string), param_name, **kwargs)
+                type_name = normalize_name(type_info.decl_string)
             else:
-                return Parameter.new(self._fixed_std_type_name(type_info), param_name, **kwargs)
+                type_name = self._fixed_std_type_name(type_info)
+
+            retval = Parameter.new(type_name, param_name, **kwargs)
+            retval._pygen_repr = ("Parameter.new(%s)"
+                                  % (", ".join([repr(type_name), repr(param_name)]
+                                               + _pygen_kwargs(kwargs))))
+            return retval
+
         assert isinstance(cpp_class, CppClass)#, cpp_class.full_name
         if not is_pointer and not is_reference:
-            return cpp_class.ThisClassParameter(type_info.decl_string, param_name, **kwargs)
+            retval = cpp_class.ThisClassParameter(type_info.decl_string, param_name, **kwargs)
+            retval._pygen_repr = ("root_module[%r].ThisClassParameter(%s)"
+                                  % (cpp_class.full_name,
+                                     ", ".join([repr(type_info.decl_string), repr(param_name)]
+                                               + _pygen_kwargs(kwargs))))
+            return retval
+
         if is_pointer and not is_reference:
             if is_const:
                 ## a pointer to const object usually means transfer_ownership=False
                 kwargs.setdefault('transfer_ownership', False)
-                return cpp_class.ThisClassPtrParameter(type_info.decl_string, param_name,
-                                                       **kwargs)
-            else:
-                ## This will fail, "missing param_name
-                ## parameter", but the lack of a const does not always
-                ## imply transfer_ownership=True, so trying to guess
-                ## here is a Bad Idea™
-                return cpp_class.ThisClassPtrParameter(type_info.decl_string, param_name, **kwargs)
+            retval = cpp_class.ThisClassPtrParameter(type_info.decl_string, param_name, **kwargs)
+            retval._pygen_repr = ("root_module[%r].ThisClassPtrParameter(%s)"
+                                  % (cpp_class.full_name,
+                                     ", ".join([repr(type_info.decl_string), repr(param_name)]
+                                               + _pygen_kwargs(kwargs))))
+            return retval
+
         if not is_pointer and is_reference:
             try:
-                return cpp_class.ThisClassRefParameter(type_info.decl_string, param_name, **kwargs)
+                retval = cpp_class.ThisClassRefParameter(type_info.decl_string, param_name, **kwargs)
+                retval._pygen_repr = ("root_module[%r].ThisClassRefParameter(%s)"
+                                      % (cpp_class.full_name,
+                                         ", ".join([repr(type_info.decl_string), repr(param_name)]
+                                                   + _pygen_kwargs(kwargs))))
+                return retval
             except TypeError:
                 print >> sys.stderr, "** Error in %s class ref parameter" % cpp_class.full_name
                 raise
@@ -424,7 +465,7 @@ class ModuleParser(object):
                 return True
         return False
 
-    def parse(self, header_files, include_paths=None, whitelist_paths=None, pygen_sink=None):
+    def parse(self, header_files, include_paths=None, whitelist_paths=None, includes=(), pygen_sink=None):
         """
         parses a set of header files and returns a pybindgen Module instance.
         It is equivalent to calling the following methods:
@@ -434,14 +475,15 @@ class ModuleParser(object):
          4. scan_functions()
          5. parse_finalize()
         """
-        self.parse_init(header_files, include_paths, whitelist_paths, pygen_sink)
+        self.parse_init(header_files, include_paths, whitelist_paths, includes, pygen_sink)
         self.scan_types()
         self.scan_methods()
         self.scan_functions()
         self.parse_finalize()
         return self.module
 
-    def parse_init(self, header_files, include_paths=None, whitelist_paths=None, pygen_sink=None):
+    def parse_init(self, header_files, include_paths=None,
+                   whitelist_paths=None, includes=(), pygen_sink=None):
         """
         Prepares to parse a set of header files.  The following
         methods should then be called in order to finish the rest of
@@ -452,6 +494,7 @@ class ModuleParser(object):
          3. parse_finalize()
         """
         assert isinstance(header_files, list)
+        assert isinstance(includes, (list, tuple))
         assert pygen_sink is None or isinstance(pygen_sink, CodeSink)
         self.header_files = [os.path.abspath(f) for f in header_files]
         self.location_filter = declarations.custom_matcher_t(self.__location_match)
@@ -475,13 +518,20 @@ class ModuleParser(object):
             self.module_namespace = declarations.get_global_namespace(self.declarations).\
                 namespace(self.module_namespace_name)
         self.module = Module(self.module_name, cpp_namespace=self.module_namespace.decl_string)
+        for inc in includes:
+            self.module.add_include(inc)
         self.pygen_sink.writeln("import sys")
-        self.pygen_sink.writeln("from pybindgen import CppClass, Module, FileCodeSink, write_preamble")
+        self.pygen_sink.writeln("from pybindgen import Module, FileCodeSink, write_preamble")
+        self.pygen_sink.writeln("from pybindgen.cppclass import CppClass")
+        self.pygen_sink.writeln("from pybindgen.cppmethod import CppMethod, CppConstructor, CppNoConstructor")
+        self.pygen_sink.writeln("from pybindgen import ReturnValue, Parameter")
         self.pygen_sink.writeln()
         self.pygen_sink.writeln("def module_init():")
         self.pygen_sink.indent()
         self.pygen_sink.writeln("root_module = Module(%r, cpp_namespace=%r)"
                                 % (self.module_name, self.module_namespace.decl_string))
+        for inc in includes:
+            self.pygen_sink.writeln("root_module.add_include(%r)" % inc)
         self.pygen_sink.writeln("return root_module")
         self.pygen_sink.unindent()
         self.pygen_sink.writeln()
@@ -493,10 +543,29 @@ class ModuleParser(object):
 
     def scan_methods(self):
         assert self._types_scanned
+        self.pygen_sink.writeln("def register_methods(root_module):")
+        self.pygen_sink.indent()
+
         for class_wrapper in self.type_registry.ordered_classes:
             if isinstance(class_wrapper.gccxml_definition, class_declaration_t):
                 continue # skip classes not fully defined
+            register_methods_func = "register_%s_methods"  % (class_wrapper.mangled_full_name,)
+            self.pygen_sink.writeln("%s(root_module, root_module[%r])" % (register_methods_func, class_wrapper.full_name))
+
+        self.pygen_sink.unindent()
+        self.pygen_sink.writeln()
+
+        for class_wrapper in self.type_registry.ordered_classes:
+            if isinstance(class_wrapper.gccxml_definition, class_declaration_t):
+                continue # skip classes not fully defined
+            register_methods_func = "register_%s_methods"  % (class_wrapper.mangled_full_name,)
+            self.pygen_sink.writeln("def %s(root_module, cls):" % (register_methods_func,))
+            self.pygen_sink.indent()
             self._scan_class_methods(class_wrapper.gccxml_definition, class_wrapper)
+            self.pygen_sink.writeln("return")
+            self.pygen_sink.unindent()
+            self.pygen_sink.writeln()
+
 
     def scan_functions(self):
         assert self._types_scanned
@@ -552,15 +621,6 @@ class ModuleParser(object):
             if not self._class_has_public_destructor(cls):
                 kwargs.setdefault('is_singleton', True)
 
-    def _pygen_kwargs(self, kwargs):
-        l = []
-        for key, val in kwargs.iteritems():
-            if isinstance(val, CppClass):
-                l.append("%s=root_module[%r]" % (key, val.full_name))
-            else:
-                l.append("%s=%r" % (key, val))
-        return l
-
     def _scan_namespace_types(self, module, module_namespace, outer_class=None, pygen_register_function_name=None):
         root_module = module.get_root()
 
@@ -594,7 +654,7 @@ class ModuleParser(object):
         ## pygccxml by a typedef whose .type.declaration is a
         ## class_declaration_t instead of class_t.
         for alias in module_namespace.typedefs(function=self.location_filter,
-                                              recursive=False, allow_empty=True):
+                                               recursive=False, allow_empty=True):
 
             ## handle "typedef int Something;"
             if isinstance(alias.type, cpptypes.int_t):
@@ -632,7 +692,7 @@ class ModuleParser(object):
 
             class_wrapper = CppClass(alias.name, **kwargs)
             self.pygen_sink.writeln("module.add_class(CppClass(%s))" %
-                                    ", ".join([repr(alias.name)] + self._pygen_kwargs(kwargs)))
+                                    ", ".join([repr(alias.name)] + _pygen_kwargs(kwargs)))
 
             class_wrapper.gccxml_definition = cls
             module.add_class(class_wrapper)
@@ -779,7 +839,7 @@ class ModuleParser(object):
             class_wrapper = CppClass(cls_name, **kwargs)
 
             self.pygen_sink.writeln("module.add_class(CppClass(%s))" %
-                                    ", ".join([repr(cls_name)] + self._pygen_kwargs(kwargs)))
+                                    ", ".join([repr(cls_name)] + _pygen_kwargs(kwargs)))
 
             class_wrapper.gccxml_definition = cls
             module.add_class(class_wrapper)
@@ -930,6 +990,7 @@ class ModuleParser(object):
                         arguments.append(self.type_registry.lookup_parameter(arg.type, arg.name,
                                                                              parameter_annotations.get(arg.name, {}),
                                                                              arg.default_value))
+                        assert hasattr(arguments[-1], "_pygen_repr")
                     except (TypeLookupError, TypeConfigurationError), ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                                % (arg.type.decl_string, arg.name, member, ex),
@@ -958,14 +1019,23 @@ class ModuleParser(object):
                 else:
                     template_parameters = ()
 
-                method_wrapper = CppMethod(return_type, member.name, arguments,
-                                           is_const=member.has_const,
-                                           is_static=member.has_static,
-                                           is_virtual=is_virtual,
-                                           is_pure_virtual=pure_virtual,
-                                           template_parameters=template_parameters,
-                                           custom_template_method_name=custom_template_method_name,
-                                           visibility=member.access_type)
+                kwargs = {}
+                if member.has_const:
+                    kwargs['is_const'] = True
+                if member.has_static:
+                    kwargs['is_static'] = True
+                if is_virtual:
+                    kwargs['is_virtual'] = True
+                if pure_virtual:
+                    kwargs['is_pure_virtual'] = True
+                if template_parameters:
+                    kwargs['template_parameters'] = template_parameters
+                if custom_template_method_name:
+                    kwargs['custom_template_method_name'] = custom_template_method_name
+                if member.access_type != 'public':
+                    kwargs['visibility'] = member.access_type
+
+                method_wrapper = CppMethod(return_type, member.name, arguments, **kwargs)
                 method_wrapper.gccxml_definition = member
                 try:
                     class_wrapper.add_method(method_wrapper)
@@ -984,6 +1054,12 @@ class ModuleParser(object):
                 else:
                     for hook in self._post_scan_hooks:
                         hook(self, member, method_wrapper)
+                
+                arglist_repr = ("[" + ', '.join([arg._pygen_repr for arg in arguments]) +  "]")
+                self.pygen_sink.writeln("cls.add_method(CppMethod(%s))" %
+                                        ", ".join(
+                        [return_type._pygen_repr, repr(member.name), arglist_repr]
+                        + _pygen_kwargs(kwargs)))
 
             ## ------------ constructor --------------------
             elif isinstance(member, calldef.constructor_t):
@@ -1018,6 +1094,10 @@ class ModuleParser(object):
                     and isinstance(arguments[0], class_wrapper.ThisClassRefParameter)):
                     have_copy_constructor = True
 
+                arglist_repr = ("[" + ', '.join([arg._pygen_repr for arg in arguments]) +  "]")
+                self.pygen_sink.writeln("cls.add_constructor(CppConstructor(%s))" %
+                                        ", ".join([arglist_repr, "visibility=%r" % member.access_type]))
+
             ## ------------ attribute --------------------
             elif isinstance(member, variable_t):
                 if member.access_type == 'protected':
@@ -1039,9 +1119,13 @@ class ModuleParser(object):
                 if member.type_qualifiers.has_static:
                     class_wrapper.add_static_attribute(return_type, member.name,
                                                        is_const=type_traits.is_const(member.type))
+                    self.pygen_sink.writeln("cls.add_static_attribute(%s, %r, is_const=%r)" %
+                                            (return_type._pygen_repr, member.name, type_traits.is_const(member.type)))
                 else:
                     class_wrapper.add_instance_attribute(return_type, member.name,
                                                          is_const=type_traits.is_const(member.type))
+                    self.pygen_sink.writeln("cls.add_instance_attribute(%s, %r, is_const=%r)" %
+                                            (return_type._pygen_repr, member.name, type_traits.is_const(member.type)))
                 ## TODO: invoke post_scan_hooks
             elif isinstance(member, calldef.destructor_t):
                 pass
@@ -1140,6 +1224,8 @@ class ModuleParser(object):
             if not ok:
                 continue
 
+            #arglist_repr = ("[" + ', '.join([arg._pygen_repr for arg in arguments]) +  "]")
+
             if as_method is not None:
                 assert of_class is not None
                 #cpp_class = type_registry.find_class(of_class, (self.module_namespace_name or '::'))
@@ -1154,6 +1240,7 @@ class ModuleParser(object):
                 cpp_class = root_module[normalize_class_name(is_constructor_of, (self.module_namespace_name or '::'))]
                 function_wrapper = Function(return_type, fun.name, arguments)
                 cpp_class.add_constructor(function_wrapper)
+
                 function_wrapper.gccxml_definition = fun
                 continue
 
