@@ -25,6 +25,8 @@ import settings
 #    destructor_t, constructor_t, member_function_t
 from pygccxml.declarations.variable import variable_t
 
+ALWAYS_USE_PARAMETER_NEW = True
+
 ## ------------------------
 
 class ErrorHandler(settings.ErrorHandler):
@@ -184,26 +186,46 @@ class GccXmlTypeRegistry(object):
                                   % (", ".join([repr(name)] + _pygen_kwargs(kwargs))))
             return retval
 
+        ## class value
         if not is_pointer and not is_reference:
-            retval = cpp_class.ThisClassReturn(type_info.decl_string)
-            retval._pygen_repr = ("root_module[%r].ThisClassReturn(%r)" % (cpp_class.full_name, type_info.decl_string))
+            if ALWAYS_USE_PARAMETER_NEW:
+                retval = ReturnValue.new(cpp_class.full_name, **kwargs)
+                retval._pygen_repr = ("ReturnValue.new(%s)"
+                                      % (", ".join([repr(cpp_class.full_name)] + _pygen_kwargs(kwargs))))
+            else:
+                retval = cpp_class.ThisClassReturn(type_info.decl_string)
+                retval._pygen_repr = ("root_module[%r].ThisClassReturn(%r)" % (cpp_class.full_name, type_info.decl_string))
             return retval
+
+        ## pointer to class
         if is_pointer and not is_reference:
             if is_const and 'caller_owns_return' not in kwargs:
                 ## a pointer to const object "usually" means caller_owns_return=False
                 ## some guessing going on here, though..
                 kwargs['caller_owns_return'] = False
-            retval = cpp_class.ThisClassPtrReturn(type_info.decl_string, **kwargs)
-            retval._pygen_repr = ("root_module[%r].ThisClassPtrReturn(%s)"
-                                  % (cpp_class.full_name,
-                                     ", ".join([repr(type_info.decl_string)] + _pygen_kwargs(kwargs))))
+            if ALWAYS_USE_PARAMETER_NEW:
+                retval = ReturnValue.new(cpp_class.full_name+'*', **kwargs)
+                retval._pygen_repr = ("ReturnValue.new(%s)"
+                                      % (", ".join([repr(cpp_class.full_name + '*')] + _pygen_kwargs(kwargs))))
+            else:
+                retval = cpp_class.ThisClassPtrReturn(type_info.decl_string, **kwargs)
+                retval._pygen_repr = ("root_module[%r].ThisClassPtrReturn(%s)"
+                                      % (cpp_class.full_name,
+                                         ", ".join([repr(type_info.decl_string)] + _pygen_kwargs(kwargs))))
+                
             return retval
             
+        ## reference of class
         if not is_pointer and is_reference:
-            retval = cpp_class.ThisClassRefReturn(type_info.decl_string, **kwargs)
-            retval._pygen_repr = ("root_module[%r].ThisClassRefReturn(%s)"
-                                  % (cpp_class.full_name,
-                                     ", ".join([repr(type_info.decl_string)] + _pygen_kwargs(kwargs))))
+            if ALWAYS_USE_PARAMETER_NEW:
+                retval = ReturnValue.new(cpp_class.full_name+'&', **kwargs)
+                retval._pygen_repr = ("ReturnValue.new(%s)"
+                                      % (", ".join([repr(cpp_class.full_name + '&')] + _pygen_kwargs(kwargs))))
+            else:
+                retval = cpp_class.ThisClassRefReturn(type_info.decl_string, **kwargs)
+                retval._pygen_repr = ("root_module[%r].ThisClassRefReturn(%s)"
+                                      % (cpp_class.full_name,
+                                         ", ".join([repr(type_info.decl_string)] + _pygen_kwargs(kwargs))))
             return retval
 
         assert 0, "this line should not be reached"
@@ -250,32 +272,51 @@ class GccXmlTypeRegistry(object):
             return retval
 
         assert isinstance(cpp_class, CppClass)#, cpp_class.full_name
+
+        ## class value
         if not is_pointer and not is_reference:
-            retval = cpp_class.ThisClassParameter(type_info.decl_string, param_name, **kwargs)
-            retval._pygen_repr = ("root_module[%r].ThisClassParameter(%s)"
-                                  % (cpp_class.full_name,
-                                     ", ".join([repr(type_info.decl_string), repr(param_name)]
-                                               + _pygen_kwargs(kwargs))))
+            if ALWAYS_USE_PARAMETER_NEW:
+                retval = Parameter.new(cpp_class.full_name, param_name, **kwargs)
+                retval._pygen_repr = ("Parameter.new(%s)"
+                                      % (", ".join([repr(cpp_class.full_name), repr(param_name)] + _pygen_kwargs(kwargs))))
+            else:
+                retval = cpp_class.ThisClassParameter(type_info.decl_string, param_name, **kwargs)
+                retval._pygen_repr = ("root_module[%r].ThisClassParameter(%s)"
+                                      % (cpp_class.full_name,
+                                         ", ".join([repr(type_info.decl_string), repr(param_name)]
+                                                   + _pygen_kwargs(kwargs))))
             return retval
 
+        ## pointer to class
         if is_pointer and not is_reference:
             if is_const:
                 ## a pointer to const object usually means transfer_ownership=False
                 kwargs.setdefault('transfer_ownership', False)
-            retval = cpp_class.ThisClassPtrParameter(type_info.decl_string, param_name, **kwargs)
-            retval._pygen_repr = ("root_module[%r].ThisClassPtrParameter(%s)"
-                                  % (cpp_class.full_name,
-                                     ", ".join([repr(type_info.decl_string), repr(param_name)]
-                                               + _pygen_kwargs(kwargs))))
-            return retval
-
-        if not is_pointer and is_reference:
-            try:
-                retval = cpp_class.ThisClassRefParameter(type_info.decl_string, param_name, **kwargs)
-                retval._pygen_repr = ("root_module[%r].ThisClassRefParameter(%s)"
+            if ALWAYS_USE_PARAMETER_NEW:
+                retval = Parameter.new(cpp_class.full_name+'*', param_name, **kwargs)
+                retval._pygen_repr = ("Parameter.new(%s)"
+                                      % (", ".join([repr(cpp_class.full_name+'*'), repr(param_name)] + _pygen_kwargs(kwargs))))
+            else:
+                retval = cpp_class.ThisClassPtrParameter(type_info.decl_string, param_name, **kwargs)
+                retval._pygen_repr = ("root_module[%r].ThisClassPtrParameter(%s)"
                                       % (cpp_class.full_name,
                                          ", ".join([repr(type_info.decl_string), repr(param_name)]
                                                    + _pygen_kwargs(kwargs))))
+            return retval
+        
+        ## reference to class
+        if not is_pointer and is_reference:
+            try:
+                if ALWAYS_USE_PARAMETER_NEW:
+                    retval = Parameter.new(cpp_class.full_name+'&', param_name, **kwargs)
+                    retval._pygen_repr = ("Parameter.new(%s)"
+                                          % (", ".join([repr(cpp_class.full_name+'&'), repr(param_name)] + _pygen_kwargs(kwargs))))
+                else:
+                    retval = cpp_class.ThisClassRefParameter(type_info.decl_string, param_name, **kwargs)
+                    retval._pygen_repr = ("root_module[%r].ThisClassRefParameter(%s)"
+                                          % (cpp_class.full_name,
+                                             ", ".join([repr(type_info.decl_string), repr(param_name)]
+                                                       + _pygen_kwargs(kwargs))))
                 return retval
             except TypeError:
                 print >> sys.stderr, "** Error in %s class ref parameter" % cpp_class.full_name
