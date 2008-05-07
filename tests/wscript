@@ -56,7 +56,9 @@ def build(bld):
         ### Same thing, but using gccxml autoscanning
         bindgen = bld.create_obj('command-output')
         bindgen.stdout = 'foomodule2.cc'
-        bindgen.argv = [bindgen.input_file('foomodulegen-auto.py'), bindgen.input_file('foo.h')]
+        bindgen.argv = [bindgen.input_file('foomodulegen-auto.py'),
+                        bindgen.input_file('foo.h'),
+                        bindgen.output_file('foomodulegen_generated.py')]
         bindgen.command = bindgen.env['PYTHON']
         bindgen.command_is_external = True
         bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
@@ -67,6 +69,29 @@ def build(bld):
             'foomodule2.cc'
             ]
         obj.target = 'foo2'
+        obj.inst_var = 0 # do not install
+        obj.includes = '.'
+
+
+        ### Now using the generated python script
+        bindgen = bld.create_obj('command-output')
+        bindgen.stdout = 'foomodule3.cc'
+        bindgen.argv = [bindgen.input_file('foomodulegen3.py'),
+                        bindgen.output_file('foomodule3.cc')]
+        bindgen.command = bindgen.env['PYTHON']
+        bindgen.command_is_external = True
+        bindgen.prio = 56 # run after the previous bindgen
+
+        ## yes, this global manipulation of PYTHONPATH is kind of evil :-/
+        ## TODO: add WAF command-output support for customising command OS environment
+        os.environ["PYTHONPATH"] = os.pathsep.join([os.environ.get("PYTHONPATH", ''), bindgen.path.abspath(bindgen.env)])
+
+        obj = create_pyext_obj(bld, 'cpp')
+        obj.source = [
+            'foo.cc',
+            'foomodule3.cc'
+            ]
+        obj.target = 'foo3'
         obj.inst_var = 0 # do not install
         obj.includes = '.'
 

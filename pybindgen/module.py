@@ -10,37 +10,74 @@ from enum import Enum
 import utils
 
 
-class Module(object):
+class Module(dict):
     """
     A Module object takes care of generating the code for a Python module.
+
+    Module objects can be indexed dictionary style to access contained types.  Example::
+
+      >>> from enum import Enum
+      >>> from cppclass import CppClass
+      >>> m = Module("foo", cpp_namespace="foo")
+      >>> subm = m.add_cpp_namespace("subm")
+      >>> c1 = CppClass("Bar")
+      >>> m.add_class(c1)
+      >>> c2 = CppClass("Zbr")
+      >>> subm.add_class(c2)
+      >>> e1 = Enum("En1", ["XX"])
+      >>> m.add_enum(e1)
+      >>> e2 = Enum("En2", ["XX"])
+      >>> subm.add_enum(e2)
+      >>> m["Bar"] is c1
+      True
+      >>> m["foo::Bar"] is c1
+      True
+      >>> m["En1"] is e1
+      True
+      >>> m["foo::En1"] is e1
+      True
+      >>> m["badname"]
+      Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+      KeyError: 'badname'
+      >>> m["foo::subm::Zbr"] is c2
+      True
+      >>> m["foo::subm::En2"] is e2
+      True
+
     """
 
     def __init__(self, name, parent=None, docstring=None, cpp_namespace=None):
-        """Constructor
-        name -- module name
         """
-        self.name = name
+        @param name: module name
+        @param parent: parent L{module<Module>} (i.e. the one that contains this submodule) or None if this is a root module
+        @param docstring: docstring to use for this module
+        @param cpp_namespace: C++ namespace prefix associated with this module
+        """
+        super(Module, self).__init__()
         self.parent = parent
         self.docstring = docstring
         self.submodules = []
         self.enums = []
         self._forward_declarations_declared = False
 
-        if parent is None:
-            self.prefix = self.name
+        self.cpp_namespace = cpp_namespace
+        if self.parent is None:
             error_return = 'return;'
         else:
-            parent.submodules.append(self)
-            self.prefix = parent.prefix + "_" + self.name
+            self.parent.submodules.append(self)
             error_return = 'return NULL;'
 
-        self.cpp_namespace = cpp_namespace
+        self.prefix = None
+        self.init_function_name = None
+        self._name = None
+        self.name = name
+
         path = self.get_namespace_path()
         if path and path[0] == '::':
             del path[0]
         self.cpp_namespace_prefix = '::'.join(path)
 
-        self.init_function_name = "init%s" % self.prefix
         self.declarations = DeclarationsScope()
         self.functions = {} # name => OverloadedFunction
         self.classes = []
@@ -57,12 +94,36 @@ class Module(object):
             self.one_time_definitions = parent.one_time_definitions
             self.includes = parent.includes
 
+    def get_name(self):
+        return self._name
+
+    def set_name(self, name):
+        self._name = name
+
+        if self.parent is None:
+            self.prefix = self.name
+        else:
+            self.prefix = self.parent.prefix + "_" + self.name
+
+        self.init_function_name = "init%s" % self.prefix
+
+    
+    name = property(get_name, set_name)
+
     def get_submodule(self, submodule_name):
+        "get a submodule by its name"
         for submodule in self.submodules:
             if submodule.name == submodule_name:
                 return submodule
         raise ValueError("submodule %s not found" % submodule_name)
         
+    def get_root(self):
+        "returns the root module (even it is self)"
+        root = self
+        while root.parent is not None:
+            root = root.parent
+        return root
+
     def set_strip_prefix(self, prefix):
         """Sets the prefix string to be used when transforming a C
         function name into the python function name; the given prefix
@@ -122,6 +183,23 @@ class Module(object):
         wrapper.module = self
         overload.add(wrapper)
 
+    def register_type(self, name, full_name, type_wrapper):
+        """
+        Register a type wrapper with the module, for easy access in
+        the future.  Normally should not be called by the programmer,
+        as it is meant for internal pybindgen use and called automatically.
+        
+        @param name: type name without any C++ namespace prefix, or None
+        @param full_name: type name with a C++ namespace prefix, or None
+        @param type_wrapper: the wrapper object for the type (e.g. L{CppClass} or L{Enum})
+        """
+        module = self
+        if name:
+            module[name] = type_wrapper
+        if full_name:
+            while module is not None:
+                module[full_name] = type_wrapper
+                module = module.parent
 
     def add_class(self, class_):
         """
@@ -132,6 +210,7 @@ class Module(object):
         assert isinstance(class_, CppClass)
         class_.module = self
         self.classes.append(class_)
+        self.register_type(class_.name, class_.full_name, class_)
 
     def add_cpp_namespace(self, name):
         """
@@ -148,6 +227,7 @@ class Module(object):
         assert isinstance(enum, Enum)
         self.enums.append(enum)
         enum.module = self
+        self.register_type(enum.name, enum.full_name, enum)
 
     def declare_one_time_definition(self, definition_name):
         """
@@ -198,14 +278,22 @@ class Module(object):
 
     def get_namespace_path(self):
         """Get the full [root_namespace, namespace, namespace,...] path """
-        if self.cpp_namespace is None:
+        if not self.cpp_namespace:
             names = []
         else:
-            names = [self.cpp_namespace]
+            if self.cpp_namespace == '::':
+                names = []
+            else:
+                names = self.cpp_namespace.split('::')
+                if not names[0]:
+                    del names[0]
         parent = self.parent
         while parent is not None:
-            if parent.cpp_namespace is not None:
-                names.insert(0, parent.cpp_namespace)
+            if parent.cpp_namespace and parent.cpp_namespace != '::':
+                parent_names = parent.cpp_namespace.split('::')
+                if not parent_names[0]:
+                    del parent_names[0]
+                names = parent_names + names
             parent = parent.parent
         return names
 

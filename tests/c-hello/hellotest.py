@@ -2,7 +2,7 @@ import sys
 import gc
 import os.path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                '..', '..', 'build', 'default', 'examples', 'c-hello'))
+                                '..', '..', 'build', 'default', 'tests', 'c-hello'))
 import hello
 import unittest
 
