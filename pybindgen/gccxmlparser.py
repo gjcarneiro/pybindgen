@@ -1202,6 +1202,8 @@ class ModuleParser(object):
         if not have_trivial_constructor:
             if type_traits.has_trivial_constructor(cls):
                 class_wrapper.add_constructor(CppConstructor([]))
+                self.pygen_sink.writeln("cls.add_constructor(CppConstructor([]))")
+
         if not have_copy_constructor:
             try: # pygccxml > 0.9
                 has_copy_constructor = type_traits.has_copy_constructor(cls)
