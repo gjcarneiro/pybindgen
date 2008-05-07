@@ -125,12 +125,13 @@ def set_options(opt):
 
     optgrp = opt.add_option_group("PyBindGen Options")
 
-    optgrp.add_option('--generate-version',
-                      help=('Generate a new pybindgen/version.py file from version control'
-                            ' introspection.  Only works from a bzr checkout tree, and is'
-                            ' meant to be used by pybindgen developers only.'),
-                      action="store_true", default=False,
-                      dest='generate_version')
+    if os.path.isdir(".bzr"):
+        optgrp.add_option('--generate-version',
+                          help=('Generate a new pybindgen/version.py file from version control'
+                                ' introspection.  Only works from a bzr checkout tree, and is'
+                                ' meant to be used by pybindgen developers only.'),
+                          action="store_true", default=False,
+                          dest='generate_version')
 
     optgrp.add_option('--generate-api-docs',
                       help=('Generate API html documentation, using epydoc.'),
@@ -170,7 +171,7 @@ def configure(conf):
 
 
 def build(bld):
-    if Params.g_options.generate_version:
+    if getattr(Params.g_options, 'generate_version', False):
         generate_version_py(force=True)
 
     bld.add_subdirs('pybindgen')
