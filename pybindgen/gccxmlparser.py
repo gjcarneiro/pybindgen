@@ -909,6 +909,8 @@ class ModuleParser(object):
                 #other_class = type_registry.find_class(operator.return_type.decl_string, '::')
                 other_class = root_module[normalize_class_name(operator.return_type.decl_string, '::')]
                 class_wrapper.implicitly_converts_to(other_class)
+                self.pygen_sink.writeln("root_module[%r].implicitly_converts_to(root_module[%r])"
+                                        % (class_wrapper.full_name, other_class.full_name))
 
         pygen_function_closed = False
         if outer_class is None:
