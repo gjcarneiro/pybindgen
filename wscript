@@ -123,17 +123,24 @@ def set_options(opt):
     opt.tool_options('compiler_cc')
     opt.tool_options('compiler_cxx')
 
-    opt.add_option('--generate-version',
-                   help=('Generate a new pybindgen/version.py file from version control'
-                         ' introspection.  Only works from a bzr checkout tree, and is'
-                         ' meant to be used by pybindgen developers only.'),
-                   action="store_true", default=False,
-                   dest='generate_version')
+    optgrp = opt.add_option_group("PyBindGen Options")
 
-    opt.add_option('--generate-api-docs',
-                   help=('Generate API html documentation, using epydoc.'),
-                   action="store_true", default=False,
-                   dest='generate_api_docs')
+    optgrp.add_option('--generate-version',
+                      help=('Generate a new pybindgen/version.py file from version control'
+                            ' introspection.  Only works from a bzr checkout tree, and is'
+                            ' meant to be used by pybindgen developers only.'),
+                      action="store_true", default=False,
+                      dest='generate_version')
+
+    optgrp.add_option('--generate-api-docs',
+                      help=('Generate API html documentation, using epydoc.'),
+                      action="store_true", default=False,
+                      dest='generate_api_docs')
+
+    optgrp.add_option('--examples',
+                      help=('Compile the example programs.'),
+                      action="store_true", default=False,
+                      dest='examples')
 
 def configure(conf):
     ## Write a pybindgen/version.py file containing the project version
@@ -167,7 +174,8 @@ def build(bld):
         generate_version_py(force=True)
 
     bld.add_subdirs('pybindgen')
-    bld.add_subdirs('examples')
+    if Params.g_options.examples:
+        bld.add_subdirs('examples')
     if Params.g_commands['check'] or Params.g_commands['clean']:
         bld.add_subdirs('tests')
 
