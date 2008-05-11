@@ -155,7 +155,7 @@ def configure(conf):
         if Params.g_options.debug_level == 'ultradebug':
             conf.env.append_value('CXXFLAGS', ['-Wextra'])
     conf.check_tool('python')
-    conf.check_python_version((2,4,2))
+    conf.check_python_version((2,3))
     conf.check_python_headers()
 
     gccxml = conf.find_program('gccxml')
@@ -163,7 +163,7 @@ def configure(conf):
         conf.env['ENABLE_PYGCCXML'] = False
     else:
 	try:
-		conf.check_python_module('pygccxml')
+            conf.check_python_module('pygccxml')
 	except Configure.ConfigurationError:
             conf.env['ENABLE_PYGCCXML'] = False
         else:
