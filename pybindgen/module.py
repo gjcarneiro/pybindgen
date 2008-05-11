@@ -27,21 +27,25 @@ Modules can be associated with specific C++ namespaces.  This means,
 for instance, that any C++ class wrapped inside that module must
 belong to that C++ namespace.  Example::
 
-   mod = Module("foo", cpp_namespace="::foo")
-   cls = CppClass("Bar")
-   mod.add_class(cls)
-   cls.full_name # prints "foo::Bar"
+    >>> from cppclass import *
+    >>> mod = Module("foo", cpp_namespace="::foo")
+    >>> cls = CppClass("Bar")
+    >>> mod.add_class(cls)
+    >>> cls.full_name
+    'foo::Bar'
 
 When we have a toplevel C++ namespace which contains another nested
 namespace, we want to wrap the nested namespace as a Python
 sub-module.  The method L{ModuleBase.add_cpp_namespace} makes it easy
 to create sub-modules for wrapping nested namespaces.  For instance::
 
-   mod = Module("foo", cpp_namespace="::foo")
-   submod = mod.add_cpp_namespace('xpto')
-   cls = CppClass("Bar")
-   submod.add_class(cls)
-   cls.full_name # prints "foo::xpto::Bar"
+    >>> from cppclass import *
+    >>> mod = Module("foo", cpp_namespace="::foo")
+    >>> submod = mod.add_cpp_namespace('xpto')
+    >>> cls = CppClass("Bar")
+    >>> submod.add_class(cls)
+    >>> cls.full_name
+    'foo::xpto::Bar'
 
 """
 
