@@ -9,6 +9,7 @@ from typehandlers import codesink
 import overloading
 import settings
 import utils
+import warnings
 
 
 class Function(ForwardWrapperBase):
@@ -27,6 +28,13 @@ class Function(ForwardWrapperBase):
         """
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
+        
+        ## backward compatibility check
+        if isinstance(return_value, str) and isinstance(function_name, ReturnValue):
+            warnings.warn("Function has changed API; see the API documentation (but trying to correct...)",
+                          DeprecationWarning, stacklevel=2)
+            function_name, return_value = return_value, function_name
+
         super(Function, self).__init__(
             return_value, parameters,
             parse_error_return="return NULL;",
