@@ -13,8 +13,7 @@ def my_module_gen(out_file):
     mod = Module('c')
     mod.add_include('"c.h"')
 
-    C = CppClass('C')
-    mod.add_class(C)
+    C = mod.add_class('C')
     C.add_constructor(CppConstructor([]))
     C.add_constructor(CppConstructor([Parameter.new('uint32_t', 'c')]))
     C.add_method(CppMethod(ReturnValue.new('void'), 'DoA', [], is_static=True))

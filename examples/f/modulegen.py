@@ -13,8 +13,7 @@ def my_module_gen(out_file):
     mod = Module('f')
     mod.add_include('"f.h"')
 
-    FBase = CppClass('FBase', allow_subclassing=True)
-    mod.add_class(FBase)
+    FBase = mod.add_class('FBase', allow_subclassing=True)
     
     FBase.add_constructor(CppConstructor([]))
     FBase.add_method(CppMethod(ReturnValue.new('void'), 'DoA', [], is_virtual=True, is_pure_virtual=True))

@@ -13,8 +13,7 @@ def my_module_gen(out_file):
     mod = Module('e')
     mod.add_include('"e.h"')
 
-    E = CppClass('E', decref_method='Unref', incref_method='Ref')
-    mod.add_class(E)
+    E = mod.add_class('E', decref_method='Unref', incref_method='Ref')
     if 1:
         E.add_constructor(Function(ReturnValue.new("E*", caller_owns_return=True), "E::CreateWithRef", []))
     else:

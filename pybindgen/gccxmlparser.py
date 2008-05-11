@@ -742,12 +742,11 @@ class ModuleParser(object):
             kwargs.setdefault("automatic_type_narrowing", False)
             kwargs.setdefault("allow_subclassing", False)
 
-            class_wrapper = CppClass(alias.name, **kwargs)
-            self.pygen_sink.writeln("module.add_class(CppClass(%s))" %
+            class_wrapper = module.add_class(alias.name, **kwargs)
+            self.pygen_sink.writeln("module.add_class(%s)" %
                                     ", ".join([repr(alias.name)] + _pygen_kwargs(kwargs)))
 
             class_wrapper.gccxml_definition = cls
-            module.add_class(class_wrapper)
             registered_classes[cls] = class_wrapper
             if cls.name != alias.name:
                 class_wrapper.register_alias(normalize_name(cls.name))
@@ -882,13 +881,12 @@ class ModuleParser(object):
                 kwargs["template_parameters"] = template_parameters
             if custom_template_class_name:
                 kwargs["custom_template_class_name"] = custom_template_class_name
-            class_wrapper = CppClass(cls_name, **kwargs)
+            class_wrapper = module.add_class(cls_name, **kwargs)
 
-            self.pygen_sink.writeln("module.add_class(CppClass(%s))" %
+            self.pygen_sink.writeln("module.add_class(%s)" %
                                     ", ".join([repr(cls_name)] + _pygen_kwargs(kwargs)))
 
             class_wrapper.gccxml_definition = cls
-            module.add_class(class_wrapper)
             registered_classes[cls] = class_wrapper
             if alias:
                 class_wrapper.register_alias(normalize_name(alias))

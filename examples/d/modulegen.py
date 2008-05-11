@@ -13,8 +13,7 @@ def my_module_gen(out_file):
     mod = Module('d')
     mod.add_include('"d.h"')
 
-    D = CppClass('D', free_function='DDestroy')
-    mod.add_class(D)
+    D = mod.add_class('D', free_function='DDestroy')
     D.add_instance_attribute(ReturnValue.new('bool'), 'd')
     D.add_constructor(Function(ReturnValue.new("D*", caller_owns_return=True), "DCreate", []))
     mod.add_function(Function(ReturnValue.new('void'), 'DDoA', [Parameter.new('D*', 'd', transfer_ownership=False)]))

@@ -29,10 +29,8 @@ belong to that C++ namespace.  Example::
 
     >>> from cppclass import *
     >>> mod = Module("foo", cpp_namespace="::foo")
-    >>> cls = CppClass("Bar")
-    >>> mod.add_class(cls)
-    >>> cls.full_name
-    'foo::Bar'
+    >>> mod.add_class("Bar")
+    <pybindgen.CppClass 'foo::Bar'>
 
 When we have a toplevel C++ namespace which contains another nested
 namespace, we want to wrap the nested namespace as a Python
@@ -42,10 +40,8 @@ to create sub-modules for wrapping nested namespaces.  For instance::
     >>> from cppclass import *
     >>> mod = Module("foo", cpp_namespace="::foo")
     >>> submod = mod.add_cpp_namespace('xpto')
-    >>> cls = CppClass("Bar")
-    >>> submod.add_class(cls)
-    >>> cls.full_name
-    'foo::xpto::Bar'
+    >>> submod.add_class("Bar")
+    <pybindgen.CppClass 'foo::xpto::Bar'>
 
 """
 
@@ -55,6 +51,7 @@ from typehandlers.codesink import MemoryCodeSink
 from cppclass import CppClass
 from enum import Enum
 import utils
+import warnings
 
 
 class ModuleBase(dict):
@@ -65,10 +62,8 @@ class ModuleBase(dict):
       >>> from cppclass import CppClass
       >>> m = Module("foo", cpp_namespace="foo")
       >>> subm = m.add_cpp_namespace("subm")
-      >>> c1 = CppClass("Bar")
-      >>> m.add_class(c1)
-      >>> c2 = CppClass("Zbr")
-      >>> subm.add_class(c2)
+      >>> c1 = m.add_class("Bar")
+      >>> c2 = subm.add_class("Zbr")
       >>> e1 = Enum("En1", ["XX"])
       >>> m.add_enum(e1)
       >>> e2 = Enum("En2", ["XX"])
@@ -248,7 +243,7 @@ class ModuleBase(dict):
                 module[full_name] = type_wrapper
                 module = module.parent
 
-    def add_class(self, class_):
+    def _add_class_obj(self, class_):
         """
         Add a class to the module.
 
@@ -258,6 +253,20 @@ class ModuleBase(dict):
         class_.module = self
         self.classes.append(class_)
         self.register_type(class_.name, class_.full_name, class_)
+
+    def add_class(self, *args, **kwargs):
+        """
+        Add a class to the module. See the documentation for
+        L{CppClass.__init__} for information on accepted parameters.
+        """
+        if len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], CppClass):
+            cls = args[0]
+            warnings.warn("add_class has changed API; see the API documentation",
+                          DeprecationWarning, stacklevel=2)
+        else:
+            cls = CppClass(*args, **kwargs)
+        self._add_class_obj(cls)
+        return cls
 
     def add_cpp_namespace(self, name):
         """

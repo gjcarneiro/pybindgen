@@ -11,18 +11,15 @@ def my_module_gen(out_file):
     mod = Module('h')
     mod.add_include('"h.h"')
 
-    H = CppClass('H')
-    mod.add_class(H)
+    H = mod.add_class('H')
     H.add_constructor(CppConstructor([]))
     H.add_method(CppMethod(ReturnValue.new('void'), 'Do', []))
 
-    Inner = CppClass('Inner', outer_class=H)
-    mod.add_class(Inner)
+    Inner = mod.add_class('Inner', outer_class=H)
     Inner.add_constructor(CppConstructor([]))
     Inner.add_method(CppMethod (ReturnValue.new('void'), 'Do', []))
 
-    MostInner = CppClass('MostInner', outer_class=Inner)
-    mod.add_class (MostInner)
+    MostInner = mod.add_class('MostInner', outer_class=Inner)
     MostInner.add_constructor (CppConstructor([]))
     MostInner.add_method (CppMethod (ReturnValue.new('void'), 'Do', []))
 

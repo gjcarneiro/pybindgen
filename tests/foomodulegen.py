@@ -22,8 +22,7 @@ def my_module_gen(out_file):
 
     mod = Module('foo')
 
-    Foo = CppClass('Foo', automatic_type_narrowing=True)
-    mod.add_class(Foo)
+    Foo = mod.add_class('Foo', automatic_type_narrowing=True)
 
     Foo.add_static_attribute(ReturnValue.new('int'), 'instance_count')
     Foo.add_constructor(
@@ -32,21 +31,18 @@ def my_module_gen(out_file):
     Foo.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
     Foo.add_method(CppMethod(ReturnValue.new('bool'), 'is_initialized', [], is_const=True))
 
-    Zoo = CppClass('Zoo', automatic_type_narrowing=True)
-    mod.add_class(Zoo)
+    Zoo = mod.add_class('Zoo', automatic_type_narrowing=True)
     Zoo.add_constructor(
         CppConstructor([Parameter.new('std::string', 'datum')]))
     Zoo.add_constructor(CppConstructor([]))
     Zoo.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
     Zoo.implicitly_converts_to(Foo)
 
-    Foobar = CppClass('Foobar')
-    mod.add_class(Foobar)
+    Foobar = mod.add_class('Foobar')
     Foobar.add_static_attribute(ReturnValue.new('int'), 'instance_count')
 
 
-    Bar = CppClass('Bar', parent=Foo)
-    mod.add_class(Bar)
+    Bar = mod.add_class('Bar', parent=Foo)
     Bar.inherit_default_constructors()
     ## a static method..
     Bar.add_method(CppMethod(ReturnValue.new('std::string'), 'Hooray', [], is_static=True))
@@ -57,9 +53,8 @@ def my_module_gen(out_file):
 
 
     ## Zbr is a reference counted class
-    Zbr = CppClass('Zbr', incref_method='Ref', decref_method='Unref',
-                   peekref_method="GetReferenceCount", allow_subclassing=True)
-    mod.add_class(Zbr)
+    Zbr = mod.add_class('Zbr', incref_method='Ref', decref_method='Unref',
+                        peekref_method="GetReferenceCount", allow_subclassing=True)
 
     def helper_class_hook(helper_class):
         helper_class.add_custom_method(
@@ -103,8 +98,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
 
 
-    SomeObject = CppClass('SomeObject', allow_subclassing=True)
-    mod.add_class(SomeObject)
+    SomeObject = mod.add_class('SomeObject', allow_subclassing=True)
 
     SomeObject.add_instance_attribute(ReturnValue.new('Foo'), 'foo',
                                       getter='get_foo_value',
@@ -277,8 +271,7 @@ int %s::custom_method_added_by_a_hook(int x)
     xpto.add_function(Function(ReturnValue.new('void'), 'set_foo_type', [Parameter.new("FooType", 'type')]))
 
 
-    xpto_SomeClass = CppClass('SomeClass')
-    xpto.add_class(xpto_SomeClass)
+    xpto_SomeClass = xpto.add_class('SomeClass')
     xpto_SomeClass.add_constructor(CppConstructor([]))
 
     ## ---- some implicity conversion APIs
@@ -287,28 +280,24 @@ int %s::custom_method_added_by_a_hook(int x)
                                [Parameter.new('Foo', 'foo')]))
     mod.add_function(Function(ReturnValue.new('Foo'), 'function_that_returns_foo', []))
     
-    cls = CppClass('ClassThatTakesFoo')
-    mod.add_class(cls)
+    cls = mod.add_class('ClassThatTakesFoo')
     cls.add_constructor(CppConstructor([Parameter.new('Foo', 'foo')]))
     cls.add_method(CppMethod(ReturnValue.new('Foo'), 'get_foo', []))
 
-    cls = CppClass('SingletonClass', is_singleton=True)
-    mod.add_class(cls)
+    cls = mod.add_class('SingletonClass', is_singleton=True)
     cls.add_method(CppMethod(ReturnValue.new('SingletonClass*', caller_owns_return=True),
                              'GetInstance', [], is_static=True))
 
 
     ## A class that has no public default constructor...
-    cls = CppClass('InterfaceId', is_singleton=True)
-    mod.add_class(cls)
+    cls = mod.add_class('InterfaceId', is_singleton=True)
     ## A function that returns such a class...
     mod.add_function(Function(ReturnValue.new('InterfaceId'),
                               'make_interface_id', []))
 
 
     ## A class the cannot be constructed; this will cause late CodeGenerationError's
-    cls = CppClass('CannotBeConstructed')
-    mod.add_class(cls)
+    cls = mod.add_class('CannotBeConstructed')
     cls.set_cannot_be_constructed("no reason")
     cls.add_method(CppMethod(ReturnValue.new('CannotBeConstructed'),
                              'get_value', [], is_static=True))
@@ -321,8 +310,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
 
     ## A nested class
-    NestedClass = CppClass('NestedClass', automatic_type_narrowing=True, outer_class=SomeObject)
-    mod.add_class(NestedClass)
+    NestedClass = mod.add_class('NestedClass', automatic_type_narrowing=True, outer_class=SomeObject)
     NestedClass.add_static_attribute(ReturnValue.new('int'), 'instance_count')
     NestedClass.add_constructor(
         CppConstructor([Parameter.new('std::string', 'datum')]))
@@ -335,8 +323,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
 
 
-    AbstractBaseClass2 = CppClass('AbstractBaseClass2', allow_subclassing=True)
-    mod.add_class(AbstractBaseClass2)
+    AbstractBaseClass2 = mod.add_class('AbstractBaseClass2', allow_subclassing=True)
 
     AbstractBaseClass2.add_method(CppMethod(ReturnValue.new('int'), 'invoke_private_virtual',
                                             [Parameter.new('int', 'x')], is_const=True))
@@ -355,15 +342,13 @@ int %s::custom_method_added_by_a_hook(int x)
 
 
 
-    AbstractXpto = CppClass('AbstractXpto', allow_subclassing=True)
-    mod.add_class(AbstractXpto)
+    AbstractXpto = mod.add_class('AbstractXpto', allow_subclassing=True)
     AbstractXpto.add_method(CppMethod(ReturnValue.new('void'), 'something',
                                       [Parameter.new('int', 'x')], is_const=True,
                                       is_virtual=True, is_pure_virtual=True))
     AbstractXpto.add_constructor(CppConstructor([]))
 
-    AbstractXptoImpl = CppClass('AbstractXptoImpl', parent=AbstractXpto)
-    mod.add_class(AbstractXptoImpl)
+    AbstractXptoImpl = mod.add_class('AbstractXptoImpl', parent=AbstractXpto)
     AbstractXptoImpl.add_method(CppMethod(ReturnValue.new('void'), 'something',
                                           [Parameter.new('int', 'x')], is_const=True,
                                           is_virtual=True, is_pure_virtual=False))
