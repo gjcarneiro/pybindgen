@@ -87,7 +87,7 @@ def _pygen_kwargs(kwargs):
 class GccXmlTypeRegistry(object):
     def __init__(self, root_module):
         """
-        @root_module: the root L{Module} object
+        @param root_module: the root L{Module} object
         """
         assert isinstance(root_module, Module)
         assert root_module.parent is None
@@ -924,11 +924,9 @@ class ModuleParser(object):
                     self.pygen_sink.writeln()
                     self.pygen_sink.writeln("## Register a nested module for the namespace %s" % nested_namespace.name)
                     self.pygen_sink.writeln()
-                    nested_module = Module(name=nested_namespace.name, parent=module, cpp_namespace=nested_namespace.name)
+                    nested_module = module.add_cpp_namespace(nested_namespace.name)
                     nested_modules.append(nested_module)
-                    self.pygen_sink.writeln(
-                        "nested_module = Module(name=%r, parent=module, cpp_namespace=%r)"
-                        % (nested_namespace.name, nested_namespace.name))
+                    self.pygen_sink.writeln("nested_module = module.add_cpp_namespace(%r)" % nested_namespace.name)
                     nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
                     self.pygen_sink.writeln("%s(nested_module)" % nested_module_type_init_func)
                     self.pygen_sink.writeln()

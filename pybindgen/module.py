@@ -10,7 +10,7 @@ from enum import Enum
 import utils
 
 
-class Module(dict):
+class ModuleBase(dict):
     """
     A Module object takes care of generating the code for a Python module.
 
@@ -49,12 +49,13 @@ class Module(dict):
 
     def __init__(self, name, parent=None, docstring=None, cpp_namespace=None):
         """
+        Note: this is an abstract base class, see L{Module}
         @param name: module name
         @param parent: parent L{module<Module>} (i.e. the one that contains this submodule) or None if this is a root module
         @param docstring: docstring to use for this module
         @param cpp_namespace: C++ namespace prefix associated with this module
         """
-        super(Module, self).__init__()
+        super(ModuleBase, self).__init__()
         self.parent = parent
         self.docstring = docstring
         self.submodules = []
@@ -215,10 +216,15 @@ class Module(dict):
     def add_cpp_namespace(self, name):
         """
         Add a nested module namespace corresponding to a C++ namespace.
-        Returns a Module object that maps to this namespace.
+
+        @param name: name of C++ namespace (just the last component,
+        not full scoped name); this also becomes the name of the
+        submodule.
+
+        @return: a SubModule object that maps to this namespace.
         """
         name = utils.ascii(name)
-        return Module(name, parent=self, cpp_namespace=name)
+        return SubModule(name, parent=self, cpp_namespace=name)
 
     def add_enum(self, enum):
         """
@@ -297,15 +303,8 @@ class Module(dict):
             parent = parent.parent
         return names
 
-    def generate(self, code_sink):
-        """Generates the module to a code sink"""
-        includes_code_sink = code_sink
-        main_code_sink = MemoryCodeSink()
-        self.do_generate(main_code_sink, includes_code_sink)
-        main_code_sink.flush_to(code_sink)
-
     def do_generate(self, code_sink, includes_code_sink):
-        """Generates the module"""
+        """Generates the module; internal method, do not call"""
         if self.parent is None:
             if not self._forward_declarations_declared:
                 self.generate_forward_declarations(code_sink)
@@ -401,3 +400,32 @@ class Module(dict):
         ## append the 'header' section to the 'includes' section
         self.header.flush_to(includes_code_sink)
         
+
+class Module(ModuleBase):
+    def __init__(self, name, docstring=None, cpp_namespace=None):
+        """
+        @param name: module name
+        @param docstring: docstring to use for this module
+        @param cpp_namespace: C++ namespace prefix associated with this module
+        """
+        super(Module, self).__init__(name, docstring=docstring, cpp_namespace=cpp_namespace)
+
+    def generate(self, code_sink):
+        """Generates the module to a code sink"""
+        includes_code_sink = code_sink
+        main_code_sink = MemoryCodeSink()
+        self.do_generate(main_code_sink, includes_code_sink)
+        main_code_sink.flush_to(code_sink)
+
+
+
+class SubModule(ModuleBase):
+    def __init__(self, name, parent, docstring=None, cpp_namespace=None):
+        """
+        @param parent: parent L{module<Module>} (i.e. the one that contains this submodule)
+        @param name: name of the submodule
+        @param docstring: docstring to use for this module
+        @param cpp_namespace: C++ namespace component associated with this module
+        """
+        super(SubModule, self).__init__(name, parent, docstring=docstring, cpp_namespace=cpp_namespace)
+
