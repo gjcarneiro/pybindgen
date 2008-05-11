@@ -1306,13 +1306,13 @@ class ModuleParser(object):
                 #cpp_class = type_registry.find_class(of_class, (self.module_namespace_name or '::'))
                 cpp_class = root_module[normalize_class_name(of_class, (self.module_namespace_name or '::'))]
 
-                function_wrapper = Function(return_type, fun.name, arguments)
+                function_wrapper = Function(fun.name, return_type, arguments)
                 cpp_class.add_method(function_wrapper, name=as_method)
                 function_wrapper.gccxml_definition = fun
 
                 self.pygen_sink.writeln("root_module[%r].add_method(Function(%s), name=%r)" %
                                         (cpp_class.full_name,
-                                         ", ".join([return_type._pygen_repr, repr(fun.name), arglist_repr]),
+                                         ", ".join([repr(fun.name), return_type._pygen_repr, arglist_repr]),
                                          as_method))
 
                 continue
@@ -1320,14 +1320,14 @@ class ModuleParser(object):
             if is_constructor_of is not None:
                 #cpp_class = type_registry.find_class(is_constructor_of, (self.module_namespace_name or '::'))
                 cpp_class = root_module[normalize_class_name(is_constructor_of, (self.module_namespace_name or '::'))]
-                function_wrapper = Function(return_type, fun.name, arguments)
+                function_wrapper = Function(fun.name, return_type, arguments)
                 cpp_class.add_constructor(function_wrapper)
 
                 function_wrapper.gccxml_definition = fun
 
                 self.pygen_sink.writeln("root_module[%r].add_constructor(Function(%s))" %
                                         (cpp_class.full_name,
-                                         ", ".join([return_type._pygen_repr, repr(fun.name), arglist_repr]),))
+                                         ", ".join([repr(fun.name), return_type._pygen_repr, arglist_repr]),))
 
                 continue
 
@@ -1336,7 +1336,7 @@ class ModuleParser(object):
             if templates.is_instantiation(fun.demangled_name):
                 kwargs['template_parameters'] = templates.args(fun.demangled_name)
             
-            func_wrapper = Function(return_type, fun.name, arguments, **kwargs)
+            func_wrapper = Function(fun.name, return_type, arguments, **kwargs)
             func_wrapper.gccxml_definition = fun
             module.add_function(func_wrapper, name=alt_name)
 
@@ -1345,7 +1345,7 @@ class ModuleParser(object):
             else:
                 _pygen_altname_arg = ', name=%r' % alt_name
             self.pygen_sink.writeln("module.add_function(Function(%s)%s)" %
-                                    (", ".join([return_type._pygen_repr, repr(fun.name), arglist_repr] + _pygen_kwargs(kwargs)),
+                                    (", ".join([repr(fun.name), return_type._pygen_repr, arglist_repr] + _pygen_kwargs(kwargs)),
                                      _pygen_altname_arg))
 
             for hook in self._post_scan_hooks:

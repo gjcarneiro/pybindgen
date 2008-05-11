@@ -18,8 +18,8 @@ def my_module_gen(out_file):
     B.add_instance_attribute(ReturnValue.new('uint32_t'), 'b_a')
     B.add_instance_attribute(ReturnValue.new('uint32_t'), 'b_b')
 
-    mod.add_function(Function(ReturnValue.new('void'), 'BDoA', [Parameter.new('B', 'b')]))
-    mod.add_function(Function(ReturnValue.new('B'), 'BDoB', []))
+    mod.add_function(Function('BDoA', ReturnValue.new('void'), [Parameter.new('B', 'b')]))
+    mod.add_function(Function('BDoB', ReturnValue.new('B'), []))
 
     mod.generate(FileCodeSink(out_file) )
 

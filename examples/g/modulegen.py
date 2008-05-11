@@ -11,11 +11,11 @@ def my_module_gen(out_file):
     mod = Module('g')
     mod.add_include('"g.h"')
 
-    mod.add_function(Function(ReturnValue.new('void'), 'GDoA', []))
+    mod.add_function(Function('GDoA', ReturnValue.new('void'), []))
     G = mod.add_cpp_namespace("G")
-    G.add_function(Function(ReturnValue.new('void'), 'GDoB', []))
+    G.add_function(Function('GDoB', ReturnValue.new('void'), []))
     GInner = G.add_cpp_namespace("GInner")
-    GInner.add_function(Function(ReturnValue.new('void'), 'GDoC', []))
+    GInner.add_function(Function('GDoC', ReturnValue.new('void'), []))
 
     mod.generate(FileCodeSink(out_file))
 

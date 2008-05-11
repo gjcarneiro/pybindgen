@@ -16,12 +16,14 @@ class Function(ForwardWrapperBase):
     Class that generates a wrapper to a C function.
     """
 
-    def __init__(self, return_value, function_name, parameters, docstring=None, unblock_threads=None,
+    def __init__(self, function_name, return_value, parameters, docstring=None, unblock_threads=None,
                  template_parameters=()):
         """
-        return_value -- the function return value
-        function_name -- name of the C function
-        parameters -- the function parameters
+        @param function_name: name of the C function
+        @param return_value: the function return value
+        @type return_value: L{ReturnValue}
+        @param parameters: the function parameters
+        @type parameters: list of L{Parameter}
         """
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
@@ -31,6 +33,7 @@ class Function(ForwardWrapperBase):
             error_return="return NULL;",
             unblock_threads=unblock_threads)
         self._module = None
+        assert isinstance(function_name, str)
         self.function_name = function_name
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
@@ -44,8 +47,8 @@ class Function(ForwardWrapperBase):
         function wrapper clone contains copies of all parameters, so
         they can be modified at will.
         """
-        func = Function(self.return_value,
-                        self.function_name,
+        func = Function(self.function_name,
+                        self.return_value,
                         [copy(param) for param in self.parameters],
                         docstring=self.docstring)
         func._module = self._module
@@ -156,7 +159,7 @@ class CustomFunctionWrapper(Function):
 
     def __init__(self, function_name, wrapper_name, wrapper_body,
                  flags=('METH_VARARGS', 'METH_KEYWORDS')):
-        super(CustomFunctionWrapper, self).__init__(ReturnValue.new('void'), function_name, [])
+        super(CustomFunctionWrapper, self).__init__(function_name, ReturnValue.new('void'), [])
         self.wrapper_base_name = wrapper_name
         self.wrapper_actual_name = wrapper_name
         self.meth_flags = list(flags)

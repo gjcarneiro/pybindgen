@@ -11,9 +11,9 @@ def my_module_gen(out_file):
     mod = Module('a')
     mod.add_include('"a.h"')
 
-    mod.add_function(Function(ReturnValue.new('void'), 'ADoA', []))
-    mod.add_function(Function(ReturnValue.new('void'), 'ADoB', [Parameter.new('uint32_t', 'b')]))
-    mod.add_function(Function(ReturnValue.new('uint32_t'), 'ADoC', []))
+    mod.add_function(Function('ADoA', ReturnValue.new('void'), []))
+    mod.add_function(Function('ADoB', ReturnValue.new('void'), [Parameter.new('uint32_t', 'b')]))
+    mod.add_function(Function('ADoC', ReturnValue.new('uint32_t'), []))
 
     mod.generate(FileCodeSink(out_file) )
 

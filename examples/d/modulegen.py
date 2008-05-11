@@ -15,10 +15,10 @@ def my_module_gen(out_file):
 
     D = mod.add_class('D', free_function='DDestroy')
     D.add_instance_attribute(ReturnValue.new('bool'), 'd')
-    D.add_constructor(Function(ReturnValue.new("D*", caller_owns_return=True), "DCreate", []))
-    mod.add_function(Function(ReturnValue.new('void'), 'DDoA', [Parameter.new('D*', 'd', transfer_ownership=False)]))
-    mod.add_function(Function(ReturnValue.new('void'), 'DDoB', [Parameter.new('D&', 'd', direction=Parameter.DIRECTION_IN)]))
-    mod.add_function(Function(ReturnValue.new('void'), 'DDoC', [Parameter.new('D&', 'd',
+    D.add_constructor(Function("DCreate", ReturnValue.new("D*", caller_owns_return=True), []))
+    mod.add_function(Function('DDoA', ReturnValue.new('void'), [Parameter.new('D*', 'd', transfer_ownership=False)]))
+    mod.add_function(Function('DDoB', ReturnValue.new('void'), [Parameter.new('D&', 'd', direction=Parameter.DIRECTION_IN)]))
+    mod.add_function(Function('DDoC', ReturnValue.new('void'), [Parameter.new('D&', 'd',
                                                                               direction=Parameter.DIRECTION_IN,
                                                                               is_const=True)]))
 

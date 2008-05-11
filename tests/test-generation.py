@@ -142,7 +142,7 @@ public:
         else:
             retval = return_handler(return_type)
 
-        wrapper = Function(retval, function_name, [])
+        wrapper = Function(function_name, retval, [])
         module.add_function(wrapper)
     
     for param_type, param_handler in typehandlers.base.param_type_matcher.items():
@@ -167,7 +167,7 @@ public:
                     ## declare a fake prototype
                     print "void %s(%s %s);" % (function_name, param_type, name)
                     print
-                    wrapper = Function(ReturnValue.new('void'), function_name, [param])
+                    wrapper = Function(function_name, ReturnValue.new('void'), [param])
                     module.add_function(wrapper)
             else:
                 param = param_handler(param_type, param_name, direction)
@@ -176,7 +176,7 @@ public:
                 ## declare a fake prototype
                 print "void %s(%s);" % (function_name, param_type)
                 print
-                wrapper = Function(ReturnValue.new('void'), function_name, [param])
+                wrapper = Function(function_name, ReturnValue.new('void'), [param])
                 module.add_function(wrapper)
 
     module.generate(code_out)

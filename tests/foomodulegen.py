@@ -48,8 +48,9 @@ def my_module_gen(out_file):
     Bar.add_method(CppMethod(ReturnValue.new('std::string'), 'Hooray', [], is_static=True))
 
     ## to test RTTI with a hidden subclass
-    mod.add_function(Function(ReturnValue.new('Foo*', caller_owns_return=True),
-                              'get_hidden_subclass_pointer', []))
+    mod.add_function(Function('get_hidden_subclass_pointer',
+                              ReturnValue.new('Foo*', caller_owns_return=True),
+                              []))
 
 
     ## Zbr is a reference counted class
@@ -75,24 +76,24 @@ int %s::custom_method_added_by_a_hook(int x)
                              is_virtual=True))
     Zbr.add_static_attribute(ReturnValue.new('int'), 'instance_count')
     
-    mod.add_function(Function(ReturnValue.new('void'), 'store_zbr',
+    mod.add_function(Function('store_zbr', ReturnValue.new('void'),
                               [Parameter.new('Zbr*', 'zbr', transfer_ownership=True)]))
-    mod.add_function(Function(ReturnValue.new('int'), 'invoke_zbr',
+    mod.add_function(Function('invoke_zbr', ReturnValue.new('int'),
                               [Parameter.new('int', 'x')]))
-    mod.add_function(Function(ReturnValue.new('void'), 'delete_stored_zbr', []))
+    mod.add_function(Function('delete_stored_zbr', ReturnValue.new('void'), []))
 
 
-    mod.add_function(Function(ReturnValue.new('int'), 'print_something',
+    mod.add_function(Function('print_something', ReturnValue.new('int'),
                               [Parameter.new('const char*', 'message')]))
-    mod.add_function(Function(ReturnValue.new('int'), 'print_something_else',
+    mod.add_function(Function('print_something_else', ReturnValue.new('int'),
                               [Parameter.new('const char*', 'message2')]))
 
     ## test overloaded functions
-    mod.add_function(Function(ReturnValue.new('int'), 'get_int_from_string',
+    mod.add_function(Function('get_int_from_string', ReturnValue.new('int'),
                               [Parameter.new('const char*', 'from_string'),
                                Parameter.new('int', 'multiplier', default_value='1')]),
                      name="get_int")
-    mod.add_function(Function(ReturnValue.new('int'), 'get_int_from_float',
+    mod.add_function(Function('get_int_from_float', ReturnValue.new('int'),
                               [Parameter.new('double', 'from_float')]),
                      name="get_int")
 
@@ -150,21 +151,21 @@ int %s::custom_method_added_by_a_hook(int x)
 
     ## add a function that appears as a method of an object
     SomeObject.add_method(
-        Function(ReturnValue.new('std::string'), 'some_object_get_something_prefixed',
+        Function('some_object_get_something_prefixed', ReturnValue.new('std::string'),
                  [Parameter.new('SomeObject*', 'obj', transfer_ownership=False, is_const=True),
                   Parameter.new('std::string', 'something')]),
         name='get_something_prefixed')
 
     ## add a function that appears as a method of an object
     SomeObject.add_method(
-        Function(ReturnValue.new('std::string'), 'some_object_val_get_something_prefixed',
+        Function('some_object_val_get_something_prefixed', ReturnValue.new('std::string'),
                  [Parameter.new('SomeObject', 'obj'),
                   Parameter.new('std::string', 'something')]),
         name='val_get_something_prefixed')
 
     ## add a function that appears as a method of an object
     SomeObject.add_method(
-        Function(ReturnValue.new('std::string'), 'some_object_ref_get_something_prefixed',
+        Function('some_object_ref_get_something_prefixed', ReturnValue.new('std::string'),
                  [Parameter.new('SomeObject&', 'obj', is_const=True),
                   Parameter.new('std::string', 'something')]),
         name='ref_get_something_prefixed')
@@ -209,20 +210,17 @@ int %s::custom_method_added_by_a_hook(int x)
         ReturnValue.new('void'), 'set_foobar_with_self_as_custodian',
         [Parameter.new('Foobar*', 'foobar', custodian=0)]))
 
-    mod.add_function(Function(ReturnValue.new('Foobar*', custodian=1),
-                              'get_foobar_with_other_as_custodian',
+    mod.add_function(Function('get_foobar_with_other_as_custodian', ReturnValue.new('Foobar*', custodian=1),
                               [Parameter.new('SomeObject*', 'other', transfer_ownership=False)]))
 
-    mod.add_function(Function(ReturnValue.new('Foobar*', caller_owns_return=True),
-                              'create_new_foobar', []))
+    mod.add_function(Function('create_new_foobar', ReturnValue.new('Foobar*', caller_owns_return=True),
+                              []))
 
-    mod.add_function(Function(ReturnValue.new('void'),
-                              'set_foobar_with_other_as_custodian',
+    mod.add_function(Function('set_foobar_with_other_as_custodian', ReturnValue.new('void'),
                               [Parameter.new('Foobar*', 'foobar', custodian=2),
                                Parameter.new('SomeObject*', 'other', transfer_ownership=False)]))
 
-    mod.add_function(Function(ReturnValue.new('SomeObject*', caller_owns_return=True),
-                              'set_foobar_with_return_as_custodian',
+    mod.add_function(Function('set_foobar_with_return_as_custodian', ReturnValue.new('SomeObject*', caller_owns_return=True),
                               [Parameter.new('Foobar*', 'foobar', custodian=-1)]))
 
 
@@ -254,31 +252,29 @@ int %s::custom_method_added_by_a_hook(int x)
                           name="get_int")
 
 
-    mod.add_function(Function(ReturnValue.new('void'), 'store_some_object',
+    mod.add_function(Function('store_some_object', ReturnValue.new('void'),
                               [Parameter.new('SomeObject*', 'obj', transfer_ownership=True)]))
-    mod.add_function(Function(ReturnValue.new('std::string'), 'invoke_some_object_get_prefix',
+    mod.add_function(Function('invoke_some_object_get_prefix', ReturnValue.new('std::string'),
                               []))
-    mod.add_function(Function(ReturnValue.new('SomeObject*', caller_owns_return=True),
-                              'take_some_object', []))
-    mod.add_function(Function(ReturnValue.new('void'), 'delete_some_object', []))
+    mod.add_function(Function('take_some_object', ReturnValue.new('SomeObject*', caller_owns_return=True), []))
+    mod.add_function(Function('delete_some_object', ReturnValue.new('void'), []))
 
     xpto = mod.add_cpp_namespace("xpto")
-    xpto.add_function(Function(ReturnValue.new('std::string'), 'some_function', []))
+    xpto.add_function(Function('some_function', ReturnValue.new('std::string'), []))
 
     ## enums..
     xpto.add_enum('FooType', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'])
-    xpto.add_function(Function(ReturnValue.new('FooType'), 'get_foo_type', []))
-    xpto.add_function(Function(ReturnValue.new('void'), 'set_foo_type', [Parameter.new("FooType", 'type')]))
+    xpto.add_function(Function('get_foo_type', ReturnValue.new('FooType'), []))
+    xpto.add_function(Function('set_foo_type', ReturnValue.new('void'), [Parameter.new("FooType", 'type')]))
 
 
     xpto_SomeClass = xpto.add_class('SomeClass')
     xpto_SomeClass.add_constructor(CppConstructor([]))
 
     ## ---- some implicity conversion APIs
-    mod.add_function(Function(ReturnValue.new('void'),
-                               'function_that_takes_foo',
+    mod.add_function(Function('function_that_takes_foo', ReturnValue.new('void'),
                                [Parameter.new('Foo', 'foo')]))
-    mod.add_function(Function(ReturnValue.new('Foo'), 'function_that_returns_foo', []))
+    mod.add_function(Function('function_that_returns_foo', ReturnValue.new('Foo'), []))
     
     cls = mod.add_class('ClassThatTakesFoo')
     cls.add_constructor(CppConstructor([Parameter.new('Foo', 'foo')]))
@@ -292,8 +288,7 @@ int %s::custom_method_added_by_a_hook(int x)
     ## A class that has no public default constructor...
     cls = mod.add_class('InterfaceId', is_singleton=True)
     ## A function that returns such a class...
-    mod.add_function(Function(ReturnValue.new('InterfaceId'),
-                              'make_interface_id', []))
+    mod.add_function(Function('make_interface_id', ReturnValue.new('InterfaceId'), []))
 
 
     ## A class the cannot be constructed; this will cause late CodeGenerationError's
@@ -303,10 +298,12 @@ int %s::custom_method_added_by_a_hook(int x)
                              'get_value', [], is_static=True))
     cls.add_method(CppMethod(ReturnValue.new('CannotBeConstructed*', caller_owns_return=True),
                              'get_ptr', [], is_static=True))
-    mod.add_function(Function(ReturnValue.new('CannotBeConstructed'),
-                              'get_cannot_be_constructed_value', []))
-    mod.add_function(Function(ReturnValue.new('CannotBeConstructed*', caller_owns_return=True),
-                              'get_cannot_be_constructed_ptr', []))
+    mod.add_function(Function('get_cannot_be_constructed_value',
+                              ReturnValue.new('CannotBeConstructed'),
+                              []))
+    mod.add_function(Function('get_cannot_be_constructed_ptr',
+                              ReturnValue.new('CannotBeConstructed*', caller_owns_return=True),
+                              []))
 
 
     ## A nested class
