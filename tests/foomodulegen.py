@@ -266,7 +266,7 @@ int %s::custom_method_added_by_a_hook(int x)
     xpto.add_function(Function(ReturnValue.new('std::string'), 'some_function', []))
 
     ## enums..
-    xpto.add_enum(Enum('FooType', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC']))
+    xpto.add_enum('FooType', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'])
     xpto.add_function(Function(ReturnValue.new('FooType'), 'get_foo_type', []))
     xpto.add_function(Function(ReturnValue.new('void'), 'set_foo_type', [Parameter.new("FooType", 'type')]))
 
@@ -318,8 +318,7 @@ int %s::custom_method_added_by_a_hook(int x)
     NestedClass.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
 
     ## A nested enum..
-    mod.add_enum(Enum('NestedEnum', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'],
-                      outer_class=SomeObject))
+    mod.add_enum('NestedEnum', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'], outer_class=SomeObject)
 
 
 

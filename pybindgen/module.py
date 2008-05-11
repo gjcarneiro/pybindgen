@@ -64,10 +64,8 @@ class ModuleBase(dict):
       >>> subm = m.add_cpp_namespace("subm")
       >>> c1 = m.add_class("Bar")
       >>> c2 = subm.add_class("Zbr")
-      >>> e1 = Enum("En1", ["XX"])
-      >>> m.add_enum(e1)
-      >>> e2 = Enum("En2", ["XX"])
-      >>> subm.add_enum(e2)
+      >>> e1 = m.add_enum("En1", ["XX"])
+      >>> e2 = subm.add_enum("En2", ["XX"])
       >>> m["Bar"] is c1
       True
       >>> m["foo::Bar"] is c1
@@ -281,7 +279,7 @@ class ModuleBase(dict):
         name = utils.ascii(name)
         return SubModule(name, parent=self, cpp_namespace=name)
 
-    def add_enum(self, enum):
+    def _add_enum_obj(self, enum):
         """
         Add an enumeration.
         """
@@ -289,6 +287,20 @@ class ModuleBase(dict):
         self.enums.append(enum)
         enum.module = self
         self.register_type(enum.name, enum.full_name, enum)
+
+    def add_enum(self, *args, **kwargs):
+        """
+        Add an enumeration to the module. See the documentation for
+        L{Enum.__init__} for information on accepted parameters.
+        """
+        if len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], Enum):
+            enum = args[0]
+            warnings.warn("add_enum has changed API; see the API documentation",
+                          DeprecationWarning, stacklevel=2)
+        else:
+            enum = Enum(*args, **kwargs)
+        self._add_enum_obj(enum)
+        return enum
 
     def declare_one_time_definition(self, definition_name):
         """

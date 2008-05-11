@@ -690,14 +690,14 @@ class ModuleParser(object):
                 enums.append(enum)
 
         for enum in enums:
-            module.add_enum(Enum(enum.name, [name for name, dummy_val in enum.values],
-                                 outer_class=outer_class))
+            module.add_enum(enum.name, [name for name, dummy_val in enum.values],
+                            outer_class=outer_class)
 
             enum_values_repr = '[' + ', '.join([repr(name) for name, dummy_val in enum.values]) + ']'
             l = [repr(enum.name), enum_values_repr]
             if outer_class is not None:
                 l.append('outer_class=root_module[%r]' % outer_class.full_name)
-            self.pygen_sink.writeln('module.add_enum(Enum(%s))' % ', '.join(l))
+            self.pygen_sink.writeln('module.add_enum(%s)' % ', '.join(l))
 
         registered_classes = {} # class_t -> CppClass
 
