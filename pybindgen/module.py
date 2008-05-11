@@ -1,5 +1,48 @@
 """
-Code to generate code for a C/C++ Python extension module.
+Objects that represent -- and generate code for -- C/C++ Python extension modules.
+
+Modules and Sub-modules
+=======================
+
+A L{Module} object takes care of generating the code for a Python
+module.  The way a Python module is organized is as follows.  There is
+one "root" L{Module} object. There can be any number of
+L{SubModule}s. Sub-modules themselves can have additional sub-modules.
+Calling L{Module.generate} on the root module will trigger code
+generation for the whole module, not only functions and types, but
+also all its sub-modules.
+
+In Python, a sub-module will appear as a I{built-in} Python module
+that is available as an attribute of its parent module.  For instance,
+a module I{foo} having a sub-module I{xpto} appears like this::
+
+    >>> import foo
+    >>> foo.xpto
+    <module 'foo.xpto' (built-in)>
+
+Modules and C++ namespaces
+==========================
+
+Modules can be associated with specific C++ namespaces.  This means,
+for instance, that any C++ class wrapped inside that module must
+belong to that C++ namespace.  Example::
+
+   mod = Module("foo", cpp_namespace="::foo")
+   cls = CppClass("Bar")
+   mod.add_class(cls)
+   cls.full_name # prints "foo::Bar"
+
+When we have a toplevel C++ namespace which contains another nested
+namespace, we want to wrap the nested namespace as a Python
+sub-module.  The method L{ModuleBase.add_cpp_namespace} makes it easy
+to create sub-modules for wrapping nested namespaces.  For instance::
+
+   mod = Module("foo", cpp_namespace="::foo")
+   submod = mod.add_cpp_namespace('xpto')
+   cls = CppClass("Bar")
+   submod.add_class(cls)
+   cls.full_name # prints "foo::xpto::Bar"
+
 """
 
 from function import Function, OverloadedFunction
@@ -12,9 +55,7 @@ import utils
 
 class ModuleBase(dict):
     """
-    A Module object takes care of generating the code for a Python module.
-
-    Module objects can be indexed dictionary style to access contained types.  Example::
+    ModuleBase objects can be indexed dictionary style to access contained types.  Example::
 
       >>> from enum import Enum
       >>> from cppclass import CppClass
@@ -54,6 +95,7 @@ class ModuleBase(dict):
         @param parent: parent L{module<Module>} (i.e. the one that contains this submodule) or None if this is a root module
         @param docstring: docstring to use for this module
         @param cpp_namespace: C++ namespace prefix associated with this module
+        @return: a new module object
         """
         super(ModuleBase, self).__init__()
         self.parent = parent
@@ -119,7 +161,7 @@ class ModuleBase(dict):
         raise ValueError("submodule %s not found" % submodule_name)
         
     def get_root(self):
-        "returns the root module (even it is self)"
+        "@return: the root L{Module} (even if it is self)"
         root = self
         while root.parent is not None:
             root = root.parent
@@ -221,7 +263,7 @@ class ModuleBase(dict):
         not full scoped name); this also becomes the name of the
         submodule.
 
-        @return: a SubModule object that maps to this namespace.
+        @return: a L{SubModule} object that maps to this namespace.
         """
         name = utils.ascii(name)
         return SubModule(name, parent=self, cpp_namespace=name)
@@ -261,7 +303,7 @@ class ModuleBase(dict):
         self.one_time_definitions[definition_name] = None
 
     def generate_forward_declarations(self, code_sink):
-        """generate forward declarations for types"""
+        """(internal) generate forward declarations for types"""
         assert not self._forward_declarations_declared
         if self.classes:
             code_sink.writeln('/* --- forward declarations --- */')
@@ -283,7 +325,7 @@ class ModuleBase(dict):
         return names
 
     def get_namespace_path(self):
-        """Get the full [root_namespace, namespace, namespace,...] path """
+        """Get the full [root_namespace, namespace, namespace,...] path (C++)"""
         if not self.cpp_namespace:
             names = []
         else:
@@ -304,7 +346,7 @@ class ModuleBase(dict):
         return names
 
     def do_generate(self, code_sink, includes_code_sink):
-        """Generates the module; internal method, do not call"""
+        """(internal) Generates the module."""
         if self.parent is None:
             if not self._forward_declarations_declared:
                 self.generate_forward_declarations(code_sink)
