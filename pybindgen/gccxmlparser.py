@@ -1335,18 +1335,15 @@ class ModuleParser(object):
 
             if templates.is_instantiation(fun.demangled_name):
                 kwargs['template_parameters'] = templates.args(fun.demangled_name)
-            
-            func_wrapper = Function(fun.name, return_type, arguments, **kwargs)
-            func_wrapper.gccxml_definition = fun
-            module.add_function(func_wrapper, name=alt_name)
+                
+            if alt_name:
+                kwargs['custom_name'] = alt_name
 
-            if alt_name is None:
-                _pygen_altname_arg = ''
-            else:
-                _pygen_altname_arg = ', name=%r' % alt_name
-            self.pygen_sink.writeln("module.add_function(Function(%s)%s)" %
-                                    (", ".join([repr(fun.name), return_type._pygen_repr, arglist_repr] + _pygen_kwargs(kwargs)),
-                                     _pygen_altname_arg))
+            func_wrapper = module.add_function(fun.name, return_type, arguments, **kwargs)
+            func_wrapper.gccxml_definition = fun
+
+            self.pygen_sink.writeln("module.add_function(%s)" %
+                                    (", ".join([repr(fun.name), return_type._pygen_repr, arglist_repr] + _pygen_kwargs(kwargs))))
 
             for hook in self._post_scan_hooks:
                 hook(self, fun, func_wrapper)

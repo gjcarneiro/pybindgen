@@ -45,7 +45,7 @@ to create sub-modules for wrapping nested namespaces.  For instance::
 
 """
 
-from function import Function, OverloadedFunction
+from function import Function, OverloadedFunction, CustomFunctionWrapper
 from typehandlers.base import CodeBlock, DeclarationsScope
 from typehandlers.codesink import MemoryCodeSink
 from cppclass import CppClass
@@ -200,18 +200,9 @@ class ModuleBase(dict):
         if include not in self.includes:
             self.includes.append(include)
 
-    def add_function(self, wrapper, name=None):
-        """
-        Add a function to the module.
-
-        @param wrapper: a Function instance that can generate the wrapper
-        @param name: name of the module function as it will appear from
-                Python side; if not given, the
-                c_function_name_transformer callback, or strip_prefix,
-                will be used to guess the Python name.
-        """
-        name = utils.ascii(name)
+    def _add_function_obj(self, wrapper):
         assert isinstance(wrapper, Function)
+        name = utils.ascii(wrapper.custom_name)
         if name is None:
             name = self.c_function_name_transformer(wrapper.function_name)
         mangled_name = utils.get_mangled_name(name, wrapper.template_parameters)
@@ -222,6 +213,38 @@ class ModuleBase(dict):
             self.functions[mangled_name] = overload
         wrapper.module = self
         overload.add(wrapper)
+
+    def add_function(self, *args, **kwargs):
+        """
+        Add a function to the module/namespace. See the documentation for
+        L{Function.__init__} for information on accepted parameters.
+        """
+        if len(args) >= 1 and isinstance(args[0], Function):
+            func = args[0]
+            warnings.warn("add_class has changed API; see the API documentation",
+                          DeprecationWarning, stacklevel=2)
+            raise TypeError("FIXME")
+            if len(args) == 2:
+                func.custom_name = args[1]
+            elif 'name' in kwargs:
+                assert len(args) == 1
+                func.custom_name = kwargs['name']
+            else:
+                assert len(args) == 1
+                assert len(kwargs) == 0
+        else:
+            func = Function(*args, **kwargs)
+        self._add_function_obj(func)
+        return func
+
+    def add_custom_function_wrapper(self, *args, **kwargs):
+        """
+        Add a function, using custom wrapper code, to the module/namespace. See the documentation for
+        L{CustomFunctionWrapper.__init__} for information on accepted parameters.
+        """
+        func = CustomFunctionWrapper(*args, **kwargs)
+        self._add_function_obj(func)
+        return func
 
     def register_type(self, name, full_name, type_wrapper):
         """

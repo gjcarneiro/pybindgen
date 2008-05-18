@@ -48,9 +48,9 @@ def my_module_gen(out_file):
     Bar.add_method(CppMethod('Hooray', ReturnValue.new('std::string'), [], is_static=True))
 
     ## to test RTTI with a hidden subclass
-    mod.add_function(Function('get_hidden_subclass_pointer',
-                              ReturnValue.new('Foo*', caller_owns_return=True),
-                              []))
+    mod.add_function('get_hidden_subclass_pointer',
+                     ReturnValue.new('Foo*', caller_owns_return=True),
+                     [])
 
 
     ## Zbr is a reference counted class
@@ -76,26 +76,23 @@ int %s::custom_method_added_by_a_hook(int x)
                              is_virtual=True))
     Zbr.add_static_attribute(ReturnValue.new('int'), 'instance_count')
     
-    mod.add_function(Function('store_zbr', None,
-                              [Parameter.new('Zbr*', 'zbr', transfer_ownership=True)]))
-    mod.add_function(Function('invoke_zbr', ReturnValue.new('int'),
-                              [Parameter.new('int', 'x')]))
-    mod.add_function(Function('delete_stored_zbr', ReturnValue.new('void'), []))
+    mod.add_function('store_zbr', None,
+                     [Parameter.new('Zbr*', 'zbr', transfer_ownership=True)])
+    mod.add_function('invoke_zbr', ReturnValue.new('int'), [Parameter.new('int', 'x')])
+    mod.add_function('delete_stored_zbr', None, [])
 
 
-    mod.add_function(Function('print_something', ReturnValue.new('int'),
-                              [Parameter.new('const char*', 'message')]))
-    mod.add_function(Function('print_something_else', ReturnValue.new('int'),
-                              [Parameter.new('const char*', 'message2')]))
+    mod.add_function('print_something', ReturnValue.new('int'),
+                     [Parameter.new('const char*', 'message')])
+    mod.add_function('print_something_else', ReturnValue.new('int'),
+                     [Parameter.new('const char*', 'message2')])
 
     ## test overloaded functions
-    mod.add_function(Function('get_int_from_string', ReturnValue.new('int'),
-                              [Parameter.new('const char*', 'from_string'),
-                               Parameter.new('int', 'multiplier', default_value='1')]),
-                     name="get_int")
-    mod.add_function(Function('get_int_from_float', ReturnValue.new('int'),
-                              [Parameter.new('double', 'from_float')]),
-                     name="get_int")
+    mod.add_function('get_int_from_string', ReturnValue.new('int'),
+                     [Parameter.new('const char*', 'from_string'),
+                      Parameter.new('int', 'multiplier', default_value='1')], custom_name="get_int")
+    mod.add_function('get_int_from_float', ReturnValue.new('int'),
+                     [Parameter.new('double', 'from_float')], custom_name="get_int")
 
 
 
@@ -212,18 +209,17 @@ int %s::custom_method_added_by_a_hook(int x)
         'set_foobar_with_self_as_custodian', ReturnValue.new('void'),
         [Parameter.new('Foobar*', 'foobar', custodian=0)]))
 
-    mod.add_function(Function('get_foobar_with_other_as_custodian', ReturnValue.new('Foobar*', custodian=1),
-                              [Parameter.new('SomeObject*', 'other', transfer_ownership=False)]))
+    mod.add_function('get_foobar_with_other_as_custodian', ReturnValue.new('Foobar*', custodian=1),
+                     [Parameter.new('SomeObject*', 'other', transfer_ownership=False)])
 
-    mod.add_function(Function('create_new_foobar', ReturnValue.new('Foobar*', caller_owns_return=True),
-                              []))
+    mod.add_function('create_new_foobar', ReturnValue.new('Foobar*', caller_owns_return=True), [])
 
-    mod.add_function(Function('set_foobar_with_other_as_custodian', ReturnValue.new('void'),
-                              [Parameter.new('Foobar*', 'foobar', custodian=2),
-                               Parameter.new('SomeObject*', 'other', transfer_ownership=False)]))
+    mod.add_function('set_foobar_with_other_as_custodian', ReturnValue.new('void'),
+                     [Parameter.new('Foobar*', 'foobar', custodian=2),
+                      Parameter.new('SomeObject*', 'other', transfer_ownership=False)])
 
-    mod.add_function(Function('set_foobar_with_return_as_custodian', ReturnValue.new('SomeObject*', caller_owns_return=True),
-                              [Parameter.new('Foobar*', 'foobar', custodian=-1)]))
+    mod.add_function('set_foobar_with_return_as_custodian', ReturnValue.new('SomeObject*', caller_owns_return=True),
+                     [Parameter.new('Foobar*', 'foobar', custodian=-1)])
 
 
     ## get/set recfcounted object Zbr
@@ -254,29 +250,29 @@ int %s::custom_method_added_by_a_hook(int x)
                           name="get_int")
 
 
-    mod.add_function(Function('store_some_object', ReturnValue.new('void'),
-                              [Parameter.new('SomeObject*', 'obj', transfer_ownership=True)]))
-    mod.add_function(Function('invoke_some_object_get_prefix', ReturnValue.new('std::string'),
-                              []))
-    mod.add_function(Function('take_some_object', ReturnValue.new('SomeObject*', caller_owns_return=True), []))
-    mod.add_function(Function('delete_some_object', ReturnValue.new('void'), []))
+    mod.add_function('store_some_object', ReturnValue.new('void'),
+                     [Parameter.new('SomeObject*', 'obj', transfer_ownership=True)])
+    mod.add_function('invoke_some_object_get_prefix', ReturnValue.new('std::string'),
+                     [])
+    mod.add_function('take_some_object', ReturnValue.new('SomeObject*', caller_owns_return=True), [])
+    mod.add_function('delete_some_object', ReturnValue.new('void'), [])
 
     xpto = mod.add_cpp_namespace("xpto")
-    xpto.add_function(Function('some_function', ReturnValue.new('std::string'), []))
+    xpto.add_function('some_function', ReturnValue.new('std::string'), [])
 
     ## enums..
     xpto.add_enum('FooType', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'])
-    xpto.add_function(Function('get_foo_type', ReturnValue.new('FooType'), []))
-    xpto.add_function(Function('set_foo_type', ReturnValue.new('void'), [Parameter.new("FooType", 'type')]))
+    xpto.add_function('get_foo_type', ReturnValue.new('FooType'), [])
+    xpto.add_function('set_foo_type', ReturnValue.new('void'), [Parameter.new("FooType", 'type')])
 
 
     xpto_SomeClass = xpto.add_class('SomeClass')
     xpto_SomeClass.add_constructor(CppConstructor([]))
 
     ## ---- some implicity conversion APIs
-    mod.add_function(Function('function_that_takes_foo', ReturnValue.new('void'),
-                               [Parameter.new('Foo', 'foo')]))
-    mod.add_function(Function('function_that_returns_foo', ReturnValue.new('Foo'), []))
+    mod.add_function('function_that_takes_foo', ReturnValue.new('void'),
+                               [Parameter.new('Foo', 'foo')])
+    mod.add_function('function_that_returns_foo', ReturnValue.new('Foo'), [])
     
     cls = mod.add_class('ClassThatTakesFoo')
     cls.add_constructor(CppConstructor([Parameter.new('Foo', 'foo')]))
@@ -290,7 +286,7 @@ int %s::custom_method_added_by_a_hook(int x)
     ## A class that has no public default constructor...
     cls = mod.add_class('InterfaceId', is_singleton=True)
     ## A function that returns such a class...
-    mod.add_function(Function('make_interface_id', ReturnValue.new('InterfaceId'), []))
+    mod.add_function('make_interface_id', ReturnValue.new('InterfaceId'), [])
 
 
     ## A class the cannot be constructed; this will cause late CodeGenerationError's
@@ -300,12 +296,12 @@ int %s::custom_method_added_by_a_hook(int x)
                              [], is_static=True))
     cls.add_method(CppMethod('get_ptr', ReturnValue.new('CannotBeConstructed*', caller_owns_return=True),
                              [], is_static=True))
-    mod.add_function(Function('get_cannot_be_constructed_value',
-                              ReturnValue.new('CannotBeConstructed'),
-                              []))
-    mod.add_function(Function('get_cannot_be_constructed_ptr',
-                              ReturnValue.new('CannotBeConstructed*', caller_owns_return=True),
-                              []))
+    mod.add_function('get_cannot_be_constructed_value',
+                     ReturnValue.new('CannotBeConstructed'),
+                     [])
+    mod.add_function('get_cannot_be_constructed_ptr',
+                     ReturnValue.new('CannotBeConstructed*', caller_owns_return=True),
+                     [])
 
 
     ## A nested class

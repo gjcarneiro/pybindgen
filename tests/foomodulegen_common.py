@@ -75,9 +75,9 @@ _wrap_foofunction_that_takes_foo_from_string(PyObject * PYBINDGEN_UNUSED(dummy),
     return py_retval;
 }
 '''
-    module.add_function(CustomFunctionWrapper('function_that_takes_foo',
-                                              '_wrap_foofunction_that_takes_foo_from_string',
-                                              wrapper_body))
+    module.add_custom_function_wrapper('function_that_takes_foo',
+                                       '_wrap_foofunction_that_takes_foo_from_string',
+                                       wrapper_body)
 
 
     ## test a custom method wrapper

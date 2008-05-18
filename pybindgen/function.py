@@ -18,7 +18,7 @@ class Function(ForwardWrapperBase):
     """
 
     def __init__(self, function_name, return_value, parameters, docstring=None, unblock_threads=None,
-                 template_parameters=()):
+                 template_parameters=(), custom_name=None):
         """
         @param function_name: name of the C function
         @param return_value: the function return value
@@ -51,7 +51,8 @@ class Function(ForwardWrapperBase):
         self.docstring = docstring
         self.self_parameter_pystruct = None
         self.template_parameters = template_parameters
-        self.mangled_name = utils.get_mangled_name(self.function_name, self.template_parameters)
+        self.custom_name = custom_name
+        self.mangled_name = utils.get_mangled_name(custom_name or function_name, self.template_parameters)
 
     def clone(self):
         """Creates a semi-deep copy of this function wrapper.  The returned
