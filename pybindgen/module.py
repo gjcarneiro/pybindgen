@@ -223,7 +223,6 @@ class ModuleBase(dict):
             func = args[0]
             warnings.warn("add_class has changed API; see the API documentation",
                           DeprecationWarning, stacklevel=2)
-            raise TypeError("FIXME")
             if len(args) == 2:
                 func.custom_name = args[1]
             elif 'name' in kwargs:
