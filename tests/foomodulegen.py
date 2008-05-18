@@ -28,14 +28,14 @@ def my_module_gen(out_file):
     Foo.add_constructor(
         CppConstructor([Parameter.new('std::string', 'datum')]))
     Foo.add_constructor(CppConstructor([]))
-    Foo.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
-    Foo.add_method(CppMethod(ReturnValue.new('bool'), 'is_initialized', [], is_const=True))
+    Foo.add_method(CppMethod('get_datum', ReturnValue.new('std::string'), []))
+    Foo.add_method(CppMethod('is_initialized', ReturnValue.new('bool'), [], is_const=True))
 
     Zoo = mod.add_class('Zoo', automatic_type_narrowing=True)
     Zoo.add_constructor(
         CppConstructor([Parameter.new('std::string', 'datum')]))
     Zoo.add_constructor(CppConstructor([]))
-    Zoo.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
+    Zoo.add_method(CppMethod('get_datum', ReturnValue.new('std::string'), []))
     Zoo.implicitly_converts_to(Foo)
 
     Foobar = mod.add_class('Foobar')
@@ -45,7 +45,7 @@ def my_module_gen(out_file):
     Bar = mod.add_class('Bar', parent=Foo)
     Bar.inherit_default_constructors()
     ## a static method..
-    Bar.add_method(CppMethod(ReturnValue.new('std::string'), 'Hooray', [], is_static=True))
+    Bar.add_method(CppMethod('Hooray', ReturnValue.new('std::string'), [], is_static=True))
 
     ## to test RTTI with a hidden subclass
     mod.add_function(Function('get_hidden_subclass_pointer',
@@ -71,8 +71,8 @@ int %s::custom_method_added_by_a_hook(int x)
 
     Zbr.add_constructor(
         CppConstructor([Parameter.new('std::string', 'datum')]))
-    Zbr.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
-    Zbr.add_method(CppMethod(ReturnValue.new('int'), 'get_int', [Parameter.new('int', 'x')],
+    Zbr.add_method(CppMethod('get_datum', ReturnValue.new('std::string'), []))
+    Zbr.add_method(CppMethod('get_int', ReturnValue.new('int'), [Parameter.new('int', 'x')],
                              is_virtual=True))
     Zbr.add_static_attribute(ReturnValue.new('int'), 'instance_count')
     
@@ -109,7 +109,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
     SomeObject.add_static_attribute(ReturnValue.new('int'), 'instance_count')
     
-    SomeObject.add_method(CppMethod(ReturnValue.new('int'), 'add_prefix',
+    SomeObject.add_method(CppMethod('add_prefix', ReturnValue.new('int'),
                                     [Parameter.new('std::string&', 'message',
                                                direction=Parameter.DIRECTION_INOUT)]))
     SomeObject.add_constructor(
@@ -119,32 +119,36 @@ int %s::custom_method_added_by_a_hook(int x)
 
     # --- some virtual methods ---
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('std::string'), 'get_prefix', [],
+        'get_prefix', ReturnValue.new('std::string'), [],
         is_virtual=True, is_const=True))
 
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('std::string'), 'get_prefix_with_foo_value',
+        'get_prefix_with_foo_value', ReturnValue.new('std::string'),
         [Parameter.new('Foo', 'foo')],
         is_virtual=True, is_const=True))
 
     SomeObject.add_method(CppMethod(
-            ReturnValue.new('std::string'), 'get_prefix_with_foo_ref',
+            'get_prefix_with_foo_ref',
+            ReturnValue.new('std::string'),
             [Parameter.new('Foo&', 'foo', is_const=True,
                            direction=Parameter.DIRECTION_INOUT)],
             is_virtual=True, is_const=True))
 
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('std::string'), 'get_prefix_with_foo_ptr',
+        'get_prefix_with_foo_ptr',
+        ReturnValue.new('std::string'),
         [Parameter.new('Foo*', 'foo', transfer_ownership=False, is_const=True)],
         is_virtual=True, is_const=True))
 
     ## overloaded virtual methods
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('std::string'), 'get_something',
+        'get_something',
+        ReturnValue.new('std::string'),
         [],
         is_virtual=True, is_const=True))
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('std::string'), 'get_something',
+        'get_something',
+        ReturnValue.new('std::string'),
         [Parameter.new('int', 'x')],
         is_virtual=True, is_const=True))
 
@@ -172,42 +176,40 @@ int %s::custom_method_added_by_a_hook(int x)
 
     # ---
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('std::string'), 'call_get_prefix', []))
+        'call_get_prefix', ReturnValue.new('std::string'), []))
 
-    SomeObject.add_method(CppMethod(ReturnValue.new('void'),
-                                    'set_foo_value',
+    SomeObject.add_method(CppMethod('set_foo_value',
+                                    ReturnValue.new('void'),                                    
                                     [Parameter.new('Foo', 'foo')]))
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('Foo'), 'get_foo_value', []))
+        'get_foo_value', ReturnValue.new('Foo'), []))
 
-    SomeObject.add_method(CppMethod(ReturnValue.new('void'),
-                                    'set_foo_ptr',
+    SomeObject.add_method(CppMethod('set_foo_ptr', ReturnValue.new('void'),
                                     [Parameter.new('Foo*', 'foo', transfer_ownership=True)]))
-    SomeObject.add_method(CppMethod(ReturnValue.new('void'),
-                                    'set_foo_shared_ptr',
+    SomeObject.add_method(CppMethod('set_foo_shared_ptr', ReturnValue.new('void'),
                                     [Parameter.new('Foo*', 'foo', transfer_ownership=False)]))
 
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('Foo*', caller_owns_return=False), 'get_foo_shared_ptr', []))
+        'get_foo_shared_ptr', ReturnValue.new('Foo*', caller_owns_return=False), []))
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('Foo*', caller_owns_return=True), 'get_foo_ptr', []))
+        'get_foo_ptr', ReturnValue.new('Foo*', caller_owns_return=True), []))
 
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('void'), 'set_foo_by_ref',
+        'set_foo_by_ref', ReturnValue.new('void'),
         [Parameter.new('Foo&', 'foo', direction=Parameter.DIRECTION_IN)]))
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('void'), 'get_foo_by_ref',
+        'get_foo_by_ref', ReturnValue.new('void'),
         [Parameter.new('Foo&', 'foo', direction=Parameter.DIRECTION_OUT)]))
 
     ## custodian/ward tests
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('Foobar*', custodian=0), 'get_foobar_with_self_as_custodian',
-        []))
+            'get_foobar_with_self_as_custodian', ReturnValue.new('Foobar*', custodian=0),
+            []))
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('Foobar*', custodian=1), 'get_foobar_with_other_as_custodian',
+        'get_foobar_with_other_as_custodian', ReturnValue.new('Foobar*', custodian=1),
         [Parameter.new('SomeObject*', 'other', transfer_ownership=False)]))
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('void'), 'set_foobar_with_self_as_custodian',
+        'set_foobar_with_self_as_custodian', ReturnValue.new('void'),
         [Parameter.new('Foobar*', 'foobar', custodian=0)]))
 
     mod.add_function(Function('get_foobar_with_other_as_custodian', ReturnValue.new('Foobar*', custodian=1),
@@ -226,28 +228,28 @@ int %s::custom_method_added_by_a_hook(int x)
 
     ## get/set recfcounted object Zbr
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('Zbr*', caller_owns_return=True), 'get_zbr', []))
+        'get_zbr', ReturnValue.new('Zbr*', caller_owns_return=True), []))
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('Zbr*', caller_owns_return=False), 'peek_zbr', []))
+        'peek_zbr', ReturnValue.new('Zbr*', caller_owns_return=False), []))
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('void'), 'set_zbr_transfer',
+        'set_zbr_transfer', ReturnValue.new('void'),
         [Parameter.new('Zbr*', 'zbr', transfer_ownership=True)]))
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('void'), 'set_zbr_shared',
+        'set_zbr_shared', ReturnValue.new('void'),
         [Parameter.new('Zbr*', 'zbr', transfer_ownership=False)]))
 
     ## methods with transformed types
     SomeObject.add_method(CppMethod(
-        ReturnValue.new('void'), 'set_zbr_pholder',
+        'set_zbr_pholder', ReturnValue.new('void'),
         [Parameter.new('PointerHolder<Zbr>', 'zbr')]))
-    SomeObject.add_method(CppMethod(
-        ReturnValue.new('PointerHolder<Zbr>'), 'get_zbr_pholder', []))
+    SomeObject.add_method(CppMethod('get_zbr_pholder',
+                                    ReturnValue.new('PointerHolder<Zbr>'), []))
 
     ## test overloaded methods
-    SomeObject.add_method(CppMethod(ReturnValue.new('int'), 'get_int',
+    SomeObject.add_method(CppMethod('get_int', ReturnValue.new('int'),
                                     [Parameter.new('const char*', 'from_string')]),
                           name="get_int")
-    SomeObject.add_method(CppMethod(ReturnValue.new('int'), 'get_int',
+    SomeObject.add_method(CppMethod('get_int', ReturnValue.new('int'),
                                     [Parameter.new('double', 'from_float')]),
                           name="get_int")
 
@@ -278,11 +280,11 @@ int %s::custom_method_added_by_a_hook(int x)
     
     cls = mod.add_class('ClassThatTakesFoo')
     cls.add_constructor(CppConstructor([Parameter.new('Foo', 'foo')]))
-    cls.add_method(CppMethod(ReturnValue.new('Foo'), 'get_foo', []))
+    cls.add_method(CppMethod('get_foo', ReturnValue.new('Foo'), []))
 
     cls = mod.add_class('SingletonClass', is_singleton=True)
-    cls.add_method(CppMethod(ReturnValue.new('SingletonClass*', caller_owns_return=True),
-                             'GetInstance', [], is_static=True))
+    cls.add_method(CppMethod('GetInstance', ReturnValue.new('SingletonClass*', caller_owns_return=True),
+                             [], is_static=True))
 
 
     ## A class that has no public default constructor...
@@ -294,10 +296,10 @@ int %s::custom_method_added_by_a_hook(int x)
     ## A class the cannot be constructed; this will cause late CodeGenerationError's
     cls = mod.add_class('CannotBeConstructed')
     cls.set_cannot_be_constructed("no reason")
-    cls.add_method(CppMethod(ReturnValue.new('CannotBeConstructed'),
-                             'get_value', [], is_static=True))
-    cls.add_method(CppMethod(ReturnValue.new('CannotBeConstructed*', caller_owns_return=True),
-                             'get_ptr', [], is_static=True))
+    cls.add_method(CppMethod('get_value', ReturnValue.new('CannotBeConstructed'),
+                             [], is_static=True))
+    cls.add_method(CppMethod('get_ptr', ReturnValue.new('CannotBeConstructed*', caller_owns_return=True),
+                             [], is_static=True))
     mod.add_function(Function('get_cannot_be_constructed_value',
                               ReturnValue.new('CannotBeConstructed'),
                               []))
@@ -312,7 +314,7 @@ int %s::custom_method_added_by_a_hook(int x)
     NestedClass.add_constructor(
         CppConstructor([Parameter.new('std::string', 'datum')]))
     NestedClass.add_constructor(CppConstructor([]))
-    NestedClass.add_method(CppMethod(ReturnValue.new('std::string'), 'get_datum', []))
+    NestedClass.add_method(CppMethod('get_datum', ReturnValue.new('std::string'), []))
 
     ## A nested enum..
     mod.add_enum('NestedEnum', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'], outer_class=SomeObject)
@@ -321,31 +323,31 @@ int %s::custom_method_added_by_a_hook(int x)
 
     AbstractBaseClass2 = mod.add_class('AbstractBaseClass2', allow_subclassing=True)
 
-    AbstractBaseClass2.add_method(CppMethod(ReturnValue.new('int'), 'invoke_private_virtual',
+    AbstractBaseClass2.add_method(CppMethod('invoke_private_virtual', ReturnValue.new('int'),
                                             [Parameter.new('int', 'x')], is_const=True))
-    AbstractBaseClass2.add_method(CppMethod(ReturnValue.new('int'), 'invoke_protected_virtual',
+    AbstractBaseClass2.add_method(CppMethod('invoke_protected_virtual', ReturnValue.new('int'),
                                             [Parameter.new('int', 'x')], is_const=True))
     AbstractBaseClass2.add_constructor(CppConstructor([], visibility='protected'))
 
     AbstractBaseClass2.add_method(CppMethod(
-            ReturnValue.new('int'), 'protected_virtual', [Parameter.new('int', 'x')],
+            'protected_virtual', ReturnValue.new('int'), [Parameter.new('int', 'x')],
             is_virtual=True, visibility='protected', is_const=True))
     
     AbstractBaseClass2.add_method(CppMethod(
-            ReturnValue.new('int'), 'private_virtual', [Parameter.new('int', 'x')],
+            'private_virtual', ReturnValue.new('int'), [Parameter.new('int', 'x')],
             is_virtual=True, is_pure_virtual=True, visibility='private', is_const=True))
 
 
 
 
     AbstractXpto = mod.add_class('AbstractXpto', allow_subclassing=True)
-    AbstractXpto.add_method(CppMethod(ReturnValue.new('void'), 'something',
+    AbstractXpto.add_method(CppMethod('something', ReturnValue.new('void'),
                                       [Parameter.new('int', 'x')], is_const=True,
                                       is_virtual=True, is_pure_virtual=True))
     AbstractXpto.add_constructor(CppConstructor([]))
 
     AbstractXptoImpl = mod.add_class('AbstractXptoImpl', parent=AbstractXpto)
-    AbstractXptoImpl.add_method(CppMethod(ReturnValue.new('void'), 'something',
+    AbstractXptoImpl.add_method(CppMethod('something', ReturnValue.new('void'),
                                           [Parameter.new('int', 'x')], is_const=True,
                                           is_virtual=True, is_pure_virtual=False))
     AbstractXptoImpl.add_constructor(CppConstructor([]))

@@ -19,7 +19,7 @@ def my_module_gen(out_file):
     else:
         ## alternative:
         E.add_constructor(Function(ReturnValue.new("E*", caller_owns_return=False), "E::CreateWithoutRef", []))
-    E.add_method(CppMethod(ReturnValue.new('void'), "Do", []))
+    E.add_method(CppMethod("Do", ReturnValue.new('void'), []))
 
 
     mod.generate(FileCodeSink(out_file) )

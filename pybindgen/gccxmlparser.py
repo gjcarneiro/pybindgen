@@ -1091,14 +1091,14 @@ class ModuleParser(object):
                     and not (kwargs.get('is_virtual', False) or kwargs.get('is_pure_virtual', False))):
                     continue
 
-                method_wrapper = CppMethod(return_type, member.name, arguments, **kwargs)
+                method_wrapper = CppMethod(member.name, return_type, arguments, **kwargs)
                 method_wrapper.gccxml_definition = member
 
                 def _pygen_method():
                     arglist_repr = ("[" + ', '.join([arg._pygen_repr for arg in arguments]) +  "]")
                     self.pygen_sink.writeln("cls.add_method(CppMethod(%s))" %
                                             ", ".join(
-                            [return_type._pygen_repr, repr(member.name), arglist_repr]
+                            [repr(member.name), return_type._pygen_repr, arglist_repr]
                             + _pygen_kwargs(kwargs)))
 
                 try:

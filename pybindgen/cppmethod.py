@@ -2,6 +2,7 @@
 Wrap C++ class methods and constructods.
 """
 
+import warnings
 from copy import copy
 
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
@@ -17,16 +18,58 @@ class CppMethod(ForwardWrapperBase):
     Class that generates a wrapper to a C++ class method
     """
 
-    def __init__(self, return_value, method_name, parameters, is_static=False,
+    def __init__(self, method_name, return_value, parameters, is_static=False,
                  template_parameters=(), is_virtual=False, is_const=False,
                  unblock_threads=None, is_pure_virtual=False,
                  custom_template_method_name=None, visibility='public'):
         """
-        return_value -- the method return value
-        method_name -- name of the method
-        parameters -- the method parameters
-        is_static -- whether it is a static method
+        Create an object the generates code to wrap a C++ class method.
+
+        @param return_value: the method return value
+        @type  return_value: L{ReturnValue}
+
+        @param method_name: name of the method
+
+        @param parameters: the method parameters
+        @type parameters: list of L{Parameter}
+
+        @param is_static: whether it is a static method
+
+        @param template_parameters: optional list of template parameters needed to invoke the method
+        @type template_parameters: list of strings, each element a template parameter expression
+
+        @param is_virtual: whether the method is virtual (pure or not)
+
+        @param is_const: whether the method has a const modifier on it
+
+        @param unblock_threads: whether to release the Python GIL
+        around the method call or not.  If None or omitted, use global
+        settings.  Releasing the GIL has a small performance penalty,
+        but is recommended if the method is expected to take
+        considerable time to complete, because otherwise no other
+        Python thread is allowed to run until the method completes.
+
+        @param is_pure_virtual: whether the method is defined as "pure
+        virtual", i.e. virtual method with no default implementation
+        in the class being wrapped.
+
+        @param custom_template_method_name: alternate name to give to
+        the method (in python side) when template parameters are
+        involved.  Otherwise PyBindGen will make up some name using a
+        name mangling algorithm.  This automatic name normally avoids
+        name conflicts but is ugly, so this parameter allows the
+        programmer to give a more friendly name to the method.
+
+        @param visibility: visibility of the method within the C++ class
+        @type visibility: a string (allowed values are 'public', 'protected', 'private')
         """
+
+        ## backward compatibility check
+        if isinstance(return_value, str) and isinstance(method_name, ReturnValue):
+            warnings.warn("CppMethod has changed API; see the API documentation (but trying to correct...)",
+                          DeprecationWarning, stacklevel=2)
+            method_name, return_value = return_value, method_name
+
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
         super(CppMethod, self).__init__(
@@ -414,7 +457,7 @@ class CppVirtualMethodParentCaller(CppMethod):
         """
         """
         super(CppVirtualMethodParentCaller, self).__init__(
-            method.return_value, method.method_name, method.parameters, unblock_threads=unblock_threads)
+            method.method_name, method.return_value, method.parameters, unblock_threads=unblock_threads)
         self._helper_class = None
         self.static_decl = False
         self.method = method
@@ -649,7 +692,7 @@ class CustomCppMethodWrapper(CppMethod):
 
     def __init__(self, method_name, wrapper_name, wrapper_body,
                  flags=('METH_VARARGS', 'METH_KEYWORDS')):
-        super(CustomCppMethodWrapper, self).__init__(ReturnValue.new('void'), method_name, [])
+        super(CustomCppMethodWrapper, self).__init__(method_name, ReturnValue.new('void'), [])
         self.wrapper_base_name = wrapper_name
         self.wrapper_actual_name = wrapper_name
         self.meth_flags = list(flags)
