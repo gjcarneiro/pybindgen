@@ -76,7 +76,7 @@ int %s::custom_method_added_by_a_hook(int x)
                              is_virtual=True))
     Zbr.add_static_attribute(ReturnValue.new('int'), 'instance_count')
     
-    mod.add_function(Function('store_zbr', ReturnValue.new('void'),
+    mod.add_function(Function('store_zbr', None,
                               [Parameter.new('Zbr*', 'zbr', transfer_ownership=True)]))
     mod.add_function(Function('invoke_zbr', ReturnValue.new('int'),
                               [Parameter.new('int', 'x')]))
@@ -179,7 +179,7 @@ int %s::custom_method_added_by_a_hook(int x)
         'call_get_prefix', ReturnValue.new('std::string'), []))
 
     SomeObject.add_method(CppMethod('set_foo_value',
-                                    ReturnValue.new('void'),                                    
+                                    None,                                    
                                     [Parameter.new('Foo', 'foo')]))
     SomeObject.add_method(CppMethod(
         'get_foo_value', ReturnValue.new('Foo'), []))

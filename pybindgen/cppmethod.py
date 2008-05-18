@@ -70,6 +70,9 @@ class CppMethod(ForwardWrapperBase):
                           DeprecationWarning, stacklevel=2)
             method_name, return_value = return_value, method_name
 
+        if return_value is None:
+            return_value = ReturnValue.new('void')
+
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
         super(CppMethod, self).__init__(

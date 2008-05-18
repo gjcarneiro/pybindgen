@@ -34,6 +34,9 @@ class Function(ForwardWrapperBase):
             warnings.warn("Function has changed API; see the API documentation (but trying to correct...)",
                           DeprecationWarning, stacklevel=2)
             function_name, return_value = return_value, function_name
+            
+        if return_value is None:
+            return_value = ReturnValue.new('void')
 
         super(Function, self).__init__(
             return_value, parameters,
