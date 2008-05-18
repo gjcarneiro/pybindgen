@@ -21,7 +21,8 @@ class CppMethod(ForwardWrapperBase):
     def __init__(self, method_name, return_value, parameters, is_static=False,
                  template_parameters=(), is_virtual=False, is_const=False,
                  unblock_threads=None, is_pure_virtual=False,
-                 custom_template_method_name=None, visibility='public'):
+                 custom_template_method_name=None, visibility='public',
+                 custom_name=None):
         """
         Create an object the generates code to wrap a C++ class method.
 
@@ -53,12 +54,8 @@ class CppMethod(ForwardWrapperBase):
         virtual", i.e. virtual method with no default implementation
         in the class being wrapped.
 
-        @param custom_template_method_name: alternate name to give to
-        the method (in python side) when template parameters are
-        involved.  Otherwise PyBindGen will make up some name using a
-        name mangling algorithm.  This automatic name normally avoids
-        name conflicts but is ugly, so this parameter allows the
-        programmer to give a more friendly name to the method.
+        @param custom_name: alternate name to give to
+        the method, in python side.
 
         @param visibility: visibility of the method within the C++ class
         @type visibility: a string (allowed values are 'public', 'protected', 'private')
@@ -87,10 +84,8 @@ class CppMethod(ForwardWrapperBase):
         self.is_pure_virtual = is_pure_virtual
         self.is_const = is_const
         self.template_parameters = template_parameters
-        if custom_template_method_name is None:
-            self.mangled_name = utils.get_mangled_name(self.method_name, self.template_parameters)
-        else:
-            self.mangled_name = custom_template_method_name
+
+        self.custom_name = (custom_name or custom_template_method_name)
 
         self._class = None
         self.docstring = None
@@ -98,6 +93,13 @@ class CppMethod(ForwardWrapperBase):
         self.wrapper_actual_name = None
         self.static_decl = True
 
+    def set_custom_name(self, custom_name):
+        if custom_name is None:
+            self.mangled_name = utils.get_mangled_name(self.method_name, self.template_parameters)
+        else:
+            self.mangled_name = custom_name
+
+    custom_name = property(None, set_custom_name)
 
     def clone(self):
         """Creates a semi-deep copy of this method wrapper.  The returned

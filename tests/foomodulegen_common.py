@@ -105,9 +105,9 @@ _wrap_PyBar_Hooray_lenx(PyBar *PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject
     return py_retval;
 }
 '''
-    Bar.add_method(CustomCppMethodWrapper("Hooray", "_wrap_PyBar_Hooray_lenx",
-                                          wrapper_body,
-                                          flags=["METH_VARARGS", "METH_KEYWORDS", "METH_STATIC"]))
+    Bar.add_custom_method_wrapper("Hooray", "_wrap_PyBar_Hooray_lenx",
+                                  wrapper_body,
+                                  flags=["METH_VARARGS", "METH_KEYWORDS", "METH_STATIC"])
 
 
     Foo, = [cls for cls in module.classes if cls.name == 'Foo']

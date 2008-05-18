@@ -16,9 +16,9 @@ def my_module_gen(out_file):
     FBase = mod.add_class('FBase', allow_subclassing=True)
     
     FBase.add_constructor(CppConstructor([]))
-    FBase.add_method(CppMethod('DoA', ReturnValue.new('void'), [], is_virtual=True, is_pure_virtual=True))
-    FBase.add_method(CppMethod('PrivDoB', ReturnValue.new('void'), [], is_virtual=True, is_pure_virtual=True, visibility='private'))
-    FBase.add_method(CppMethod('DoB', ReturnValue.new('void'), []))
+    FBase.add_method('DoA', None, [], is_virtual=True, is_pure_virtual=True)
+    FBase.add_method('PrivDoB', None, [], is_virtual=True, is_pure_virtual=True, visibility='private')
+    FBase.add_method('DoB', None, [])
 
     mod.generate(FileCodeSink(out_file) )
 

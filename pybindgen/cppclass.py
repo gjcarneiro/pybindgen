@@ -12,7 +12,7 @@ from typehandlers.codesink import NullCodeSink, MemoryCodeSink
 
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor, CppFunctionAsConstructor, \
     CppOverloadedMethod, CppOverloadedConstructor, \
-    CppVirtualMethodParentCaller, CppVirtualMethodProxy
+    CppVirtualMethodParentCaller, CppVirtualMethodProxy, CustomCppMethodWrapper
 
 from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter,
                           CppStaticAttributeGetter, CppStaticAttributeSetter,
@@ -905,7 +905,7 @@ public:
 ''')
         code_sink.writeln("\npybindgen::TypeMap %s;\n" % self.typeid_map_name)
 
-    def add_method(self, method, name=None):
+    def _add_method_obj(self, method):
         """
         Add a method to the class.
 
@@ -913,13 +913,10 @@ public:
         @param name: optional name of the class method as it will appear
                 from Python side
         """
-        name = utils.ascii(name)
-
         if isinstance(method, CppMethod):
-            if name is None:
-                name = method.mangled_name
+            name = method.mangled_name
         elif isinstance(method, function.Function):
-            assert name is not None
+            name = method.custom_name
             assert isinstance(method.parameters[0], CppClassParameterBase)
             assert method.parameters[0].cpp_class is self, \
                 "expected first parameter to be of class %s, but it is of class %s" % \
@@ -959,6 +956,62 @@ public:
                 proxy = CppVirtualMethodProxy(method)
                 proxy.main_wrapper = method
                 helper_class.add_virtual_proxy(proxy)
+
+    def add_method(self, *args, **kwargs):
+        """
+        Add a method to the class. See the documentation for
+        L{CppMethod.__init__} for information on accepted parameters.
+        """
+
+        ## <compat>
+        if len(args) >= 1 and isinstance(args[0], CppMethod):
+            meth = args[0]
+            warnings.warn("add_method has changed API; see the API documentation",
+                          DeprecationWarning, stacklevel=2)
+            if len(args) == 2:
+                meth.custom_name = args[1]
+            elif 'name' in kwargs:
+                assert len(args) == 1
+                meth.custom_name = kwargs['name']
+            else:
+                assert len(args) == 1
+                assert len(kwargs) == 0
+        elif len(args) >= 1 and isinstance(args[0], function.Function):
+            meth = args[0]
+            warnings.warn("add_method has changed API; see the API documentation",
+                          DeprecationWarning, stacklevel=2)
+            if len(args) == 2:
+                meth.custom_name = args[1]
+            elif 'name' in kwargs:
+                assert len(args) == 1
+                meth.custom_name = kwargs['name']
+            else:
+                assert len(args) == 1
+                assert len(kwargs) == 0
+        ## </compat>
+
+        else:
+            meth = CppMethod(*args, **kwargs)
+        self._add_method_obj(meth)
+        return meth
+
+    def add_function_as_method(self, *args, **kwargs):
+        """
+        Add a function as method of the class. See the documentation for
+        L{Function.__init__} for information on accepted parameters.
+        TODO: explain the implicit first function parameter
+        """
+        meth = function.Function(*args, **kwargs)
+        self._add_method_obj(meth)
+        return meth
+
+    def add_custom_method_wrapper(self, *args, **kwargs):
+        """
+        Adds a custom method wrapper. See L{CustomCppMethodWrapper} for more information.
+        """
+        meth = CustomCppMethodWrapper(*args, **kwargs)
+        self._add_method_obj(meth)
+        return meth
 
     def set_helper_class_disabled(self, flag=True):
         self.helper_class_disabled = flag

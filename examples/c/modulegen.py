@@ -16,11 +16,11 @@ def my_module_gen(out_file):
     C = mod.add_class('C')
     C.add_constructor(CppConstructor([]))
     C.add_constructor(CppConstructor([Parameter.new('uint32_t', 'c')]))
-    C.add_method(CppMethod('DoA', ReturnValue.new('void'), [], is_static=True))
-    C.add_method(CppMethod('DoB', ReturnValue.new('void'), []))
-    C.add_method(CppMethod('DoC', ReturnValue.new('void'), [Parameter.new('uint32_t', 'c')]))
-    C.add_method(CppMethod('DoD', ReturnValue.new('uint32_t'), []))
-    C.add_method(CppMethod('DoE', ReturnValue.new('void'), [], is_virtual=True))
+    C.add_method('DoA', None, [], is_static=True)
+    C.add_method('DoB', None, [])
+    C.add_method('DoC', None, [Parameter.new('uint32_t', 'c')])
+    C.add_method('DoD', ReturnValue.new('uint32_t'), [])
+    C.add_method('DoE', None, [], is_virtual=True)
 
     mod.generate(FileCodeSink(out_file) )
 

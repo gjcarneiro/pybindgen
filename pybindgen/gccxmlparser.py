@@ -1091,18 +1091,16 @@ class ModuleParser(object):
                     and not (kwargs.get('is_virtual', False) or kwargs.get('is_pure_virtual', False))):
                     continue
 
-                method_wrapper = CppMethod(member.name, return_type, arguments, **kwargs)
-                method_wrapper.gccxml_definition = member
-
                 def _pygen_method():
                     arglist_repr = ("[" + ', '.join([arg._pygen_repr for arg in arguments]) +  "]")
-                    self.pygen_sink.writeln("cls.add_method(CppMethod(%s))" %
+                    self.pygen_sink.writeln("cls.add_method(%s)" %
                                             ", ".join(
                             [repr(member.name), return_type._pygen_repr, arglist_repr]
                             + _pygen_kwargs(kwargs)))
 
                 try:
-                    class_wrapper.add_method(method_wrapper)
+                    method_wrapper = class_wrapper.add_method(member.name, return_type, arguments, **kwargs)
+                    method_wrapper.gccxml_definition = member
                 except NotSupportedError, ex:
                     _pygen_method()
                     if pure_virtual:
@@ -1306,11 +1304,10 @@ class ModuleParser(object):
                 #cpp_class = type_registry.find_class(of_class, (self.module_namespace_name or '::'))
                 cpp_class = root_module[normalize_class_name(of_class, (self.module_namespace_name or '::'))]
 
-                function_wrapper = Function(fun.name, return_type, arguments)
-                cpp_class.add_method(function_wrapper, name=as_method)
+                function_wrapper = cpp_class.add_function_as_method(fun.name, return_type, arguments, custom_name=as_method)
                 function_wrapper.gccxml_definition = fun
 
-                self.pygen_sink.writeln("root_module[%r].add_method(Function(%s), name=%r)" %
+                self.pygen_sink.writeln("root_module[%r].add_function_as_method(%s, custom_name=%r)" %
                                         (cpp_class.full_name,
                                          ", ".join([repr(fun.name), return_type._pygen_repr, arglist_repr]),
                                          as_method))
