@@ -24,7 +24,7 @@ def my_module_gen(out_file):
 
     Foo = mod.add_class('Foo', automatic_type_narrowing=True)
 
-    Foo.add_static_attribute(ReturnValue.new('int'), 'instance_count')
+    Foo.add_static_attribute('instance_count', ReturnValue.new('int'))
     Foo.add_constructor([Parameter.new('std::string', 'datum')])
     Foo.add_constructor([])
     Foo.add_method('get_datum', ReturnValue.new('std::string'), [])
@@ -37,7 +37,7 @@ def my_module_gen(out_file):
     Zoo.implicitly_converts_to(Foo)
 
     Foobar = mod.add_class('Foobar')
-    Foobar.add_static_attribute(ReturnValue.new('int'), 'instance_count')
+    Foobar.add_static_attribute('instance_count', ReturnValue.new('int'))
 
 
     Bar = mod.add_class('Bar', parent=Foo)
@@ -71,7 +71,7 @@ int %s::custom_method_added_by_a_hook(int x)
     Zbr.add_method('get_datum', ReturnValue.new('std::string'), [])
     Zbr.add_method('get_int', ReturnValue.new('int'), [Parameter.new('int', 'x')],
                              is_virtual=True)
-    Zbr.add_static_attribute(ReturnValue.new('int'), 'instance_count')
+    Zbr.add_static_attribute('instance_count', ReturnValue.new('int'))
     
     mod.add_function('store_zbr', None,
                      [Parameter.new('Zbr*', 'zbr', transfer_ownership=True)])
@@ -95,13 +95,13 @@ int %s::custom_method_added_by_a_hook(int x)
 
     SomeObject = mod.add_class('SomeObject', allow_subclassing=True)
 
-    SomeObject.add_instance_attribute(ReturnValue.new('Foo'), 'foo',
+    SomeObject.add_instance_attribute('foo', ReturnValue.new('Foo'),
                                       getter='get_foo_value',
                                       setter='set_foo_value')
-    SomeObject.add_instance_attribute(ReturnValue.new('std::string'), 'm_prefix')
-    SomeObject.add_static_attribute(ReturnValue.new('std::string'), 'staticData')
+    SomeObject.add_instance_attribute('m_prefix', ReturnValue.new('std::string'))
+    SomeObject.add_static_attribute('staticData', ReturnValue.new('std::string'))
 
-    SomeObject.add_static_attribute(ReturnValue.new('int'), 'instance_count')
+    SomeObject.add_static_attribute('instance_count', ReturnValue.new('int'))
     
     SomeObject.add_method('add_prefix', ReturnValue.new('int'),
                           [Parameter.new('std::string&', 'message',
@@ -280,7 +280,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
     ## A nested class
     NestedClass = mod.add_class('NestedClass', automatic_type_narrowing=True, outer_class=SomeObject)
-    NestedClass.add_static_attribute(ReturnValue.new('int'), 'instance_count')
+    NestedClass.add_static_attribute('instance_count', ReturnValue.new('int'))
     NestedClass.add_constructor([Parameter.new('std::string', 'datum')])
     NestedClass.add_constructor([])
     NestedClass.add_method('get_datum', ReturnValue.new('std::string'), [])

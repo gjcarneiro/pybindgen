@@ -1179,15 +1179,15 @@ class ModuleParser(object):
                                            Warning, member.location.file_name, member.location.line)
                     continue
                 if member.type_qualifiers.has_static:
-                    class_wrapper.add_static_attribute(return_type, member.name,
+                    class_wrapper.add_static_attribute(member.name, return_type,
                                                        is_const=type_traits.is_const(member.type))
-                    self.pygen_sink.writeln("cls.add_static_attribute(%s, %r, is_const=%r)" %
-                                            (return_type._pygen_repr, member.name, type_traits.is_const(member.type)))
+                    self.pygen_sink.writeln("cls.add_static_attribute(%r, %s, is_const=%r)" %
+                                            (member.name, return_type._pygen_repr, type_traits.is_const(member.type)))
                 else:
-                    class_wrapper.add_instance_attribute(return_type, member.name,
+                    class_wrapper.add_instance_attribute(member.name, return_type,
                                                          is_const=type_traits.is_const(member.type))
-                    self.pygen_sink.writeln("cls.add_instance_attribute(%s, %r, is_const=%r)" %
-                                            (return_type._pygen_repr, member.name, type_traits.is_const(member.type)))
+                    self.pygen_sink.writeln("cls.add_instance_attribute(%r, %s, is_const=%r)" %
+                                            (member.name, return_type._pygen_repr, type_traits.is_const(member.type)))
                 ## TODO: invoke post_scan_hooks
             elif isinstance(member, calldef.destructor_t):
                 pass

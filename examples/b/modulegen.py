@@ -15,8 +15,8 @@ def my_module_gen(out_file):
 
     B = mod.add_class('B')
     B.add_constructor([])
-    B.add_instance_attribute(ReturnValue.new('uint32_t'), 'b_a')
-    B.add_instance_attribute(ReturnValue.new('uint32_t'), 'b_b')
+    B.add_instance_attribute('b_a', ReturnValue.new('uint32_t'))
+    B.add_instance_attribute('b_b', ReturnValue.new('uint32_t'))
 
     mod.add_function('BDoA', None, [Parameter.new('B', 'b')])
     mod.add_function('BDoB', ReturnValue.new('B'), [])

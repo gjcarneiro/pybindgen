@@ -1066,12 +1066,19 @@ public:
         self._add_constructor_obj(constructor)
         return constructor
 
-    def add_static_attribute(self, value_type, name, is_const=False):
+    def add_static_attribute(self, name, value_type, is_const=False):
         """
         @param value_type: a ReturnValue object
         @param name: attribute name (i.e. the name of the class member variable)
         @param is_const: True if the attribute is const, i.e. cannot be modified
         """
+
+        ## backward compatibility check
+        if isinstance(value_type, str) and isinstance(name, ReturnValue):
+            warnings.warn("add_static_attribute has changed API; see the API documentation (but trying to correct...)",
+                          DeprecationWarning, stacklevel=2)
+            value_type, name = name, value_type
+
         assert isinstance(value_type, ReturnValue)
         getter = CppStaticAttributeGetter(value_type, self, name)
         if is_const:
@@ -1080,7 +1087,7 @@ public:
             setter = CppStaticAttributeSetter(value_type, self, name)
         self.static_attributes.add_attribute(name, getter, setter)
 
-    def add_instance_attribute(self, value_type, name, is_const=False,
+    def add_instance_attribute(self, name, value_type, is_const=False,
                                getter=None, setter=None):
         """
         @param value_type: a ReturnValue object
@@ -1089,6 +1096,13 @@ public:
         @param getter: None, or name of a method of this class used to get the value
         @param setter: None, or name of a method of this class used to set the value
         """
+
+        ## backward compatibility check
+        if isinstance(value_type, str) and isinstance(name, ReturnValue):
+            warnings.warn("add_static_attribute has changed API; see the API documentation (but trying to correct...)",
+                          DeprecationWarning, stacklevel=2)
+            value_type, name = name, value_type
+
         assert isinstance(value_type, ReturnValue)
         getter_wrapper = CppInstanceAttributeGetter(value_type, self, name, getter=getter)
         if is_const:

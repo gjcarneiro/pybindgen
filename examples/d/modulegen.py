@@ -14,7 +14,7 @@ def my_module_gen(out_file):
     mod.add_include('"d.h"')
 
     D = mod.add_class('D', free_function='DDestroy')
-    D.add_instance_attribute(ReturnValue.new('bool'), 'd')
+    D.add_instance_attribute('d', ReturnValue.new('bool'))
     D.add_function_as_constructor("DCreate", ReturnValue.new("D*", caller_owns_return=True), [])
     mod.add_function('DDoA', None, [Parameter.new('D*', 'd', transfer_ownership=False)])
     mod.add_function('DDoB', None, [Parameter.new('D&', 'd', direction=Parameter.DIRECTION_IN)])
