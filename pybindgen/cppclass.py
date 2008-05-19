@@ -1020,21 +1020,51 @@ public:
         assert isinstance(reason, basestring)
         self.cannot_be_constructed = reason
 
-    def add_constructor(self, wrapper):
+    def _add_constructor_obj(self, wrapper):
         """
         Add a constructor to the class.
 
         @param wrapper: a CppConstructor instance
         """
-        if isinstance(wrapper, function.Function):
-            wrapper = CppFunctionAsConstructor(wrapper.parameters, wrapper.function_name)
-            wrapper.module = self.module
-        else:
-            assert isinstance(wrapper, CppConstructor)
+        assert isinstance(wrapper, CppConstructor)
         wrapper.set_class(self)
         self.constructors.append(wrapper)
         if not wrapper.parameters:
             self.has_trivial_constructor = True
+
+    def add_constructor(self, *args, **kwargs):
+        """
+        Add a constructor to the class. See the documentation for
+        L{CppConstructor.__init__} for information on accepted parameters.
+        """
+
+        ## <compat>
+        if len(args) == 1 and isinstance(args[0], CppConstructor):
+            warnings.warn("add_constructor has changed API; see the API documentation",
+                          DeprecationWarning, stacklevel=2)
+            #raise TypeError("FIXME: remove this exception")
+            constructor = args[0]
+        elif len(args) == 1 and isinstance(args[0], function.Function):
+            warnings.warn("add_constructor has changed API; see the API documentation",
+                          DeprecationWarning, stacklevel=2)
+            #raise TypeError("FIXME: remove this exception")
+            func = args[0]
+            constructor = CppFunctionAsConstructor(func.function_name, func.parameters)
+            constructor.module = self.module
+        ## </compat>
+        else:
+            constructor = CppConstructor(*args, **kwargs)
+        self._add_constructor_obj(constructor)
+        return constructor
+
+    def add_function_as_constructor(self, *args, **kwargs):
+        """
+        Wrap a function that behaves as a constructor to the class. See the documentation for
+        L{CppFunctionAsConstructor.__init__} for information on accepted parameters.
+        """
+        constructor = CppFunctionAsConstructor(*args, **kwargs)
+        self._add_constructor_obj(constructor)
+        return constructor
 
     def add_static_attribute(self, value_type, name, is_const=False):
         """

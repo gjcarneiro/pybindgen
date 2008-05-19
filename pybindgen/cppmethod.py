@@ -383,7 +383,16 @@ class CppFunctionAsConstructor(CppConstructor):
     """
     Class that generates a wrapper to a C/C++ function that appears as a contructor.
     """
-    def __init__(self, parameters, c_function_name, unblock_threads=None):
+    def __init__(self, c_function_name, parameters, unblock_threads=None):
+        """
+        @param c_function_name: name of the C/C++ function; it is
+        implied that this function returns a pointer to the a class
+        instance with caller_owns_return semantics.
+
+        @param parameters: the function/constructor parameters
+        @type parameters: list of L{Parameter}
+
+        """
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
         super(CppFunctionAsConstructor, self).__init__(parameters)
