@@ -25,16 +25,14 @@ def my_module_gen(out_file):
     Foo = mod.add_class('Foo', automatic_type_narrowing=True)
 
     Foo.add_static_attribute(ReturnValue.new('int'), 'instance_count')
-    Foo.add_constructor(
-        CppConstructor([Parameter.new('std::string', 'datum')]))
-    Foo.add_constructor(CppConstructor([]))
+    Foo.add_constructor([Parameter.new('std::string', 'datum')])
+    Foo.add_constructor([])
     Foo.add_method('get_datum', ReturnValue.new('std::string'), [])
     Foo.add_method('is_initialized', ReturnValue.new('bool'), [], is_const=True)
 
     Zoo = mod.add_class('Zoo', automatic_type_narrowing=True)
-    Zoo.add_constructor(
-        CppConstructor([Parameter.new('std::string', 'datum')]))
-    Zoo.add_constructor(CppConstructor([]))
+    Zoo.add_constructor([Parameter.new('std::string', 'datum')])
+    Zoo.add_constructor([])
     Zoo.add_method('get_datum', ReturnValue.new('std::string'), [])
     Zoo.implicitly_converts_to(Foo)
 
@@ -69,8 +67,7 @@ int %s::custom_method_added_by_a_hook(int x)
         helper_class.add_post_generation_code("// this comment was written by a helper class hook function")
     Zbr.add_helper_class_hook(helper_class_hook)
 
-    Zbr.add_constructor(
-        CppConstructor([Parameter.new('std::string', 'datum')]))
+    Zbr.add_constructor([Parameter.new('std::string', 'datum')])
     Zbr.add_method('get_datum', ReturnValue.new('std::string'), [])
     Zbr.add_method('get_int', ReturnValue.new('int'), [Parameter.new('int', 'x')],
                              is_virtual=True)
@@ -109,10 +106,8 @@ int %s::custom_method_added_by_a_hook(int x)
     SomeObject.add_method('add_prefix', ReturnValue.new('int'),
                           [Parameter.new('std::string&', 'message',
                                          direction=Parameter.DIRECTION_INOUT)])
-    SomeObject.add_constructor(
-        CppConstructor([Parameter.new('std::string', 'prefix')]))
-    SomeObject.add_constructor(
-        CppConstructor([Parameter.new('int', 'prefix_len')]))
+    SomeObject.add_constructor([Parameter.new('std::string', 'prefix')])
+    SomeObject.add_constructor([Parameter.new('int', 'prefix_len')])
 
     # --- some virtual methods ---
     SomeObject.add_method('get_prefix', ReturnValue.new('std::string'), [],
@@ -246,7 +241,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
 
     xpto_SomeClass = xpto.add_class('SomeClass')
-    xpto_SomeClass.add_constructor(CppConstructor([]))
+    xpto_SomeClass.add_constructor([])
 
     ## ---- some implicity conversion APIs
     mod.add_function('function_that_takes_foo', ReturnValue.new('void'),
@@ -254,7 +249,7 @@ int %s::custom_method_added_by_a_hook(int x)
     mod.add_function('function_that_returns_foo', ReturnValue.new('Foo'), [])
     
     cls = mod.add_class('ClassThatTakesFoo')
-    cls.add_constructor(CppConstructor([Parameter.new('Foo', 'foo')]))
+    cls.add_constructor([Parameter.new('Foo', 'foo')])
     cls.add_method('get_foo', ReturnValue.new('Foo'), [])
 
     cls = mod.add_class('SingletonClass', is_singleton=True)
@@ -286,9 +281,8 @@ int %s::custom_method_added_by_a_hook(int x)
     ## A nested class
     NestedClass = mod.add_class('NestedClass', automatic_type_narrowing=True, outer_class=SomeObject)
     NestedClass.add_static_attribute(ReturnValue.new('int'), 'instance_count')
-    NestedClass.add_constructor(
-        CppConstructor([Parameter.new('std::string', 'datum')]))
-    NestedClass.add_constructor(CppConstructor([]))
+    NestedClass.add_constructor([Parameter.new('std::string', 'datum')])
+    NestedClass.add_constructor([])
     NestedClass.add_method('get_datum', ReturnValue.new('std::string'), [])
 
     ## A nested enum..
@@ -302,7 +296,7 @@ int %s::custom_method_added_by_a_hook(int x)
                                   [Parameter.new('int', 'x')], is_const=True)
     AbstractBaseClass2.add_method('invoke_protected_virtual', ReturnValue.new('int'),
                                   [Parameter.new('int', 'x')], is_const=True)
-    AbstractBaseClass2.add_constructor(CppConstructor([], visibility='protected'))
+    AbstractBaseClass2.add_constructor([], visibility='protected')
 
     AbstractBaseClass2.add_method('protected_virtual',
                                   ReturnValue.new('int'),
@@ -320,13 +314,13 @@ int %s::custom_method_added_by_a_hook(int x)
     AbstractXpto.add_method('something', ReturnValue.new('void'),
                             [Parameter.new('int', 'x')], is_const=True,
                             is_virtual=True, is_pure_virtual=True)
-    AbstractXpto.add_constructor(CppConstructor([]))
+    AbstractXpto.add_constructor([])
 
     AbstractXptoImpl = mod.add_class('AbstractXptoImpl', parent=AbstractXpto)
     AbstractXptoImpl.add_method('something', ReturnValue.new('void'),
                                 [Parameter.new('int', 'x')], is_const=True,
                                 is_virtual=True, is_pure_virtual=False)
-    AbstractXptoImpl.add_constructor(CppConstructor([]))
+    AbstractXptoImpl.add_constructor([])
 
 
     #### --- error handler ---

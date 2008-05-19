@@ -12,15 +12,15 @@ def my_module_gen(out_file):
     mod.add_include('"h.h"')
 
     H = mod.add_class('H')
-    H.add_constructor(CppConstructor([]))
+    H.add_constructor([])
     H.add_method('Do', None, [])
 
     Inner = mod.add_class('Inner', outer_class=H)
-    Inner.add_constructor(CppConstructor([]))
+    Inner.add_constructor([])
     Inner.add_method('Do', None, [])
 
     MostInner = mod.add_class('MostInner', outer_class=Inner)
-    MostInner.add_constructor(CppConstructor([]))
+    MostInner.add_constructor([])
     MostInner.add_method('Do', None, [])
 
     mod.generate(FileCodeSink(out_file))

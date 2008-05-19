@@ -221,7 +221,7 @@ class ModuleBase(dict):
         """
         if len(args) >= 1 and isinstance(args[0], Function):
             func = args[0]
-            warnings.warn("add_class has changed API; see the API documentation",
+            warnings.warn("add_function has changed API; see the API documentation",
                           DeprecationWarning, stacklevel=2)
             if len(args) == 2:
                 func.custom_name = args[1]

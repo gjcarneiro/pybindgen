@@ -815,10 +815,10 @@ class CppClass(object):
             return
         for cons in self.parent.constructors:
             if len(cons.parameters) == 0:
-                self.add_constructor(CppConstructor([]))
+                self.add_constructor([])
             elif (len(cons.parameters) == 1
                   and isinstance(cons.parameters[0], self.parent.ThisClassRefParameter)):
-                self.add_constructor(CppConstructor([self.ThisClassRefParameter()]))
+                self.add_constructor([self.ThisClassRefParameter()])
 
     def get_helper_class(self):
         """gets the "helper class" for this class wrapper, creating it if necessary"""
@@ -1042,12 +1042,12 @@ public:
         if len(args) == 1 and isinstance(args[0], CppConstructor):
             warnings.warn("add_constructor has changed API; see the API documentation",
                           DeprecationWarning, stacklevel=2)
-            #raise TypeError("FIXME: remove this exception")
+            raise TypeError("FIXME: remove this exception")
             constructor = args[0]
         elif len(args) == 1 and isinstance(args[0], function.Function):
             warnings.warn("add_constructor has changed API; see the API documentation",
                           DeprecationWarning, stacklevel=2)
-            #raise TypeError("FIXME: remove this exception")
+            raise TypeError("FIXME: remove this exception")
             func = args[0]
             constructor = CppFunctionAsConstructor(func.function_name, func.parameters)
             constructor.module = self.module

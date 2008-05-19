@@ -1147,9 +1147,8 @@ class ModuleParser(object):
                     ok = True
                 if not ok:
                     continue
-                constructor_wrapper = CppConstructor(arguments, visibility=member.access_type)
+                constructor_wrapper = class_wrapper.add_constructor(arguments, visibility=member.access_type)
                 constructor_wrapper.gccxml_definition = member
-                class_wrapper.add_constructor(constructor_wrapper)
                 for hook in self._post_scan_hooks:
                     hook(self, member, constructor_wrapper)
 
@@ -1158,7 +1157,7 @@ class ModuleParser(object):
                     have_copy_constructor = True
 
                 arglist_repr = ("[" + ', '.join([arg._pygen_repr for arg in arguments]) +  "]")
-                self.pygen_sink.writeln("cls.add_constructor(CppConstructor(%s))" %
+                self.pygen_sink.writeln("cls.add_constructor(%s)" %
                                         ", ".join([arglist_repr, "visibility=%r" % member.access_type]))
 
             ## ------------ attribute --------------------
@@ -1197,8 +1196,8 @@ class ModuleParser(object):
         ## thankfully pygccxml comes to the rescue!
         if not have_trivial_constructor:
             if type_traits.has_trivial_constructor(cls):
-                class_wrapper.add_constructor(CppConstructor([]))
-                self.pygen_sink.writeln("cls.add_constructor(CppConstructor([]))")
+                class_wrapper.add_constructor([])
+                self.pygen_sink.writeln("cls.add_constructor([])")
 
         if not have_copy_constructor:
             try: # pygccxml > 0.9
@@ -1206,9 +1205,9 @@ class ModuleParser(object):
             except AttributeError: # pygccxml <= 0.9
                 has_copy_constructor = type_traits.has_trivial_copy(cls)
             if has_copy_constructor:
-                class_wrapper.add_constructor(CppConstructor([
+                class_wrapper.add_constructor([
                             class_wrapper.ThisClassRefParameter("%s const &" % class_wrapper.full_name,
-                                                                'ctor_arg', is_const=True)]))
+                                                                'ctor_arg', is_const=True)])
 
 
     def scan_functions(self):
@@ -1317,12 +1316,11 @@ class ModuleParser(object):
             if is_constructor_of is not None:
                 #cpp_class = type_registry.find_class(is_constructor_of, (self.module_namespace_name or '::'))
                 cpp_class = root_module[normalize_class_name(is_constructor_of, (self.module_namespace_name or '::'))]
-                function_wrapper = Function(fun.name, return_type, arguments)
-                cpp_class.add_constructor(function_wrapper)
+                function_wrapper = cpp_class.add_function_as_constructor(fun.name, return_type, arguments)
 
                 function_wrapper.gccxml_definition = fun
 
-                self.pygen_sink.writeln("root_module[%r].add_constructor(Function(%s))" %
+                self.pygen_sink.writeln("root_module[%r].add_function_as_constructor(%s)" %
                                         (cpp_class.full_name,
                                          ", ".join([repr(fun.name), return_type._pygen_repr, arglist_repr]),))
 

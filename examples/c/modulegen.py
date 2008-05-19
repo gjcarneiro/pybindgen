@@ -14,8 +14,8 @@ def my_module_gen(out_file):
     mod.add_include('"c.h"')
 
     C = mod.add_class('C')
-    C.add_constructor(CppConstructor([]))
-    C.add_constructor(CppConstructor([Parameter.new('uint32_t', 'c')]))
+    C.add_constructor([])
+    C.add_constructor([Parameter.new('uint32_t', 'c')])
     C.add_method('DoA', None, [], is_static=True)
     C.add_method('DoB', None, [])
     C.add_method('DoC', None, [Parameter.new('uint32_t', 'c')])

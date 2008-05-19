@@ -383,11 +383,14 @@ class CppFunctionAsConstructor(CppConstructor):
     """
     Class that generates a wrapper to a C/C++ function that appears as a contructor.
     """
-    def __init__(self, c_function_name, parameters, unblock_threads=None):
+    def __init__(self, c_function_name, return_value, parameters, unblock_threads=None):
         """
-        @param c_function_name: name of the C/C++ function; it is
+        @param c_function_name: name of the C/C++ function; FIXME: for now it is
         implied that this function returns a pointer to the a class
-        instance with caller_owns_return semantics.
+        instance with caller_owns_return=True semantics.
+
+        @param return_value: function return value type
+        @type return_value: L{ReturnValue}
 
         @param parameters: the function/constructor parameters
         @type parameters: list of L{Parameter}
@@ -397,6 +400,7 @@ class CppFunctionAsConstructor(CppConstructor):
             unblock_threads = settings.unblock_threads
         super(CppFunctionAsConstructor, self).__init__(parameters)
         self.c_function_name = c_function_name
+        self.function_return_value = return_value
 
     def generate_call(self, class_=None):
         "virtual method implementation; do not call"
@@ -404,6 +408,7 @@ class CppFunctionAsConstructor(CppConstructor):
             class_ = self._class
         #assert isinstance(class_, CppClass)
         assert class_.helper_class is None
+        ## FIXME: check caller_owns_return in self.function_return_value
         self.before_call.write_code("self->obj = %s(%s);" %
                                     (self.c_function_name, ", ".join(self.call_params)))
 

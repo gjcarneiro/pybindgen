@@ -14,7 +14,7 @@ def my_module_gen(out_file):
     mod.add_include('"b.h"')
 
     B = mod.add_class('B')
-    B.add_constructor(CppConstructor([]))
+    B.add_constructor([])
     B.add_instance_attribute(ReturnValue.new('uint32_t'), 'b_a')
     B.add_instance_attribute(ReturnValue.new('uint32_t'), 'b_b')
 

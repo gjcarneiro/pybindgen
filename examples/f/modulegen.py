@@ -15,7 +15,7 @@ def my_module_gen(out_file):
 
     FBase = mod.add_class('FBase', allow_subclassing=True)
     
-    FBase.add_constructor(CppConstructor([]))
+    FBase.add_constructor([])
     FBase.add_method('DoA', None, [], is_virtual=True, is_pure_virtual=True)
     FBase.add_method('PrivDoB', None, [], is_virtual=True, is_pure_virtual=True, visibility='private')
     FBase.add_method('DoB', None, [])

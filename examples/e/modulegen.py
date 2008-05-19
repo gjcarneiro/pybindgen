@@ -15,10 +15,10 @@ def my_module_gen(out_file):
 
     E = mod.add_class('E', decref_method='Unref', incref_method='Ref')
     if 1:
-        E.add_constructor(Function("E::CreateWithRef", ReturnValue.new("E*", caller_owns_return=True), []))
+        E.add_function_as_constructor("E::CreateWithRef", ReturnValue.new("E*", caller_owns_return=True), [])
     else:
         ## alternative:
-        E.add_constructor(Function(ReturnValue.new("E*", caller_owns_return=False), "E::CreateWithoutRef", []))
+        E.add_function_as_constructor("E::CreateWithoutRef", ReturnValue.new("E*", caller_owns_return=False), [])
     E.add_method("Do", None, [])
 
 
