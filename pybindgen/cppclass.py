@@ -907,11 +907,9 @@ public:
 
     def _add_method_obj(self, method):
         """
-        Add a method to the class.
+        Add a method object to the class.  For internal use.
 
-        @param method: a CppMethod instance that can generate the method wrapper
-        @param name: optional name of the class method as it will appear
-                from Python side
+        @param method: a L{CppMethod} or L{Function} instance that can generate the method wrapper
         """
         if isinstance(method, CppMethod):
             name = method.mangled_name
