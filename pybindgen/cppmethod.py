@@ -322,6 +322,8 @@ class CppConstructor(ForwardWrapperBase):
             self.before_call.indent()
 
             try:
+                if self.visibility != 'public':
+                    raise CodeGenerationError
                 class_.get_construct_name()
             except CodeGenerationError:
                 self.before_call.write_code('PyErr_SetString(PyExc_TypeError, "class \'%s\' '
