@@ -1,7 +1,8 @@
 """
 C wrapper wrapper
 """
-from typehandlers.base import ForwardWrapperBase, NotSupportedError
+from typehandlers.base import TypeConfigurationError, CodeGenerationError, NotSupportedError
+from typehandlers.base import ForwardWrapperBase
 import utils
 
 def isiterable(obj): 
@@ -262,9 +263,14 @@ class OverloadedWrapper(object):
             ## detect inconsistencies in flags; they must all be the same
             if __debug__:
                 for func in self.all_wrappers:
-                    assert set(func.get_py_method_def_flags()) == set(flags),\
-                        ("Expected PyMethodDef flags %r, got %r"
-                         % (flags, func.get_py_method_def_flags()))
+                    try:
+                        assert set(func.get_py_method_def_flags()) == set(flags),\
+                            ("Expected PyMethodDef flags %r, got %r"
+                             % (flags, func.get_py_method_def_flags()))
+                    except (TypeConfigurationError,
+                            CodeGenerationError,
+                            NotSupportedError):
+                        pass
             docstring = None # FIXME
             return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
                 (name, self.wrapper_function_name, '|'.join(flags),

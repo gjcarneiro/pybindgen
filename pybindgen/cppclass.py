@@ -1515,6 +1515,7 @@ class CppClassParameter(CppClassParameterBase):
             implicit_conversion_sources = self.cpp_class.get_all_implicit_conversions()
             if not implicit_conversion_sources:
                 if self.default_value is not None:
+                    self.cpp_class.get_construct_name() # raises an exception if the class cannot be constructed
                     self.py_name = wrapper.declarations.declare_variable(
                         self.cpp_class.pystruct+'*', self.name, 'NULL')
                     wrapper.parse_params.add_parameter(
@@ -1631,6 +1632,7 @@ class CppClassRefParameter(CppClassParameterBase):
             else:
                 implicit_conversion_sources = self.cpp_class.get_all_implicit_conversions()
                 if not (implicit_conversion_sources and self.is_const):
+                    self.cpp_class.get_construct_name() # raises an exception if the class cannot be constructed
                     if self.default_value is not None:
                         self.py_name = wrapper.declarations.declare_variable(
                             self.cpp_class.pystruct+'*', self.name, 'NULL')
