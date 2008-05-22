@@ -93,6 +93,13 @@ class CppMethod(ForwardWrapperBase):
         self.wrapper_actual_name = None
         self.static_decl = True
 
+    def matches_signature(self, other):
+        return (self.mangled_name == other.mangled_name
+                and self.return_value.ctype == other.return_value.ctype
+                and all([param1.ctype == param2.ctype
+                         for param1, param2 in zip(self.parameters, other.parameters)])
+                and ((not not self.is_const) == (not not other.is_const)))
+
     def set_custom_name(self, custom_name):
         if custom_name is None:
             self.mangled_name = utils.get_mangled_name(self.method_name, self.template_parameters)

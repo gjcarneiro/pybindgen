@@ -72,6 +72,26 @@ class CppHelperClass(object):
         self.cannot_be_constructed = False
         self.custom_methods = []
         self.post_generation_code = []
+        self.virtual_methods = []
+
+    def add_virtual_method(self, method):
+        assert method.is_virtual
+
+        for existing in self.virtual_methods:
+            if method.matches_signature(existing):
+                return # don't re-add already existing method
+        
+        self.virtual_methods.append(method)
+        if not method.is_pure_virtual:
+            if method.visibility in ['public', 'protected']:
+                parent_caller = CppVirtualMethodParentCaller(method)
+                parent_caller.main_wrapper = method
+                self.add_virtual_parent_caller(parent_caller)
+
+        proxy = CppVirtualMethodProxy(method)
+        proxy.main_wrapper = method
+        self.add_virtual_proxy(proxy)
+        
         
     def add_virtual_parent_caller(self, parent_caller):
         """Add a new CppVirtualMethodParentCaller object to this helper class"""
@@ -501,7 +521,18 @@ class CppClass(object):
                 pass
 
     def __repr__(self):
-        return "<pybindgen.CppClass '%s'>" % self.full_name
+        return "<pybindgen.CppClass %r>" % self.full_name
+
+    def get_mro(self):
+        """
+        Get the method resolution order (MRO) of this class.
+
+        @return: an iterator that gives CppClass objects, from leaf to root class
+        """
+        cls = self
+        while cls is not None:
+            yield cls
+            cls = cls.parent
 
     def get_all_methods(self):
         """Returns an iterator to iterate over all methods of the class"""
@@ -519,20 +550,10 @@ class CppClass(object):
         """
         if self._have_pure_virtual_methods is not None:
             return self._have_pure_virtual_methods
-        mro = []
-        cls = self
-        while cls is not None:
-            mro.append(cls)
-            cls = cls.parent
+        mro = list(self.get_mro())
         mro_reversed = list(mro)
         mro_reversed.reverse()
 
-        def method_matches_signature(meth1, meth2):
-            return (meth1.mangled_name == meth2.mangled_name
-                    and meth1.return_value.ctype == meth2.return_value.ctype
-                    and all([param1.ctype == param2.ctype
-                             for param1, param2 in zip(meth1.parameters, meth2.parameters)])
-                    and ((not not meth1.is_const) == (not not meth2.is_const)))
         self._have_pure_virtual_methods = False
         for pos, cls in enumerate(mro_reversed):
             for method in cls.get_all_methods():
@@ -550,7 +571,7 @@ class CppClass(object):
                                 continue
                             if not child_method.is_virtual:
                                 continue
-                            if not method_matches_signature(child_method, method):
+                            if not child_method.matches_signature(method):
                                 continue
                             if not child_method.is_pure_virtual:
                                 implemented = True
@@ -945,15 +966,7 @@ public:
             self._have_pure_virtual_methods = None
             helper_class = self.get_helper_class()
             if helper_class is not None:
-                if not method.is_pure_virtual:
-                    if method.visibility in ['public', 'protected']:
-                        parent_caller = CppVirtualMethodParentCaller(method)
-                        parent_caller.main_wrapper = method
-                        helper_class.add_virtual_parent_caller(parent_caller)
-                        
-                proxy = CppVirtualMethodProxy(method)
-                proxy.main_wrapper = method
-                helper_class.add_virtual_proxy(proxy)
+                helper_class.add_virtual_method(method)
 
     def add_method(self, *args, **kwargs):
         """
@@ -1112,6 +1125,21 @@ public:
             setter_wrapper = CppInstanceAttributeSetter(value_type, self, name, setter=setter)
         self.instance_attributes.add_attribute(name, getter_wrapper, setter_wrapper)
 
+
+    def _inherit_helper_class_parent_virtuals(self):
+        """
+        Given a class containing a helper class, add all virtual
+        methods from the all parent classes of this class.
+        """
+        mro = self.get_mro()
+        mro.next() # skip 'self'
+        for cls in mro:
+            for method in cls.get_all_methods():
+                if not method.is_virtual:
+                    continue
+                self.helper_class.add_virtual_method(method)
+
+
     def generate_forward_declarations(self, code_sink, module):
         """
         Generates forward declarations for the instance and type
@@ -1144,6 +1172,7 @@ typedef struct {
             self._register_typeid(module)
 
         if self.helper_class is not None:
+            self._inherit_helper_class_parent_virtuals()
             for hook in self._get_all_helper_class_hooks():
                 hook(self.helper_class)
             self.helper_class.generate_forward_declarations(code_sink)
