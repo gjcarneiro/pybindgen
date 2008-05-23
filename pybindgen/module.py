@@ -482,12 +482,16 @@ class ModuleBase(dict):
         code_sink.unindent()
         code_sink.writeln('}')
 
-        ## generate the include directives
-        for include in self.includes:
-            includes_code_sink.writeln("#include %s" % include)
+        ## generate the include directives (only the root module)
+        if self.parent is None:
+            for include in self.includes:
+                includes_code_sink.writeln("#include %s" % include)
 
         ## append the 'header' section to the 'includes' section
         self.header.flush_to(includes_code_sink)
+    
+    def __repr__(self):
+        return "<pybindgen.module.Module %r>" % self.name
         
 
 class Module(ModuleBase):
