@@ -1055,12 +1055,10 @@ public:
         if len(args) == 1 and isinstance(args[0], CppConstructor):
             warnings.warn("add_constructor has changed API; see the API documentation",
                           DeprecationWarning, stacklevel=2)
-            raise TypeError("FIXME: remove this exception")
             constructor = args[0]
         elif len(args) == 1 and isinstance(args[0], function.Function):
             warnings.warn("add_constructor has changed API; see the API documentation",
                           DeprecationWarning, stacklevel=2)
-            raise TypeError("FIXME: remove this exception")
             func = args[0]
             constructor = CppFunctionAsConstructor(func.function_name, func.parameters)
             constructor.module = self.module
