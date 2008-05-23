@@ -104,7 +104,9 @@ class ModuleBase(dict):
         self.cpp_namespace = cpp_namespace
         if self.parent is None:
             error_return = 'return;'
+            self.after_forward_declarations = MemoryCodeSink()
         else:
+            self.after_forward_declarations = None
             self.parent.submodules.append(self)
             error_return = 'return NULL;'
 
@@ -397,6 +399,7 @@ class ModuleBase(dict):
         if self.parent is None:
             if not self._forward_declarations_declared:
                 self.generate_forward_declarations(code_sink)
+                self.after_forward_declarations.flush_to(code_sink)
 
         ## generate the submodules
         for submodule in self.submodules:
