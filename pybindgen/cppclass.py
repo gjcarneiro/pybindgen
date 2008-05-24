@@ -158,7 +158,15 @@ class CppHelperClass(object):
         code_sink.writeln("PyObject *m_pyself;")
 
         ## replicate the parent constructors in the helper class
+        implemented_constructor_signatures = []
         for cons in self.class_.constructors:
+
+            ## filter out duplicated constructors
+            signature = [param.ctype for param in cons.parameters]
+            if signature in implemented_constructor_signatures:
+                continue
+            implemented_constructor_signatures.append(signature)
+
             params = [join_ctype_and_name(param.ctype, param.name)
                       for param in cons.parameters]
             code_sink.writeln("%s(%s)" % (self.name, ', '.join(params)))
