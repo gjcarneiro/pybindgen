@@ -283,6 +283,12 @@ class DummyReturnValue(ReturnValue):
         else:
             args, kwargs = utils.parse_retval_spec(arg)
             super(DummyReturnValue, self).__init__(args[0])
+    def convert_c_to_python(self, wrapper):
+        raise CodeGenerationError
+    def convert_python_to_c(self, wrapper):
+        raise CodeGenerationError
+    def get_c_error_return(self):
+        return ''
 
 
 class DummyParameter(Parameter):
@@ -303,6 +309,11 @@ class DummyParameter(Parameter):
         else:
             args, kwargs = utils.parse_param_spec(arg)
             super(DummyParameter, self).__init__(args[0], args[1])
+
+    def convert_c_to_python(self, wrapper):
+        raise CodeGenerationError
+    def convert_python_to_c(self, wrapper):
+        raise CodeGenerationError
 
 
 class CppDummyMethod(CppMethod):

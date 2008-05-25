@@ -1020,8 +1020,13 @@ public:
                     ## is a very important fact that needs to be
                     ## recorded in the class, even if the method is
                     ## not wrapped.
-                    dummy = CppDummyMethod(*args, **kwargs)
-                    self._dummy_methods.append(dummy)
+                    method = CppDummyMethod(*args, **kwargs)
+                    self._dummy_methods.append(method)
+                    self._have_pure_virtual_methods = None
+                    helper_class = self.get_helper_class()
+                    if helper_class is not None:
+                        helper_class.add_virtual_method(method)
+
                 return None
         self._add_method_obj(meth)
         return meth
