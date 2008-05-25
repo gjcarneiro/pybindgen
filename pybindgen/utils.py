@@ -1,6 +1,7 @@
 import sys
 from typehandlers.codesink import CodeSink
-from typehandlers.base import TypeConfigurationError, CodeGenerationError, NotSupportedError
+from typehandlers.base import TypeLookupError, TypeConfigurationError, CodeGenerationError, NotSupportedError, \
+    Parameter, ReturnValue
 import version
 import settings
 
@@ -129,3 +130,73 @@ def ascii(value):
     else:
         raise TypeError("value must be str or ascii string contained in a unicode object")
 
+
+def param(*args, **kwargs):
+    """
+    Simplified syntax for representing a parameter with delayed lookup.
+    
+    Parameters are the same as L{Parameter.new}.
+    """
+    return (args + (kwargs,))
+
+
+def retval(*args, **kwargs):
+    """
+    Simplified syntax for representing a return value with delayed lookup.
+    
+    Parameters are the same as L{ReturnValue.new}.
+    """
+    return (args + (kwargs,))
+
+
+def parse_param_spec(param_spec):
+    if isinstance(param_spec, tuple):
+        assert len(param_spec) >= 2
+        if isinstance(param_spec[-1], dict):
+            kwargs = param_spec[-1]
+            args = param_spec[:-1]
+        else:
+            kwargs = dict()
+            args = param_spec
+    else:
+        raise TypeError("Could not parse `%r' as a Parameter" % param_spec)
+    return args, kwargs
+
+
+def parse_retval_spec(retval_spec):
+    if isinstance(retval_spec, tuple):
+        assert len(retval_spec) >= 1
+        if isinstance(retval_spec[-1], dict):
+            kwargs = retval_spec[-1]
+            args = retval_spec[:-1]
+        else:
+            kwargs = dict()
+            args = retval_spec
+    elif isinstance(retval_spec, str):
+        kwargs = dict()
+        args = (retval_spec,)
+    else:
+        raise TypeError("Could not parse `%r' as a ReturnValue" % retval_spec)
+    return args, kwargs
+
+
+def eval_param(param_value, wrapper=None):
+    if isinstance(param_value, Parameter):
+        return param_value
+    else:
+        args, kwargs = parse_param_spec(param_value)
+        return call_with_error_handling(Parameter.new, args, kwargs, wrapper,
+                                        exceptions_to_handle=(TypeConfigurationError,
+                                                              NotSupportedError,
+                                                              TypeLookupError))
+
+
+def eval_retval(retval_value, wrapper=None):
+    if isinstance(retval_value, ReturnValue):
+        return retval_value
+    else:
+        args, kwargs = parse_retval_spec(retval_value)
+        return call_with_error_handling(ReturnValue.new, args, kwargs, wrapper,
+                                        exceptions_to_handle=(TypeConfigurationError,
+                                                              NotSupportedError,
+                                                              TypeLookupError))

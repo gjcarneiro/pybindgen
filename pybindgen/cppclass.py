@@ -12,7 +12,8 @@ from typehandlers.codesink import NullCodeSink, MemoryCodeSink
 
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor, CppFunctionAsConstructor, \
     CppOverloadedMethod, CppOverloadedConstructor, \
-    CppVirtualMethodParentCaller, CppVirtualMethodProxy, CustomCppMethodWrapper
+    CppVirtualMethodParentCaller, CppVirtualMethodProxy, CustomCppMethodWrapper, \
+    CppDummyMethod
 
 from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter,
                           CppStaticAttributeGetter, CppStaticAttributeSetter,
@@ -396,6 +397,7 @@ class CppClass(object):
         self.is_singleton = is_singleton
         self.full_name = None # full name with C++ namespaces attached and template parameters
         self.methods = {} # name => OverloadedMethod
+        self._dummy_methods = [] # methods that have parameter/retval binding problems
         self.nonpublic_methods = []
         self.constructors = [] # (name, wrapper) pairs
         self.slots = dict()
@@ -564,7 +566,7 @@ class CppClass(object):
 
         self._have_pure_virtual_methods = False
         for pos, cls in enumerate(mro_reversed):
-            for method in cls.get_all_methods():
+            for method in list(cls.get_all_methods()) + cls._dummy_methods:
                 if not isinstance(method, CppMethod):
                     continue
 
@@ -574,7 +576,7 @@ class CppClass(object):
                     ## this pure virtual method.
                     implemented = False
                     for child_cls in mro_reversed[pos+1:]:
-                        for child_method in child_cls.get_all_methods():
+                        for child_method in list(child_cls.get_all_methods()) + child_cls._dummy_methods:
                             if not isinstance(child_method, CppMethod):
                                 continue
                             if not child_method.is_virtual:
@@ -1010,7 +1012,17 @@ public:
         ## </compat>
 
         else:
-            meth = CppMethod(*args, **kwargs)
+            try:
+                meth = CppMethod(*args, **kwargs)
+            except utils.SkipWrapper:
+                if kwargs.get('is_virtual', False):
+                    ## if the method was supposed to be virtual, this
+                    ## is a very important fact that needs to be
+                    ## recorded in the class, even if the method is
+                    ## not wrapped.
+                    dummy = CppDummyMethod(*args, **kwargs)
+                    self._dummy_methods.append(dummy)
+                return None
         self._add_method_obj(meth)
         return meth
 
@@ -1020,7 +1032,10 @@ public:
         L{Function.__init__} for information on accepted parameters.
         TODO: explain the implicit first function parameter
         """
-        meth = function.Function(*args, **kwargs)
+        try:
+            meth = function.Function(*args, **kwargs)
+        except utils.SkipWrapper:
+            return None
         self._add_method_obj(meth)
         return meth
 
@@ -1028,7 +1043,10 @@ public:
         """
         Adds a custom method wrapper. See L{CustomCppMethodWrapper} for more information.
         """
-        meth = CustomCppMethodWrapper(*args, **kwargs)
+        try:
+            meth = CustomCppMethodWrapper(*args, **kwargs)
+        except utils.SkipWrapper:
+            return None
         self._add_method_obj(meth)
         return meth
 
@@ -1072,7 +1090,10 @@ public:
             constructor.module = self.module
         ## </compat>
         else:
-            constructor = CppConstructor(*args, **kwargs)
+            try:
+                constructor = CppConstructor(*args, **kwargs)
+            except utils.SkipWrapper:
+                return None
         self._add_constructor_obj(constructor)
         return constructor
 
@@ -1081,7 +1102,10 @@ public:
         Wrap a function that behaves as a constructor to the class. See the documentation for
         L{CppFunctionAsConstructor.__init__} for information on accepted parameters.
         """
-        constructor = CppFunctionAsConstructor(*args, **kwargs)
+        try:
+            constructor = CppFunctionAsConstructor(*args, **kwargs)
+        except utils.SkipWrapper:
+            return None
         self._add_constructor_obj(constructor)
         return constructor
 
@@ -1097,6 +1121,11 @@ public:
             warnings.warn("add_static_attribute has changed API; see the API documentation (but trying to correct...)",
                           DeprecationWarning, stacklevel=2)
             value_type, name = name, value_type
+
+        try:
+            value_type = utils.eval_retval(value_type, None)
+        except utils.SkipWrapper:
+            return
 
         assert isinstance(value_type, ReturnValue)
         getter = CppStaticAttributeGetter(value_type, self, name)
@@ -1121,6 +1150,11 @@ public:
             warnings.warn("add_static_attribute has changed API; see the API documentation (but trying to correct...)",
                           DeprecationWarning, stacklevel=2)
             value_type, name = name, value_type
+
+        try:
+            value_type = utils.eval_retval(value_type, None)
+        except utils.SkipWrapper:
+            return
 
         assert isinstance(value_type, ReturnValue)
         getter_wrapper = CppInstanceAttributeGetter(value_type, self, name, getter=getter)

@@ -234,7 +234,10 @@ class ModuleBase(dict):
                 assert len(args) == 1
                 assert len(kwargs) == 0
         else:
-            func = Function(*args, **kwargs)
+            try:
+                func = Function(*args, **kwargs)
+            except utils.SkipWrapper:
+                return None
         self._add_function_obj(func)
         return func
 
@@ -243,7 +246,10 @@ class ModuleBase(dict):
         Add a function, using custom wrapper code, to the module/namespace. See the documentation for
         L{CustomFunctionWrapper.__init__} for information on accepted parameters.
         """
-        func = CustomFunctionWrapper(*args, **kwargs)
+        try:
+            func = CustomFunctionWrapper(*args, **kwargs)
+        except utils.SkipWrapper:
+            return None
         self._add_function_obj(func)
         return func
 

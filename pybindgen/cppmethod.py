@@ -7,11 +7,11 @@ from copy import copy
 
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
     join_ctype_and_name, CodeGenerationError, ReturnValue
+from typehandlers.base import ReturnValue, Parameter
 from typehandlers import codesink
 import overloading
 import settings
 import utils
-
 
 class CppMethod(ForwardWrapperBase):
     """
@@ -72,6 +72,10 @@ class CppMethod(ForwardWrapperBase):
 
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
+
+        return_value = utils.eval_retval(return_value, self)
+        parameters = [utils.eval_param(param, self) for param in parameters]
+
         super(CppMethod, self).__init__(
             return_value, parameters,
             "return NULL;", "return NULL;",
@@ -261,6 +265,58 @@ class CppOverloadedMethod(overloading.OverloadedWrapper):
     ERROR_RETURN = 'return NULL;'
 
 
+
+class DummyReturnValue(ReturnValue):
+    CTYPES = []
+    """
+    A 'dummy' return value object used for modelling methods that have
+    incomplete or incorrect parameters or return values.
+    """
+    def __init__(self, arg):
+        """
+        Accepts either a ReturnValue object or a tuple as sole
+        parameter.  In case it's a tuple, it is assumed to be a retval
+        spec (*args, **kwargs).
+        """
+        if isinstance(arg, ReturnValue):
+            super(DummyReturnValue, self).__init__(arg.ctype)
+        else:
+            args, kwargs = utils.parse_retval_spec(arg)
+            super(DummyReturnValue, self).__init__(*args, **kwargs)
+
+
+class DummyParameter(Parameter):
+    CTYPES = []
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT, Parameter.DIRECTION_INOUT]
+    """
+    A 'dummy' parameter object used for modelling methods that have
+    incomplete or incorrect parameters or return values.
+    """
+    def __init__(self, arg):
+        """
+        Accepts either a Parameter object or a tuple as sole
+        parameter.  In case it's a tuple, it is assumed to be a retval
+        spec (*args, **kwargs).
+        """
+        if isinstance(arg, ReturnValue):
+            super(DummyParameter, self).__init__(arg.ctype)
+        else:
+            args, kwargs = utils.parse_param_spec(arg)
+            super(DummyParameter, self).__init__(*args, **kwargs)
+
+
+class CppDummyMethod(CppMethod):
+    """
+    A 'dummy' method; cannot be generated due to incomple or incorrect
+    parameters, but is added to the class to model the missing method.
+    """
+
+    def __init__(self, method_name, return_value, parameters, *args, **kwargs):
+        return_value = DummyReturnValue(return_value)
+        parameters = [DummyParameter(p) for p in parameters]
+        super(CppDummyMethod, self).__init__(method_name, return_value, parameters, *args, **kwargs)
+
+
 class CppConstructor(ForwardWrapperBase):
     """
     Class that generates a wrapper to a C++ class constructor.  Such
@@ -273,6 +329,9 @@ class CppConstructor(ForwardWrapperBase):
         """
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
+
+        parameters = [utils.eval_param(param, self) for param in parameters]
+
         super(CppConstructor, self).__init__(
             None, parameters,
             "return -1;", "return -1;",
@@ -414,6 +473,9 @@ class CppFunctionAsConstructor(CppConstructor):
         """
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
+
+        parameters = [utils.eval_param(param, self) for param in parameters]
+
         super(CppFunctionAsConstructor, self).__init__(parameters)
         self.c_function_name = c_function_name
         self.function_return_value = return_value

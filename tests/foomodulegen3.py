@@ -1,12 +1,24 @@
 #! /usr/bin/env python
 
 import sys
+import warnings
 
 import pybindgen
+import pybindgen.settings
 from pybindgen import (FileCodeSink)
 
 import foomodulegen_generated
 import foomodulegen_common
+
+
+
+class ErrorHandler(pybindgen.settings.ErrorHandler):
+    def handle_error(self, wrapper, exception, dummy_traceback_):
+        warnings.warn("exception >>> %r in wrapper %s" % (exception, wrapper))
+        return True
+pybindgen.settings.error_handler = ErrorHandler()
+
+
 
 def my_module_gen():
     out = FileCodeSink(sys.stdout)

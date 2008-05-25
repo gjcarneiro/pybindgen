@@ -38,6 +38,9 @@ class Function(ForwardWrapperBase):
         if return_value is None:
             return_value = ReturnValue.new('void')
 
+        return_value = utils.eval_retval(return_value, self)
+        parameters = [utils.eval_param(param, self) for param in parameters]
+
         super(Function, self).__init__(
             return_value, parameters,
             parse_error_return="return NULL;",

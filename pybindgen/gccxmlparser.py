@@ -82,6 +82,22 @@ def _pygen_kwargs(kwargs):
             l.append("%s=%r" % (key, val))
     return l
 
+def _pygen_args_kwargs(args, kwargs):
+    return ", ".join([repr(arg) for arg in args] + _pygen_kwargs(kwargs))
+
+def _pygen_args_kwargs_dict(args, kwargs):
+    l = [repr(arg) for arg in args]
+    if kwargs:
+        l.append("dict(%s)" % ', '.join(_pygen_kwargs(kwargs)))
+    return ", ".join(l)
+
+def _pygen_retval(args, kwargs):
+    if len(args) == 1 and len(kwargs) == 0:
+        return repr(args[0])
+    return "retval(%s)" % _pygen_args_kwargs(args, kwargs)
+
+def _pygen_param(args, kwargs):
+    return "param(%s)" % _pygen_args_kwargs(args, kwargs)
 
 
 class GccXmlTypeRegistry(object):
@@ -181,21 +197,11 @@ class GccXmlTypeRegistry(object):
                 name = normalize_name(type_info.decl_string)
             else:
                 name = self._fixed_std_type_name(type_info)
-            retval = ReturnValue.new(name, **kwargs)
-            retval._pygen_repr = ("ReturnValue.new(%s)"
-                                  % (", ".join([repr(name)] + _pygen_kwargs(kwargs))))
-            return retval
+            return (name,), kwargs
 
         ## class value
         if not is_pointer and not is_reference:
-            if ALWAYS_USE_PARAMETER_NEW:
-                retval = ReturnValue.new(cpp_class.full_name, **kwargs)
-                retval._pygen_repr = ("ReturnValue.new(%s)"
-                                      % (", ".join([repr(cpp_class.full_name)] + _pygen_kwargs(kwargs))))
-            else:
-                retval = cpp_class.ThisClassReturn(type_info.decl_string)
-                retval._pygen_repr = ("root_module[%r].ThisClassReturn(%r)" % (cpp_class.full_name, type_info.decl_string))
-            return retval
+            return (cpp_class.full_name,), kwargs
 
         ## pointer to class
         if is_pointer and not is_reference:
@@ -203,30 +209,11 @@ class GccXmlTypeRegistry(object):
                 ## a pointer to const object "usually" means caller_owns_return=False
                 ## some guessing going on here, though..
                 kwargs['caller_owns_return'] = False
-            if ALWAYS_USE_PARAMETER_NEW:
-                retval = ReturnValue.new(cpp_class.full_name+'*', **kwargs)
-                retval._pygen_repr = ("ReturnValue.new(%s)"
-                                      % (", ".join([repr(cpp_class.full_name + '*')] + _pygen_kwargs(kwargs))))
-            else:
-                retval = cpp_class.ThisClassPtrReturn(type_info.decl_string, **kwargs)
-                retval._pygen_repr = ("root_module[%r].ThisClassPtrReturn(%s)"
-                                      % (cpp_class.full_name,
-                                         ", ".join([repr(type_info.decl_string)] + _pygen_kwargs(kwargs))))
-                
-            return retval
+            return (cpp_class.full_name+'*',), kwargs
             
         ## reference of class
         if not is_pointer and is_reference:
-            if ALWAYS_USE_PARAMETER_NEW:
-                retval = ReturnValue.new(cpp_class.full_name+'&', **kwargs)
-                retval._pygen_repr = ("ReturnValue.new(%s)"
-                                      % (", ".join([repr(cpp_class.full_name + '&')] + _pygen_kwargs(kwargs))))
-            else:
-                retval = cpp_class.ThisClassRefReturn(type_info.decl_string, **kwargs)
-                retval._pygen_repr = ("root_module[%r].ThisClassRefReturn(%s)"
-                                      % (cpp_class.full_name,
-                                         ", ".join([repr(type_info.decl_string)] + _pygen_kwargs(kwargs))))
-            return retval
+            return (cpp_class.full_name+'&',), kwargs
 
         assert 0, "this line should not be reached"
 
@@ -265,62 +252,24 @@ class GccXmlTypeRegistry(object):
             else:
                 type_name = self._fixed_std_type_name(type_info)
 
-            retval = Parameter.new(type_name, param_name, **kwargs)
-            retval._pygen_repr = ("Parameter.new(%s)"
-                                  % (", ".join([repr(type_name), repr(param_name)]
-                                               + _pygen_kwargs(kwargs))))
-            return retval
+            return (type_name, param_name), kwargs
 
         assert isinstance(cpp_class, CppClass)#, cpp_class.full_name
 
         ## class value
         if not is_pointer and not is_reference:
-            if ALWAYS_USE_PARAMETER_NEW:
-                retval = Parameter.new(cpp_class.full_name, param_name, **kwargs)
-                retval._pygen_repr = ("Parameter.new(%s)"
-                                      % (", ".join([repr(cpp_class.full_name), repr(param_name)] + _pygen_kwargs(kwargs))))
-            else:
-                retval = cpp_class.ThisClassParameter(type_info.decl_string, param_name, **kwargs)
-                retval._pygen_repr = ("root_module[%r].ThisClassParameter(%s)"
-                                      % (cpp_class.full_name,
-                                         ", ".join([repr(type_info.decl_string), repr(param_name)]
-                                                   + _pygen_kwargs(kwargs))))
-            return retval
+            return (cpp_class.full_name, param_name), kwargs
 
         ## pointer to class
         if is_pointer and not is_reference:
             if is_const:
                 ## a pointer to const object usually means transfer_ownership=False
                 kwargs.setdefault('transfer_ownership', False)
-            if ALWAYS_USE_PARAMETER_NEW:
-                retval = Parameter.new(cpp_class.full_name+'*', param_name, **kwargs)
-                retval._pygen_repr = ("Parameter.new(%s)"
-                                      % (", ".join([repr(cpp_class.full_name+'*'), repr(param_name)] + _pygen_kwargs(kwargs))))
-            else:
-                retval = cpp_class.ThisClassPtrParameter(type_info.decl_string, param_name, **kwargs)
-                retval._pygen_repr = ("root_module[%r].ThisClassPtrParameter(%s)"
-                                      % (cpp_class.full_name,
-                                         ", ".join([repr(type_info.decl_string), repr(param_name)]
-                                                   + _pygen_kwargs(kwargs))))
-            return retval
+            return (cpp_class.full_name+'*', param_name), kwargs
         
         ## reference to class
         if not is_pointer and is_reference:
-            try:
-                if ALWAYS_USE_PARAMETER_NEW:
-                    retval = Parameter.new(cpp_class.full_name+'&', param_name, **kwargs)
-                    retval._pygen_repr = ("Parameter.new(%s)"
-                                          % (", ".join([repr(cpp_class.full_name+'&'), repr(param_name)] + _pygen_kwargs(kwargs))))
-                else:
-                    retval = cpp_class.ThisClassRefParameter(type_info.decl_string, param_name, **kwargs)
-                    retval._pygen_repr = ("root_module[%r].ThisClassRefParameter(%s)"
-                                          % (cpp_class.full_name,
-                                             ", ".join([repr(type_info.decl_string), repr(param_name)]
-                                                       + _pygen_kwargs(kwargs))))
-                return retval
-            except TypeError:
-                print >> sys.stderr, "** Error in %s class ref parameter" % cpp_class.full_name
-                raise
+            return (cpp_class.full_name+'&', param_name), kwargs
         assert 0, "this line should not be reached"
 
 
@@ -562,10 +511,10 @@ class ModuleParser(object):
         for inc in includes:
             self.module.add_include(inc)
         self.pygen_sink.writeln("import sys")
-        self.pygen_sink.writeln("from pybindgen import Module, FileCodeSink, write_preamble")
-        self.pygen_sink.writeln("from pybindgen.cppclass import CppClass")
-        self.pygen_sink.writeln("from pybindgen.cppmethod import CppMethod, CppConstructor, CppNoConstructor")
-        self.pygen_sink.writeln("from pybindgen import ReturnValue, Parameter, Function, Enum")
+        self.pygen_sink.writeln("from pybindgen import Module, FileCodeSink, write_preamble, param, retval")
+        #self.pygen_sink.writeln("from pybindgen.cppclass import CppClass")
+        #self.pygen_sink.writeln("from pybindgen.cppmethod import CppMethod, CppConstructor, CppNoConstructor")
+        #self.pygen_sink.writeln("from pybindgen import ReturnValue, Parameter, Function, Enum")
         self.pygen_sink.writeln()
         self.pygen_sink.writeln("def module_init():")
         self.pygen_sink.indent()
@@ -690,14 +639,14 @@ class ModuleParser(object):
                 enums.append(enum)
 
         for enum in enums:
-            module.add_enum(enum.name, [name for name, dummy_val in enum.values],
-                            outer_class=outer_class)
-
             enum_values_repr = '[' + ', '.join([repr(name) for name, dummy_val in enum.values]) + ']'
             l = [repr(enum.name), enum_values_repr]
             if outer_class is not None:
                 l.append('outer_class=root_module[%r]' % outer_class.full_name)
             self.pygen_sink.writeln('module.add_enum(%s)' % ', '.join(l))
+
+            module.add_enum(enum.name, [name for name, dummy_val in enum.values],
+                            outer_class=outer_class)
 
         registered_classes = {} # class_t -> CppClass
 
@@ -742,9 +691,10 @@ class ModuleParser(object):
             kwargs.setdefault("automatic_type_narrowing", False)
             kwargs.setdefault("allow_subclassing", False)
 
-            class_wrapper = module.add_class(alias.name, **kwargs)
             self.pygen_sink.writeln("module.add_class(%s)" %
                                     ", ".join([repr(alias.name)] + _pygen_kwargs(kwargs)))
+
+            class_wrapper = module.add_class(alias.name, **kwargs)
 
             class_wrapper.gccxml_definition = cls
             registered_classes[cls] = class_wrapper
@@ -881,11 +831,11 @@ class ModuleParser(object):
                 kwargs["template_parameters"] = template_parameters
             if custom_template_class_name:
                 kwargs["custom_template_class_name"] = custom_template_class_name
-            class_wrapper = module.add_class(cls_name, **kwargs)
 
             self.pygen_sink.writeln("module.add_class(%s)" %
                                     ", ".join([repr(cls_name)] + _pygen_kwargs(kwargs)))
 
+            class_wrapper = module.add_class(cls_name, **kwargs)
             class_wrapper.gccxml_definition = cls
             registered_classes[cls] = class_wrapper
             if alias:
@@ -1015,44 +965,21 @@ class ModuleParser(object):
                         warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
                                                % (key, val, member),
                                                Warning, member.location.file_name, member.location.line)
-                
-                try:
-                    return_type = self.type_registry.lookup_return(member.return_type,
-                                                                   parameter_annotations.get('return', {}))
-                except (TypeLookupError, TypeConfigurationError), ex:
-                    warnings.warn_explicit("Return value '%s' error (used in %s): %r"
-                                           % (member.return_type.decl_string, member, ex),
-                                           Warning, member.location.file_name, member.location.line)
-                    if pure_virtual:
-                        class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
-                        class_wrapper.set_helper_class_disabled(True)
-                        self.pygen_sink.writeln('cls.set_cannot_be_constructed("pure virtual method not wrapped")')
-                        self.pygen_sink.writeln('cls.set_helper_class_disabled(True)')
-                    continue
-                arguments = []
-                ok = True
+
+                ## --- pygen ---
+                return_type_spec = self.type_registry.lookup_return(member.return_type,
+                                                                    parameter_annotations.get('return', {}))
+                argument_specs = []
                 for arg in member.arguments:
-                    try:
-                        arguments.append(self.type_registry.lookup_parameter(arg.type, arg.name,
-                                                                             parameter_annotations.get(arg.name, {}),
-                                                                             arg.default_value))
-                        assert hasattr(arguments[-1], "_pygen_repr")
-                    except (TypeLookupError, TypeConfigurationError), ex:
-                        warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
-                                               % (arg.type.decl_string, arg.name, member, ex),
-                                               Warning, member.location.file_name, member.location.line)
-                        ok = False
-                if not ok:
-                    if pure_virtual:
-                        class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
-                        class_wrapper.set_helper_class_disabled(True)
-                        self.pygen_sink.writeln('cls.set_cannot_be_constructed("pure virtual method not wrapped")')
-                        self.pygen_sink.writeln('cls.set_helper_class_disabled(True)')
-                    continue
+                    argument_specs.append(self.type_registry.lookup_parameter(arg.type, arg.name,
+                                                                              parameter_annotations.get(arg.name, {}),
+                                                                              arg.default_value))
+                    
+                
 
                 if pure_virtual and not class_wrapper.allow_subclassing:
                     class_wrapper.set_cannot_be_constructed("pure virtual method and subclassing disabled")
-                    self.pygen_sink.writeln('cls.set_cannot_be_constructed("pure virtual method not wrapped")')
+                    #self.pygen_sink.writeln('cls.set_cannot_be_constructed("pure virtual method not wrapped")')
 
                 custom_template_method_name = None
                 if templates.is_instantiation(member.demangled_name):
@@ -1091,18 +1018,49 @@ class ModuleParser(object):
                     and not (kwargs.get('is_virtual', False) or kwargs.get('is_pure_virtual', False))):
                     continue
 
-                def _pygen_method():
-                    arglist_repr = ("[" + ', '.join([arg._pygen_repr for arg in arguments]) +  "]")
-                    self.pygen_sink.writeln("cls.add_method(%s)" %
-                                            ", ".join(
-                            [repr(member.name), return_type._pygen_repr, arglist_repr]
-                            + _pygen_kwargs(kwargs)))
+                ## --- pygen ---
+                arglist_repr = ("[" + ', '.join([_pygen_param(args_, kwargs_) for (args_, kwargs_) in argument_specs]) +  "]")
+                self.pygen_sink.writeln("cls.add_method(%s)" %
+                                        ", ".join(
+                        [repr(member.name), _pygen_retval(return_type_spec[0], return_type_spec[1]), arglist_repr]
+                        + _pygen_kwargs(kwargs)))
+
+                ## --- realize the return type and parameters
+                try:
+                    return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
+                except (TypeLookupError, TypeConfigurationError), ex:
+                    warnings.warn_explicit("Return value '%s' error (used in %s): %r"
+                                           % (member.return_type.decl_string, member, ex),
+                                           Warning, member.location.file_name, member.location.line)
+                    if pure_virtual:
+                        class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
+                        class_wrapper.set_helper_class_disabled(True)
+                        #self.pygen_sink.writeln('cls.set_cannot_be_constructed("pure virtual method not wrapped")')
+                        #self.pygen_sink.writeln('cls.set_helper_class_disabled(True)')
+                    continue
+                arguments = []
+                ok = True
+                for arg in argument_specs:
+                    try:
+                        arguments.append(Parameter.new(*arg[0], **arg[1]))
+                    except (TypeLookupError, TypeConfigurationError), ex:
+                        warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
+                                               % (arg[0][0], arg[0][1], member, ex),
+                                               Warning, member.location.file_name, member.location.line)
+                        ok = False
+                if not ok:
+                    if pure_virtual:
+                        class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
+                        class_wrapper.set_helper_class_disabled(True)
+                        #self.pygen_sink.writeln('cls.set_cannot_be_constructed("pure virtual method not wrapped")')
+                        #self.pygen_sink.writeln('cls.set_helper_class_disabled(True)')
+                    continue
+
 
                 try:
                     method_wrapper = class_wrapper.add_method(member.name, return_type, arguments, **kwargs)
                     method_wrapper.gccxml_definition = member
                 except NotSupportedError, ex:
-                    _pygen_method()
                     if pure_virtual:
                         class_wrapper.set_cannot_be_constructed("pure virtual method %r not wrapped" % member.name)
                         class_wrapper.set_helper_class_disabled(True)
@@ -1119,7 +1077,6 @@ class ModuleParser(object):
                                            Warning, member.location.file_name, member.location.line)
                     raise
                 else: # no exception, add method succeeded
-                    _pygen_method()
                     for hook in self._post_scan_hooks:
                         hook(self, member, method_wrapper)
                 
@@ -1132,11 +1089,20 @@ class ModuleParser(object):
                 if not member.arguments:
                     have_trivial_constructor = True
 
-                arguments = []
+                argument_specs = []
                 for arg in member.arguments:
+                    argument_specs.append(self.type_registry.lookup_parameter(arg.type, arg.name,
+                                                                              default_value=arg.default_value))
+
+                arglist_repr = ("[" + ', '.join([_pygen_param(args_, kwargs_) for (args_, kwargs_) in argument_specs]) +  "]")
+                self.pygen_sink.writeln("cls.add_constructor(%s)" %
+                                        ", ".join([arglist_repr, "visibility=%r" % member.access_type]))
+
+
+                arguments = []
+                for a, kw in argument_specs:
                     try:
-                        arguments.append(self.type_registry.lookup_parameter(arg.type, arg.name,
-                                                                             default_value=arg.default_value))
+                        arguments.append(Parameter.new(*a, **kw))
                     except (TypeLookupError, TypeConfigurationError), ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                                % (arg.type.decl_string, arg.name, member, ex),
@@ -1156,10 +1122,6 @@ class ModuleParser(object):
                     and isinstance(arguments[0], class_wrapper.ThisClassRefParameter)):
                     have_copy_constructor = True
 
-                arglist_repr = ("[" + ', '.join([arg._pygen_repr for arg in arguments]) +  "]")
-                self.pygen_sink.writeln("cls.add_constructor(%s)" %
-                                        ", ".join([arglist_repr, "visibility=%r" % member.access_type]))
-
             ## ------------ attribute --------------------
             elif isinstance(member, variable_t):
                 if member.access_type == 'protected':
@@ -1171,23 +1133,33 @@ class ModuleParser(object):
                 if member.access_type == 'private':
                     continue
 
+                return_type_spec = self.type_registry.lookup_return(member.type)
+
+                ## pygen...
+                if member.type_qualifiers.has_static:
+                    self.pygen_sink.writeln("cls.add_static_attribute(%r, %s, is_const=%r)" %
+                                            (member.name, _pygen_retval(*return_type_spec),
+                                             type_traits.is_const(member.type)))
+                else:
+                    self.pygen_sink.writeln("cls.add_instance_attribute(%r, %s, is_const=%r)" %
+                                            (member.name, _pygen_retval(*return_type_spec),
+                                             type_traits.is_const(member.type)))
+                    
+                ## convert the return value
                 try:
-                    return_type = self.type_registry.lookup_return(member.type)
+                    return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                            % (member.type.decl_string, member, ex),
                                            Warning, member.location.file_name, member.location.line)
                     continue
+
                 if member.type_qualifiers.has_static:
                     class_wrapper.add_static_attribute(member.name, return_type,
                                                        is_const=type_traits.is_const(member.type))
-                    self.pygen_sink.writeln("cls.add_static_attribute(%r, %s, is_const=%r)" %
-                                            (member.name, return_type._pygen_repr, type_traits.is_const(member.type)))
                 else:
                     class_wrapper.add_instance_attribute(member.name, return_type,
                                                          is_const=type_traits.is_const(member.type))
-                    self.pygen_sink.writeln("cls.add_instance_attribute(%r, %s, is_const=%r)" %
-                                            (member.name, return_type._pygen_repr, type_traits.is_const(member.type)))
                 ## TODO: invoke post_scan_hooks
             elif isinstance(member, calldef.destructor_t):
                 pass
@@ -1257,72 +1229,76 @@ class ModuleParser(object):
             return_annotations = parameter_annotations.get('return', {})
             if is_constructor_of:
                 return_annotations['caller_owns_return'] = 'true'
+
+            params_ok = True
+            return_type_spec = self.type_registry.lookup_return(fun.return_type, return_annotations)
             try:
-                return_type = self.type_registry.lookup_return(fun.return_type, return_annotations)
+                return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
             except (TypeLookupError, TypeConfigurationError), ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                        % (fun.return_type.decl_string, fun, ex),
                                        Warning, fun.location.file_name, fun.location.line)
-                continue
+                params_ok = False
             except TypeError, ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                        % (fun.return_type.decl_string, fun, ex),
                                        Warning, fun.location.file_name, fun.location.line)
                 raise
+            argument_specs = []
             arguments = []
             for argnum, arg in enumerate(fun.arguments):
                 annotations = parameter_annotations.get(arg.name, {})
                 if argnum == 0 and as_method is not None \
                         and isinstance(arg.type, cpptypes.pointer_t):
                     annotations.setdefault("transfer_ownership", "false")
+                    
+                spec = self.type_registry.lookup_parameter(arg.type, arg.name,
+                                                           annotations,
+                                                           default_value=arg.default_value)
+                argument_specs.append(spec)
                 try:
-                    arguments.append(self.type_registry.lookup_parameter(arg.type, arg.name,
-                                                                    annotations,
-                                                                    default_value=arg.default_value))
+                    arguments.append(Parameter.new(*spec[0], **spec[1]))
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                            % (arg.type.decl_string, arg.name, fun, ex),
                                            Warning, fun.location.file_name, fun.location.line)
 
-                    ok = False
-                    break
+                    params_ok = False
                 except TypeError, ex:
                     warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                            % (arg.type.decl_string, arg.name, fun, ex),
                                            Warning, fun.location.file_name, fun.location.line)
                     raise
-            else:
-                ok = True
-            if not ok:
-                continue
 
-            arglist_repr = ("[" + ', '.join([arg._pygen_repr for arg in arguments]) +  "]")
+            arglist_repr = ("[" + ', '.join([_pygen_param(*arg)  for arg in argument_specs]) +  "]")
+            retval_repr = _pygen_retval(*return_type_spec)
 
             if as_method is not None:
                 assert of_class is not None
-                #cpp_class = type_registry.find_class(of_class, (self.module_namespace_name or '::'))
                 cpp_class = root_module[normalize_class_name(of_class, (self.module_namespace_name or '::'))]
-
-                function_wrapper = cpp_class.add_function_as_method(fun.name, return_type, arguments, custom_name=as_method)
-                function_wrapper.gccxml_definition = fun
 
                 self.pygen_sink.writeln("root_module[%r].add_function_as_method(%s, custom_name=%r)" %
                                         (cpp_class.full_name,
-                                         ", ".join([repr(fun.name), return_type._pygen_repr, arglist_repr]),
+                                         ", ".join([repr(fun.name), retval_repr, arglist_repr]),
                                          as_method))
+                if params_ok:
+                    function_wrapper = cpp_class.add_function_as_method(fun.name, return_type, arguments, custom_name=as_method)
+                    function_wrapper.gccxml_definition = fun
 
                 continue
 
             if is_constructor_of is not None:
                 #cpp_class = type_registry.find_class(is_constructor_of, (self.module_namespace_name or '::'))
                 cpp_class = root_module[normalize_class_name(is_constructor_of, (self.module_namespace_name or '::'))]
-                function_wrapper = cpp_class.add_function_as_constructor(fun.name, return_type, arguments)
-
-                function_wrapper.gccxml_definition = fun
 
                 self.pygen_sink.writeln("root_module[%r].add_function_as_constructor(%s)" %
                                         (cpp_class.full_name,
-                                         ", ".join([repr(fun.name), return_type._pygen_repr, arglist_repr]),))
+                                         ", ".join([repr(fun.name), retval_repr, arglist_repr]),))
+
+                if params_ok:
+                    function_wrapper = cpp_class.add_function_as_constructor(fun.name, return_type, arguments)
+                    function_wrapper.gccxml_definition = fun
+
 
                 continue
 
@@ -1334,14 +1310,14 @@ class ModuleParser(object):
             if alt_name:
                 kwargs['custom_name'] = alt_name
 
-            func_wrapper = module.add_function(fun.name, return_type, arguments, **kwargs)
-            func_wrapper.gccxml_definition = fun
-
             self.pygen_sink.writeln("module.add_function(%s)" %
-                                    (", ".join([repr(fun.name), return_type._pygen_repr, arglist_repr] + _pygen_kwargs(kwargs))))
+                                    (", ".join([repr(fun.name), retval_repr, arglist_repr] + _pygen_kwargs(kwargs))))
 
-            for hook in self._post_scan_hooks:
-                hook(self, fun, func_wrapper)
+            if params_ok:
+                func_wrapper = module.add_function(fun.name, return_type, arguments, **kwargs)
+                func_wrapper.gccxml_definition = fun
+                for hook in self._post_scan_hooks:
+                    hook(self, fun, func_wrapper)
 
 
         ## scan nested namespaces (mapped as python submodules)
