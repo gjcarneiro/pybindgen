@@ -282,7 +282,7 @@ class DummyReturnValue(ReturnValue):
             super(DummyReturnValue, self).__init__(arg.ctype)
         else:
             args, kwargs = utils.parse_retval_spec(arg)
-            super(DummyReturnValue, self).__init__(*args, **kwargs)
+            super(DummyReturnValue, self).__init__(args[0])
 
 
 class DummyParameter(Parameter):
@@ -302,7 +302,7 @@ class DummyParameter(Parameter):
             super(DummyParameter, self).__init__(arg.ctype)
         else:
             args, kwargs = utils.parse_param_spec(arg)
-            super(DummyParameter, self).__init__(*args, **kwargs)
+            super(DummyParameter, self).__init__(args[0], args[1])
 
 
 class CppDummyMethod(CppMethod):
