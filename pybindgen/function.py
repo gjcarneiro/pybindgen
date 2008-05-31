@@ -55,7 +55,7 @@ class Function(ForwardWrapperBase):
         self.self_parameter_pystruct = None
         self.template_parameters = template_parameters
         self.custom_name = custom_name
-        self.mangled_name = utils.get_mangled_name(custom_name or function_name, self.template_parameters)
+        self.mangled_name = utils.get_mangled_name(function_name, self.template_parameters)
 
     def clone(self):
         """Creates a semi-deep copy of this function wrapper.  The returned
