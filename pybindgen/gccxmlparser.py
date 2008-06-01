@@ -361,12 +361,25 @@ class AnnotationsScanner(object):
                 if (line_number + 1) not in used_annotations:
                     warnings.warn_explicit("unused annotation",
                                            Warning, file_name, line_number+1)
-                    
-        
+
+
 
 annotations_scanner = AnnotationsScanner()
 
 ## ------------------------
+
+class PygenClassifier(object):
+    def classify(self, pygccxml_definition):
+        """
+        This is a pure virtual method that must be implemented by
+        subclasses.  It will be called by PyBindGen for every API
+        definition, and should return a section name.
+
+        @param pygccxml_definition: gccxml definition object
+        @returns: section name
+        """
+        raise NotImplementedError
+
 
 
 class ModuleParser(object):
@@ -393,8 +406,10 @@ class ModuleParser(object):
         self._types_scanned = False
         self._pre_scan_hooks = []
         self._post_scan_hooks = []
-        self.pygen_sink = NullCodeSink()
         self.type_registry = None
+        self._stage = None
+        self._pygen_sink = None
+        self._pygen_factory = None
 
     def add_pre_scan_hook(self, hook):
         """
@@ -455,7 +470,8 @@ class ModuleParser(object):
                 return True
         return False
 
-    def parse(self, header_files, include_paths=None, whitelist_paths=None, includes=(), pygen_sink=None):
+    def parse(self, header_files, include_paths=None, whitelist_paths=None, includes=(),
+              pygen_sink=None, pygen_classifier=None):
         """
         parses a set of header files and returns a pybindgen Module instance.
         It is equivalent to calling the following methods:
@@ -464,8 +480,10 @@ class ModuleParser(object):
          3. scan_methods()
          4. scan_functions()
          5. parse_finalize()
+
+         The documentation for L{ModuleParser.parse_init} explains the parameters.
         """
-        self.parse_init(header_files, include_paths, whitelist_paths, includes, pygen_sink)
+        self.parse_init(header_files, include_paths, whitelist_paths, includes, pygen_sink, pygen_classifier)
         self.scan_types()
         self.scan_methods()
         self.scan_functions()
@@ -473,7 +491,7 @@ class ModuleParser(object):
         return self.module
 
     def parse_init(self, header_files, include_paths=None,
-                   whitelist_paths=None, includes=(), pygen_sink=None):
+                   whitelist_paths=None, includes=(), pygen_sink=None, pygen_classifier=None):
         """
         Prepares to parse a set of header files.  The following
         methods should then be called in order to finish the rest of
@@ -482,14 +500,65 @@ class ModuleParser(object):
          2. scan_methods()
          2. scan_functions()
          3. parse_finalize()
+
+         @param header_files: header files to parse
+         @type header_files: list of string
+
+         @param include_paths: list of include paths
+         @type include_paths: list of string
+
+         @param whitelist_paths: additional directories for definitions to be included
+           Normally the module parser filters out API definitions that
+           have been defined outside one of the header files indicated
+           for parsing.  The parameter whitelist_paths instructs the
+           module parser to accept definitions defined in another
+           header file if such header file is inside one of the
+           directories listed by whitelist_paths.
+         @type whitelist_paths: list of string
+
+         @param pygen: code sink for python script generation.
+
+           This parameter activates a mode wherein ModuleParser, in
+           addition to building in memory API definitions, creates a
+           python script that will generate the module, when executed.
+           The generated Python script can be human editable and does
+           not require pygccxml or gccxml to run, only PyBindGen to be
+           installed.
+
+           The pygen parameter can be either:
+             1. A single code sink: this will become the main and only script file to be generated
+             2. A list of tuples: entries in the list map "section
+             name" to "code sink".  A special '__main__' entry must be
+             provided for the main script.  This option requires the
+             pygen_classifier to be given.
+
+         @type pygen: L{CodeSink} or list of (section_name, code_sink) tuples
+
+         @param pygen_classifier: the classifier to use when pygen is given and is a dict
         """
         assert isinstance(header_files, list)
         assert isinstance(includes, (list, tuple))
-        assert pygen_sink is None or isinstance(pygen_sink, CodeSink)
+        self._pygen = pygen_sink
+        self._pygen_classifier = pygen_classifier
+        if isinstance(pygen_sink, list):
+            assert isinstance(pygen_classifier, PygenClassifier)
+            has_main = False
+            for sect, sink in self._pygen:
+                if not isinstance(sect, str):
+                    raise TypeError
+                if sect == '__main__':
+                    has_main = True
+                if not isinstance(sink, CodeSink):
+                    raise TypeError
+            if not has_main:
+                raise ValueError("missing __main__ section")
+        elif pygen_sink is None:
+            pass
+        else:
+            assert isinstance(pygen_sink, CodeSink)
+
         self.header_files = [os.path.abspath(f) for f in header_files]
         self.location_filter = declarations.custom_matcher_t(self.__location_match)
-        if pygen_sink is not None:
-            self.pygen_sink = pygen_sink
 
         if whitelist_paths is not None:
             assert isinstance(whitelist_paths, list)
@@ -510,69 +579,136 @@ class ModuleParser(object):
         self.module = Module(self.module_name, cpp_namespace=self.module_namespace.decl_string)
         for inc in includes:
             self.module.add_include(inc)
-        self.pygen_sink.writeln("import sys")
-        self.pygen_sink.writeln("from pybindgen import Module, FileCodeSink, write_preamble, param, retval")
-        #self.pygen_sink.writeln("from pybindgen.cppclass import CppClass")
-        #self.pygen_sink.writeln("from pybindgen.cppmethod import CppMethod, CppConstructor, CppNoConstructor")
-        #self.pygen_sink.writeln("from pybindgen import ReturnValue, Parameter, Function, Enum")
-        self.pygen_sink.writeln()
-        self.pygen_sink.writeln("def module_init():")
-        self.pygen_sink.indent()
-        self.pygen_sink.writeln("root_module = Module(%r, cpp_namespace=%r)"
-                                % (self.module_name, self.module_namespace.decl_string))
-        for inc in includes:
-            self.pygen_sink.writeln("root_module.add_include(%r)" % inc)
-        self.pygen_sink.writeln("return root_module")
-        self.pygen_sink.unindent()
-        self.pygen_sink.writeln()
+
+        for pygen_sink in self._get_all_pygen_sinks():
+            pygen_sink.writeln("from pybindgen import Module, FileCodeSink, write_preamble, param, retval")
+            pygen_sink.writeln()
+
+        pygen_sink = self._get_main_pygen_sink()
+        if pygen_sink:
+            pygen_sink.writeln("""
+import pybindgen.settings
+import warnings
+
+class ErrorHandler(pybindgen.settings.ErrorHandler):
+    def handle_error(self, wrapper, exception, traceback_):
+        warnings.warn("exception %r in wrapper %s" % (exception, wrapper))
+        return True
+pybindgen.settings.error_handler = ErrorHandler()
+
+""")
+            pygen_sink.writeln("import sys")
+            if isinstance(self._pygen, list):
+                for sect, dummy in self._pygen:
+                    if sect == '__main__':
+                        continue
+                    pygen_sink.writeln("import %s" % sect)
+            pygen_sink.writeln()
+            pygen_sink.writeln("def module_init():")
+            pygen_sink.indent()
+            pygen_sink.writeln("root_module = Module(%r, cpp_namespace=%r)"
+                               % (self.module_name, self.module_namespace.decl_string))
+            for inc in includes:
+                pygen_sink.writeln("root_module.add_include(%r)" % inc)
+            pygen_sink.writeln("return root_module")
+            pygen_sink.unindent()
+            pygen_sink.writeln()
+
         self.type_registry = GccXmlTypeRegistry(self.module)
+        self._stage = 'init'
+
+    def _get_main_pygen_sink(self):
+        if isinstance (self._pygen, CodeSink):
+            return self._pygen
+        elif isinstance(self._pygen, list):
+            for sect, sink in self._pygen:
+                if sect == '__main__':
+                    return sink
+        else:
+            return None
+
+    def _get_all_pygen_sinks(self):
+        if isinstance (self._pygen, CodeSink):
+            return [self._pygen]
+        elif isinstance(self._pygen, list):
+            return [sink for dummy, sink in self._pygen]
+        else:
+            return []
+
+    def _get_pygen_sink_for_definition(self, pygccxml_definition):
+        if self._pygen_classifier is None:
+            return self._pygen
+        else:
+            section = self._pygen_classifier.classify(pygccxml_definition)
+            for sect, sink in self._pygen:
+                if sect == section:
+                    return sink
+            else:
+                raise ValueError("CodeSink for section %r not available" % section)
 
     def scan_types(self):
+        self._stage = 'scan types'
         self._scan_namespace_types(self.module, self.module_namespace, pygen_register_function_name="register_types")
         self._types_scanned = True
 
     def scan_methods(self):
+        self._stage = 'scan methods'
         assert self._types_scanned
-        self.pygen_sink.writeln("def register_methods(root_module):")
-        self.pygen_sink.indent()
+        for pygen_sink in self._get_all_pygen_sinks():
+            pygen_sink.writeln("def register_methods(root_module):")
+            pygen_sink.indent()
+
+        for class_wrapper in self.type_registry.ordered_classes:
+            if isinstance(class_wrapper.gccxml_definition, class_declaration_t):
+                continue # skip classes not fully defined
+            pygen_sink =  self._get_pygen_sink_for_definition(class_wrapper.gccxml_definition)
+            if pygen_sink:
+                register_methods_func = "register_%s_methods"  % (class_wrapper.mangled_full_name,)
+                pygen_sink.writeln("%s(root_module, root_module[%r])" % (register_methods_func, class_wrapper.full_name))
+
+        for pygen_sink in self._get_all_pygen_sinks():
+            if pygen_sink is self._get_main_pygen_sink() and isinstance(self._pygen, list):
+                for sect, dummy in self._pygen:
+                    if sect == '__main__':
+                        continue
+                    pygen_sink.writeln("%s.register_methods(root_module)" % sect)
+            pygen_sink.writeln("return")
+            pygen_sink.unindent()
+            pygen_sink.writeln()
 
         for class_wrapper in self.type_registry.ordered_classes:
             if isinstance(class_wrapper.gccxml_definition, class_declaration_t):
                 continue # skip classes not fully defined
             register_methods_func = "register_%s_methods"  % (class_wrapper.mangled_full_name,)
-            self.pygen_sink.writeln("%s(root_module, root_module[%r])" % (register_methods_func, class_wrapper.full_name))
 
-        self.pygen_sink.unindent()
-        self.pygen_sink.writeln()
-
-        for class_wrapper in self.type_registry.ordered_classes:
-            if isinstance(class_wrapper.gccxml_definition, class_declaration_t):
-                continue # skip classes not fully defined
-            register_methods_func = "register_%s_methods"  % (class_wrapper.mangled_full_name,)
-            self.pygen_sink.writeln("def %s(root_module, cls):" % (register_methods_func,))
-            self.pygen_sink.indent()
-            self._scan_class_methods(class_wrapper.gccxml_definition, class_wrapper)
-            self.pygen_sink.writeln("return")
-            self.pygen_sink.unindent()
-            self.pygen_sink.writeln()
+            pygen_sink =  self._get_pygen_sink_for_definition(class_wrapper.gccxml_definition)
+            if pygen_sink:
+                pygen_sink.writeln("def %s(root_module, cls):" % (register_methods_func,))
+                pygen_sink.indent()
+            self._scan_class_methods(class_wrapper.gccxml_definition, class_wrapper, pygen_sink)
+            if pygen_sink:
+                pygen_sink.writeln("return")
+                pygen_sink.unindent()
+                pygen_sink.writeln()
 
 
     def parse_finalize(self):
         annotations_scanner.warn_unused_annotations()
-
-        self.pygen_sink.writeln("def main():")
-        self.pygen_sink.indent()
-        self.pygen_sink.writeln("out = FileCodeSink(sys.stdout)")
-        self.pygen_sink.writeln("root_module = module_init()")
-        self.pygen_sink.writeln("register_types(root_module)")
-        self.pygen_sink.writeln("register_methods(root_module)")
-        self.pygen_sink.writeln("register_functions(root_module)")
-        self.pygen_sink.writeln("write_preamble(out)")
-        self.pygen_sink.writeln("root_module.generate(out)")
-        self.pygen_sink.unindent()
-        self.pygen_sink.writeln()
-        self.pygen_sink.writeln("if __name__ == '__main__':\n    main()")
-        self.pygen_sink.writeln()
+        pygen_sink = self._get_main_pygen_sink()
+        if pygen_sink:
+            pygen_sink.writeln("def main():")
+            pygen_sink.indent()
+            pygen_sink.writeln("out = FileCodeSink(sys.stdout)")
+            pygen_sink.writeln("root_module = module_init()")
+            pygen_sink.writeln("register_types(root_module)")
+            pygen_sink.writeln("register_methods(root_module)")
+            pygen_sink.writeln("register_functions(root_module)")
+            pygen_sink.writeln("write_preamble(out)")
+            pygen_sink.writeln("root_module.generate(out)")
+            pygen_sink.unindent()
+            pygen_sink.writeln()
+            pygen_sink.writeln("if __name__ == '__main__':\n    main()")
+            pygen_sink.writeln()
 
         return self.module
 
@@ -613,11 +749,17 @@ class ModuleParser(object):
         root_module = module.get_root()
 
         if pygen_register_function_name:
-            self.pygen_sink.writeln("def %s(module):" % pygen_register_function_name)
-            self.pygen_sink.indent()
-            self.pygen_sink.writeln("root_module = module.get_root()")
-            self.pygen_sink.writeln()
-
+            for pygen_sink in self._get_all_pygen_sinks():
+                pygen_sink.writeln("def %s(module):" % pygen_register_function_name)
+                pygen_sink.indent()
+                pygen_sink.writeln("root_module = module.get_root()")
+                pygen_sink.writeln()
+                if pygen_sink is self._get_main_pygen_sink() and isinstance(self._pygen, list):
+                    for section, dummy in self._pygen:
+                        if section == '__main__':
+                            continue
+                        if pygen_register_function_name == "register_types":
+                            pygen_sink.writeln("%s.%s(module)" % (section, pygen_register_function_name))
 
         ## scan enumerations
         if outer_class is None:
@@ -643,7 +785,9 @@ class ModuleParser(object):
             l = [repr(enum.name), enum_values_repr]
             if outer_class is not None:
                 l.append('outer_class=root_module[%r]' % outer_class.full_name)
-            self.pygen_sink.writeln('module.add_enum(%s)' % ', '.join(l))
+            pygen_sink = self._get_pygen_sink_for_definition(enum)
+            if pygen_sink:
+                pygen_sink.writeln('module.add_enum(%s)' % ', '.join(l))
 
             module.add_enum(enum.name, [name for name, dummy_val in enum.values],
                             outer_class=outer_class)
@@ -691,8 +835,10 @@ class ModuleParser(object):
             kwargs.setdefault("automatic_type_narrowing", False)
             kwargs.setdefault("allow_subclassing", False)
 
-            self.pygen_sink.writeln("module.add_class(%s)" %
-                                    ", ".join([repr(alias.name)] + _pygen_kwargs(kwargs)))
+            pygen_sink = self._get_pygen_sink_for_definition(cls)
+            if pygen_sink:
+                pygen_sink.writeln("module.add_class(%s)" %
+                                   ", ".join([repr(alias.name)] + _pygen_kwargs(kwargs)))
 
             class_wrapper = module.add_class(alias.name, **kwargs)
 
@@ -832,8 +978,10 @@ class ModuleParser(object):
             if custom_template_class_name:
                 kwargs["custom_template_class_name"] = custom_template_class_name
 
-            self.pygen_sink.writeln("module.add_class(%s)" %
-                                    ", ".join([repr(cls_name)] + _pygen_kwargs(kwargs)))
+            pygen_sink = self._get_pygen_sink_for_definition(cls)
+            if pygen_sink:
+                pygen_sink.writeln("module.add_class(%s)" %
+                                   ", ".join([repr(cls_name)] + _pygen_kwargs(kwargs)))
 
             class_wrapper = module.add_class(cls_name, **kwargs)
             class_wrapper.gccxml_definition = cls
@@ -857,8 +1005,9 @@ class ModuleParser(object):
                 #other_class = type_registry.find_class(operator.return_type.decl_string, '::')
                 other_class = root_module[normalize_class_name(operator.return_type.decl_string, '::')]
                 class_wrapper.implicitly_converts_to(other_class)
-                self.pygen_sink.writeln("root_module[%r].implicitly_converts_to(root_module[%r])"
-                                        % (class_wrapper.full_name, other_class.full_name))
+                if pygen_sink:
+                    pygen_sink.writeln("root_module[%r].implicitly_converts_to(root_module[%r])"
+                                       % (class_wrapper.full_name, other_class.full_name))
 
         pygen_function_closed = False
         if outer_class is None:
@@ -869,18 +1018,19 @@ class ModuleParser(object):
                     continue
 
                 if pygen_register_function_name:
-                    self.pygen_sink.writeln()
-                    self.pygen_sink.writeln("## Register a nested module for the namespace %s" % nested_namespace.name)
-                    self.pygen_sink.writeln()
                     nested_module = module.add_cpp_namespace(nested_namespace.name)
                     nested_modules.append(nested_module)
-                    self.pygen_sink.writeln("nested_module = module.add_cpp_namespace(%r)" % nested_namespace.name)
-                    nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
-                    self.pygen_sink.writeln("%s(nested_module)" % nested_module_type_init_func)
-                    self.pygen_sink.writeln()
-
-            self.pygen_sink.unindent()
-            self.pygen_sink.writeln()
+                    for pygen_sink in self._get_all_pygen_sinks():
+                        pygen_sink.writeln()
+                        pygen_sink.writeln("## Register a nested module for the namespace %s" % nested_namespace.name)
+                        pygen_sink.writeln()
+                        pygen_sink.writeln("nested_module = module.add_cpp_namespace(%r)" % nested_namespace.name)
+                        nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
+                        pygen_sink.writeln("%s(nested_module)" % nested_module_type_init_func)
+                        pygen_sink.writeln()
+            for pygen_sink in self._get_all_pygen_sinks():
+                pygen_sink.unindent()
+                pygen_sink.writeln()
             pygen_function_closed = True
 
             ## scan nested namespaces (mapped as python submodules)
@@ -896,8 +1046,9 @@ class ModuleParser(object):
             assert not nested_modules # make sure all have been consumed by the second for loop
 
         if pygen_register_function_name and not pygen_function_closed:
-            self.pygen_sink.unindent()
-            self.pygen_sink.writeln()
+            for pygen_sink in self._get_all_pygen_sinks():
+                pygen_sink.unindent()
+                pygen_sink.writeln()
 
 
     def _class_has_virtual_methods(self, cls):
@@ -915,9 +1066,13 @@ class ModuleParser(object):
                 return True
         return False
 
-    def _scan_class_methods(self, cls, class_wrapper):
+    def _scan_class_methods(self, cls, class_wrapper, pygen_sink):
         have_trivial_constructor = False
         have_copy_constructor = False
+
+        pygen_sink = self._get_pygen_sink_for_definition(cls)
+        if pygen_sink is None:
+            pygen_sink = NullCodeSink()
 
         for member in cls.get_members():
             if isinstance(member, calldef.member_function_t):
@@ -1020,8 +1175,8 @@ class ModuleParser(object):
 
                 ## --- pygen ---
                 arglist_repr = ("[" + ', '.join([_pygen_param(args_, kwargs_) for (args_, kwargs_) in argument_specs]) +  "]")
-                self.pygen_sink.writeln("cls.add_method(%s)" %
-                                        ", ".join(
+                pygen_sink.writeln("cls.add_method(%s)" %
+                                   ", ".join(
                         [repr(member.name), _pygen_retval(return_type_spec[0], return_type_spec[1]), arglist_repr]
                         + _pygen_kwargs(kwargs)))
 
@@ -1064,9 +1219,9 @@ class ModuleParser(object):
                     if pure_virtual:
                         class_wrapper.set_cannot_be_constructed("pure virtual method %r not wrapped" % member.name)
                         class_wrapper.set_helper_class_disabled(True)
-                        self.pygen_sink.writeln('cls.set_cannot_be_constructed("pure virtual method %%r not wrapped" %% %r)'
-                                                % member.name)
-                        self.pygen_sink.writeln('cls.set_helper_class_disabled(True)')
+                        pygen_sink.writeln('cls.set_cannot_be_constructed("pure virtual method %%r not wrapped" %% %r)'
+                                           % member.name)
+                        pygen_sink.writeln('cls.set_helper_class_disabled(True)')
 
                     warnings.warn_explicit("Error adding method %s: %r"
                                            % (member, ex),
@@ -1095,8 +1250,8 @@ class ModuleParser(object):
                                                                               default_value=arg.default_value))
 
                 arglist_repr = ("[" + ', '.join([_pygen_param(args_, kwargs_) for (args_, kwargs_) in argument_specs]) +  "]")
-                self.pygen_sink.writeln("cls.add_constructor(%s)" %
-                                        ", ".join([arglist_repr, "visibility=%r" % member.access_type]))
+                pygen_sink.writeln("cls.add_constructor(%s)" %
+                                   ", ".join([arglist_repr, "visibility=%r" % member.access_type]))
 
 
                 arguments = []
@@ -1137,13 +1292,13 @@ class ModuleParser(object):
 
                 ## pygen...
                 if member.type_qualifiers.has_static:
-                    self.pygen_sink.writeln("cls.add_static_attribute(%r, %s, is_const=%r)" %
-                                            (member.name, _pygen_retval(*return_type_spec),
-                                             type_traits.is_const(member.type)))
+                    pygen_sink.writeln("cls.add_static_attribute(%r, %s, is_const=%r)" %
+                                       (member.name, _pygen_retval(*return_type_spec),
+                                        type_traits.is_const(member.type)))
                 else:
-                    self.pygen_sink.writeln("cls.add_instance_attribute(%r, %s, is_const=%r)" %
-                                            (member.name, _pygen_retval(*return_type_spec),
-                                             type_traits.is_const(member.type)))
+                    pygen_sink.writeln("cls.add_instance_attribute(%r, %s, is_const=%r)" %
+                                       (member.name, _pygen_retval(*return_type_spec),
+                                        type_traits.is_const(member.type)))
                     
                 ## convert the return value
                 try:
@@ -1169,7 +1324,7 @@ class ModuleParser(object):
         if not have_trivial_constructor:
             if type_traits.has_trivial_constructor(cls):
                 class_wrapper.add_constructor([])
-                self.pygen_sink.writeln("cls.add_constructor([])")
+                pygen_sink.writeln("cls.add_constructor([])")
 
         if not have_copy_constructor:
             try: # pygccxml > 0.9
@@ -1183,10 +1338,17 @@ class ModuleParser(object):
 
 
     def scan_functions(self):
+        self._stage = 'scan functions'
         assert self._types_scanned
-        self.pygen_sink.writeln("def register_functions(root_module):")
-        self.pygen_sink.indent()
-        self.pygen_sink.writeln("module = root_module")
+        for pygen_sink in self._get_all_pygen_sinks():
+            pygen_sink.writeln("def register_functions(root_module):")
+            pygen_sink.indent()
+            pygen_sink.writeln("module = root_module")
+            if pygen_sink is self._get_main_pygen_sink() and isinstance(self._pygen, list):
+                for section, dummy in self._pygen:
+                    if section == '__main__':
+                        continue
+                    pygen_sink.writeln("%s.register_functions(root_module)" % section)
         self._scan_namespace_functions(self.module, self.module_namespace)
             
     def _scan_namespace_functions(self, module, module_namespace):
@@ -1277,10 +1439,12 @@ class ModuleParser(object):
                 assert of_class is not None
                 cpp_class = root_module[normalize_class_name(of_class, (self.module_namespace_name or '::'))]
 
-                self.pygen_sink.writeln("root_module[%r].add_function_as_method(%s, custom_name=%r)" %
-                                        (cpp_class.full_name,
-                                         ", ".join([repr(fun.name), retval_repr, arglist_repr]),
-                                         as_method))
+                pygen_sink = self._get_pygen_sink_for_definition(fun)
+                if pygen_sink:
+                    pygen_sink.writeln("root_module[%r].add_function_as_method(%s, custom_name=%r)" %
+                                       (cpp_class.full_name,
+                                        ", ".join([repr(fun.name), retval_repr, arglist_repr]),
+                                        as_method))
                 if params_ok:
                     function_wrapper = cpp_class.add_function_as_method(fun.name, return_type, arguments, custom_name=as_method)
                     function_wrapper.gccxml_definition = fun
@@ -1291,9 +1455,11 @@ class ModuleParser(object):
                 #cpp_class = type_registry.find_class(is_constructor_of, (self.module_namespace_name or '::'))
                 cpp_class = root_module[normalize_class_name(is_constructor_of, (self.module_namespace_name or '::'))]
 
-                self.pygen_sink.writeln("root_module[%r].add_function_as_constructor(%s)" %
-                                        (cpp_class.full_name,
-                                         ", ".join([repr(fun.name), retval_repr, arglist_repr]),))
+                pygen_sink = self._get_pygen_sink_for_definition(fun)
+                if pygen_sink:
+                    pygen_sink.writeln("root_module[%r].add_function_as_constructor(%s)" %
+                                       (cpp_class.full_name,
+                                        ", ".join([repr(fun.name), retval_repr, arglist_repr]),))
 
                 if params_ok:
                     function_wrapper = cpp_class.add_function_as_constructor(fun.name, return_type, arguments)
@@ -1310,8 +1476,10 @@ class ModuleParser(object):
             if alt_name:
                 kwargs['custom_name'] = alt_name
 
-            self.pygen_sink.writeln("module.add_function(%s)" %
-                                    (", ".join([repr(fun.name), retval_repr, arglist_repr] + _pygen_kwargs(kwargs))))
+            pygen_sink = self._get_pygen_sink_for_definition(fun)
+            if pygen_sink:
+                pygen_sink.writeln("module.add_function(%s)" %
+                                   (", ".join([repr(fun.name), retval_repr, arglist_repr] + _pygen_kwargs(kwargs))))
 
             if params_ok:
                 func_wrapper = module.add_function(fun.name, return_type, arguments, **kwargs)
@@ -1327,12 +1495,14 @@ class ModuleParser(object):
             nested_module = module.get_submodule(nested_namespace.name)
             
             nested_module_pygen_func = "register_functions_" + "_".join(nested_module.get_namespace_path())
-            self.pygen_sink.writeln("%s(module.get_submodule(%r), root_module)" %
-                                    (nested_module_pygen_func, nested_namespace.name))
+            for pygen_sink in self._get_all_pygen_sinks():
+                pygen_sink.writeln("%s(module.get_submodule(%r), root_module)" %
+                                   (nested_module_pygen_func, nested_namespace.name))
 
-        self.pygen_sink.writeln("return")
-        self.pygen_sink.unindent()
-        self.pygen_sink.writeln()
+        for pygen_sink in self._get_all_pygen_sinks():
+            pygen_sink.writeln("return")
+            pygen_sink.unindent()
+            pygen_sink.writeln()
     
         for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
             if nested_namespace.name.startswith('__'):
@@ -1340,8 +1510,9 @@ class ModuleParser(object):
             nested_module = module.get_submodule(nested_namespace.name)
 
             nested_module_pygen_func = "register_functions_" + "_".join(nested_module.get_namespace_path())
-            self.pygen_sink.writeln("def %s(module, root_module):" % nested_module_pygen_func)
-            self.pygen_sink.indent()
+            for pygen_sink in self._get_all_pygen_sinks():
+                pygen_sink.writeln("def %s(module, root_module):" % nested_module_pygen_func)
+                pygen_sink.indent()
 
             self._scan_namespace_functions(nested_module, nested_namespace)
 

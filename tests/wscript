@@ -63,16 +63,6 @@ def build(bld):
         bindgen.command_is_external = True
         bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
-        obj = create_pyext_obj(bld, 'cpp')
-        obj.source = [
-            'foo.cc',
-            'foomodule2.cc'
-            ]
-        obj.target = 'foo2'
-        obj.inst_var = 0 # do not install
-        obj.includes = '.'
-
-
         ### Now using the generated python script
         bindgen = bld.create_obj('command-output')
         bindgen.stdout = 'foomodule3.cc'
@@ -92,6 +82,51 @@ def build(bld):
             'foomodule3.cc'
             ]
         obj.target = 'foo3'
+        obj.inst_var = 0 # do not install
+        obj.includes = '.'
+
+        ## ---
+
+        ### using gccxml autoscanning, but split the generated python script into modules
+        bindgen = bld.create_obj('command-output')
+        bindgen.argv = [bindgen.input_file('foomodulegen-auto-split.py'),
+                        bindgen.input_file('foo.h'),
+                        bindgen.output_file('foomodulegen_split.py'),
+                        bindgen.output_file('foomodulegen_module1.py'),
+                        bindgen.output_file('foomodulegen_module2.py'),
+                        ]
+        bindgen.command = bindgen.env['PYTHON']
+        bindgen.command_is_external = True
+        bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
+
+        obj = create_pyext_obj(bld, 'cpp')
+        obj.source = [
+            'foo.cc',
+            'foomodule2.cc'
+            ]
+        obj.target = 'foo2'
+        obj.inst_var = 0 # do not install
+        obj.includes = '.'
+
+        ### Run the generated python script with split modules
+        bindgen = bld.create_obj('command-output')
+        bindgen.stdout = 'foomodule4.cc'
+        bindgen.argv = [bindgen.input_file('foomodulegen4.py')]
+        bindgen.command = bindgen.env['PYTHON']
+        bindgen.command_is_external = True
+        bindgen.prio = 56 # run after the previous bindgen
+        bindgen.hidden_inputs = [
+            'foomodulegen_split.py',
+            'foomodulegen_module1.py',
+            'foomodulegen_module2.py',
+            ]
+
+        obj = create_pyext_obj(bld, 'cpp')
+        obj.source = [
+            'foo.cc',
+            'foomodule4.cc'
+            ]
+        obj.target = 'foo4'
         obj.inst_var = 0 # do not install
         obj.includes = '.'
 

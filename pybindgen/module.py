@@ -298,7 +298,9 @@ class ModuleBase(dict):
 
     def add_cpp_namespace(self, name):
         """
-        Add a nested module namespace corresponding to a C++ namespace.
+        Add a nested module namespace corresponding to a C++
+        namespace.  If the requested namespace was already added, the
+        existing module is returned instead of creating a new one.
 
         @param name: name of C++ namespace (just the last component,
         not full scoped name); this also becomes the name of the
@@ -307,7 +309,10 @@ class ModuleBase(dict):
         @return: a L{SubModule} object that maps to this namespace.
         """
         name = utils.ascii(name)
-        return SubModule(name, parent=self, cpp_namespace=name)
+        try:
+            return self.get_submodule(name)
+        except ValueError:
+            return SubModule(name, parent=self, cpp_namespace=name)
 
     def _add_enum_obj(self, enum):
         """

@@ -12,6 +12,8 @@ elif which == 2:
     import foo2 as foo
 elif which == 3:
     import foo3 as foo
+elif which == 4:
+    import foo4 as foo
 else:
     raise AssertionError("bad command line arguments")
 

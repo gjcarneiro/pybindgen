@@ -46,5 +46,5 @@ if __name__ == '__main__':
         my_module_gen()
     else:
         print >> sys.stderr, "** running under profiler"
-        profile.run('my_module_gen()', 'foomodulegen-auto.pstat')
+        profile.run('my_module_gen()', 'foomodulegen3.pstat')
 
