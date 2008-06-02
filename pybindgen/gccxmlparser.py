@@ -698,6 +698,15 @@ pybindgen.settings.error_handler = ErrorHandler()
                     if sect.name == '__main__':
                         continue
                     pygen_sink.writeln("%s.register_methods(root_module)" % sect.name)
+                    if sect.local_customizations_module:
+                        pygen_sink.writeln("\ntry:\n"
+                                           "    import %s\n"
+                                           "except ImportError:\n"
+                                           "    pass\n"
+                                           "else:\n"
+                                           "    %s.register_methods(root_module)\n"
+                                           % (sect.local_customizations_module, sect.local_customizations_module))
+
             pygen_sink.writeln("return")
             pygen_sink.unindent()
             pygen_sink.writeln()
@@ -786,6 +795,14 @@ pybindgen.settings.error_handler = ErrorHandler()
                             continue
                         if pygen_register_function_name == "register_types":
                             pygen_sink.writeln("%s.%s(module)" % (section.name, pygen_register_function_name))
+                            if section.local_customizations_module:
+                                pygen_sink.writeln("\ntry:\n"
+                                                   "    import %s\n"
+                                                   "except ImportError:\n"
+                                                   "    pass\n"
+                                                   "else:\n"
+                                                   "    %s.register_types(module)\n"
+                                                   % (section.local_customizations_module, section.local_customizations_module))
 
         ## scan enumerations
         if outer_class is None:
@@ -1375,6 +1392,14 @@ pybindgen.settings.error_handler = ErrorHandler()
                     if section.name == '__main__':
                         continue
                     pygen_sink.writeln("%s.register_functions(root_module)" % section.name)
+                    if section.local_customizations_module:
+                        pygen_sink.writeln("\ntry:\n"
+                                           "    import %s\n"
+                                           "except ImportError:\n"
+                                           "    pass\n"
+                                           "else:\n"
+                                           "    %s.register_functions(root_module)\n"
+                                           % (section.local_customizations_module, section.local_customizations_module))
         self._scan_namespace_functions(self.module, self.module_namespace)
             
     def _scan_namespace_functions(self, module, module_namespace):
