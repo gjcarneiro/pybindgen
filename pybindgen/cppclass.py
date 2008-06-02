@@ -969,7 +969,10 @@ public:
                 self.methods[name] = overload
 
             method.class_ = self
-            overload.add(method)
+            try:
+                utils.call_with_error_handling(overload.add, (method,), {}, method)
+            except utils.SkipWrapper:
+                return
         else:
             self.nonpublic_methods.append(method)
         if method.is_virtual:
