@@ -26,3 +26,49 @@ def build(bld):
     obj.target = 'a'
     obj.inst_var = 0 # do not install
     obj.includes = '.'
+
+
+    if bld.env()['ENABLE_PYGCCXML']:
+        ## gccxml direct generation method
+        bindgen = bld.create_obj('command-output')
+        bindgen.stdout = 'a1module.cc'
+        bindgen.argv = [bindgen.input_file('module-autogen.py'),
+                        bindgen.input_file('a.h')]
+        bindgen.command = bindgen.env['PYTHON']
+        bindgen.command_is_external = True
+        bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
+
+        obj = create_pyext_obj(bld, 'cpp')
+        obj.source = [
+            'a.cc',
+            'a1module.cc'
+            ]
+        obj.target = 'a1'
+        obj.inst_var = 0 # do not install
+        obj.includes = '.'
+
+
+        ## gccxml indirect generation method
+        bindgen = bld.create_obj('command-output')
+        bindgen.stdout = 'a2modulegen.py'
+        bindgen.argv = [bindgen.input_file('module-autoscan.py'),
+                        bindgen.input_file('a.h')]
+        bindgen.command = bindgen.env['PYTHON']
+        bindgen.command_is_external = True
+        bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
+
+        bindgen = bld.create_obj('command-output')
+        bindgen.stdout = 'a2module.cc'
+        bindgen.argv = [bindgen.input_file('a2modulegen.py')]
+        bindgen.command = bindgen.env['PYTHON']
+        bindgen.command_is_external = True
+        bindgen.prio = 56 # must run after the 'py' objects in ../pybindgen
+
+        obj = create_pyext_obj(bld, 'cpp')
+        obj.source = [
+            'a.cc',
+            'a2module.cc'
+            ]
+        obj.target = 'a2'
+        obj.inst_var = 0 # do not install
+        obj.includes = '.'
