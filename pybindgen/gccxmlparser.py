@@ -516,7 +516,7 @@ class ModuleParser(object):
            directories listed by whitelist_paths.
          @type whitelist_paths: list of string
 
-         @param pygen: code sink for python script generation.
+         @param pygen_sink: code sink for python script generation.
 
            This parameter activates a mode wherein ModuleParser, in
            addition to building in memory API definitions, creates a
@@ -532,7 +532,7 @@ class ModuleParser(object):
              provided for the main script.  This option requires the
              pygen_classifier to be given.
 
-         @type pygen: L{CodeSink} or list of (section_name, code_sink) tuples
+         @type pygen_sink: L{CodeSink} or list of (section_name, code_sink) tuples
 
          @param pygen_classifier: the classifier to use when pygen is given and is a dict
         """
