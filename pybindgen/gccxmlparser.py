@@ -368,6 +368,36 @@ annotations_scanner = AnnotationsScanner()
 
 ## ------------------------
 
+class PygenSection(object):
+    "Class to hold information about a python generation section"
+    def __init__(self, name, code_sink, local_customizations_module=None):
+        """
+        @param name: section name; this name should be a valid python
+        module name; the special name '__main__' is used to denote the
+        main section, which comprises the main script itself
+        @type name: str
+
+        @param code_sink: code sink that will receive the generated
+        code for the section.  Normally the code sink should write to
+        a file with the name of the section and a .py extension, to
+        allow importing it as module.
+        @type code_sink: L{CodeSink}
+
+        @param local_customizations_module: name of the python module
+        that may contain local customizations for the section, or
+        None.  If not None, PyBindGen will generate code that tries to
+        import that module in the respective section and call
+        functions on it, or ignore it if the module does not exist.
+        @type local_customizations_module: str
+        """
+        assert isinstance(name, str)
+        self.name = name
+        assert isinstance(code_sink, CodeSink)
+        self.code_sink = code_sink
+        assert local_customizations_module is None or isinstance(local_customizations_module, str)
+        self.local_customizations_module = local_customizations_module
+
+
 class PygenClassifier(object):
     def classify(self, pygccxml_definition):
         """
@@ -527,12 +557,10 @@ class ModuleParser(object):
 
            The pygen parameter can be either:
              1. A single code sink: this will become the main and only script file to be generated
-             2. A list of tuples: entries in the list map "section
-             name" to "code sink".  A special '__main__' entry must be
-             provided for the main script.  This option requires the
-             pygen_classifier to be given.
+             2. A list of L{PygenSection} objects.  This option
+             requires the pygen_classifier to be given.
 
-         @type pygen_sink: L{CodeSink} or list of (section_name, code_sink) tuples
+         @type pygen_sink: L{CodeSink} or list of L{PygenSection} objects
 
          @param pygen_classifier: the classifier to use when pygen is given and is a dict
         """
@@ -543,13 +571,11 @@ class ModuleParser(object):
         if isinstance(pygen_sink, list):
             assert isinstance(pygen_classifier, PygenClassifier)
             has_main = False
-            for sect, sink in self._pygen:
-                if not isinstance(sect, str):
+            for sect in self._pygen:
+                if not isinstance(sect, PygenSection):
                     raise TypeError
-                if sect == '__main__':
+                if sect.name == '__main__':
                     has_main = True
-                if not isinstance(sink, CodeSink):
-                    raise TypeError
             if not has_main:
                 raise ValueError("missing __main__ section")
         elif pygen_sink is None:
@@ -599,10 +625,10 @@ pybindgen.settings.error_handler = ErrorHandler()
 """)
             pygen_sink.writeln("import sys")
             if isinstance(self._pygen, list):
-                for sect, dummy in self._pygen:
-                    if sect == '__main__':
+                for sect in self._pygen:
+                    if sect.name == '__main__':
                         continue
-                    pygen_sink.writeln("import %s" % sect)
+                    pygen_sink.writeln("import %s" % sect.name)
             pygen_sink.writeln()
             pygen_sink.writeln("def module_init():")
             pygen_sink.indent()
@@ -621,9 +647,9 @@ pybindgen.settings.error_handler = ErrorHandler()
         if isinstance (self._pygen, CodeSink):
             return self._pygen
         elif isinstance(self._pygen, list):
-            for sect, sink in self._pygen:
-                if sect == '__main__':
-                    return sink
+            for sect in self._pygen:
+                if sect.name == '__main__':
+                    return sect.code_sink
         else:
             return None
 
@@ -631,7 +657,7 @@ pybindgen.settings.error_handler = ErrorHandler()
         if isinstance (self._pygen, CodeSink):
             return [self._pygen]
         elif isinstance(self._pygen, list):
-            return [sink for dummy, sink in self._pygen]
+            return [sect.code_sink for sect in self._pygen]
         else:
             return []
 
@@ -640,9 +666,9 @@ pybindgen.settings.error_handler = ErrorHandler()
             return self._pygen
         else:
             section = self._pygen_classifier.classify(pygccxml_definition)
-            for sect, sink in self._pygen:
-                if sect == section:
-                    return sink
+            for sect in self._pygen:
+                if sect is section or sect.name == section:
+                    return sect.code_sink
             else:
                 raise ValueError("CodeSink for section %r not available" % section)
 
@@ -668,10 +694,10 @@ pybindgen.settings.error_handler = ErrorHandler()
 
         for pygen_sink in self._get_all_pygen_sinks():
             if pygen_sink is self._get_main_pygen_sink() and isinstance(self._pygen, list):
-                for sect, dummy in self._pygen:
-                    if sect == '__main__':
+                for sect in self._pygen:
+                    if sect.name == '__main__':
                         continue
-                    pygen_sink.writeln("%s.register_methods(root_module)" % sect)
+                    pygen_sink.writeln("%s.register_methods(root_module)" % sect.name)
             pygen_sink.writeln("return")
             pygen_sink.unindent()
             pygen_sink.writeln()
@@ -755,11 +781,11 @@ pybindgen.settings.error_handler = ErrorHandler()
                 pygen_sink.writeln("root_module = module.get_root()")
                 pygen_sink.writeln()
                 if pygen_sink is self._get_main_pygen_sink() and isinstance(self._pygen, list):
-                    for section, dummy in self._pygen:
-                        if section == '__main__':
+                    for section in self._pygen:
+                        if section.name == '__main__':
                             continue
                         if pygen_register_function_name == "register_types":
-                            pygen_sink.writeln("%s.%s(module)" % (section, pygen_register_function_name))
+                            pygen_sink.writeln("%s.%s(module)" % (section.name, pygen_register_function_name))
 
         ## scan enumerations
         if outer_class is None:
@@ -1345,10 +1371,10 @@ pybindgen.settings.error_handler = ErrorHandler()
             pygen_sink.indent()
             pygen_sink.writeln("module = root_module")
             if pygen_sink is self._get_main_pygen_sink() and isinstance(self._pygen, list):
-                for section, dummy in self._pygen:
-                    if section == '__main__':
+                for section in self._pygen:
+                    if section.name == '__main__':
                         continue
-                    pygen_sink.writeln("%s.register_functions(root_module)" % section)
+                    pygen_sink.writeln("%s.register_functions(root_module)" % section.name)
         self._scan_namespace_functions(self.module, self.module_namespace)
             
     def _scan_namespace_functions(self, module, module_namespace):

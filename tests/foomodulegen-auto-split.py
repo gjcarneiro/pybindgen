@@ -7,7 +7,7 @@ import pybindgen
 from pybindgen.typehandlers import base as typehandlers
 from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
 from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
-from pybindgen.gccxmlparser import ModuleParser, PygenClassifier
+from pybindgen.gccxmlparser import ModuleParser, PygenClassifier, PygenSection
 from pybindgen.function import CustomFunctionWrapper
 from pybindgen.cppmethod import CustomCppMethodWrapper
 
@@ -24,14 +24,14 @@ class MyPygenClassifier(PygenClassifier):
 
 def my_module_gen():
     pygen = [
-        ('__main__', FileCodeSink(open(sys.argv[2], "wt"))),
-        ('foomodulegen_module1', FileCodeSink(open(sys.argv[3], "wt"))),
-        ('foomodulegen_module2', FileCodeSink(open(sys.argv[4], "wt"))),
+        PygenSection('__main__', FileCodeSink(open(sys.argv[2], "wt"))),
+        PygenSection('foomodulegen_module1', FileCodeSink(open(sys.argv[3], "wt"))),
+        PygenSection('foomodulegen_module2', FileCodeSink(open(sys.argv[4], "wt"))),
         ]
     module_parser = ModuleParser('foo4', '::')
     module_parser.parse([sys.argv[1]], includes=['"foo.h"'], pygen_sink=pygen, pygen_classifier=MyPygenClassifier())
-    for dummy, sink in pygen:
-        sink.file.close()
+    for sect in pygen:
+        sect.code_sink.file.close()
 
 
 if __name__ == '__main__':
