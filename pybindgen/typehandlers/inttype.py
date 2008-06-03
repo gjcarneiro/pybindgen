@@ -146,6 +146,25 @@ class UInt16Return(ReturnValue):
         wrapper.build_params.add_parameter("i", [self.value], prepend=True)
 
 
+class Int16Return(ReturnValue):
+
+    CTYPES = ['int16_t', 'short', 'short int']
+
+    def get_c_error_return(self):
+        return "return 0;"
+    
+    def convert_python_to_c(self, wrapper):
+        tmp_var = wrapper.declarations.declare_variable("int", "tmp")
+        wrapper.parse_params.add_parameter("i", ["&"+tmp_var], prepend=True)
+        wrapper.after_call.write_error_check('%s > 32767 || %s < -32768' % (tmp_var, tmp_var),
+                                             'PyErr_SetString(PyExc_ValueError, "Out of range");')
+        wrapper.after_call.write_code(
+            "%s = %s;" % (self.value, tmp_var))
+
+    def convert_c_to_python(self, wrapper):
+        wrapper.build_params.add_parameter("i", [self.value], prepend=True)
+
+
 class UInt16Param(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
@@ -166,7 +185,7 @@ class UInt16Param(Parameter):
 class Int16Param(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['int16_t', 'int16_t const']
+    CTYPES = ['int16_t', 'int16_t const', 'short', 'short int']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
