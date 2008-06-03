@@ -606,4 +606,16 @@ public:
     virtual void something (int x) const {}
 };
 
+
+// Test anonymous structures
+union Word
+{
+    uint16_t word;
+    struct
+    {
+        uint8_t low, high;
+    };
+};
+
+
 #endif 	    /* !FOO_H_ */

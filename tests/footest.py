@@ -688,5 +688,19 @@ class TestFoo(unittest.TestCase):
         y = foo.get_int("123", 2)
         self.assertEqual(y, 246)
 
+    def test_anonymous_struct(self):
+        """https://bugs.launchpad.net/pybindgen/+bug/237054"""
+
+        word = foo.Word()
+
+        word.word = 1
+        self.assertEqual(word.word, 1)
+
+        word.low = 2
+        word.high = 3
+        self.assertEqual(word.low, 2)
+        self.assertEqual(word.high, 3)
+
+
 if __name__ == '__main__':
     unittest.main()

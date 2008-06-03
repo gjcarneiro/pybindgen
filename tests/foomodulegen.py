@@ -322,6 +322,11 @@ int %s::custom_method_added_by_a_hook(int x)
                                 is_virtual=True, is_pure_virtual=False)
     AbstractXptoImpl.add_constructor([])
 
+    Word = mod.add_class('Word')
+    Word.add_instance_attribute('low', 'uint8_t', is_const=False)
+    Word.add_instance_attribute('high', 'uint8_t', is_const=False)
+    Word.add_instance_attribute('word', 'uint16_t', is_const=False)
+    Word.add_constructor([])
 
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):

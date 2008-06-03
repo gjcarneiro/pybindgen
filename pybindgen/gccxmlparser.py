@@ -440,6 +440,7 @@ class ModuleParser(object):
         self._stage = None
         self._pygen_sink = None
         self._pygen_factory = None
+        self._anonymous_structs = [] # list of (pygccxml_anonymous_class, outer_pybindgen_class)
 
     def add_pre_scan_hook(self, hook):
         """
@@ -720,7 +721,12 @@ pybindgen.settings.error_handler = ErrorHandler()
             if pygen_sink:
                 pygen_sink.writeln("def %s(root_module, cls):" % (register_methods_func,))
                 pygen_sink.indent()
+            ## Add attributes from inner anonymous to each outer class (LP#237054)
+            for anon_cls, wrapper in self._anonymous_structs:
+                if wrapper is class_wrapper:
+                    self._scan_class_methods(anon_cls, wrapper, pygen_sink)
             self._scan_class_methods(class_wrapper.gccxml_definition, class_wrapper, pygen_sink)
+
             if pygen_sink:
                 pygen_sink.writeln("return")
                 pygen_sink.unindent()
@@ -936,6 +942,17 @@ pybindgen.settings.error_handler = ErrorHandler()
             if 'ignore' in global_annotations:
                 continue
 
+            if not cls.name:
+                if outer_class is None:
+                    warnings.warn_explicit(("Class %s ignored: anonymous structure not inside a named structure/union."
+                                            % cls.decl_string),
+                                           Warning, cls.location.file_name, cls.location.line)
+                    continue
+
+                self._anonymous_structs.append((cls, outer_class))
+                continue
+                
+
             if '<' in cls.name:
 
                 for typedef in module_namespace.typedefs(function=self.location_filter,
@@ -1113,7 +1130,6 @@ pybindgen.settings.error_handler = ErrorHandler()
         have_trivial_constructor = False
         have_copy_constructor = False
 
-        pygen_sink = self._get_pygen_sink_for_definition(cls)
         if pygen_sink is None:
             pygen_sink = NullCodeSink()
 
@@ -1322,6 +1338,8 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             ## ------------ attribute --------------------
             elif isinstance(member, variable_t):
+                if not member.name:
+                    continue # anonymous structure
                 if member.access_type == 'protected':
                     warnings.warn_explicit("%s: protected member variables not yet implemented "
                                            "by PyBindGen."
