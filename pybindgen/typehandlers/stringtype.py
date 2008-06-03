@@ -118,11 +118,10 @@ class CharReturn(ReturnValue):
         return "return '\\0';"
 
     def convert_python_to_c(self, wrapper):
-        name = wrapper.declarations.declare_variable("char*", "retval_ptr")
-        wrapper.parse_params.add_parameter("c", ['&'+name], self.value)
+        wrapper.parse_params.add_parameter("c", ['&'+self.value], prepend=True)
 
     def convert_c_to_python(self, wrapper):
-        wrapper.build_params.add_parameter("c", [self.value])
+        wrapper.build_params.add_parameter("c", ["(int) %s" % self.value])
 
 
 class CStringReturn(ReturnValue):
