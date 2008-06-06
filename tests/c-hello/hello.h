@@ -24,6 +24,7 @@ void         hello_foo_set_data        (HelloFoo   *foo,
                                         const char *data);
 const char * hello_foo_get_data        (HelloFoo   *foo);
 
+const HelloFoo* hello_foo_get_self  (HelloFoo *foo);
 
 
 #ifdef __cplusplus

@@ -1826,7 +1826,7 @@ class CppClassRefParameter(CppClassParameterBase):
             ## that the python code directly manipulates the object
             ## received as parameter, instead of a copy.
             if self.is_const:
-                value = "const_cast< %s* >(&(%s))" % (self.cpp_class.full_name, self.value)
+                value = "(%s*) (&(%s))" % (self.cpp_class.full_name, self.value)
             else:
                 value = "&(%s)" % self.value
             wrapper.before_call.write_code(
@@ -2039,7 +2039,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                         ## that the python code directly manipulates the object
                         ## received as parameter, instead of a copy.
                         if self.is_const:
-                            unconst_value = "const_cast< %s* >(%s)" % (self.cpp_class.full_name, value)
+                            unconst_value = "(%s*) (%s)" % (self.cpp_class.full_name, value)
                         else:
                             unconst_value = value
                         wrapper.before_call.write_code(
@@ -2066,7 +2066,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                     ## The PyObject gets a new reference to the same obj
                     self.cpp_class.write_incref(wrapper.before_call, value)
                     if self.is_const:
-                        wrapper.before_call.write_code("%s->obj = const_cast< %s*>(%s);" %
+                        wrapper.before_call.write_code("%s->obj = (%s*) (%s);" %
                                                        (py_name, self.cpp_class.full_name, value))
                     else:
                         wrapper.before_call.write_code("%s->obj = %s;" % (py_name, value))
@@ -2082,14 +2082,14 @@ class CppClassPtrParameter(CppClassParameterBase):
 
             if self.is_const:
                 wrapper.before_call.write_code(
-                    "%s = reinterpret_cast< %s* >(reinterpret_cast< %s* >(const_cast< %s* > (%s))->m_pyself);"
+                    "%s = (%s*) (((%s*) ((%s*) %s))->m_pyself);"
                     % (py_name, self.cpp_class.pystruct,
                        self.cpp_class.helper_class.name, self.cpp_class.full_name, value))
-                wrapper.before_call.write_code("%s->obj = const_cast< %s* > (%s);" %
+                wrapper.before_call.write_code("%s->obj =  (%s*) (%s);" %
                                                (py_name, self.cpp_class.full_name, value))
             else:
                 wrapper.before_call.write_code(
-                    "%s = reinterpret_cast< %s* >(reinterpret_cast< %s* >(%s)->m_pyself);"
+                    "%s = (%s*) (((%s*) %s)->m_pyself);"
                     % (py_name, self.cpp_class.pystruct,
                        self.cpp_class.helper_class.name, value))
                 wrapper.before_call.write_code("%s->obj = %s;" % (py_name, value))
@@ -2225,7 +2225,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                     ## The PyObject gets a new reference to the same obj
                     self.cpp_class.write_incref(wrapper.after_call, value)
                     if self.is_const:
-                        wrapper.after_call.write_code("%s->obj = const_cast< %s* >(%s);" %
+                        wrapper.after_call.write_code("%s->obj = (%s*) (%s);" %
                                                       (py_name, self.cpp_class.full_name, value))
                     else:
                         wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))

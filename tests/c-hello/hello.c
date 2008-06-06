@@ -86,3 +86,8 @@ hello_foo_get_data(HelloFoo *foo)
     return foo->data;
 }
 
+const HelloFoo* hello_foo_get_self  (HelloFoo *foo)
+{
+    return foo;
+}
+
