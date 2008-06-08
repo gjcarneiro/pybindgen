@@ -3,6 +3,7 @@ Wrap C++ classes and methods
 """
 
 import warnings
+import traceback
 
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, Parameter, ReturnValue, \
     join_ctype_and_name, CodeGenerationError, TypeConfigurationError, \
@@ -1032,6 +1033,7 @@ public:
 
                 return None
         self._add_method_obj(meth)
+        meth.stack_where_defined = traceback.extract_stack()
         return meth
 
     def add_function_as_method(self, *args, **kwargs):
@@ -1045,6 +1047,7 @@ public:
         except utils.SkipWrapper:
             return None
         self._add_method_obj(meth)
+        meth.stack_where_defined = traceback.extract_stack()
         return meth
 
     def add_custom_method_wrapper(self, *args, **kwargs):
@@ -1056,6 +1059,7 @@ public:
         except utils.SkipWrapper:
             return None
         self._add_method_obj(meth)
+        meth.stack_where_defined = traceback.extract_stack()
         return meth
 
     def set_helper_class_disabled(self, flag=True):
@@ -1103,6 +1107,7 @@ public:
             except utils.SkipWrapper:
                 return None
         self._add_constructor_obj(constructor)
+        constructor.stack_where_defined = traceback.extract_stack()
         return constructor
 
     def add_function_as_constructor(self, *args, **kwargs):
@@ -1115,6 +1120,7 @@ public:
         except utils.SkipWrapper:
             return None
         self._add_constructor_obj(constructor)
+        constructor.stack_where_defined = traceback.extract_stack()
         return constructor
 
     def add_static_attribute(self, name, value_type, is_const=False):
@@ -1137,10 +1143,12 @@ public:
 
         assert isinstance(value_type, ReturnValue)
         getter = CppStaticAttributeGetter(value_type, self, name)
+        getter.stack_where_defined = traceback.extract_stack()
         if is_const:
             setter = None
         else:
             setter = CppStaticAttributeSetter(value_type, self, name)
+            setter.stack_where_defined = traceback.extract_stack()
         self.static_attributes.add_attribute(name, getter, setter)
 
     def add_instance_attribute(self, name, value_type, is_const=False,
@@ -1166,11 +1174,13 @@ public:
 
         assert isinstance(value_type, ReturnValue)
         getter_wrapper = CppInstanceAttributeGetter(value_type, self, name, getter=getter)
+        getter_wrapper.stack_where_defined = traceback.extract_stack()
         if is_const:
             setter_wrapper = None
             assert setter is None
         else:
             setter_wrapper = CppInstanceAttributeSetter(value_type, self, name, setter=setter)
+            setter_wrapper.stack_where_defined = traceback.extract_stack()
         self.instance_attributes.add_attribute(name, getter_wrapper, setter_wrapper)
 
 

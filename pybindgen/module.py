@@ -52,6 +52,7 @@ from cppclass import CppClass
 from enum import Enum
 import utils
 import warnings
+import traceback
 
 
 class ModuleBase(dict):
@@ -239,6 +240,7 @@ class ModuleBase(dict):
             except utils.SkipWrapper:
                 return None
         self._add_function_obj(func)
+        func.stack_where_defined = traceback.extract_stack()
         return func
 
     def add_custom_function_wrapper(self, *args, **kwargs):
@@ -251,6 +253,7 @@ class ModuleBase(dict):
         except utils.SkipWrapper:
             return None
         self._add_function_obj(func)
+        func.stack_where_defined = traceback.extract_stack()
         return func
 
     def register_type(self, name, full_name, type_wrapper):
@@ -294,6 +297,7 @@ class ModuleBase(dict):
         else:
             cls = CppClass(*args, **kwargs)
         self._add_class_obj(cls)
+        cls.stack_where_defined = traceback.extract_stack()
         return cls
 
     def add_cpp_namespace(self, name):
@@ -312,7 +316,9 @@ class ModuleBase(dict):
         try:
             return self.get_submodule(name)
         except ValueError:
-            return SubModule(name, parent=self, cpp_namespace=name)
+            module = SubModule(name, parent=self, cpp_namespace=name)
+            module.stack_where_defined = traceback.extract_stack()
+            return module
 
     def _add_enum_obj(self, enum):
         """
@@ -335,6 +341,7 @@ class ModuleBase(dict):
         else:
             enum = Enum(*args, **kwargs)
         self._add_enum_obj(enum)
+        enum.stack_where_defined = traceback.extract_stack()
         return enum
 
     def declare_one_time_definition(self, definition_name):
