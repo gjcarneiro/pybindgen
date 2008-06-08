@@ -11,9 +11,7 @@ from typehandlers.codesink import FileCodeSink, CodeSink, NullCodeSink
 import typehandlers.base
 from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
 from pygccxml.declarations.enumeration import enumeration_t
-from enum import Enum
-from function import Function
-from cppclass import CppClass, CppConstructor, CppMethod
+from cppclass import CppClass
 from pygccxml.declarations import type_traits
 from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
@@ -26,6 +24,12 @@ import settings
 from pygccxml.declarations.variable import variable_t
 
 ALWAYS_USE_PARAMETER_NEW = True
+
+class ScanWarning(Warning):
+    """
+    Warning for pybindgen GccxmlParser, to be used when a C++
+    definition cannot be converted to a pybindgen wrapper.
+    """
 
 ## ------------------------
 
@@ -46,7 +50,7 @@ class ErrorHandler(settings.ErrorHandler):
         else:
             warnings.warn_explicit("exception %r in wrapper for %s"
                                    % (exception, definition),
-                                   Warning, definition.location.file_name,
+                                   ScanWarning, definition.location.file_name,
                                    definition.location.line)
         return True
 settings.error_handler = ErrorHandler()
@@ -333,10 +337,10 @@ class AnnotationsScanner(object):
                         else:
                             warnings.warn_explicit("could not parse %r as parameter annotation element" %
                                                    (param.strip()),
-                                                   Warning, file_name, line_number)
+                                                   ScanWarning, file_name, line_number)
                     continue
                 warnings.warn_explicit("could not parse %r" % (annotation_str),
-                                       Warning, file_name, line_number)
+                                       ScanWarning, file_name, line_number)
         return global_annotations, parameter_annotations
 
     def parse_boolean(self, value):
@@ -360,7 +364,7 @@ class AnnotationsScanner(object):
                 #print >> sys.stderr, (line_number+1), used_annotations
                 if (line_number + 1) not in used_annotations:
                     warnings.warn_explicit("unused annotation",
-                                           Warning, file_name, line_number+1)
+                                           ScanWarning, file_name, line_number+1)
 
 
 
@@ -777,7 +781,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 kwargs.setdefault('python_name', value)
             else:
                 warnings.warn_explicit("Class annotation %r ignored" % name,
-                                       Warning, cls.location.file_name, cls.location.line)
+                                       ScanWarning, cls.location.file_name, cls.location.line)
                 
         if isinstance(cls, class_t):
             if self._class_has_virtual_methods(cls):
@@ -825,7 +829,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if not enum.name:
                     warnings.warn_explicit("Enum %s ignored because it has no name"
                                            % (enum, ),
-                                           Warning, enum.location.file_name, enum.location.line)
+                                           ScanWarning, enum.location.file_name, enum.location.line)
                     continue
                 enums.append(enum)
 
@@ -946,7 +950,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if outer_class is None:
                     warnings.warn_explicit(("Class %s ignored: anonymous structure not inside a named structure/union."
                                             % cls.decl_string),
-                                           Warning, cls.location.file_name, cls.location.line)
+                                           ScanWarning, cls.location.file_name, cls.location.line)
                     continue
 
                 self._anonymous_structs.append((cls, outer_class))
@@ -967,7 +971,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 warnings.warn_explicit(("Class %s ignored because it uses multiple "
                                         "inheritance (not yet supported by pybindgen)"
                                         % cls.decl_string),
-                                       Warning, cls.location.file_name, cls.location.line)
+                                       ScanWarning, cls.location.file_name, cls.location.line)
                 continue
             if cls.bases:
                 base_cls = cls.bases[0].related_class
@@ -979,7 +983,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                         warnings.warn_explicit("Class %s ignored because it uses has a base class (%s) "
                                                "which is not declared."
                                                % (cls.decl_string, base_cls.decl_string),
-                                               Warning, cls.location.file_name, cls.location.line)
+                                               ScanWarning, cls.location.file_name, cls.location.line)
                         continue
                     postpone_class(cls, "waiting for base class %s to be registered first" % base_cls)
                     continue
@@ -1178,7 +1182,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     else:
                         warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
                                                % (key, val, member),
-                                               Warning, member.location.file_name, member.location.line)
+                                               ScanWarning, member.location.file_name, member.location.line)
 
                 ## --- pygen ---
                 return_type_spec = self.type_registry.lookup_return(member.return_type,
@@ -1245,7 +1249,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                            % (member.return_type.decl_string, member, ex),
-                                           Warning, member.location.file_name, member.location.line)
+                                           ScanWarning, member.location.file_name, member.location.line)
                     if pure_virtual:
                         class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
                         class_wrapper.set_helper_class_disabled(True)
@@ -1260,7 +1264,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     except (TypeLookupError, TypeConfigurationError), ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                                % (arg[0][0], arg[0][1], member, ex),
-                                               Warning, member.location.file_name, member.location.line)
+                                               ScanWarning, member.location.file_name, member.location.line)
                         ok = False
                 if not ok:
                     if pure_virtual:
@@ -1284,11 +1288,11 @@ pybindgen.settings.error_handler = ErrorHandler()
 
                     warnings.warn_explicit("Error adding method %s: %r"
                                            % (member, ex),
-                                           Warning, member.location.file_name, member.location.line)
+                                           ScanWarning, member.location.file_name, member.location.line)
                 except ValueError, ex:
                     warnings.warn_explicit("Error adding method %s: %r"
                                            % (member, ex),
-                                           Warning, member.location.file_name, member.location.line)
+                                           ScanWarning, member.location.file_name, member.location.line)
                     raise
                 else: # no exception, add method succeeded
                     for hook in self._post_scan_hooks:
@@ -1320,7 +1324,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     except (TypeLookupError, TypeConfigurationError), ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                                % (arg.type.decl_string, arg.name, member, ex),
-                                               Warning, member.location.file_name, member.location.line)
+                                               ScanWarning, member.location.file_name, member.location.line)
                         ok = False
                         break
                 else:
@@ -1344,7 +1348,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     warnings.warn_explicit("%s: protected member variables not yet implemented "
                                            "by PyBindGen."
                                            % member,
-                                           Warning, member.location.file_name, member.location.line)
+                                           ScanWarning, member.location.file_name, member.location.line)
                     continue
                 if member.access_type == 'private':
                     continue
@@ -1367,7 +1371,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                            % (member.type.decl_string, member, ex),
-                                           Warning, member.location.file_name, member.location.line)
+                                           ScanWarning, member.location.file_name, member.location.line)
                     continue
 
                 if member.type_qualifiers.has_static:
@@ -1451,7 +1455,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     pass
                 else:
                     warnings.warn_explicit("Incorrect annotation %s=%s" % (name, value),
-                                           Warning, fun.location.file_name, fun.location.line)
+                                           ScanWarning, fun.location.file_name, fun.location.line)
             if ignore:
                 continue
 
@@ -1468,12 +1472,12 @@ pybindgen.settings.error_handler = ErrorHandler()
             except (TypeLookupError, TypeConfigurationError), ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                        % (fun.return_type.decl_string, fun, ex),
-                                       Warning, fun.location.file_name, fun.location.line)
+                                       ScanWarning, fun.location.file_name, fun.location.line)
                 params_ok = False
             except TypeError, ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                        % (fun.return_type.decl_string, fun, ex),
-                                       Warning, fun.location.file_name, fun.location.line)
+                                       ScanWarning, fun.location.file_name, fun.location.line)
                 raise
             argument_specs = []
             arguments = []
@@ -1492,13 +1496,13 @@ pybindgen.settings.error_handler = ErrorHandler()
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                            % (arg.type.decl_string, arg.name, fun, ex),
-                                           Warning, fun.location.file_name, fun.location.line)
+                                           ScanWarning, fun.location.file_name, fun.location.line)
 
                     params_ok = False
                 except TypeError, ex:
                     warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                            % (arg.type.decl_string, arg.name, fun, ex),
-                                           Warning, fun.location.file_name, fun.location.line)
+                                           ScanWarning, fun.location.file_name, fun.location.line)
                     raise
 
             arglist_repr = ("[" + ', '.join([_pygen_param(*arg)  for arg in argument_specs]) +  "]")
