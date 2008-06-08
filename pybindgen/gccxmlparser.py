@@ -847,6 +847,15 @@ pybindgen.settings.error_handler = ErrorHandler()
                 enums.append(enum)
 
         for enum in enums:
+
+            global_annotations, param_annotations = \
+                annotations_scanner.get_annotations(enum.location.file_name,
+                                                    enum.location.line)
+            for hook in self._pre_scan_hooks:
+                hook(self, enum, global_annotations, param_annotations)
+            if 'ignore' in global_annotations:
+                continue
+
             enum_values_repr = '[' + ', '.join([repr(name) for name, dummy_val in enum.values]) + ']'
             l = [repr(enum.name), enum_values_repr]
             if outer_class is not None:
