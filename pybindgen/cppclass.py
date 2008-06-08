@@ -1032,8 +1032,8 @@ public:
                         helper_class.add_virtual_method(method)
 
                 return None
-        self._add_method_obj(meth)
         meth.stack_where_defined = traceback.extract_stack()
+        self._add_method_obj(meth)
         return meth
 
     def add_function_as_method(self, *args, **kwargs):
@@ -1046,8 +1046,8 @@ public:
             meth = function.Function(*args, **kwargs)
         except utils.SkipWrapper:
             return None
-        self._add_method_obj(meth)
         meth.stack_where_defined = traceback.extract_stack()
+        self._add_method_obj(meth)
         return meth
 
     def add_custom_method_wrapper(self, *args, **kwargs):
@@ -1058,8 +1058,8 @@ public:
             meth = CustomCppMethodWrapper(*args, **kwargs)
         except utils.SkipWrapper:
             return None
-        self._add_method_obj(meth)
         meth.stack_where_defined = traceback.extract_stack()
+        self._add_method_obj(meth)
         return meth
 
     def set_helper_class_disabled(self, flag=True):
@@ -1106,8 +1106,8 @@ public:
                 constructor = CppConstructor(*args, **kwargs)
             except utils.SkipWrapper:
                 return None
-        self._add_constructor_obj(constructor)
         constructor.stack_where_defined = traceback.extract_stack()
+        self._add_constructor_obj(constructor)
         return constructor
 
     def add_function_as_constructor(self, *args, **kwargs):
@@ -1119,8 +1119,8 @@ public:
             constructor = CppFunctionAsConstructor(*args, **kwargs)
         except utils.SkipWrapper:
             return None
-        self._add_constructor_obj(constructor)
         constructor.stack_where_defined = traceback.extract_stack()
+        self._add_constructor_obj(constructor)
         return constructor
 
     def add_static_attribute(self, name, value_type, is_const=False):

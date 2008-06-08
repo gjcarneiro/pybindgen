@@ -3,6 +3,7 @@ Wrap C++ class methods and constructods.
 """
 
 import warnings
+import traceback
 from copy import copy
 
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
@@ -60,6 +61,7 @@ class CppMethod(ForwardWrapperBase):
         @param visibility: visibility of the method within the C++ class
         @type visibility: a string (allowed values are 'public', 'protected', 'private')
         """
+        self.stack_where_defined = traceback.extract_stack()
 
         ## backward compatibility check
         if isinstance(return_value, str) and isinstance(method_name, ReturnValue):
@@ -338,6 +340,7 @@ class CppConstructor(ForwardWrapperBase):
         """
         parameters -- the constructor parameters
         """
+        self.stack_where_defined = traceback.extract_stack()
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
 
@@ -520,6 +523,7 @@ class CppNoConstructor(ForwardWrapperBase):
         """
         reason -- string indicating reason why the class cannot be constructed.
         """
+        self.stack_where_defined = traceback.extract_stack()
         super(CppNoConstructor, self).__init__(
             None, [],
             "return -1;", "return -1;")
@@ -679,6 +683,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         """
         xxx
         """
+        self.stack_where_defined = traceback.extract_stack()
         super(CppVirtualMethodProxy, self).__init__(method.return_value, method.parameters)
         self.method_name = method.method_name
         self.method = method

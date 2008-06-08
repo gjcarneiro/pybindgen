@@ -10,7 +10,7 @@ import overloading
 import settings
 import utils
 import warnings
-
+import traceback
 
 class Function(ForwardWrapperBase):
     """
@@ -26,6 +26,8 @@ class Function(ForwardWrapperBase):
         @param parameters: the function parameters
         @type parameters: list of L{Parameter}
         """
+        self.stack_where_defined = traceback.extract_stack()
+
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
         

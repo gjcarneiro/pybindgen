@@ -239,8 +239,8 @@ class ModuleBase(dict):
                 func = Function(*args, **kwargs)
             except utils.SkipWrapper:
                 return None
-        self._add_function_obj(func)
         func.stack_where_defined = traceback.extract_stack()
+        self._add_function_obj(func)
         return func
 
     def add_custom_function_wrapper(self, *args, **kwargs):
@@ -252,8 +252,8 @@ class ModuleBase(dict):
             func = CustomFunctionWrapper(*args, **kwargs)
         except utils.SkipWrapper:
             return None
-        self._add_function_obj(func)
         func.stack_where_defined = traceback.extract_stack()
+        self._add_function_obj(func)
         return func
 
     def register_type(self, name, full_name, type_wrapper):
@@ -296,8 +296,8 @@ class ModuleBase(dict):
                           DeprecationWarning, stacklevel=2)
         else:
             cls = CppClass(*args, **kwargs)
-        self._add_class_obj(cls)
         cls.stack_where_defined = traceback.extract_stack()
+        self._add_class_obj(cls)
         return cls
 
     def add_cpp_namespace(self, name):
@@ -340,8 +340,8 @@ class ModuleBase(dict):
                           DeprecationWarning, stacklevel=2)
         else:
             enum = Enum(*args, **kwargs)
-        self._add_enum_obj(enum)
         enum.stack_where_defined = traceback.extract_stack()
+        self._add_enum_obj(enum)
         return enum
 
     def declare_one_time_definition(self, definition_name):
