@@ -792,6 +792,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                 kwargs.setdefault('decref_function', value)
             elif name == 'python_name':
                 kwargs.setdefault('python_name', value)
+            elif name == 'pygen_comment':
+                pass
             else:
                 warnings.warn_explicit("Class annotation %r ignored" % name,
                                        AnnotationsWarning, cls.location.file_name, cls.location.line)
@@ -862,6 +864,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                 l.append('outer_class=root_module[%r]' % outer_class.full_name)
             pygen_sink = self._get_pygen_sink_for_definition(enum)
             if pygen_sink:
+                if 'pygen_comment' in global_annotations:
+                    pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
                 pygen_sink.writeln('module.add_enum(%s)' % ', '.join(l))
 
             module.add_enum(enum.name, [name for name, dummy_val in enum.values],
@@ -912,6 +916,8 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             pygen_sink = self._get_pygen_sink_for_definition(cls)
             if pygen_sink:
+                if 'pygen_comment' in global_annotations:
+                    pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
                 pygen_sink.writeln("module.add_class(%s)" %
                                    ", ".join([repr(alias.name)] + _pygen_kwargs(kwargs)))
 
@@ -1066,6 +1072,8 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             pygen_sink = self._get_pygen_sink_for_definition(cls)
             if pygen_sink:
+                if 'pygen_comment' in global_annotations:
+                    pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
                 pygen_sink.writeln("module.add_class(%s)" %
                                    ", ".join([repr(cls_name)] + _pygen_kwargs(kwargs)))
 
@@ -1092,6 +1100,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                 other_class = root_module[normalize_class_name(operator.return_type.decl_string, '::')]
                 class_wrapper.implicitly_converts_to(other_class)
                 if pygen_sink:
+                    if 'pygen_comment' in global_annotations:
+                        pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
                     pygen_sink.writeln("root_module[%r].implicitly_converts_to(root_module[%r])"
                                        % (class_wrapper.full_name, other_class.full_name))
 
@@ -1201,6 +1211,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     if key == 'template_instance_names' \
                             and templates.is_instantiation(member.demangled_name):
                         pass
+                    elif key == 'pygen_comment':
+                        pass
                     else:
                         warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
                                                % (key, val, member),
@@ -1260,6 +1272,8 @@ pybindgen.settings.error_handler = ErrorHandler()
 
                 ## --- pygen ---
                 arglist_repr = ("[" + ', '.join([_pygen_param(args_, kwargs_) for (args_, kwargs_) in argument_specs]) +  "]")
+                if 'pygen_comment' in global_annotations:
+                    pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
                 pygen_sink.writeln("cls.add_method(%s)" %
                                    ", ".join(
                         [repr(member.name), _pygen_retval(return_type_spec[0], return_type_spec[1]), arglist_repr]
@@ -1335,6 +1349,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                                                                               default_value=arg.default_value))
 
                 arglist_repr = ("[" + ', '.join([_pygen_param(args_, kwargs_) for (args_, kwargs_) in argument_specs]) +  "]")
+                if 'pygen_comment' in global_annotations:
+                    pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
                 pygen_sink.writeln("cls.add_constructor(%s)" %
                                    ", ".join([arglist_repr, "visibility=%r" % member.access_type]))
 
@@ -1378,6 +1394,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                 return_type_spec = self.type_registry.lookup_return(member.type)
 
                 ## pygen...
+                if 'pygen_comment' in global_annotations:
+                    pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
                 if member.type_qualifiers.has_static:
                     pygen_sink.writeln("cls.add_static_attribute(%r, %s, is_const=%r)" %
                                        (member.name, _pygen_retval(*return_type_spec),
@@ -1475,6 +1493,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     ignore = True
                 elif name == 'is_constructor_of':
                     pass
+                elif name == 'pygen_comment':
+                    pass
                 else:
                     warnings.warn_explicit("Incorrect annotation %s=%s" % (name, value),
                                            AnnotationsWarning, fun.location.file_name, fun.location.line)
@@ -1536,6 +1556,8 @@ pybindgen.settings.error_handler = ErrorHandler()
 
                 pygen_sink = self._get_pygen_sink_for_definition(fun)
                 if pygen_sink:
+                    if 'pygen_comment' in global_annotations:
+                        pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
                     pygen_sink.writeln("root_module[%r].add_function_as_method(%s, custom_name=%r)" %
                                        (cpp_class.full_name,
                                         ", ".join([repr(fun.name), retval_repr, arglist_repr]),
@@ -1552,6 +1574,8 @@ pybindgen.settings.error_handler = ErrorHandler()
 
                 pygen_sink = self._get_pygen_sink_for_definition(fun)
                 if pygen_sink:
+                    if 'pygen_comment' in global_annotations:
+                        pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
                     pygen_sink.writeln("root_module[%r].add_function_as_constructor(%s)" %
                                        (cpp_class.full_name,
                                         ", ".join([repr(fun.name), retval_repr, arglist_repr]),))
@@ -1573,6 +1597,8 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             pygen_sink = self._get_pygen_sink_for_definition(fun)
             if pygen_sink:
+                if 'pygen_comment' in global_annotations:
+                    pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
                 pygen_sink.writeln("module.add_function(%s)" %
                                    (", ".join([repr(fun.name), retval_repr, arglist_repr] + _pygen_kwargs(kwargs))))
 
