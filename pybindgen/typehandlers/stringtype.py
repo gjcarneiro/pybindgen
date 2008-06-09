@@ -5,6 +5,10 @@ from base import ReturnValue, Parameter, ReverseWrapperBase, ForwardWrapperBase
 
 
 class CStringParam(Parameter):
+    """
+    >>> isinstance(Parameter.new('char*', 's'), CStringParam)
+    True
+    """
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
     CTYPES = ['char*', 'const char*', 'char const*', 'char const *']
@@ -125,6 +129,10 @@ class CharReturn(ReturnValue):
 
 
 class CStringReturn(ReturnValue):
+    """
+    >>> isinstance(ReturnValue.new('char*'), CStringReturn)
+    True
+    """
 
     CTYPES = ['char*', 'const char*', 'char const *']
 
