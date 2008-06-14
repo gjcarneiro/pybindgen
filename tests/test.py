@@ -1,5 +1,5 @@
 import pybindgen.typehandlers.base as typehandlers
-from pybindgen.typehandlers import stringtype
+from pybindgen.typehandlers import stringtype, ctypeparser
 import pybindgen.typehandlers.codesink as codesink
 from pybindgen import module, cppclass, overloading, utils
     
@@ -71,6 +71,7 @@ if __name__ == '__main__':
         overloading,
         utils,
         stringtype,
+        ctypeparser,
         ]:
         suite.addTest(doctest.DocTestSuite(mod))
 

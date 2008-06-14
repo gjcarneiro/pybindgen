@@ -13,3 +13,7 @@ def build(bld):
     obj.inst_dir = 'pybindgen/typehandlers'
     obj.prio = 50
 
+    obj = bld.create_obj('py')
+    obj.find_sources_in_dirs('typehandlers/ctypeparser')
+    obj.inst_dir = 'pybindgen/typehandlers/ctypeparser'
+    obj.prio = 50
