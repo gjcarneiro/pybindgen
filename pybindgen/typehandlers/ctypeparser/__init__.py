@@ -1,5 +1,9 @@
 import tokenizer
 
+## TODO:
+## - Check pointer to function types
+
+
 class CType(object):
     """
     A L{CType} represents a C/C++ type as a list of items.  Generally
@@ -76,10 +80,10 @@ def _parse_type_recursive(tokens):
     while tokens:
         token = tokens.pop(0)
         if token.token_type == tokenizer.SYNTAX:
-            if token.name in [',', '>']:
+            if token.name in [',', '>', ')']:
                 ctype.reorder_modifiers()
                 return ctype, token
-            elif token.name == '<':
+            elif token.name in ['<', '(']:
                 ctype.tokens.append(token)
                 while 1:
                     nested_ctype, last_token = _parse_type_recursive(tokens)
@@ -88,7 +92,7 @@ def _parse_type_recursive(tokens):
                     assert token.token_type == tokenizer.SYNTAX
                     if last_token.name == ',':
                         continue
-                    elif last_token.name == '>':
+                    elif last_token.name in ['>', ')']:
                         break
                     else:
                         assert False, ("last_token invalid: %s" % last_token)
@@ -132,6 +136,8 @@ def normalize_type_string(type_string):
     'char const * const'
     >>> normalize_type_string('const char*const*const')
     'char const * const * const'
+    >>> normalize_type_string('const std::map<std::string, void (*) (int, std::vector<zbr>) >')
+    'std::map< std::string, void ( * ) ( int, std::vector< zbr > ) > const'
     """
     ctype = parse_type(type_string)
     return str(ctype)
