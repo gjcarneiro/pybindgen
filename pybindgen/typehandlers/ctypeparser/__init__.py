@@ -3,6 +3,12 @@ import tokenizer
 ## TODO:
 ## - Check pointer to function types
 
+MODIFIERS = ['const', 'volatile'] # XXX: are there others?
+
+if 'set' not in dir(__builtins__):
+    # Nominal support for Python 2.3.
+    from sets import Set as set
+
 
 class CType(object):
     """
@@ -19,7 +25,7 @@ class CType(object):
         Reoder const modifiers, as rightward as possible without
         changing the meaning of the type.  I.e., move modifiers to the
         right until a * or & is found."""
-        for modifier in ['const', 'volatile']: ## XXX: are there others?
+        for modifier in MODIFIERS:
             self._reorder_modifier(modifier)
 
     def _reorder_modifier(self, modifier):
@@ -52,6 +58,31 @@ class CType(object):
                     break
             if not reordered:
                 break
+
+    def remove_modifiers(self):
+        """
+        Remove modifiers from the toplevel type.  Return a set of modifiers removed.
+        """
+        retval = set()
+        for modifier in MODIFIERS:
+            if self._remove_modifier(modifier):
+                retval.add(modifier)
+        return retval
+
+    def _remove_modifier(self, modifier):
+        changed = True
+        removed = False
+        while changed:
+            changed = False
+            for token_i, token in enumerate(self.tokens):
+                if isinstance(token, CType):
+                    continue
+                if token.name == modifier:
+                    del self.tokens[token_i]
+                    changed = True
+                    removed = True
+                    break
+        return removed
 
     def __str__(self):
         l = []
