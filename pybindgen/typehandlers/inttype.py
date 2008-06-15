@@ -129,7 +129,7 @@ class IntRefParam(Parameter):
 
 class UInt16Return(ReturnValue):
 
-    CTYPES = ['uint16_t']
+    CTYPES = ['uint16_t', 'unsigned short', 'unsigned short int']
 
     def get_c_error_return(self):
         return "return 0;"
@@ -168,7 +168,7 @@ class Int16Return(ReturnValue):
 class UInt16Param(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['uint16_t', 'uint16_t const']
+    CTYPES = ['uint16_t', 'uint16_t const', 'unsigned short', 'unsigned short int']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
