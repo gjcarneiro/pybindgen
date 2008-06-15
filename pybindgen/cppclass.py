@@ -2248,12 +2248,16 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                                           % (value, self.cpp_class.helper_class.name))
             wrapper.after_call.indent()
 
+            if self.is_const:
+                const_cast_value = "const_cast<%s *>(%s) " % (self.cpp_class.full_name, value)
+            else:
+                const_cast_value = value
             wrapper.after_call.write_code(
                 "%s = reinterpret_cast< %s* >(reinterpret_cast< %s* >(%s)->m_pyself);"
                 % (py_name, self.cpp_class.pystruct,
-                   self.cpp_class.helper_class.name, value))
+                   self.cpp_class.helper_class.name, const_cast_value))
 
-            wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
+            wrapper.after_call.write_code("%s->obj = %s;" % (py_name, const_cast_value))
             wrapper.after_call.write_code("Py_INCREF(%s);" % py_name)
             wrapper.after_call.unindent()
             wrapper.after_call.write_code("} else {")
@@ -2299,7 +2303,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                 self.cpp_class.write_incref(wrapper.after_call, value)
                 if self.is_const:
                     wrapper.after_call.write_code(
-                        "%s = const_cass< %s* >(%s);" %
+                        "%s = const_cast< %s* >(%s);" %
                         (self.value, self.cpp_class.full_name, value))
                 else:
                     wrapper.after_call.write_code(
