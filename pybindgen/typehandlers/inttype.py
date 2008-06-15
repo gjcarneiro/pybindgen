@@ -117,7 +117,7 @@ class IntRefParam(Parameter):
             wrapper.parse_params.add_parameter("i", [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
-        assert self.ctype == 'int&'
+        #assert self.ctype == 'int&'
         name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
         wrapper.call_params.append(name)
         if self.direction & self.DIRECTION_IN:
@@ -300,7 +300,7 @@ class Int8PtrParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['int8_t*', 'int8_t *', 'int8_t const *']
+    CTYPES = ['int8_t*', 'int8_t const *']
 
     def __init__(self, ctype, name, direction=None, is_const=None, default_value=None):
         if is_const is None:
@@ -335,7 +335,7 @@ class UInt8PtrParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['uint8_t*', 'uint8_t *', 'uint8_t const *']
+    CTYPES = ['uint8_t*', 'uint8_t const *']
 
     def __init__(self, ctype, name, direction=None, is_const=None, default_value=None):
         if is_const is None:

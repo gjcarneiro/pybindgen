@@ -8,6 +8,7 @@ and base interfaces for wrapper generators.
 
 import codesink
 import warnings
+from ctypeparser import normalize_type_string
 
 
 try:
@@ -1172,6 +1173,7 @@ class TypeMatcher(object):
         @param name: C type name
         @param type_handler: class to handle this C type
         """
+        name = normalize_type_string(name)
         if name in self._types:
             raise ValueError("return type %s already registered" % (name,))
         self._types[name] = type_handler
@@ -1186,6 +1188,7 @@ class TypeMatcher(object):
 
         @param name: C type name, possibly transformed (e.g. MySmartPointer<Foo> looks up Foo*)
         """
+        name = normalize_type_string(name)
         try:
             return self._types[name], None
         except KeyError:

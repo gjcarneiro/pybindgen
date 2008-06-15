@@ -48,7 +48,7 @@ class FloatPtrParam(Parameter):
             wrapper.parse_params.add_parameter("f", [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
-        assert self.ctype == 'float*'
+        #assert self.ctype == 'float*'
         name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
@@ -71,7 +71,7 @@ class FloatRefParam(Parameter):
             wrapper.parse_params.add_parameter("f", [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
-        assert self.ctype == 'float&'
+        #assert self.ctype == 'float&'
         name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
         wrapper.call_params.append(name)
         if self.direction & self.DIRECTION_IN:

@@ -59,7 +59,7 @@ class BoolPtrParam(Parameter):
                 "*%s = PyObject_IsTrue(%s);" % (self.value, py_name,))
 
     def convert_python_to_c(self, wrapper):
-        assert self.ctype == 'bool*'
+        #assert self.ctype == 'bool*'
         name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
@@ -90,7 +90,7 @@ class BoolRefParam(Parameter):
                 "%s = PyObject_IsTrue(%s);" % (self.value, py_name,))
 
     def convert_python_to_c(self, wrapper):
-        assert self.ctype == 'bool&'
+        #assert self.ctype == 'bool&'
         name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
         wrapper.call_params.append(name)
         if self.direction & self.DIRECTION_IN:
