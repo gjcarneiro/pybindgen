@@ -1,8 +1,5 @@
 import tokenizer
 
-## TODO:
-## - Check pointer to function types
-
 MODIFIERS = ['const', 'volatile'] # XXX: are there others?
 
 if 'set' not in dir(__builtins__):
@@ -14,7 +11,7 @@ class CType(object):
     """
     A L{CType} represents a C/C++ type as a list of items.  Generally
     the items are L{Token}s, but some times they can be other
-    L{CType}s (case of templated types).
+    L{CType}s (arguments of templated types, function pointer name and parameters).
     """
     __slots__ = 'tokens'
     def __init__(self):
