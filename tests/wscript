@@ -110,8 +110,8 @@ def build(bld):
 
         ### Run the generated python script with split modules
         bindgen = bld.create_obj('command-output')
-        bindgen.stdout = 'foomodule4.cc'
-        bindgen.argv = [bindgen.input_file('foomodulegen4.py')]
+        bindgen.argv = [bindgen.input_file('foomodulegen4.py'),
+                        bindgen.output_file('foomodule4.cc')]
         bindgen.command = bindgen.env['PYTHON']
         bindgen.command_is_external = True
         bindgen.prio = 56 # run after the previous bindgen
@@ -120,11 +120,18 @@ def build(bld):
             'foomodulegen_module1.py',
             'foomodulegen_module2.py',
             ]
+        bindgen.hidden_outputs = [
+            'foomodule4.h',
+            'foomodulegen_module1.cc',
+            'foomodulegen_module2.cc',
+            ]
 
         obj = create_pyext_obj(bld, 'cpp')
         obj.source = [
             'foo.cc',
-            'foomodule4.cc'
+            'foomodule4.cc',
+            'foomodulegen_module1.cc',
+            'foomodulegen_module2.cc',
             ]
         obj.target = 'foo4'
         obj.inst_var = 0 # do not install

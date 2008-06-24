@@ -715,6 +715,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 for sect in self._pygen:
                     if sect.name == '__main__':
                         continue
+                    pygen_sink.writeln("root_module.begin_section(%r)" % sect.name)
                     pygen_sink.writeln("%s.register_methods(root_module)" % sect.name)
                     if sect.local_customizations_module:
                         pygen_sink.writeln("\ntry:\n"
@@ -724,6 +725,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                                            "else:\n"
                                            "    %s.register_methods(root_module)\n"
                                            % (sect.local_customizations_module, sect.local_customizations_module))
+                    pygen_sink.writeln("root_module.end_section(%r)" % sect.name)
 
             pygen_sink.writeln("return")
             pygen_sink.unindent()
@@ -819,6 +821,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                         if section.name == '__main__':
                             continue
                         if pygen_register_function_name == "register_types":
+                            pygen_sink.writeln("root_module.begin_section(%r)" % section.name)
                             pygen_sink.writeln("%s.%s(module)" % (section.name, pygen_register_function_name))
                             if section.local_customizations_module:
                                 pygen_sink.writeln("\ntry:\n"
@@ -828,6 +831,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                                                    "else:\n"
                                                    "    %s.register_types(module)\n"
                                                    % (section.local_customizations_module, section.local_customizations_module))
+                            pygen_sink.writeln("root_module.end_section(%r)" % section.name)
 
         ## scan enumerations
         if outer_class is None:
@@ -1453,6 +1457,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 for section in self._pygen:
                     if section.name == '__main__':
                         continue
+                    pygen_sink.writeln("root_module.begin_section(%r)" % section.name)
                     pygen_sink.writeln("%s.register_functions(root_module)" % section.name)
                     if section.local_customizations_module:
                         pygen_sink.writeln("\ntry:\n"
@@ -1462,6 +1467,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                                            "else:\n"
                                            "    %s.register_functions(root_module)\n"
                                            % (section.local_customizations_module, section.local_customizations_module))
+                    pygen_sink.writeln("root_module.end_section(%r)" % section.name)
         self._scan_namespace_functions(self.module, self.module_namespace)
             
     def _scan_namespace_functions(self, module, module_namespace):

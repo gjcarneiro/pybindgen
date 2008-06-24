@@ -709,6 +709,12 @@ class ForwardWrapperBase(object):
         self.unblock_threads = unblock_threads
         self.no_c_retval = no_c_retval
         self.overload_index = None
+
+        # The following 3 variables describe the C wrapper function
+        # prototype; do not confuse with the python function/method!
+        self.wrapper_actual_name = None # name of the wrapper function/method
+        self.wrapper_return = None # C type expression for the wrapper return
+        self.wrapper_args = None # list of arguments to the wrapper function
         
         if return_value is not None:
             self.declarations.declare_variable('PyObject*', 'py_retval')
@@ -737,7 +743,6 @@ class ForwardWrapperBase(object):
             and self.return_value.ctype != 'void'
             and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR):
             self.declarations.declare_variable(self.return_value.ctype, 'retval')
-        
 
     def set_parse_error_return(self, parse_error_return):
         self.before_parse.error_return = parse_error_return
@@ -760,6 +765,23 @@ class ForwardWrapperBase(object):
         created.
         """
         pass
+
+    def write_open_wrapper(self, code_sink, add_static=False):
+        assert self.wrapper_actual_name is not None
+        assert self.wrapper_return is not None
+        assert isinstance(self.wrapper_args, list)
+        if add_static:
+            code_sink.writeln("static " + self.wrapper_return)
+        else:
+            code_sink.writeln(self.wrapper_return)
+        code_sink.writeln("%s(%s)" % (self.wrapper_actual_name, ', '.join(self.wrapper_args)))
+        code_sink.writeln('{')
+        code_sink.indent()
+
+    def write_close_wrapper(self, code_sink):
+        code_sink.unindent()
+        code_sink.writeln('}')
+
 
     def generate_body(self, code_sink, gen_call_params=()):
         """Generate the wrapper function body

@@ -333,6 +333,9 @@ class PyGetSetDef(object):
         self.cname = cname
         self.attributes = [] # (name, getter, setter)
 
+    def empty(self):
+        return len(self.attributes) == 0
+
     def add_attribute(self, name, getter, setter):
         """
         Add a new attribute

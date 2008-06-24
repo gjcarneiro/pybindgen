@@ -121,3 +121,7 @@ class Enum(object):
                     value_str, value_str, self.outer_class.pytypestruct, value))
             module.after_init.unindent()
             module.after_init.write_code("}")
+
+    def generate_declaration(self, sink, module):
+        pass
+

@@ -108,7 +108,7 @@ class CppHelperClass(object):
             ## temporarily until I can figure out how to fix the unit
             ## tests.
             overload.enable_implicit_conversions = False
-            overload.static_decl = False
+            #overload.static_decl = False
             overload.pystruct = self.class_.pystruct
             self.virtual_parent_callers[name] = overload
             assert self.class_ is not None
@@ -212,7 +212,7 @@ void set_pyobj(PyObject *pyobj)
                 parent_caller.reset_code_generation_state()
 
             code_sink.writeln()
-            parent_caller.generate_declaration(code_sink)
+            parent_caller.generate_class_declaration(code_sink)
 
             for parent_caller_wrapper in parent_caller.wrappers:
                 parent_caller_wrapper.generate_parent_caller_method(code_sink)
@@ -935,7 +935,7 @@ public:
 
 }
 ''')
-        code_sink.writeln("\npybindgen::TypeMap %s;\n" % self.typeid_map_name)
+        code_sink.writeln("\nextern pybindgen::TypeMap %s;\n" % self.typeid_map_name)
 
     def _add_method_obj(self, method):
         """
@@ -1224,6 +1224,8 @@ typedef struct {
 
         code_sink.writeln()
         code_sink.writeln('extern PyTypeObject %s;' % (self.pytypestruct,))
+        if not self.static_attributes.empty():
+            code_sink.writeln('extern PyTypeObject Py%s_Type;' % (self.metaclass_name,))
         code_sink.writeln()
 
         if self.automatic_type_narrowing:
@@ -1247,8 +1249,11 @@ typedef struct {
     def generate(self, code_sink, module, docstring=None):
         """Generates the class to a code sink"""
 
+        if self.typeid_map_name is not None:
+            code_sink.writeln("\npybindgen::TypeMap %s;\n" % self.typeid_map_name)
+
         if self.helper_class is not None:
-            parent_caller_methods = self.helper_class.generate(code_sink)       
+            parent_caller_methods = self.helper_class.generate(code_sink)
         else:
             parent_caller_methods = []
 
@@ -1377,7 +1382,7 @@ typedef struct {
                     constructor = None
                     have_constructor = False
                 else:
-                    constructor = overload.wrapper_function_name
+                    constructor = overload.wrapper_actual_name
                     code_sink.writeln()
             else:
                 constructor = None
@@ -1389,8 +1394,10 @@ typedef struct {
             ## tp_init to prevent this type from inheriting a
             ## tp_init that will allocate an instance of the
             ## parent class instead of this class.
-            code_sink.writeln()
-            constructor = CppNoConstructor(self.cannot_be_constructed).generate(code_sink, self)
+            code_sink.writeln()            
+            wrapper = CppNoConstructor(self.cannot_be_constructed)
+            wrapper.generate(code_sink, self)
+            constructor = wrapper.wrapper_actual_name
             have_constructor = False
             code_sink.writeln()
 

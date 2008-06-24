@@ -3,6 +3,7 @@ C wrapper wrapper
 """
 from typehandlers.base import TypeConfigurationError, CodeGenerationError, NotSupportedError
 from typehandlers.base import ForwardWrapperBase
+from typehandlers.codesink import NullCodeSink
 import utils
 
 def isiterable(obj): 
@@ -48,9 +49,11 @@ class OverloadedWrapper(object):
         self.wrappers = []
         self.all_wrappers = None
         self.wrapper_name = wrapper_name
-        self.wrapper_function_name = None
+        self.wrapper_actual_name = None
+        self.wrapper_return = None
+        self.wrapper_args = None
         self.pystruct = 'PyObject'
-        self.static_decl = True
+        #self.static_decl = True ## FIXME: unused?
 #         self.enable_implicit_conversions = True
         
     def add(self, wrapper):
@@ -151,17 +154,19 @@ class OverloadedWrapper(object):
             ## simple things simple
 
             #self.all_wrappers[0].generate(code_sink)
-            utils.call_with_error_handling(self.all_wrappers[0].generate,
-                                           (code_sink,), {}, self.all_wrappers[0])
+            prototype_line = utils.call_with_error_handling(self.all_wrappers[0].generate,
+                                                            (code_sink,), {}, self.all_wrappers[0])
 
-            self.wrapper_function_name = self.all_wrappers[0].wrapper_actual_name
-            assert self.wrapper_function_name is not None
+            self.wrapper_actual_name = self.all_wrappers[0].wrapper_actual_name
+            assert self.wrapper_actual_name is not None
+            self.wrapper_return = self.all_wrappers[0].wrapper_return
+            self.wrapper_args = self.all_wrappers[0].wrapper_args
         else:
             ## multiple overloaded wrappers case..
             flags = self.all_wrappers[0].get_py_method_def_flags()
 
             ## Generate the individual "low level" wrappers that handle a single prototype
-            self.wrapper_function_name = self.all_wrappers[0].wrapper_base_name
+            self.wrapper_actual_name = self.all_wrappers[0].wrapper_base_name
             delegate_wrappers = []
             for number, wrapper in enumerate(self.all_wrappers):
                 ## enforce uniform method flags
@@ -175,7 +180,7 @@ class OverloadedWrapper(object):
     Py_XDECREF(traceback);
 }
 %s""" % (self.ERROR_RETURN,)
-                wrapper_name = "%s__%i" % (self.wrapper_function_name, number)
+                wrapper_name = "%s__%i" % (self.wrapper_actual_name, number)
                 wrapper.set_parse_error_return(error_return)
                 code_sink.writeln()
 
@@ -198,16 +203,14 @@ class OverloadedWrapper(object):
             
             ## Generate the 'main wrapper' that calls the other ones
             code_sink.writeln()
-            if self.static_decl:
-                code_sink.writeln("static " + self.RETURN_TYPE)
-            else:
-                code_sink.writeln(self.RETURN_TYPE)
-            main_args = ['%s *self' % self.pystruct]
+            self.wrapper_return = self.RETURN_TYPE
+            self.wrapper_args = ['%s *self' % self.pystruct]
             if 'METH_VARARGS' in flags:
-                main_args.append('PyObject *args')
+                self.wrapper_args.append('PyObject *args')
             if 'METH_KEYWORDS' in flags:
-                main_args.append('PyObject *kwargs')
-            code_sink.writeln("%s(%s)" % (self.wrapper_function_name, ', '.join(main_args)))
+                self.wrapper_args.append('PyObject *kwargs')
+            prototype_line = "%s %s(%s)" % (self.wrapper_return, self.wrapper_actual_name, ', '.join(self.wrapper_args))
+            code_sink.writeln(prototype_line)
             code_sink.writeln('{')
             code_sink.indent()
             code_sink.writeln(self.RETURN_TYPE + ' retval;')
@@ -247,6 +250,8 @@ class OverloadedWrapper(object):
             code_sink.writeln(self.ERROR_RETURN)
             code_sink.unindent()
             code_sink.writeln('}')
+            
+        return prototype_line
         
     def get_py_method_def(self, name):
         """
@@ -272,28 +277,57 @@ class OverloadedWrapper(object):
                             NotSupportedError):
                         pass
             docstring = None # FIXME
+
+            assert isinstance(self.wrapper_return, str)
+            assert isinstance(self.wrapper_actual_name, str)
+            assert isinstance(self.wrapper_args, list)
+
             return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
-                (name, self.wrapper_function_name, '|'.join(flags),
+                (name, self.wrapper_actual_name, '|'.join(flags),
                  (docstring is None and "NULL" or ('"'+docstring+'"')))
 
     def generate_declaration(self, code_sink):
+        self.reset_code_generation_state()
         self._compute_all_wrappers()
+        self.generate(NullCodeSink())
+        assert isinstance(self.wrapper_return, str)
+        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_args, list)
+        code_sink.writeln("%s %s(%s);" % (self.wrapper_return, self.wrapper_actual_name, ', '.join(self.wrapper_args)))
+        self.reset_code_generation_state()
+
+    def generate_class_declaration(self, code_sink):
+        self.reset_code_generation_state()
+        self._compute_all_wrappers()
+        self.generate(NullCodeSink())
+        assert isinstance(self.wrapper_return, str)
+        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_args, list)
+        name = self.wrapper_actual_name.split('::')[-1]
+        code_sink.writeln("static %s %s(%s);" % (self.wrapper_return, name, ', '.join(self.wrapper_args)))
 
         if len(self.all_wrappers) > 1:
-            for i, wrapper in enumerate(self.all_wrappers):
-                wrapper.overload_index = i
-                wrapper.force_parse = wrapper.PARSE_TUPLE_AND_KEYWORDS
-                wrapper.generate_declaration(
-                    code_sink,
-                    extra_wrapper_parameters=["PyObject **return_exception"])
+            for wrapper in self.all_wrappers:
+                name = wrapper.wrapper_actual_name.split('::')[-1]
+                code_sink.writeln("static %s %s(%s);" % (wrapper.wrapper_return, name, ', '.join(wrapper.wrapper_args)))
 
-        self.all_wrappers[0].overload_index = None
-        self.all_wrappers[0].generate_declaration(code_sink)
+        self.reset_code_generation_state()
 
     def reset_code_generation_state(self):
         self._compute_all_wrappers()
         for wrapper in self.all_wrappers:
             wrapper.reset_code_generation_state()
+
+    def get_section(self):
+        section = None
+        if self.all_wrappers is None:
+            self._compute_all_wrappers()
+        for wrapper in self.all_wrappers:
+            if section is None:
+                section = wrapper.section
+        return section
+
+    section = property(get_section)
 
 
 from cppclass import CppClassParameter, CppClassRefParameter

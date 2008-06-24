@@ -47,12 +47,127 @@ to create sub-modules for wrapping nested namespaces.  For instance::
 
 from function import Function, OverloadedFunction, CustomFunctionWrapper
 from typehandlers.base import CodeBlock, DeclarationsScope
-from typehandlers.codesink import MemoryCodeSink
+from typehandlers.codesink import MemoryCodeSink, CodeSink, FileCodeSink, NullCodeSink
 from cppclass import CppClass
 from enum import Enum
 import utils
 import warnings
 import traceback
+
+
+class MultiSectionFactory(object):
+    """
+    Abstract base class for objects providing support for
+    multi-section code generation, i.e., splitting the generated C/C++
+    code into multiple files.  The generated code will generally have
+    the following structure:
+
+       1. For each section there is one source file specific to that section;
+
+       2. There is a I{main} source file, e.g. C{foomodule.cc}.  Code
+       that does not belong to any section will be included in this
+       main file;
+
+       3. Finally, there is a common header file, (e.g. foomodule.h),
+       which is included by the main file and section files alike.
+       Typically this header file contains function prototypes and
+       type definitions.
+
+    @see: L{Module.enable_multi_section}
+
+    """
+    def get_section_code_sink(self, section_name):
+        """
+        Create and/or return a code sink for a given section.
+        @param section_name: name of the section
+        @returns: a L{CodeSink} object that will receive generated code belonging to the section C{section_name}
+        """
+        raise NotImplementedError
+    def get_main_code_sink(self):
+        """
+        Create and/or return a code sink for the main file.
+        """
+        raise NotImplementedError
+    def get_common_header_code_sink(self):
+        """
+        Create and/or return a code sink for the common header.
+        """
+        raise NotImplementedError
+    def get_common_header_include(self):
+        """
+        Return the argument for an #include directive to include the common header.
+
+        @returns: a string with the header name, including surrounding
+        "" or <>.  For example, '"foomodule.h"'.
+        """
+        raise NotImplementedError
+
+
+class _SinkManager(object):
+    """
+    Internal abstract base class for bridging differences between
+    multi-file and single-file code generation.
+    """
+    def get_code_sink_for_wrapper(self, wrapper):
+        """
+        @param wrapper: wrapper object
+        @returns: (body_code_sink, header_code_sink) 
+        """
+        raise NotImplementedError
+    def get_includes_code_sink(self):
+        raise NotImplementedError
+    def get_main_code_sink(self):
+        raise NotImplementedError
+    def close(self):
+        raise NotImplementedError
+
+class _MultiSectionSinkManager(_SinkManager):
+    """
+    Sink manager that deals with multi-section code generation.
+    """
+    def __init__(self, multi_section_factory):
+        super(_MultiSectionSinkManager, self).__init__()
+        self.multi_section_factory = multi_section_factory
+        utils.write_preamble(self.multi_section_factory.get_common_header_code_sink())
+        self.multi_section_factory.get_main_code_sink().writeln(
+            "#include %s" % self.multi_section_factory.get_common_header_include())
+        self._already_initialized_sections = {}
+
+    def get_code_sink_for_wrapper(self, wrapper):
+        header_sink = self.multi_section_factory.get_common_header_code_sink()
+        section = getattr(wrapper, "section", None)
+        if section is None:
+            return self.multi_section_factory.get_main_code_sink(), header_sink
+        else:
+            section_sink = self.multi_section_factory.get_section_code_sink(section)
+            if section not in self._already_initialized_sections:
+                self._already_initialized_sections[section] = True
+                section_sink.writeln("#include %s" % self.multi_section_factory.get_common_header_include())
+            return section_sink, header_sink
+    def get_includes_code_sink(self):
+        return self.multi_section_factory.get_common_header_code_sink()
+    def get_main_code_sink(self):
+        return self.multi_section_factory.get_main_code_sink()
+    def close(self):
+        pass
+
+class _MonolithicSinkManager(_SinkManager):
+    """
+    Sink manager that deals with single-section monolithic code generation.
+    """
+    def __init__(self, code_sink):
+        super(_MonolithicSinkManager, self).__init__()
+        self.code_sink = code_sink
+        self.null_sink = NullCodeSink()
+        utils.write_preamble(code_sink)
+    def get_code_sink_for_wrapper(self, dummy_wrapper):
+        return self.code_sink, self.code_sink
+    def get_includes_code_sink(self):
+        return self.code_sink
+    def get_main_code_sink(self):
+        return self.code_sink
+    def close(self):
+        pass
 
 
 class ModuleBase(dict):
@@ -124,18 +239,56 @@ class ModuleBase(dict):
         self.declarations = DeclarationsScope()
         self.functions = {} # name => OverloadedFunction
         self.classes = []
-        self.header = MemoryCodeSink()
         self.before_init = CodeBlock(error_return, self.declarations)
         self.after_init = CodeBlock(error_return, self.declarations,
                                     predecessor=self.before_init)
         self.c_function_name_transformer = None
         self.set_strip_prefix(name + '_')
         if parent is None:
+            self.header = MemoryCodeSink()
             self.one_time_definitions = {}
             self.includes = []
         else:
+            self.header = parent.header
             self.one_time_definitions = parent.one_time_definitions
             self.includes = parent.includes
+
+        self._current_section = '__main__'
+
+    def get_current_section(self):
+        return self.get_root()._current_section
+    current_section = property(get_current_section)
+
+    def begin_section(self, section_name):
+        """
+        Declare that types and functions registered with the module in
+        the future belong to the section given by that section_name
+        parameter, until a matching end_section() is called.
+
+        @note: L{begin_section}/L{end_section} are silently ignored
+        unless a L{MultiSectionFactory} object is used as code
+        generation output.
+        """
+        if self.current_section != '__main__':
+            raise ValueError("begin_section called while current section not ended")
+        if section_name == '__main__':
+            raise ValueError ("__main__ not allowed as section name")
+        assert self.parent is None
+        self._current_section = section_name
+        
+    def end_section(self, section_name):
+        """
+        Declare the end of a section, i.e. further types and functions
+        will belong to the main module.
+
+        @param section_name: name of section; must match the one in
+        the previous L{begin_section} call.
+        """
+        assert self.parent is None
+        if self._current_section != section_name:
+            raise ValueError("end_section called for wrong section: expected %r, got %r"
+                             % (self._current_section, section_name))
+        self._current_section = '__main__'
 
     def get_name(self):
         return self._name
@@ -215,6 +368,7 @@ class ModuleBase(dict):
             overload = OverloadedFunction(mangled_name)
             self.functions[mangled_name] = overload
         wrapper.module = self
+        wrapper.section = self.current_section
         overload.add(wrapper)
 
     def add_function(self, *args, **kwargs):
@@ -282,6 +436,7 @@ class ModuleBase(dict):
         """
         assert isinstance(class_, CppClass)
         class_.module = self
+        class_.section = self.current_section
         self.classes.append(class_)
         self.register_type(class_.name, class_.full_name, class_)
 
@@ -327,6 +482,7 @@ class ModuleBase(dict):
         assert isinstance(enum, Enum)
         self.enums.append(enum)
         enum.module = self
+        enum.section = self.current_section
         self.register_type(enum.name, enum.full_name, enum)
 
     def add_enum(self, *args, **kwargs):
@@ -412,16 +568,23 @@ class ModuleBase(dict):
             parent = parent.parent
         return names
 
-    def do_generate(self, code_sink, includes_code_sink):
+    def do_generate(self, out):
         """(internal) Generates the module."""
+        assert isinstance(out, _SinkManager)
+
         if self.parent is None:
+            ## generate the include directives (only the root module)
+            if self.parent is None:
+                for include in self.includes:
+                    out.get_includes_code_sink().writeln("#include %s" % include)
+
             if not self._forward_declarations_declared:
-                self.generate_forward_declarations(code_sink)
-                self.after_forward_declarations.flush_to(code_sink)
+                self.generate_forward_declarations(out.get_includes_code_sink())
+                self.after_forward_declarations.flush_to(out.get_includes_code_sink())
 
         ## generate the submodules
         for submodule in self.submodules:
-            submodule.do_generate(code_sink, includes_code_sink)
+            submodule.do_generate(out)
 
         m = self.declarations.declare_variable('PyObject*', 'm')
         assert m == 'm'
@@ -431,48 +594,59 @@ class ModuleBase(dict):
                self.docstring and '"'+self.docstring+'"' or 'NULL'))
         self.before_init.write_error_check("m == NULL")
 
+        main_sink = out.get_main_code_sink()
+
         ## generate the function wrappers
         py_method_defs = []
         if self.functions:
-            code_sink.writeln('/* --- module functions --- */')
-            code_sink.writeln()
+            main_sink.writeln('/* --- module functions --- */')
+            main_sink.writeln()
             for func_name, overload in self.functions.iteritems():
-                code_sink.writeln()
-                #overload.generate(code_sink)
+                sink, header_sink = out.get_code_sink_for_wrapper(overload)
+                sink.writeln()
                 try:
-                    utils.call_with_error_handling(overload.generate, (code_sink,), {}, overload)
+                    utils.call_with_error_handling(overload.generate, (sink,), {}, overload)
                 except utils.SkipWrapper:
                     continue
-                code_sink.writeln()
+                try:
+                    utils.call_with_error_handling(overload.generate_declaration, (main_sink,), {}, overload)
+                except utils.SkipWrapper:
+                    continue
+                
+                sink.writeln()
                 py_method_defs.append(overload.get_py_method_def(func_name))
+                del sink
 
         ## generate the function table
-        code_sink.writeln("static PyMethodDef %s_functions[] = {"
+        main_sink.writeln("static PyMethodDef %s_functions[] = {"
                           % (self.prefix,))
-        code_sink.indent()
+        main_sink.indent()
         for py_method_def in py_method_defs:
-            code_sink.writeln(py_method_def)
-        code_sink.writeln("{NULL, NULL, 0, NULL}")
-        code_sink.unindent()
-        code_sink.writeln("};")
+            main_sink.writeln(py_method_def)
+        main_sink.writeln("{NULL, NULL, 0, NULL}")
+        main_sink.unindent()
+        main_sink.writeln("};")
 
         ## generate the classes
         if self.classes:
-            code_sink.writeln('/* --- classes --- */')
-            code_sink.writeln()
+            main_sink.writeln('/* --- classes --- */')
+            main_sink.writeln()
             for class_ in self.classes:
-                code_sink.writeln()
-                class_.generate(code_sink, self)
-                code_sink.writeln()
+                sink, header_sink = out.get_code_sink_for_wrapper(class_)
+                sink.writeln()
+                class_.generate(sink, self)
+                sink.writeln()
 
         ## generate the enums
         if self.enums:
-            code_sink.writeln('/* --- enumerations --- */')
-            code_sink.writeln()
+            main_sink.writeln('/* --- enumerations --- */')
+            main_sink.writeln()
             for enum in self.enums:
-                code_sink.writeln()
-                enum.generate(code_sink)
-                code_sink.writeln()
+                sink, header_sink = out.get_code_sink_for_wrapper(enum)
+                sink.writeln()
+                enum.generate(sink)
+                enum.generate_declaration(header_sink, self)
+                sink.writeln()
 
         ## register the submodules
         if self.submodules:
@@ -485,32 +659,28 @@ class ModuleBase(dict):
             self.after_init.write_code('PyModule_AddObject(m, "%s", %s);'
                                        % (submodule.name, submodule_var,))
 
+        ## flush the header section
+        self.header.flush_to(out.get_includes_code_sink())
+
         ## now generate the module init function itself
-        code_sink.writeln()
+        main_sink.writeln()
         if self.parent is None:
-            code_sink.writeln("PyMODINIT_FUNC")
+            main_sink.writeln("PyMODINIT_FUNC")
         else:
-            code_sink.writeln("static PyObject *")
-        code_sink.writeln("%s(void)" % (self.init_function_name,))
-        code_sink.writeln('{')
-        code_sink.indent()
-        self.declarations.get_code_sink().flush_to(code_sink)
-        self.before_init.sink.flush_to(code_sink)
+            main_sink.writeln("static PyObject *")
+        main_sink.writeln("%s(void)" % (self.init_function_name,))
+        main_sink.writeln('{')
+        main_sink.indent()
+        self.declarations.get_code_sink().flush_to(main_sink)
+        self.before_init.sink.flush_to(main_sink)
         self.after_init.write_cleanup()
-        self.after_init.sink.flush_to(code_sink)
+        self.after_init.sink.flush_to(main_sink)
         if self.parent is not None:
-            code_sink.writeln("return m;")
-        code_sink.unindent()
-        code_sink.writeln('}')
+            main_sink.writeln("return m;")
+        main_sink.unindent()
+        main_sink.writeln('}')
 
-        ## generate the include directives (only the root module)
-        if self.parent is None:
-            for include in self.includes:
-                includes_code_sink.writeln("#include %s" % include)
 
-        ## append the 'header' section to the 'includes' section
-        self.header.flush_to(includes_code_sink)
-    
     def __repr__(self):
         return "<pybindgen.module.Module %r>" % self.name
         
@@ -524,13 +694,20 @@ class Module(ModuleBase):
         """
         super(Module, self).__init__(name, docstring=docstring, cpp_namespace=cpp_namespace)
 
-    def generate(self, code_sink):
-        """Generates the module to a code sink"""
-        includes_code_sink = code_sink
-        main_code_sink = MemoryCodeSink()
-        self.do_generate(main_code_sink, includes_code_sink)
-        main_code_sink.flush_to(code_sink)
-
+    def generate(self, out):
+        """Generates the module
+        @type out: file, L{FileCodeSink}, or L{MultiSectionFactory}
+        """
+        if isinstance(out, file):
+            out = FileCodeSink(out)
+        if isinstance(out, CodeSink):
+            sink_manager = _MonolithicSinkManager(out)
+        elif isinstance(out, MultiSectionFactory):
+            sink_manager = _MultiSectionSinkManager(out)
+        else:
+            raise TypeError
+        self.do_generate(sink_manager)
+        sink_manager.close()
 
 
 class SubModule(ModuleBase):

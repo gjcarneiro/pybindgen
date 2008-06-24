@@ -48,3 +48,8 @@ Error handler, or None.  When it is None, code generation exceptions
 propagate to the caller.  Else it can be a
 pybindgen.utils.ErrorHandler subclass instance that handles the error.
 """
+
+min_python_version=(2, 3)
+"""
+Minimum python version the generated code must support.
+"""

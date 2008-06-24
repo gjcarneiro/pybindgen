@@ -97,7 +97,7 @@ class CppMethod(ForwardWrapperBase):
         self.docstring = None
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
-        self.static_decl = True
+        #self.static_decl = True
 
     def matches_signature(self, other):
         if self.mangled_name != other.mangled_name:
@@ -184,35 +184,37 @@ class CppMethod(ForwardWrapperBase):
     def get_wrapper_signature(self, wrapper_name, extra_wrapper_params=()):
         flags = self.get_py_method_def_flags()
 
-        retline = "PyObject *"
+        self.wrapper_actual_name = wrapper_name
+        self.wrapper_return = "PyObject *"
         if 'METH_STATIC' in flags:
             _self_name = 'PYBINDGEN_UNUSED(dummy)'
         else:
             _self_name = 'self'
 
-        if extra_wrapper_params:
-            extra = ', '.join([''] + list(extra_wrapper_params))
-        else:
-            extra = ''
+#         if extra_wrapper_params:
+#             extra = ', '.join([''] + list(extra_wrapper_params))
+#         else:
+#             extra = ''
         if 'METH_VARARGS' in flags:
             if 'METH_KEYWORDS' in flags:
-                line = ("%s(%s *%s, PyObject *args, PyObject *kwargs%s)"
-                            % (wrapper_name, self.class_.pystruct, _self_name, extra))
+                self.wrapper_args = ["%s *%s" % (self.class_.pystruct, _self_name),
+                                     "PyObject *args", "PyObject *kwargs"]
             else:
                 assert not extra_wrapper_params, \
                     "extra_wrapper_params can only be used with"\
                     " full varargs/kwargs wrappers"
-                line = (
-                    "%s(%s *%s, PyObject *args)"
-                    % (wrapper_name, self.class_.pystruct, _self_name))
+                self.wrapper_args = ["%s *%s" % (self.class_.pystruct, _self_name),
+                                     "PyObject *args"]
         else:
             assert not extra_wrapper_params, \
                 "extra_wrapper_params can only be used with full varargs/kwargs wrappers"
             if 'METH_STATIC' in flags:
-                line = ("%s(void)" % (wrapper_name,))
+                self.wrapper_args = ['void']
             else:
-                line = ("%s(%s *%s)" % (wrapper_name, self.class_.pystruct, _self_name))
-        return retline, line
+                self.wrapper_args = ["%s *%s" % (self.class_.pystruct, _self_name)]
+        self.wrapper_args.extend(extra_wrapper_params)
+
+        return self.wrapper_return, "%s(%s)" % (self.wrapper_actual_name, ', '.join(self.wrapper_args))
 
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """
@@ -234,17 +236,10 @@ class CppMethod(ForwardWrapperBase):
         else:
             self.wrapper_actual_name = wrapper_name
 
-        retline, line = self.get_wrapper_signature(self.wrapper_actual_name, extra_wrapper_params)
-        if self.static_decl:
-            retline = 'static ' + retline
-        code_sink.writeln(retline)
-        code_sink.writeln(line)
-        
-        code_sink.writeln('{')
-        code_sink.indent()
+        self.get_wrapper_signature(self.wrapper_actual_name, extra_wrapper_params)
+        self.write_open_wrapper(code_sink)#, add_static=self.static_decl)
         tmp_sink.flush_to(code_sink)
-        code_sink.unindent()
-        code_sink.writeln('}')
+        self.write_close_wrapper(code_sink)
 
     def get_py_method_def_flags(self):
         "Get the PyMethodDef flags suitable for this method"
@@ -451,21 +446,15 @@ class CppConstructor(ForwardWrapperBase):
         else:
             self.wrapper_actual_name = wrapper_name
 
-        if extra_wrapper_params:
-            extra = ', '.join([''] + list(extra_wrapper_params))
-        else:
-            extra = ''
+        self.wrapper_return = 'static int'
+        self.wrapper_args = ["%s *self" % self._class.pystruct,
+                             "PyObject *args", "PyObject *kwargs"]
+        self.wrapper_args.extend(extra_wrapper_params)
 
-        code_sink.writeln("static int")
-        code_sink.writeln(
-            "%s(%s *self, PyObject *args, PyObject *kwargs%s)"
-            % (self.wrapper_actual_name, self._class.pystruct, extra))
-        code_sink.writeln('{')
-        code_sink.indent()
+        self.write_open_wrapper(code_sink)
         tmp_sink.flush_to(code_sink)
         code_sink.writeln('return 0;')
-        code_sink.unindent()
-        code_sink.writeln('}')
+        self.write_close_wrapper(code_sink)
 
 
 class CppFunctionAsConstructor(CppConstructor):
@@ -543,20 +532,18 @@ class CppNoConstructor(ForwardWrapperBase):
         """
         #assert isinstance(class_, CppClass)
 
-        wrapper_function_name = "_wrap_%s__tp_init" % (
+        self.wrapper_actual_name = "_wrap_%s__tp_init" % (
             class_.pystruct,)
-        code_sink.writeln("static int")
-        code_sink.writeln("%s(void)" % wrapper_function_name)
-        code_sink.writeln('{')
-        code_sink.indent()
+        self.wrapper_return = 'static int'
+        self.wrapper_args = ["void"]
+
+        self.write_open_wrapper(code_sink)
+
         code_sink.writeln('PyErr_SetString(PyExc_TypeError, "class \'%s\' '
                           'cannot be constructed (%s)");' % (class_.name, self.reason))
         code_sink.writeln('return -1;')
-        code_sink.unindent()
-        code_sink.writeln('}')
 
-        return wrapper_function_name
-
+        self.write_close_wrapper(code_sink)
 
 
 class CppVirtualMethodParentCaller(CppMethod):
@@ -571,7 +558,7 @@ class CppVirtualMethodParentCaller(CppMethod):
         super(CppVirtualMethodParentCaller, self).__init__(
             method.method_name, method.return_value, method.parameters, unblock_threads=unblock_threads)
         self._helper_class = None
-        self.static_decl = False
+        #self.static_decl = False
         self.method = method
 
     def set_class(self, class_):
@@ -590,17 +577,24 @@ class CppVirtualMethodParentCaller(CppMethod):
     def generate_declaration(self, code_sink, extra_wrapper_parameters=()):
         ## We need to fake generate the code (and throw away the
         ## result) only in order to obtain correct method signature.
-        tmp_sink = codesink.NullCodeSink()
-        self.generate_body(tmp_sink, gen_call_params=[self.class_])
+        self.reset_code_generation_state()
+        self.generate(codesink.NullCodeSink(), extra_wrapper_params=extra_wrapper_parameters)
+        assert isinstance(self.wrapper_return, str)
+        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_args, list)
+        code_sink.writeln('%s %s(%s);' % (self.wrapper_return, self.wrapper_actual_name, ', '.join(self.wrapper_args)))
+        self.reset_code_generation_state()
 
-        if self.overload_index is None:
-            overload_str = ''
-        else:
-            overload_str = '__%i' % self.overload_index
-
-        retline, line = self.get_wrapper_signature(
-            '_wrap_'+self.method_name+overload_str, extra_wrapper_parameters)
-        code_sink.writeln(' '.join(['static', retline, line]) + ';')
+    def generate_class_declaration(self, code_sink, extra_wrapper_parameters=()):
+        ## We need to fake generate the code (and throw away the
+        ## result) only in order to obtain correct method signature.
+        self.reset_code_generation_state()
+        self.generate(codesink.NullCodeSink(), extra_wrapper_params=extra_wrapper_parameters)
+        assert isinstance(self.wrapper_return, str)
+        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_args, list)
+        dummy_cls, name = self.wrapper_actual_name.split('::')
+        code_sink.writeln('static %s %s(%s);' % (self.wrapper_return, name, ', '.join(self.wrapper_args)))
         self.reset_code_generation_state()
 
     def generate_parent_caller_method(self, code_sink):
@@ -814,6 +808,8 @@ class CustomCppMethodWrapper(CppMethod):
     def generate(self, code_sink, dummy_wrapper_name=None, extra_wrapper_params=()):
         assert extra_wrapper_params == ["PyObject **return_exception"]
         code_sink.writeln(self.wrapper_body)
+        return ("PyObject * %s (%s *self, PyObject *args, PyObject *kwargs, PyObject **return_exception)"
+                % (self.wrapper_actual_name, self._class.pystruct))
 
     def generate_call(self, *args, **kwargs):
         pass
@@ -839,6 +835,8 @@ class CustomCppConstructorWrapper(CppConstructor):
     def generate(self, code_sink, dummy_wrapper_name=None, extra_wrapper_params=()):
         assert extra_wrapper_params == ["PyObject **return_exception"]
         code_sink.writeln(self.wrapper_body)
+        return ("int %s (%s *self, PyObject *args, PyObject *kwargs, PyObject **return_exception)"
+                % (self.wrapper_actual_name, self._class.pystruct))
 
     def generate_call(self, *args, **kwargs):
         pass

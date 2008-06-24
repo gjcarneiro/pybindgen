@@ -126,30 +126,35 @@ class Function(ForwardWrapperBase):
             self.wrapper_actual_name = wrapper_name
         tmp_sink = codesink.MemoryCodeSink()
         self.generate_body(tmp_sink)
-        code_sink.writeln("static PyObject *")
 
-        python_args = ''
         flags = self.get_py_method_def_flags()
+        self.wrapper_args = []
         if 'METH_VARARGS' in flags:
             if self.self_parameter_pystruct is None:
                 self_param = 'PyObject * PYBINDGEN_UNUSED(dummy)'
             else:
                 self_param = '%s *self' % self.self_parameter_pystruct
-            python_args += "%s, PyObject *args" % self_param
+            self.wrapper_args.append(self_param)
+            self.wrapper_args.append("PyObject *args")
             if 'METH_KEYWORDS' in flags:
-                python_args += ", PyObject *kwargs"
-
-        prototype_line = "%s(%s" % (self.wrapper_actual_name, python_args)
-        if extra_wrapper_params:
-            prototype_line += ", " + ", ".join(extra_wrapper_params)
-        prototype_line += ')'
-        code_sink.writeln(prototype_line)
-        code_sink.writeln('{')
-        code_sink.indent()
+                self.wrapper_args.append("PyObject *kwargs")
+        self.wrapper_args.extend(extra_wrapper_params)
+        self.wrapper_return = "PyObject *"
+        self.write_open_wrapper(code_sink)
         tmp_sink.flush_to(code_sink)
-        code_sink.unindent()
-        code_sink.writeln('}')
+        self.write_close_wrapper(code_sink)
         
+
+    def generate_declaration(self, code_sink, extra_wrapper_parameters=()):
+        ## We need to fake generate the code (and throw away the
+        ## result) only in order to obtain correct method signature.
+        self.reset_code_generation_state()
+        self.generate(codesink.NullCodeSink(), extra_wrapper_params=extra_wrapper_parameters)
+        assert isinstance(self.wrapper_return, str)
+        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_args, list)
+        code_sink.writeln('%s %s(%s);' % (self.wrapper_return, self.wrapper_actual_name, ', '.join(self.wrapper_args)))
+        self.reset_code_generation_state()
 
     def get_py_method_def(self, name):
         """
@@ -159,6 +164,9 @@ class Function(ForwardWrapperBase):
         @param name: python function/method name
         """
         flags = self.get_py_method_def_flags()
+        assert isinstance(self.wrapper_return, str)
+        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_args, list)
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
                (name, self.wrapper_actual_name, '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
@@ -185,6 +193,7 @@ class CustomFunctionWrapper(Function):
     def generate(self, code_sink, dummy_wrapper_name=None, extra_wrapper_params=()):
         assert extra_wrapper_params == ["PyObject **return_exception"]
         code_sink.writeln(self.wrapper_body)
+        return "PyObject * %s (PyObject *args, PyObject *kwargs, PyObject **return_exception)" % self.wrapper_actual_name
 
     def generate_call(self, *args, **kwargs):
         pass
