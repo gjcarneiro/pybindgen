@@ -198,3 +198,20 @@ void delete_stored_zbr (void)
     g_zbr = NULL;
 }
 
+float matrix_sum_of_elements (float *matrix)
+{
+    float result = 0;
+    for (int i = 0; i < 6; i++)
+        result += matrix[i];
+    return result;
+}
+
+void matrix_identity_new (float *matrix)
+{
+    matrix[0] = 1;
+    matrix[1] = 0;
+    matrix[2] = 0;
+    matrix[3] = 0;
+    matrix[4] = 1;
+    matrix[5] = 0;
+}

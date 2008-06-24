@@ -617,5 +617,12 @@ union Word
     };
 };
 
+// Test float array
+// -#- @matrix(direction=in, array_length=6) -#-
+float matrix_sum_of_elements (float *matrix);
+
+// -#- @matrix(direction=out, array_length=6) -#-
+void matrix_identity_new (float *matrix);
+
 
 #endif 	    /* !FOO_H_ */

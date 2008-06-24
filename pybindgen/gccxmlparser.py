@@ -252,6 +252,8 @@ class GccXmlTypeRegistry(object):
                     warnings.warn("invalid direction direction %r" % value, AnnotationsWarning)
             elif name == 'custodian':
                 kwargs['custodian'] = int(value)
+            elif name == 'array_length':
+                kwargs['array_length'] = int(value)
             else:
                 warnings.warn("invalid annotation name %r" % name, AnnotationsWarning)
 

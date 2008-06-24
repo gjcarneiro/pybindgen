@@ -701,6 +701,14 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(word.low, 2)
         self.assertEqual(word.high, 3)
 
+    def test_float_array(self):
+        array = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+        s = foo.matrix_sum_of_elements(array)
+        self.assertEqual(s, sum(array))
+
+        result = foo.matrix_identity_new()
+        expected = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0]
+        self.assertEqual(result, expected)
 
 if __name__ == '__main__':
     unittest.main()

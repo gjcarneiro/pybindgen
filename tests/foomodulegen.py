@@ -328,6 +328,17 @@ int %s::custom_method_added_by_a_hook(int x)
     Word.add_instance_attribute('word', 'uint16_t', is_const=False)
     Word.add_constructor([])
 
+
+    mod.add_function('matrix_sum_of_elements',
+                     ReturnValue.new('float'),
+                     [Parameter.new("float*", 'matrix', direction=Parameter.DIRECTION_IN, array_length=6)])
+
+    mod.add_function('matrix_identity_new',
+                     ReturnValue.new('void'),
+                     [Parameter.new("float*", 'matrix', direction=Parameter.DIRECTION_OUT, array_length=6)])
+
+
+
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):
         def __init__(self):
