@@ -665,7 +665,7 @@ class ModuleBase(dict):
         self.header.flush_to(out.get_includes_code_sink())
 
         ## flush the body section
-        self.header.flush_to(main_sink)
+        self.body.flush_to(main_sink)
 
         ## now generate the module init function itself
         main_sink.writeln()
