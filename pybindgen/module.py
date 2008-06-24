@@ -246,10 +246,12 @@ class ModuleBase(dict):
         self.set_strip_prefix(name + '_')
         if parent is None:
             self.header = MemoryCodeSink()
+            self.body = MemoryCodeSink()
             self.one_time_definitions = {}
             self.includes = []
         else:
             self.header = parent.header
+            self.body = parent.body
             self.one_time_definitions = parent.one_time_definitions
             self.includes = parent.includes
 
@@ -661,6 +663,9 @@ class ModuleBase(dict):
 
         ## flush the header section
         self.header.flush_to(out.get_includes_code_sink())
+
+        ## flush the body section
+        self.header.flush_to(main_sink)
 
         ## now generate the module init function itself
         main_sink.writeln()
