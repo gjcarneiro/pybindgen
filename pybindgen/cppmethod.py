@@ -797,7 +797,7 @@ class CustomCppMethodWrapper(CppMethod):
 
     NEEDS_OVERLOADING_INTERFACE = True
 
-    def __init__(self, method_name, wrapper_name, wrapper_body,
+    def __init__(self, method_name, wrapper_name, wrapper_body=None,
                  flags=('METH_VARARGS', 'METH_KEYWORDS')):
         super(CustomCppMethodWrapper, self).__init__(method_name, ReturnValue.new('void'), [])
         self.wrapper_base_name = wrapper_name
@@ -805,11 +805,22 @@ class CustomCppMethodWrapper(CppMethod):
         self.meth_flags = list(flags)
         self.wrapper_body = wrapper_body
 
+
     def generate(self, code_sink, dummy_wrapper_name=None, extra_wrapper_params=()):
         assert extra_wrapper_params == ["PyObject **return_exception"]
-        code_sink.writeln(self.wrapper_body)
-        return ("PyObject * %s (%s *self, PyObject *args, PyObject *kwargs, PyObject **return_exception)"
-                % (self.wrapper_actual_name, self._class.pystruct))
+
+        self.wrapper_args = ["%s *self" % self._class.pystruct, "PyObject *args", "PyObject *kwargs", "PyObject **return_exception"]
+        self.wrapper_return = "PyObject *"
+        if self.wrapper_body is not None:
+            code_sink.writeln(self.wrapper_body)
+        else:
+            self.generate_declaration(code_sink, extra_wrapper_parameters=extra_wrapper_params)
+
+    def generate_declaration(self, code_sink, extra_wrapper_parameters=()):
+        assert isinstance(self.wrapper_return, str)
+        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_args, list)
+        code_sink.writeln('%s %s(%s);' % (self.wrapper_return, self.wrapper_actual_name, ', '.join(self.wrapper_args)))
 
     def generate_call(self, *args, **kwargs):
         pass

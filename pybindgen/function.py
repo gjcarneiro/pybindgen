@@ -182,18 +182,25 @@ class CustomFunctionWrapper(Function):
 
     NEEDS_OVERLOADING_INTERFACE = True
 
-    def __init__(self, function_name, wrapper_name, wrapper_body,
+    def __init__(self, function_name, wrapper_name, wrapper_body=None,
                  flags=('METH_VARARGS', 'METH_KEYWORDS')):
         super(CustomFunctionWrapper, self).__init__(function_name, ReturnValue.new('void'), [])
         self.wrapper_base_name = wrapper_name
         self.wrapper_actual_name = wrapper_name
         self.meth_flags = list(flags)
         self.wrapper_body = wrapper_body
+        self.wrapper_args = ["PyObject *args", "PyObject *kwargs", "PyObject **return_exception"]
+        self.wrapper_return = "PyObject *"
+
 
     def generate(self, code_sink, dummy_wrapper_name=None, extra_wrapper_params=()):
         assert extra_wrapper_params == ["PyObject **return_exception"]
-        code_sink.writeln(self.wrapper_body)
-        return "PyObject * %s (PyObject *args, PyObject *kwargs, PyObject **return_exception)" % self.wrapper_actual_name
+        if self.wrapper_body is not None:
+            code_sink.writeln(self.wrapper_body)
+        else:
+            self.generate_declaration(code_sink, extra_wrapper_parameters=extra_wrapper_params)
+
+        #return "PyObject * %s (PyObject *args, PyObject *kwargs, PyObject **return_exception)" % self.wrapper_actual_name
 
     def generate_call(self, *args, **kwargs):
         pass
