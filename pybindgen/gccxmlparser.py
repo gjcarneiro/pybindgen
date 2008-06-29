@@ -26,6 +26,57 @@ from pygccxml.declarations.variable import variable_t
 ALWAYS_USE_PARAMETER_NEW = True
 
 
+###
+### some patched pygccxml functions, from the type_traits module
+###
+def remove_pointer(type):
+    """removes pointer from the type definition
+
+    If type is not pointer type, it will be returned as is.
+    """
+    #nake_type = remove_alias( type )
+    nake_type = type
+    if not type_traits.is_pointer( nake_type ):
+        return type
+    elif isinstance( nake_type, cpptypes.volatile_t ) and isinstance( nake_type.base, cpptypes.pointer_t ):
+        return cpptypes.volatile_t( nake_type.base.base )
+    elif isinstance( nake_type, cpptypes.const_t ) and isinstance( nake_type.base, cpptypes.pointer_t ):
+        return cpptypes.const_t( nake_type.base.base )
+    elif isinstance( nake_type.base, cpptypes.calldef_type_t ):
+        return type
+    else:
+        return nake_type.base
+
+def remove_reference(type):
+    """removes reference from the type definition
+
+    If type is not reference type, it will be returned as is.
+    """
+    #nake_type = remove_alias( type )
+    nake_type = type
+    if not type_traits.is_reference( nake_type ):
+        return type
+    else:
+        return nake_type.base
+
+def remove_const(type):
+    """removes const from the type definition
+
+    If type is not const type, it will be returned as is
+    """
+
+    #nake_type = remove_alias( type )
+    nake_type = type
+    if not type_traits.is_const( nake_type ):
+        return type
+    else:
+        return nake_type.base
+###
+### end of patched pygccxml functions
+###
+
+
+
 class ModuleParserWarning(Warning):
     """
     Base class for all warnings reported here.
@@ -135,8 +186,7 @@ class GccXmlTypeRegistry(object):
     def get_type_traits(self, type_info):
         assert isinstance(type_info, cpptypes.type_t)
 
-        orig_type_info = type_info
-        debug = False #('int16_t' in type_info.decl_string or '* * *' in type_info.decl_string)
+        debug = False #('int64_t' in type_info.decl_string)
 
         if debug:
             print >> sys.stderr, "***** type traits for %r" % (type_info.decl_string, )
@@ -149,15 +199,15 @@ class GccXmlTypeRegistry(object):
             prev_type_info = type_info
             if type_traits.is_pointer(type_info):
                 is_pointer += 1
-                type_info = type_traits.remove_pointer(type_info)
+                type_info = remove_pointer(type_info)
             elif type_traits.is_const(type_info):
                 warnings.warn("multiple consts not handled")
                 is_const = True
-                type_info = type_traits.remove_const(type_info)
+                type_info = remove_const(type_info)
             elif type_traits.is_reference(type_info):
                 warnings.warn("multiple &'s not handled")
                 is_reference = True
-                type_info = type_traits.remove_reference(type_info)
+                type_info = remove_reference(type_info)
             else:
                 break
             if type_info is prev_type_info:
