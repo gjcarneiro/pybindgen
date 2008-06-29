@@ -2,7 +2,7 @@
 # documented in base.py)
 # pylint: disable-msg=C0111
 
-from base import ReturnValue, Parameter,\
+from base import ReturnValue, Parameter, PointerParameter, PointerReturnValue, \
      ReverseWrapperBase, ForwardWrapperBase, TypeConfigurationError
 
 
@@ -66,13 +66,13 @@ class UnsignedIntReturn(ReturnValue):
         wrapper.build_params.add_parameter("I", [self.value], prepend=True)
 
 
-class IntPtrParam(Parameter):
+class IntPtrParam(PointerParameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
     CTYPES = ['int*', 'int const *']
 
-    def __init__(self, ctype, name, direction=None, is_const=None):
+    def __init__(self, ctype, name, direction=None, is_const=None, transfer_ownership=None):
         if is_const is None:
             is_const = ('const' in ctype)
         if is_const and 'const' not in ctype:
@@ -84,7 +84,7 @@ class IntPtrParam(Parameter):
             else:
                 raise TypeConfigurationError("direction not given")
         
-        super(IntPtrParam, self).__init__(ctype, name, direction, is_const)
+        super(IntPtrParam, self).__init__(ctype, name, direction, is_const, transfer_ownership)
 
     
     def convert_c_to_python(self, wrapper):
@@ -302,13 +302,13 @@ class LongLongReturn(ReturnValue):
         wrapper.build_params.add_parameter("L", [self.value], prepend=True)
 
 
-class Int8PtrParam(Parameter):
+class Int8PtrParam(PointerParameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
     CTYPES = ['int8_t*', 'int8_t const *']
 
-    def __init__(self, ctype, name, direction=None, is_const=None, default_value=None):
+    def __init__(self, ctype, name, direction=None, is_const=None, default_value=None, transfer_ownership=None):
         if is_const is None:
             is_const = ('const' in ctype)
         if is_const and 'const' not in ctype:
@@ -320,7 +320,7 @@ class Int8PtrParam(Parameter):
             else:
                 raise TypeConfigurationError("direction not given")
         
-        super(Int8PtrParam, self).__init__(ctype, name, direction, is_const, default_value)
+        super(Int8PtrParam, self).__init__(ctype, name, direction, is_const, default_value, transfer_ownership)
     
     def convert_c_to_python(self, wrapper):
         if self.direction & self.DIRECTION_IN:
@@ -337,13 +337,13 @@ class Int8PtrParam(Parameter):
         if self.direction & self.DIRECTION_OUT:
             wrapper.build_params.add_parameter("b", [name])
 
-class UInt8PtrParam(Parameter):
+class UInt8PtrParam(PointerParameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
     CTYPES = ['uint8_t*', 'uint8_t const *']
 
-    def __init__(self, ctype, name, direction=None, is_const=None, default_value=None):
+    def __init__(self, ctype, name, direction=None, is_const=None, default_value=None, transfer_ownership=None):
         if is_const is None:
             is_const = ('const' in ctype)
         if is_const and 'const' not in ctype:
@@ -355,7 +355,7 @@ class UInt8PtrParam(Parameter):
             else:
                 raise TypeConfigurationError("direction not given")
         
-        super(UInt8PtrParam, self).__init__(ctype, name, direction, is_const, default_value)
+        super(UInt8PtrParam, self).__init__(ctype, name, direction, is_const, default_value, transfer_ownership)
     
     def convert_c_to_python(self, wrapper):
         if self.direction & self.DIRECTION_IN:
