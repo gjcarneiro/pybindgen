@@ -1013,7 +1013,7 @@ class ReturnValue(object):
         else:
             return cls(*args, **kwargs)
 
-    def __init__(self, ctype):
+    def __init__(self, ctype, is_const=False):
         '''
         Creates a return value object
 
@@ -1027,6 +1027,7 @@ class ReturnValue(object):
         self.untransformed_ctype = ctype
         self.transformation = NullTypeTransformation()
         self.value = 'retval'
+        self.is_const = is_const
 
     def set_tranformation(self, transformation, untransformed_ctype):
         "Set the type transformation to use in this type handler"
@@ -1060,8 +1061,14 @@ class ReturnValue(object):
 
 ReturnValue.CTYPES = NotImplemented
 
+class PointerReturnValue(ReturnValue):
+    """Base class for all pointer-to-something handlers"""
+    CTYPES = []
+    def __init__(self, ctype, is_const=False, caller_owns_return=None):
+        super(PointerReturnValue, self).__init__(ctype, is_const)
+        self.call_owns_return = caller_owns_return
 
-
+PointerReturnValue.CTYPES = NotImplemented
 
 
 class Parameter(object):
@@ -1079,6 +1086,16 @@ class Parameter(object):
     ## list of C type names it can handle
     CTYPES = []
 
+    def _direction_value_to_name(cls, value):
+        if value == cls.DIRECTION_IN:
+            return "DIRECTION_IN"
+        elif value == cls.DIRECTION_OUT:
+            return "DIRECTION_OUT"
+        elif value == cls.DIRECTION_INOUT:
+            return "DIRECTION_INOUT"
+        else:
+            return "(invalid %r)" % value
+    _direction_value_to_name = classmethod(_direction_value_to_name)
 
     class __metaclass__(type):
         "Metaclass for automatically registering parameter type handlers"
@@ -1138,7 +1155,10 @@ class Parameter(object):
         self.ctype = ctype
         self.untransformed_ctype = ctype
         self.name = name
-        assert direction in self.DIRECTIONS
+        assert direction in self.DIRECTIONS, \
+            "Error: requested direction %s for type handler %r (ctype=%r), but it only supports directions %r"\
+            % (self._direction_value_to_name(direction), type(self), self.ctype,
+               [self._direction_value_to_name(d) for d in self.DIRECTIONS])
         self.direction = direction
         self.is_const = is_const
         self.transformation = NullTypeTransformation()
@@ -1168,9 +1188,17 @@ class Parameter(object):
 
 Parameter.CTYPES = NotImplemented
 
+class PointerParameter(Parameter):
+    """Base class for all pointer-to-something handlers"""
 
+    CTYPES = []
 
+    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False, default_value=None,
+                 transfer_ownership=False):
+        super(PointerParameter, self).__init__(ctype, name, direction, is_const, default_value)
+        self.transfer_ownership = transfer_ownership
 
+PointerParameter.CTYPES = NotImplemented
 
 
 class TypeMatcher(object):

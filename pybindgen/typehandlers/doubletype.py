@@ -72,7 +72,7 @@ class DoubleRefParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         #assert self.ctype == 'double&'
-        name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
+        name = wrapper.declarations.declare_variable('double', self.name)
         wrapper.call_params.append(name)
         if self.direction & self.DIRECTION_IN:
             wrapper.parse_params.add_parameter('d', ['&'+name], self.name)

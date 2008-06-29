@@ -278,9 +278,15 @@ class LongLongParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype, self.name, self.default_value)
+        name = wrapper.declarations.declare_variable('long long', self.name, self.default_value)
         wrapper.parse_params.add_parameter('L', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.call_params.append(name)
+
+
+class LongLongRefParam(LongLongParam):
+    DIRECTIONS = [Parameter.DIRECTION_IN] # other directions not yet implemented
+    CTYPES = ['long long&', 'int64_t&']
+
 
 class LongLongReturn(ReturnValue):
 

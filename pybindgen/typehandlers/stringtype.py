@@ -1,10 +1,10 @@
 # docstrings not neede here (the type handler interfaces are fully
 # documented in base.py) pylint: disable-msg=C0111
 
-from base import ReturnValue, Parameter, ReverseWrapperBase, ForwardWrapperBase
+from base import ReturnValue, PointerReturnValue, Parameter, PointerParameter, ReverseWrapperBase, ForwardWrapperBase
 
 
-class CStringParam(Parameter):
+class CStringParam(PointerParameter):
     """
     >>> isinstance(Parameter.new('char*', 's'), CStringParam)
     True
@@ -128,7 +128,7 @@ class CharReturn(ReturnValue):
         wrapper.build_params.add_parameter("c", ["(int) %s" % self.value])
 
 
-class CStringReturn(ReturnValue):
+class CStringReturn(PointerReturnValue):
     """
     >>> isinstance(ReturnValue.new('char*'), CStringReturn)
     True
