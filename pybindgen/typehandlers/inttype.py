@@ -248,9 +248,14 @@ class UnsignedLongLongParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype, self.name, self.default_value)
+        name = wrapper.declarations.declare_variable("unsigned long long", self.name, self.default_value)
         wrapper.parse_params.add_parameter('K', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.call_params.append(name)
+
+class UnsignedLongLongRefParam(UnsignedLongLongParam):
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['unsigned long long&', 'uint64_t&']
+
 
 class UnsignedLongLongReturn(ReturnValue):
 
