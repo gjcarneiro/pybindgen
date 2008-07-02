@@ -710,5 +710,10 @@ class TestFoo(unittest.TestCase):
         expected = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0]
         self.assertEqual(result, expected)
 
+    def test_output_stream(self):
+        f = foo.Foo("hello")
+        self.assertEqual(str(f), "hello")
+
+
 if __name__ == '__main__':
     unittest.main()

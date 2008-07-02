@@ -1507,6 +1507,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                             class_wrapper.ThisClassRefParameter("%s const &" % class_wrapper.full_name,
                                                                 'ctor_arg', is_const=True)])
         if has_output_stream_operator:
+            class_wrapper.add_output_stream_operator()
             pygen_sink.writeln("cls.add_output_stream_operator()")
 
 

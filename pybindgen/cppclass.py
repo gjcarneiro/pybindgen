@@ -1085,6 +1085,17 @@ public:
             self.has_trivial_constructor = True
 
     def add_output_stream_operator(self):
+        """
+        Add str() support based on C++ output stream operator.
+
+        Calling this method enables wrapping of an assumed to be defined operator function::
+
+             std::ostream & operator << (std::ostream &, MyClass const &);
+
+        The wrapper will be registered as an str() python operator,
+        and will call the C++ operator function to convert the value
+        to a string.
+        """
         self.has_output_stream_operator = True
 
     def add_constructor(self, *args, **kwargs):

@@ -29,6 +29,7 @@ def my_module_gen(out_file):
     Foo.add_constructor([])
     Foo.add_method('get_datum', ReturnValue.new('std::string'), [])
     Foo.add_method('is_initialized', ReturnValue.new('bool'), [], is_const=True)
+    Foo.add_output_stream_operator()
 
     Zoo = mod.add_class('Zoo', automatic_type_narrowing=True)
     Zoo.add_constructor([Parameter.new('std::string', 'datum')])

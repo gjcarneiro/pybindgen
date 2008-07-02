@@ -49,6 +49,11 @@ public:
     virtual ~Foo() { Foo::instance_count--; }
 };
 
+inline std::ostream & operator << (std::ostream &os, Foo const &foo)
+{
+    os << foo.get_datum ();
+    return os;
+}
 
 class Zoo
 // -#- automatic_type_narrowing=True -#-
