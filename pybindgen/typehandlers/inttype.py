@@ -246,9 +246,12 @@ class UnsignedLongLongParam(Parameter):
         assert isinstance(wrapper, ReverseWrapperBase)
         wrapper.build_params.add_parameter('K', [self.value])
 
+    def get_ctype_without_ref(self):
+        return self.ctype
+
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable("unsigned long long", self.name, self.default_value)
+        name = wrapper.declarations.declare_variable(self.get_ctype_without_ref(), self.name, self.default_value)
         wrapper.parse_params.add_parameter('K', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.call_params.append(name)
 
@@ -256,6 +259,9 @@ class UnsignedLongLongRefParam(UnsignedLongLongParam):
     DIRECTIONS = [Parameter.DIRECTION_IN]
     CTYPES = ['unsigned long long&', 'uint64_t&']
 
+    def get_ctype_without_ref(self):
+        assert self.ctype[-1] == '&'
+        return self.ctype[:-1]
 
 class UnsignedLongLongReturn(ReturnValue):
 
@@ -281,9 +287,12 @@ class LongLongParam(Parameter):
         assert isinstance(wrapper, ReverseWrapperBase)
         wrapper.build_params.add_parameter('L', [self.value])
 
+    def get_ctype_without_ref(self):
+        return self.ctype
+
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable('long long', self.name, self.default_value)
+        name = wrapper.declarations.declare_variable(self.get_ctype_without_ref(), self.name, self.default_value)
         wrapper.parse_params.add_parameter('L', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.call_params.append(name)
 
@@ -291,6 +300,10 @@ class LongLongParam(Parameter):
 class LongLongRefParam(LongLongParam):
     DIRECTIONS = [Parameter.DIRECTION_IN] # other directions not yet implemented
     CTYPES = ['long long&', 'int64_t&']
+
+    def get_ctype_without_ref(self):
+        assert self.ctype[-1] == '&'
+        return self.ctype[:-1]
 
 
 class LongLongReturn(ReturnValue):
