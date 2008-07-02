@@ -409,6 +409,7 @@ class CppClass(object):
         self.helper_class_disabled = False
         self.cannot_be_constructed = '' # reason
         self.has_trivial_constructor = False
+        self.has_operator_os = False
         self._have_pure_virtual_methods = None
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
@@ -1083,6 +1084,9 @@ public:
         if not wrapper.parameters:
             self.has_trivial_constructor = True
 
+    def add_operator_os(self):
+        self.has_operator_os = True
+
     def add_constructor(self, *args, **kwargs):
         """
         Add a constructor to the class. See the documentation for
@@ -1318,6 +1322,8 @@ typedef struct {
             self._generate_gc_methods(code_sink)
 
         self._generate_destructor(code_sink, have_constructor)
+        if self.has_operator_os:
+            self._generate_str(code_sink)
         self._generate_type_structure(code_sink, docstring)
         
     def _generate_type_structure(self, code_sink, docstring):
@@ -1505,6 +1511,23 @@ static int
     return 0;
 }
 ''' % (tp_traverse_function_name, self.pystruct, visit_self))
+
+    def _generate_str(self, code_sink):
+        """Generate a tp_str function and register it in the type"""
+
+        tp_str_function_name = "_wrap_%s__tp_str" % (self.pystruct,)
+        self.slots.setdefault("tp_str", tp_str_function_name )
+
+        code_sink.writeln('''
+static PyObject *
+%s(%s *self)
+{
+    std::ostringstream oss;
+    oss << *self->obj;
+    return PyString_FromString(oss.str ().c_str ());
+}
+''' % (tp_str_function_name, self.pystruct))
+        code_sink.writeln()
 
 
     def _generate_destructor(self, code_sink, have_constructor):

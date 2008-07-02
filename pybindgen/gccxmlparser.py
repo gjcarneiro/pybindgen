@@ -1203,9 +1203,34 @@ pybindgen.settings.error_handler = ErrorHandler()
                 return True
         return False
 
+    def _is_ostream(self,type):
+        return isinstance (type, cpptypes.reference_t) \
+            and not isinstance (type.base, cpptypes.const_t) \
+            and str (type.base) == 'std::ostream'
+
     def _scan_class_methods(self, cls, class_wrapper, pygen_sink):
         have_trivial_constructor = False
         have_copy_constructor = False
+        has_operator_os = False
+
+
+        for op in self.module_namespace.free_operators(function=self.location_filter,
+                                                       allow_empty=True, 
+                                                       recursive=True):
+            if self._is_ostream (op.return_type) \
+                    and len (op.arguments) >= 2 \
+                    and self._is_ostream (op.arguments[0].type) \
+                    and type_traits.is_convertible (cls, op.arguments[1].type):
+                has_operator_os = True
+
+        for op in cls.member_operators(function=self.location_filter,
+                                       allow_empty=True, 
+                                       recursive=True):
+            if self._is_ostream (op.return_type) \
+                    and len (op.arguments) >= 2 \
+                    and self._is_ostream (op.arguments[0].type) \
+                    and type_traits.is_convertible (cls, op.arguments[1].type):
+                has_operator_os = True
 
         if pygen_sink is None:
             pygen_sink = NullCodeSink()
@@ -1471,7 +1496,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             if type_traits.has_trivial_constructor(cls):
                 class_wrapper.add_constructor([])
                 pygen_sink.writeln("cls.add_constructor([])")
-
+                
         if not have_copy_constructor:
             try: # pygccxml > 0.9
                 has_copy_constructor = type_traits.has_copy_constructor(cls)
@@ -1481,6 +1506,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                 class_wrapper.add_constructor([
                             class_wrapper.ThisClassRefParameter("%s const &" % class_wrapper.full_name,
                                                                 'ctor_arg', is_const=True)])
+        if has_operator_os:
+            pygen_sink.writeln("cls.add_operator_os()")
 
 
     def scan_functions(self):
