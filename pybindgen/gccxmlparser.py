@@ -1211,7 +1211,7 @@ pybindgen.settings.error_handler = ErrorHandler()
     def _scan_class_methods(self, cls, class_wrapper, pygen_sink):
         have_trivial_constructor = False
         have_copy_constructor = False
-        has_operator_os = False
+        has_output_stream_operator = False
 
 
         for op in self.module_namespace.free_operators(function=self.location_filter,
@@ -1221,7 +1221,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     and len (op.arguments) >= 2 \
                     and self._is_ostream (op.arguments[0].type) \
                     and type_traits.is_convertible (cls, op.arguments[1].type):
-                has_operator_os = True
+                has_output_stream_operator = True
 
         for op in cls.member_operators(function=self.location_filter,
                                        allow_empty=True, 
@@ -1230,7 +1230,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     and len (op.arguments) >= 2 \
                     and self._is_ostream (op.arguments[0].type) \
                     and type_traits.is_convertible (cls, op.arguments[1].type):
-                has_operator_os = True
+                has_output_stream_operator = True
 
         if pygen_sink is None:
             pygen_sink = NullCodeSink()
@@ -1506,8 +1506,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                 class_wrapper.add_constructor([
                             class_wrapper.ThisClassRefParameter("%s const &" % class_wrapper.full_name,
                                                                 'ctor_arg', is_const=True)])
-        if has_operator_os:
-            pygen_sink.writeln("cls.add_operator_os()")
+        if has_output_stream_operator:
+            pygen_sink.writeln("cls.add_output_stream_operator()")
 
 
     def scan_functions(self):

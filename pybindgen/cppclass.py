@@ -409,7 +409,7 @@ class CppClass(object):
         self.helper_class_disabled = False
         self.cannot_be_constructed = '' # reason
         self.has_trivial_constructor = False
-        self.has_operator_os = False
+        self.has_output_stream_operator = False
         self._have_pure_virtual_methods = None
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
@@ -1084,8 +1084,8 @@ public:
         if not wrapper.parameters:
             self.has_trivial_constructor = True
 
-    def add_operator_os(self):
-        self.has_operator_os = True
+    def add_output_stream_operator(self):
+        self.has_output_stream_operator = True
 
     def add_constructor(self, *args, **kwargs):
         """
@@ -1322,7 +1322,7 @@ typedef struct {
             self._generate_gc_methods(code_sink)
 
         self._generate_destructor(code_sink, have_constructor)
-        if self.has_operator_os:
+        if self.has_output_stream_operator:
             self._generate_str(code_sink)
         self._generate_type_structure(code_sink, docstring)
         
