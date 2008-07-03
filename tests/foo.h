@@ -36,7 +36,7 @@ public:
 
     Foo () : m_datum (""), m_initialized (false)
         { Foo::instance_count++; }
-    Foo (std::string datum) : m_datum (datum), m_initialized (false)
+    Foo (std::string const &datum) : m_datum (datum), m_initialized (false)
         { Foo::instance_count++; }
     std::string get_datum () const { return m_datum; }
 
