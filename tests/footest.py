@@ -714,6 +714,11 @@ class TestFoo(unittest.TestCase):
         f = foo.Foo("hello")
         self.assertEqual(str(f), "hello")
 
+    def test_outer_inner_namespace(self):
+        inner = foo.TopNs.PrefixBottomNs.PrefixInner ()
+        inner.Do ()
+        self.assertEqual (True, True)
+
 
 if __name__ == '__main__':
     unittest.main()

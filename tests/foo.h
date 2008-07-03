@@ -630,5 +630,26 @@ float matrix_sum_of_elements (float *matrix);
 // -#- @matrix(direction=out, array_length=6) -#-
 void matrix_identity_new (float *matrix);
 
+namespace TopNs
+{
+
+    class OuterBase
+    {
+    public:
+    };
+
+    namespace PrefixBottomNs {
+        class PrefixInner : public OuterBase 
+        {
+        public:
+            PrefixInner () {}
+            void Do (void) {}
+        };
+    }
+
+}
+
+
+
 
 #endif 	    /* !FOO_H_ */

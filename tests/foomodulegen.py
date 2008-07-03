@@ -337,6 +337,14 @@ int %s::custom_method_added_by_a_hook(int x)
                      ReturnValue.new('void'),
                      [Parameter.new("float*", 'matrix', direction=Parameter.DIRECTION_OUT, array_length=6)])
 
+    top_ns = mod.add_cpp_namespace('TopNs')
+    outer_base = top_ns.add_class('OuterBase')
+    bottom_ns = top_ns.add_cpp_namespace('PrefixBottomNs')
+    inner = bottom_ns.add_class('PrefixInner',parent=outer_base)
+    inner.add_constructor([])
+    inner.add_method('Do', 'void', [])
+    
+
 
 
     #### --- error handler ---

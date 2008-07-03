@@ -729,6 +729,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 
     def scan_types(self):
         self._stage = 'scan types'
+        self._registered_classes = {} # class_t -> CppClass
         self._scan_namespace_types(self.module, self.module_namespace, pygen_register_function_name="register_types")
         self._types_scanned = True
 
@@ -912,8 +913,6 @@ pybindgen.settings.error_handler = ErrorHandler()
             module.add_enum(enum.name, [name for name, dummy_val in enum.values],
                             outer_class=outer_class)
 
-        registered_classes = {} # class_t -> CppClass
-
         ## Look for forward declarations of class/structs like
         ## "typedef struct _Foo Foo"; these are represented in
         ## pygccxml by a typedef whose .type.declaration is a
@@ -965,7 +964,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             class_wrapper = module.add_class(alias.name, **kwargs)
 
             class_wrapper.gccxml_definition = cls
-            registered_classes[cls] = class_wrapper
+            self._registered_classes[cls] = class_wrapper
             if cls.name != alias.name:
                 class_wrapper.register_alias(normalize_name(cls.name))
             self.type_registry.class_registered(class_wrapper)
@@ -1045,11 +1044,11 @@ pybindgen.settings.error_handler = ErrorHandler()
             if cls.bases:
                 base_cls = cls.bases[0].related_class
                 try:
-                    base_class_wrapper = registered_classes[base_cls]
+                    base_class_wrapper = self._registered_classes[base_cls]
                 except KeyError:
                     ## base class not yet registered => postpone this class registration
                     if base_cls not in unregistered_classes:
-                        warnings.warn_explicit("Class %s ignored because it uses has a base class (%s) "
+                        warnings.warn_explicit("Class %s ignored because it uses a base class (%s) "
                                                "which is not declared."
                                                % (cls.decl_string, base_cls.decl_string),
                                                ModuleParserWarning, cls.location.file_name, cls.location.line)
@@ -1120,7 +1119,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             class_wrapper = module.add_class(cls_name, **kwargs)
             class_wrapper.gccxml_definition = cls
-            registered_classes[cls] = class_wrapper
+            self._registered_classes[cls] = class_wrapper
             if alias:
                 class_wrapper.register_alias(normalize_name(alias))
             self.type_registry.class_registered(class_wrapper)
