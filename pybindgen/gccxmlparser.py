@@ -23,8 +23,6 @@ import settings
 #    destructor_t, constructor_t, member_function_t
 from pygccxml.declarations.variable import variable_t
 
-ALWAYS_USE_PARAMETER_NEW = True
-
 
 ###
 ### some patched pygccxml functions, from the type_traits module
@@ -42,10 +40,13 @@ def remove_pointer(type):
         return cpptypes.volatile_t( nake_type.base.base )
     elif isinstance( nake_type, cpptypes.const_t ) and isinstance( nake_type.base, cpptypes.pointer_t ):
         return cpptypes.const_t( nake_type.base.base )
-    elif isinstance( nake_type.base, cpptypes.calldef_type_t ):
+    elif isinstance(nake_type, cpptypes.compound_t) and isinstance( nake_type.base, cpptypes.calldef_type_t ):
         return type
     else:
-        return nake_type.base
+        if isinstance(nake_type, cpptypes.compound_t):
+            return nake_type.base
+        else:
+            return nake_type
 
 def remove_reference(type):
     """removes reference from the type definition
@@ -57,7 +58,10 @@ def remove_reference(type):
     if not type_traits.is_reference( nake_type ):
         return type
     else:
-        return nake_type.base
+        if isinstance(nake_type, cpptypes.compound_t):
+            return nake_type.base
+        else:
+            return nake_type
 
 def remove_const(type):
     """removes const from the type definition
@@ -70,7 +74,10 @@ def remove_const(type):
     if not type_traits.is_const( nake_type ):
         return type
     else:
-        return nake_type.base
+        if isinstance(nake_type, cpptypes.compound_t):
+            return nake_type.base
+        else:
+            return nake_type
 ###
 ### end of patched pygccxml functions
 ###

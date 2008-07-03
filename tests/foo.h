@@ -650,6 +650,9 @@ namespace TopNs
 }
 
 
+// Bug #245097
+typedef void (*Callback) (void);
+void function_that_takes_callback (Callback cb);
 
 
 #endif 	    /* !FOO_H_ */
