@@ -54,7 +54,6 @@ def my_module_gen():
     foomodulegen_split.register_functions(root_module)
     foomodulegen_common.customize_module(root_module)
 
-    #pybindgen.write_preamble(out)
     root_module.generate(out)
 
     out.close()

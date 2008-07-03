@@ -599,6 +599,7 @@ class AbstractXpto
 {
 public:
     AbstractXpto () {}
+    virtual ~AbstractXpto () {}
 
     virtual void something (int x) const = 0;
 };

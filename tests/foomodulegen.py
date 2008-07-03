@@ -16,11 +16,10 @@ import foomodulegen_common
 
 
 def my_module_gen(out_file):
-    pybindgen.write_preamble(FileCodeSink(out_file))
-
-    print >> out_file, "#include \"foo.h\""
 
     mod = Module('foo')
+
+    mod.add_include ('"foo.h"')
 
     Foo = mod.add_class('Foo', automatic_type_narrowing=True)
 
