@@ -25,12 +25,21 @@ def my_module_gen():
     module.generate(out)
 
 
-if __name__ == '__main__':
-    try:
-        import cProfile as profile
-    except ImportError:
+def main():
+    if sys.argv[1] == '-d':
+        del sys.argv[1]
+        import pdb
+        pdb.set_trace()
         my_module_gen()
     else:
-        print >> sys.stderr, "** running under profiler"
-        profile.run('my_module_gen()', 'foomodulegen-auto.pstat')
+        try:
+            import cProfile as profile
+        except ImportError:
+            my_module_gen()
+        else:
+            print >> sys.stderr, "** running under profiler"
+            profile.run('my_module_gen()', 'foomodulegen-auto.pstat')
+
+if __name__ == '__main__':
+    main()
 
