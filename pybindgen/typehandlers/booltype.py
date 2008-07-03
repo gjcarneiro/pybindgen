@@ -16,7 +16,7 @@ class BoolParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype, self.name)
+        name = wrapper.declarations.declare_variable(self.ctype_no_const, self.name)
         py_name = wrapper.declarations.declare_variable('PyObject *', 'py_'+self.name)
         wrapper.parse_params.add_parameter('O', ['&'+py_name], self.value)
         wrapper.before_call.write_code("%s = PyObject_IsTrue(%s);" % (name, py_name))
@@ -60,7 +60,7 @@ class BoolPtrParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         #assert self.ctype == 'bool*'
-        name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
+        name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
             py_name = wrapper.declarations.declare_variable("PyObject*", 'py_'+self.name)
@@ -91,7 +91,7 @@ class BoolRefParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         #assert self.ctype == 'bool&'
-        name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
+        name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
         wrapper.call_params.append(name)
         if self.direction & self.DIRECTION_IN:
             py_name = wrapper.declarations.declare_variable("PyObject*", 'py_'+self.name)

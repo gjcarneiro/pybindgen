@@ -148,33 +148,48 @@ public:
         if os.name == 'nt':
             if stdint_rx.search(param_type):
                 continue # win32 does not support the u?int\d+_t types (defined in <stdint.h>)
-        for direction in param_handler.DIRECTIONS:
-            if direction == (Parameter.DIRECTION_IN):
-                param_name = 'param'
-            elif direction == (Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT):
-                param_name = 'param_inout'
-            elif direction == (Parameter.DIRECTION_OUT):
-                param_name = 'param_out'
 
-            if issubclass(param_handler, (cppclass.CppClassPtrParameter,
-                                          typehandlers.pyobjecttype.PyObjectParam)):
-                for transfer_ownership in True, False:
-                    name = param_name + (transfer_ownership and '_transfer' or '_notransfer')
-                    param = param_handler(param_type, name , transfer_ownership=transfer_ownership)
+        for is_const in [True, False]:
+            for direction in param_handler.DIRECTIONS:
+                if direction == (Parameter.DIRECTION_IN):
+                    param_name = 'param'
+                elif direction == (Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT):
+                    param_name = 'param_inout'
+                elif direction == (Parameter.DIRECTION_OUT):
+                    param_name = 'param_out'
+
+                if is_const and direction & Parameter.DIRECTION_OUT:
+                    continue # const and output parameter makes no sense
+
+                if is_const:
+                    param_type_with_const = "const " + param_type
+                else:
+                    param_type_with_const = param_type
+
+                if issubclass(param_handler, (cppclass.CppClassPtrParameter,
+                                              typehandlers.pyobjecttype.PyObjectParam)):
+                    for transfer_ownership in True, False:
+                        name = param_name + (transfer_ownership and '_transfer' or '_notransfer')
+                        try:
+                            param = param_handler(param_type, name, transfer_ownership=transfer_ownership, is_const=is_const)
+                        except TypeError:
+                            print >> sys.stderr, "ERROR -----> param_handler(param_type=%r, "\
+                                "name=%r, transfer_ownership=%r, is_const=%r)"\
+                                % (param_type, name, transfer_ownership, is_const)
+                        wrapper_number += 1
+                        function_name = 'foo_function_%i' % (wrapper_number,)
+                        ## declare a fake prototype
+                        print "void %s(%s %s);" % (function_name, param_type_with_const, name)
+                        print
+                        module.add_function(function_name, ReturnValue.new('void'), [param])
+                else:
+                    param = param_handler(param_type, param_name, direction, is_const=is_const)
                     wrapper_number += 1
                     function_name = 'foo_function_%i' % (wrapper_number,)
                     ## declare a fake prototype
-                    print "void %s(%s %s);" % (function_name, param_type, name)
+                    print "void %s(%s);" % (function_name, param_type_with_const)
                     print
                     module.add_function(function_name, ReturnValue.new('void'), [param])
-            else:
-                param = param_handler(param_type, param_name, direction)
-                wrapper_number += 1
-                function_name = 'foo_function_%i' % (wrapper_number,)
-                ## declare a fake prototype
-                print "void %s(%s);" % (function_name, param_type)
-                print
-                module.add_function(function_name, ReturnValue.new('void'), [param])
 
     module.generate(code_out)
 

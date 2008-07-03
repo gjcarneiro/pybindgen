@@ -1023,6 +1023,9 @@ class ReturnValue(object):
         '''
         if type(self) is ReturnValue:
             raise TypeError('ReturnValue is an abstract class; use ReturnValue.new(...)')
+        #assert 'const' not in ctype, "FIXME: remove this assert"
+        if is_const:
+            ctype = 'const ' + ctype
         self.ctype = ctype
         self.untransformed_ctype = ctype
         self.transformation = NullTypeTransformation()
@@ -1150,7 +1153,9 @@ class Parameter(object):
         '''
         if type(self) is Parameter:
             raise TypeError('Parameter is an abstract class; use Parameter.new(...)')
-        if is_const and 'const' not in ctype:
+        #assert 'const' not in ctype, "FIXME: remove this assert"
+        self.ctype_no_const = ctype
+        if is_const:
             ctype = 'const ' + ctype
         self.ctype = ctype
         self.untransformed_ctype = ctype

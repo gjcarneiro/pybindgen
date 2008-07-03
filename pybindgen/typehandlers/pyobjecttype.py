@@ -10,7 +10,7 @@ class PyObjectParam(Parameter):
     DIRECTIONS = [Parameter.DIRECTION_IN]
     CTYPES = ['PyObject*']
 
-    def __init__(self, ctype, name, transfer_ownership):
+    def __init__(self, ctype, name, transfer_ownership, is_const=False):
         """
         @param ctype: C type, normally 'PyObject*'
         @param name: parameter name
@@ -19,7 +19,7 @@ class PyObjectParam(Parameter):
                               function
         """
         super(PyObjectParam, self).__init__(
-            ctype, name, direction=Parameter.DIRECTION_IN)
+            ctype, name, direction=Parameter.DIRECTION_IN, is_const=is_const)
         self.transfer_ownership = transfer_ownership
 
     def convert_c_to_python(self, wrapper):
@@ -31,7 +31,7 @@ class PyObjectParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype, self.name)
+        name = wrapper.declarations.declare_variable(self.ctype_no_const, self.name)
         wrapper.parse_params.add_parameter('O', ['&'+name])
         wrapper.call_params.append(name)
         if self.transfer_ownership:
@@ -42,13 +42,13 @@ class PyObjectReturnValue(ReturnValue):
 
     CTYPES = ['PyObject*']
 
-    def __init__(self, ctype, caller_owns_return):
+    def __init__(self, ctype, caller_owns_return, is_const=False):
         """
         @param ctype: C type, normally 'MyClass*'
         @param caller_owns_return: if true, ownership of the object pointer
                               is transferred to the caller
         """
-        super(PyObjectReturnValue, self).__init__(ctype)
+        super(PyObjectReturnValue, self).__init__(ctype, is_const)
         self.caller_owns_return = caller_owns_return
 
     def get_c_error_return(self):

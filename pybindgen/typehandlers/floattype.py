@@ -16,7 +16,7 @@ class FloatParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype, self.name)
+        name = wrapper.declarations.declare_variable(self.ctype_no_const, self.name)
         wrapper.parse_params.add_parameter('f', ['&'+name], self.value)
         wrapper.call_params.append(name)
 
@@ -55,14 +55,14 @@ class FloatPtrParam(Parameter):
     def convert_python_to_c(self, wrapper):
         #assert self.ctype == 'float*'
         if self.array_length is None:
-            name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
+            name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
             wrapper.call_params.append('&'+name)
             if self.direction & self.DIRECTION_IN:
                 wrapper.parse_params.add_parameter('f', ['&'+name], self.name)
             if self.direction & self.DIRECTION_OUT:
                 wrapper.build_params.add_parameter("f", [name])
         else:
-            name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name, array="[%i]" % self.array_length)
+            name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name, array="[%i]" % self.array_length)
             py_list = wrapper.declarations.declare_variable("PyObject*", "py_list")
             idx = wrapper.declarations.declare_variable("int", "idx")
             wrapper.call_params.append(name)
@@ -115,7 +115,7 @@ class FloatRefParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         #assert self.ctype == 'float&'
-        name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
+        name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
         wrapper.call_params.append(name)
         if self.direction & self.DIRECTION_IN:
             wrapper.parse_params.add_parameter('f', ['&'+name], self.name)

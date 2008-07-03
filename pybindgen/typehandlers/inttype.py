@@ -17,7 +17,7 @@ class IntParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype, self.name, self.default_value)
+        name = wrapper.declarations.declare_variable(self.ctype_no_const, self.name, self.default_value)
         wrapper.parse_params.add_parameter('i', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.call_params.append(name)
 
@@ -25,7 +25,7 @@ class IntParam(Parameter):
 class UnsignedIntParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['unsigned int', 'uint32_t', 'uint32_t const']
+    CTYPES = ['unsigned int', 'uint32_t']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -70,14 +70,9 @@ class IntPtrParam(PointerParameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['int*', 'int const *']
+    CTYPES = ['int*']
 
     def __init__(self, ctype, name, direction=None, is_const=None, transfer_ownership=None):
-        if is_const is None:
-            is_const = ('const' in ctype)
-        if is_const and 'const' not in ctype:
-            ctype = 'const ' + ctype
-
         if direction is None:
             if is_const:
                 direction = Parameter.DIRECTION_IN
@@ -118,7 +113,7 @@ class IntRefParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         #assert self.ctype == 'int&'
-        name = wrapper.declarations.declare_variable(self.ctype[:-1], self.name)
+        name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
         wrapper.call_params.append(name)
         if self.direction & self.DIRECTION_IN:
             wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
@@ -168,7 +163,7 @@ class Int16Return(ReturnValue):
 class UInt16Param(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['uint16_t', 'uint16_t const', 'unsigned short', 'unsigned short int']
+    CTYPES = ['uint16_t', 'unsigned short', 'unsigned short int']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -185,7 +180,7 @@ class UInt16Param(Parameter):
 class Int16Param(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['int16_t', 'int16_t const', 'short', 'short int']
+    CTYPES = ['int16_t', 'short', 'short int']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -203,7 +198,7 @@ class Int16Param(Parameter):
 class UInt8Param(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['uint8_t', 'uint8_t const']
+    CTYPES = ['uint8_t']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -247,7 +242,7 @@ class UnsignedLongLongParam(Parameter):
         wrapper.build_params.add_parameter('K', [self.value])
 
     def get_ctype_without_ref(self):
-        return self.ctype
+        return self.ctype_no_const
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
@@ -260,8 +255,8 @@ class UnsignedLongLongRefParam(UnsignedLongLongParam):
     CTYPES = ['unsigned long long&', 'uint64_t&']
 
     def get_ctype_without_ref(self):
-        assert self.ctype[-1] == '&'
-        return self.ctype[:-1]
+        assert self.ctype_no_const[-1] == '&'
+        return self.ctype_no_const[:-1]
 
 class UnsignedLongLongReturn(ReturnValue):
 
@@ -288,7 +283,7 @@ class LongLongParam(Parameter):
         wrapper.build_params.add_parameter('L', [self.value])
 
     def get_ctype_without_ref(self):
-        return self.ctype
+        return self.ctype_no_const
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
@@ -302,8 +297,8 @@ class LongLongRefParam(LongLongParam):
     CTYPES = ['long long&', 'int64_t&']
 
     def get_ctype_without_ref(self):
-        assert self.ctype[-1] == '&'
-        return self.ctype[:-1]
+        assert self.ctype_no_const[-1] == '&'
+        return self.ctype_no_const[:-1]
 
 
 class LongLongReturn(ReturnValue):
@@ -324,14 +319,9 @@ class Int8PtrParam(PointerParameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['int8_t*', 'int8_t const *']
+    CTYPES = ['int8_t*']
 
     def __init__(self, ctype, name, direction=None, is_const=None, default_value=None, transfer_ownership=None):
-        if is_const is None:
-            is_const = ('const' in ctype)
-        if is_const and 'const' not in ctype:
-            ctype = 'const ' + ctype
-
         if direction is None:
             if is_const:
                 direction = Parameter.DIRECTION_IN
@@ -359,14 +349,9 @@ class UInt8PtrParam(PointerParameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['uint8_t*', 'uint8_t const *']
+    CTYPES = ['uint8_t*']
 
     def __init__(self, ctype, name, direction=None, is_const=None, default_value=None, transfer_ownership=None):
-        if is_const is None:
-            is_const = ('const' in ctype)
-        if is_const and 'const' not in ctype:
-            ctype = 'const ' + ctype
-
         if direction is None:
             if is_const:
                 direction = Parameter.DIRECTION_IN

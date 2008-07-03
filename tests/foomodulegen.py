@@ -80,13 +80,13 @@ int %s::custom_method_added_by_a_hook(int x)
 
 
     mod.add_function('print_something', ReturnValue.new('int'),
-                     [Parameter.new('const char*', 'message')])
+                     [Parameter.new('char*', 'message', is_const=True)])
     mod.add_function('print_something_else', ReturnValue.new('int'),
-                     [Parameter.new('const char*', 'message2')])
+                     [Parameter.new('char*', 'message2', is_const=True)])
 
     ## test overloaded functions
     mod.add_function('get_int_from_string', ReturnValue.new('int'),
-                     [Parameter.new('const char*', 'from_string'),
+                     [Parameter.new('char*', 'from_string', is_const=True),
                       Parameter.new('int', 'multiplier', default_value='1')], custom_name="get_int")
     mod.add_function('get_int_from_float', ReturnValue.new('int'),
                      [Parameter.new('double', 'from_float')], custom_name="get_int")
@@ -217,7 +217,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
     ## test overloaded methods
     SomeObject.add_method('get_int', ReturnValue.new('int'),
-                          [Parameter.new('const char*', 'from_string')],
+                          [Parameter.new('char*', 'from_string', is_const=True)],
                           custom_name="get_int")
     SomeObject.add_method('get_int', ReturnValue.new('int'),
                           [Parameter.new('double', 'from_float')],

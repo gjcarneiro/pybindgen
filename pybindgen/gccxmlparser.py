@@ -1510,7 +1510,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 has_copy_constructor = type_traits.has_trivial_copy(cls)
             if has_copy_constructor:
                 class_wrapper.add_constructor([
-                            class_wrapper.ThisClassRefParameter("%s const &" % class_wrapper.full_name,
+                            class_wrapper.ThisClassRefParameter("%s &" % class_wrapper.full_name,
                                                                 'ctor_arg', is_const=True)])
         if has_output_stream_operator:
             class_wrapper.add_output_stream_operator()

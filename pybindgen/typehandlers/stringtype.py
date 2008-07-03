@@ -11,7 +11,7 @@ class CStringParam(PointerParameter):
     """
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['char*', 'const char*']
+    CTYPES = ['char*']
     
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -35,7 +35,7 @@ class CharParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype, self.name)
+        name = wrapper.declarations.declare_variable(self.ctype_no_const, self.name)
         wrapper.parse_params.add_parameter('c', ['&'+name], self.value)
         wrapper.call_params.append(name)
 
@@ -43,7 +43,7 @@ class CharParam(Parameter):
 class StdStringParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['std::string', 'std::string const']
+    CTYPES = ['std::string']
     
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -75,7 +75,7 @@ class StdStringRefParam(Parameter):
     DIRECTIONS = [Parameter.DIRECTION_IN,
                   Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['std::string&', 'std::string const &']
+    CTYPES = ['std::string&']
     
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -134,7 +134,7 @@ class CStringReturn(PointerReturnValue):
     True
     """
 
-    CTYPES = ['char*', 'char const *']
+    CTYPES = ['char*']
 
     def get_c_error_return(self):
         return "return NULL;"
