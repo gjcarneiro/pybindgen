@@ -1335,6 +1335,10 @@ typedef struct {
         self._generate_destructor(code_sink, have_constructor)
         if self.has_output_stream_operator:
             self._generate_str(code_sink)
+
+        if self.slots.get("tp_richcompare", "NULL") == "NULL":
+            self.slots["tp_richcompare"] = self._generate_tp_richcompare(code_sink)
+        
         self._generate_type_structure(code_sink, docstring)
         
     def _generate_type_structure(self, code_sink, docstring):
@@ -1584,6 +1588,26 @@ static void
         code_sink.writeln()
         self.slots.setdefault("tp_dealloc", tp_dealloc_function_name )
 
+
+    def _generate_tp_richcompare(self, code_sink):
+        tp_richcompare_function_name = "_wrap_%s__tp_richcompare" % (self.pystruct,)
+
+        code_sink.writeln("static PyObject*\n%s (%s *self, PyObject *o2, int opid)"
+                          % (tp_richcompare_function_name, self.pystruct))
+        code_sink.writeln("{")
+        code_sink.indent()
+
+        ## TODO
+        code_sink.writeln('PyErr_SetString(PyExc_TypeError, "Comparison not defined or not yet implemented.");')
+        code_sink.writeln('return NULL;')
+
+        #code_sink.writeln("Py_INCREF(Py_NotImplemented);")
+        #code_sink.writeln("return Py_NotImplemented;")
+
+        code_sink.unindent()
+        code_sink.writeln("}\n")
+
+        return tp_richcompare_function_name
 
 ###
 ### ------------ C++ class parameter type handlers ------------
