@@ -570,7 +570,7 @@ class ModuleBase(dict):
             parent = parent.parent
         return names
 
-    def do_generate(self, out):
+    def do_generate(self, out, module_file_base_name=None):
         """(internal) Generates the module."""
         assert isinstance(out, _SinkManager)
 
@@ -580,9 +580,12 @@ class ModuleBase(dict):
                 for include in self.includes:
                     out.get_includes_code_sink().writeln("#include %s" % include)
 
+
             if not self._forward_declarations_declared:
                 self.generate_forward_declarations(out.get_includes_code_sink())
                 self.after_forward_declarations.flush_to(out.get_includes_code_sink())
+        else:
+            assert module_file_base_name is None, "only root modules can generate with alternate module_file_base_name"
 
         ## generate the submodules
         for submodule in self.submodules:
@@ -590,9 +593,13 @@ class ModuleBase(dict):
 
         m = self.declarations.declare_variable('PyObject*', 'm')
         assert m == 'm'
+        if module_file_base_name is None:
+            mod_init_name = '.'.join(self.get_module_path())
+        else:
+            mod_init_name = module_file_base_name
         self.before_init.write_code(
             "m = Py_InitModule3(\"%s\", %s_functions, %s);"
-            % ('.'.join(self.get_module_path()), self.prefix,
+            % (mod_init_name, self.prefix,
                self.docstring and '"'+self.docstring+'"' or 'NULL'))
         self.before_init.write_error_check("m == NULL")
 
@@ -673,7 +680,10 @@ class ModuleBase(dict):
             main_sink.writeln("PyMODINIT_FUNC")
         else:
             main_sink.writeln("static PyObject *")
-        main_sink.writeln("%s(void)" % (self.init_function_name,))
+        if module_file_base_name is None:
+            main_sink.writeln("%s(void)" % (self.init_function_name,))
+        else:
+            main_sink.writeln("init%s(void)" % (module_file_base_name,))
         main_sink.writeln('{')
         main_sink.indent()
         self.declarations.get_code_sink().flush_to(main_sink)
@@ -699,9 +709,14 @@ class Module(ModuleBase):
         """
         super(Module, self).__init__(name, docstring=docstring, cpp_namespace=cpp_namespace)
 
-    def generate(self, out):
+    def generate(self, out, module_file_base_name=None):
         """Generates the module
-        @type out: file, L{FileCodeSink}, or L{MultiSectionFactory}
+        @type out: a file object, L{FileCodeSink}, or L{MultiSectionFactory}
+
+        @param module_file_base_name: base name of the module file.
+        This is useful when we want to produce a _foo module that will
+        be imported into a foo module, to avoid making all types
+        docstrings contain _foo.Xpto instead of foo.Xpto.
         """
         if isinstance(out, file):
             out = FileCodeSink(out)
@@ -711,7 +726,7 @@ class Module(ModuleBase):
             sink_manager = _MultiSectionSinkManager(out)
         else:
             raise TypeError
-        self.do_generate(sink_manager)
+        self.do_generate(sink_manager, module_file_base_name)
         sink_manager.close()
 
 
