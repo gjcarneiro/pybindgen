@@ -849,7 +849,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             if self._class_has_virtual_methods(cls):
                 kwargs.setdefault('allow_subclassing', True)
 
-            if not self._class_has_public_destructor(cls):
+            if not type_traits.has_public_destructor(cls):
                 kwargs.setdefault('is_singleton', True)
 
     def _scan_namespace_types(self, module, module_namespace, outer_class=None, pygen_register_function_name=None):
@@ -1202,17 +1202,10 @@ pybindgen.settings.error_handler = ErrorHandler()
                     return True
         return False
 
-    def _class_has_public_destructor(self, cls):
-        """return True if cls has a public destructor, else False"""
-        for member in cls.get_members('public'):
-            if isinstance(member, calldef.destructor_t):
-                return True
-        return False
-
-    def _is_ostream(self,type):
-        return isinstance (type, cpptypes.reference_t) \
-            and not isinstance (type.base, cpptypes.const_t) \
-            and str (type.base) == 'std::ostream'
+    def _is_ostream(self, cpp_type):
+        return (isinstance (cpp_type, cpptypes.reference_t)
+                and not isinstance(cpp_type.base, cpptypes.const_t)
+                and str(cpp_type.base) == 'std::ostream')
 
     def _scan_class_methods(self, cls, class_wrapper, pygen_sink):
         have_trivial_constructor = False
