@@ -3,7 +3,7 @@
 # pylint: disable-msg=C0111
 
 from base import ReturnValue, Parameter, PointerParameter, PointerReturnValue, \
-     ReverseWrapperBase, ForwardWrapperBase, TypeConfigurationError
+     ReverseWrapperBase, ForwardWrapperBase, TypeConfigurationError, NotSupportedError
 
 
 class IntParam(Parameter):
@@ -37,6 +37,76 @@ class UnsignedIntParam(Parameter):
         wrapper.parse_params.add_parameter('I', ['&'+name], self.name, optional=bool(self.default_value))
         wrapper.call_params.append(name)
 
+
+class UnsignedIntPtrParam(PointerParameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT, Parameter.DIRECTION_INOUT]
+    CTYPES = ['unsigned int*', 'uint32_t*']
+
+    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False,
+                 default_value=None, transfer_ownership=False, array_length=None):
+        super(UnsignedIntPtrParam, self).__init__(ctype, name, direction, is_const, default_value, transfer_ownership)
+        self.array_length = array_length
+        if transfer_ownership:
+            raise NotSupportedError("%s: transfer_ownership=True not yet implemented." % ctype)
+
+    def convert_c_to_python(self, wrapper):
+        if self.direction & self.DIRECTION_IN:
+            wrapper.build_params.add_parameter('I', ['*'+self.value])
+
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.parse_params.add_parameter('I', [self.value], self.name)
+
+    def convert_python_to_c(self, wrapper):
+        #assert self.ctype == 'unsigned int*'
+        if self.array_length is None:
+            name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
+            wrapper.call_params.append('&'+name)
+            if self.direction & self.DIRECTION_IN:
+                wrapper.parse_params.add_parameter('I', ['&'+name], self.name)
+            if self.direction & self.DIRECTION_OUT:
+                wrapper.build_params.add_parameter('I', [name])
+
+        else: # complicated code path to deal with arrays...
+
+            name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name, array="[%i]" % self.array_length)
+            py_list = wrapper.declarations.declare_variable("PyObject*", "py_list")
+            idx = wrapper.declarations.declare_variable("int", "idx")
+            wrapper.call_params.append(name)
+            if self.direction & self.DIRECTION_IN:
+                elem = wrapper.declarations.declare_variable("PyObject*", "element")
+                wrapper.parse_params.add_parameter('O!', ['&PyList_Type', '&'+py_list], self.name)
+                wrapper.before_call.write_error_check(
+                        'PyList_Size(%s) != %i' % (py_list, self.array_length),
+                        'PyErr_SetString(PyExc_TypeError, "Parameter `%s\' must be a list of %i ints/longs");'
+                        % (self.name, self.array_length))
+
+                wrapper.before_call.write_code(
+                    "for (%s = 0; %s < %i; %s++) {" % (idx, idx, self.array_length, idx))
+                wrapper.before_call.indent()
+
+                wrapper.before_call.write_code("%(elem)s = PyList_GET_ITEM(%(py_list)s, %(idx)s);" % vars())
+                wrapper.before_call.write_error_check(
+                        '!(PyInt_Check(%(elem)s) || PyLong_Check(%(elem)s))',
+                        'PyErr_SetString(PyExc_TypeError, "Parameter `%s\' must be a list of %i ints / longs");'
+                        % (self.name, self.array_length))
+                wrapper.before_call.write_code("%(name)s[%(idx)s] = PyLong_AsUnsignedInt(%(elem)s);" % vars())
+
+                wrapper.before_call.unindent()
+                wrapper.before_call.write_code('}')
+
+            if self.direction & self.DIRECTION_OUT:
+                wrapper.after_call.write_code("%s = PyList_New(%i);" % (py_list, self.array_length))
+
+                wrapper.after_call.write_code(
+                    "for (%s = 0; %s < %i; %s++) {" % (idx, idx, self.array_length, idx))
+                wrapper.after_call.indent()
+                wrapper.after_call.write_code("PyList_SET_ITEM(%(py_list)s, %(idx)s, PyLong_FromUnsignedLong(%(name)s[%(idx)s]));"
+                                              % vars())
+                wrapper.after_call.unindent()
+                wrapper.after_call.write_code('}')
+
+                wrapper.build_params.add_parameter("N", [py_list])
 
 class IntReturn(ReturnValue):
 
