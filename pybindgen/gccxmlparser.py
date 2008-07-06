@@ -849,8 +849,16 @@ pybindgen.settings.error_handler = ErrorHandler()
             if self._class_has_virtual_methods(cls):
                 kwargs.setdefault('allow_subclassing', True)
 
-            if not type_traits.has_public_destructor(cls):
+            if not self._has_public_destructor(cls):
                 kwargs.setdefault('is_singleton', True)
+                #print >> sys.stderr, "##### class %s has no public destructor" % cls.decl_string
+
+    def _has_public_destructor(self, cls):
+        for member in cls.get_members():
+            if isinstance(member, calldef.destructor_t):
+                if member.access_type != 'public':
+                    return False
+        return True
 
     def _scan_namespace_types(self, module, module_namespace, outer_class=None, pygen_register_function_name=None):
         root_module = module.get_root()
