@@ -852,10 +852,10 @@ class CppClass(object):
             return
         for cons in self.parent.constructors:
             if len(cons.parameters) == 0:
-                self.add_constructor([])
+                self.add_constructor([], visibility=cons.visibility)
             elif (len(cons.parameters) == 1
                   and isinstance(cons.parameters[0], self.parent.ThisClassRefParameter)):
-                self.add_constructor([self.ThisClassRefParameter()])
+                self.add_constructor([self.ThisClassRefParameter()], visibility=cons.visibility)
 
     def get_helper_class(self):
         """gets the "helper class" for this class wrapper, creating it if necessary"""
@@ -1086,7 +1086,7 @@ public:
         wrapper.set_class(self)
         self.constructors.append(wrapper)
         if not wrapper.parameters:
-            self.has_trivial_constructor = True
+            self.has_trivial_constructor = True # FIXME: I don't remember what is this used for anymore, maybe remove
 
     def add_output_stream_operator(self):
         """

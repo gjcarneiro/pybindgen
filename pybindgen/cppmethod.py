@@ -396,9 +396,10 @@ class CppConstructor(ForwardWrapperBase):
             self.before_call.write_code("} else {")
             self.before_call.indent()
 
+            self.before_call.write_code("// visibility: %r" % self.visibility)
             try:
-                if self.visibility not in ['public', 'protected']:
-                    raise CodeGenerationError("private constructor")
+                if self.visibility not in ['public']:
+                    raise CodeGenerationError("private/protected constructor")
                 class_.get_construct_name()
             except CodeGenerationError:
                 self.before_call.write_code('PyErr_SetString(PyExc_TypeError, "class \'%s\' '
