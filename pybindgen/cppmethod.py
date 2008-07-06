@@ -281,9 +281,9 @@ class DummyReturnValue(ReturnValue):
             args, kwargs = utils.parse_retval_spec(arg)
             super(DummyReturnValue, self).__init__(args[0])
     def convert_c_to_python(self, wrapper):
-        raise CodeGenerationError
+        raise TypeError("this is a DummyReturnValue")
     def convert_python_to_c(self, wrapper):
-        raise CodeGenerationError
+        raise TypeError("this is a DummyReturnValue")
     def get_c_error_return(self):
         return ''
 
@@ -308,9 +308,9 @@ class DummyParameter(Parameter):
             super(DummyParameter, self).__init__(args[0], args[1])
 
     def convert_c_to_python(self, wrapper):
-        raise CodeGenerationError
+        raise TypeError("this is a DummyParameter")
     def convert_python_to_c(self, wrapper):
-        raise CodeGenerationError
+        raise TypeError("this is a DummyParameter")
 
 
 class CppDummyMethod(CppMethod):
@@ -397,8 +397,8 @@ class CppConstructor(ForwardWrapperBase):
             self.before_call.indent()
 
             try:
-                if self.visibility != 'public':
-                    raise CodeGenerationError
+                if self.visibility not in ['public', 'protected']:
+                    raise CodeGenerationError("private constructor")
                 class_.get_construct_name()
             except CodeGenerationError:
                 self.before_call.write_code('PyErr_SetString(PyExc_TypeError, "class \'%s\' '

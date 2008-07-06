@@ -83,16 +83,20 @@ class CppHelperClass(object):
             if method.matches_signature(existing):
                 return # don't re-add already existing method
         
-        self.virtual_methods.append(method)
-        if not method.is_pure_virtual:
-            if method.visibility in ['public', 'protected']:
-                parent_caller = CppVirtualMethodParentCaller(method)
-                parent_caller.main_wrapper = method
-                self.add_virtual_parent_caller(parent_caller)
+        if isinstance(method, CppDummyMethod):
+            if method.is_pure_virtual:
+                self.cannot_be_constructed = True
+        else:
+            self.virtual_methods.append(method)
+            if not method.is_pure_virtual:
+                if method.visibility in ['public', 'protected']:
+                    parent_caller = CppVirtualMethodParentCaller(method)
+                    parent_caller.main_wrapper = method
+                    self.add_virtual_parent_caller(parent_caller)
 
-        proxy = CppVirtualMethodProxy(method)
-        proxy.main_wrapper = method
-        self.add_virtual_proxy(proxy)
+            proxy = CppVirtualMethodProxy(method)
+            proxy.main_wrapper = method
+            self.add_virtual_proxy(proxy)
         
         
     def add_virtual_parent_caller(self, parent_caller):
