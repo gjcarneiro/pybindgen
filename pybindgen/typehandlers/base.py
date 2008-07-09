@@ -365,15 +365,24 @@ class BuildValueParameters(object):
         else:
             self._build_value_items.append(item)
 
-    def get_parameters(self):
+    def get_parameters(self, force_tuple_creation=False):
         """returns a list of parameters to pass into a
         Py_BuildValue-style function call, the first paramter in
-        the list being the template string."""
+        the list being the template string.
+
+        @param force_tuple_creation: if True, Py_BuildValue is
+        instructed to always create a tuple, even for zero or 1
+        values.
+        """
         template = ['"']
+        if force_tuple_creation:
+            template.append('(')
         params = [None]
         for (param_template, param_values, dummy) in self._build_value_items:
             template.append(param_template)
             params.extend(param_values)
+        if force_tuple_creation:
+            template.append(')')
         template.append('"')
         params[0] = ''.join(template)
         return params
