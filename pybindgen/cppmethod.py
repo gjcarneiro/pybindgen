@@ -279,7 +279,30 @@ class CppMethod(ForwardWrapperBase):
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
                (method_name, self.wrapper_actual_name, '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
-    
+
+    def __str__(self):
+        if self.class_ is None:
+            cls_name = "???"
+        else:
+            cls_name = self.class_.full_name
+        if self.is_const:
+            const = ' const'
+        else:
+            const = ''
+        if self.is_virtual:
+            virtual = "virtual "
+        else:
+            virtual = ''
+        if self.is_pure_virtual:
+            pure_virtual = " = 0"
+        else:
+            pure_virtual = ''
+        
+        return ("%s: %s%s %s::%s (%s)%s%s;" %
+                (self.visibility, virtual, self.return_value.ctype, cls_name, self.method_name,
+                 ', '.join(["%s %s" % (param.ctype, param.name) for param in self.parameters]),
+                 const, pure_virtual))
+
 
 class CppOverloadedMethod(overloading.OverloadedWrapper):
     "Support class for overloaded methods"
