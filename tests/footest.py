@@ -719,6 +719,22 @@ class TestFoo(unittest.TestCase):
         inner.Do ()
         self.assertEqual (True, True)
 
+    def test_overloaded_methods_and_inheritance(self):
+        """https://bugs.launchpad.net/pybindgen/+bug/246069"""
+
+        sock = foo.Socket()
+        self.assertEqual(sock.Bind(), -1)
+        self.assertEqual(sock.Bind(123), 123)
+
+        udpsock = foo.UdpSocket()
+        self.assertEqual(udpsock.Bind(), 0)
+        try:
+            self.assertEqual(udpsock.Bind(123), 123)
+        except TypeError, ex:
+            pass
+        else:
+            self.fail("UdpSocket.Bind(int) was not supposed to work")
+            
 
 if __name__ == '__main__':
     unittest.main()

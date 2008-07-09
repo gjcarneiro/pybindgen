@@ -94,10 +94,21 @@ class CppMethod(ForwardWrapperBase):
         self.custom_name = (custom_name or custom_template_method_name)
 
         self._class = None
+        self._helper_class = None
         self.docstring = None
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
         #self.static_decl = True
+
+    def set_helper_class(self, helper_class):
+        "Set the C++ helper class, which is used for overriding virtual methods"
+        self._helper_class = helper_class
+        self.wrapper_base_name = "%s::_wrap_%s" % (self._helper_class.name, self.method_name)
+    def get_helper_class(self):
+        "Get the C++ helper class, which is used for overriding virtual methods"
+        return self._helper_class
+    helper_class = property(get_helper_class, set_helper_class)
+
 
     def matches_signature(self, other):
         if self.mangled_name != other.mangled_name:
@@ -132,7 +143,8 @@ class CppMethod(ForwardWrapperBase):
                          is_static=self.is_static,
                          template_parameters=self.template_parameters,
                          is_virtual=self.is_virtual,
-                         is_const=self.is_const)
+                         is_const=self.is_const,
+                         visibility=self.visibility)
         meth._class = self._class
         meth.docstring = self.docstring
         meth.wrapper_base_name = self.wrapper_base_name
@@ -181,6 +193,18 @@ class CppMethod(ForwardWrapperBase):
         CppClass parameters"""
         cppclass.implement_parameter_custodians(self)
 
+    def _get_pystruct(self):
+        # When a method is used in the context of a helper class, we
+        # should use the pystruct of the helper class' class.
+        #
+        # self.class_: original base class where the method is defined
+        # self._helper_class.class_: subclass that is inheriting the method
+        #
+        if self._helper_class is None:
+            return self.class_.pystruct
+        else:
+            return self._helper_class.class_.pystruct
+
     def get_wrapper_signature(self, wrapper_name, extra_wrapper_params=()):
         flags = self.get_py_method_def_flags()
 
@@ -195,15 +219,16 @@ class CppMethod(ForwardWrapperBase):
 #             extra = ', '.join([''] + list(extra_wrapper_params))
 #         else:
 #             extra = ''
+
         if 'METH_VARARGS' in flags:
             if 'METH_KEYWORDS' in flags:
-                self.wrapper_args = ["%s *%s" % (self.class_.pystruct, _self_name),
+                self.wrapper_args = ["%s *%s" % (self._get_pystruct(), _self_name),
                                      "PyObject *args", "PyObject *kwargs"]
             else:
                 assert not extra_wrapper_params, \
                     "extra_wrapper_params can only be used with"\
                     " full varargs/kwargs wrappers"
-                self.wrapper_args = ["%s *%s" % (self.class_.pystruct, _self_name),
+                self.wrapper_args = ["%s *%s" % (self._get_pystruct(), _self_name),
                                      "PyObject *args"]
         else:
             assert not extra_wrapper_params, \
@@ -211,7 +236,7 @@ class CppMethod(ForwardWrapperBase):
             if 'METH_STATIC' in flags:
                 self.wrapper_args = ['void']
             else:
-                self.wrapper_args = ["%s *%s" % (self.class_.pystruct, _self_name)]
+                self.wrapper_args = ["%s *%s" % (self._get_pystruct(), _self_name)]
         self.wrapper_args.extend(extra_wrapper_params)
 
         return self.wrapper_return, "%s(%s)" % (self.wrapper_actual_name, ', '.join(self.wrapper_args))
@@ -558,22 +583,16 @@ class CppVirtualMethodParentCaller(CppMethod):
         """
         super(CppVirtualMethodParentCaller, self).__init__(
             method.method_name, method.return_value, method.parameters, unblock_threads=unblock_threads)
-        self._helper_class = None
         #self.static_decl = False
         self.method = method
 
-    def set_class(self, class_):
-        "Set the class wrapper object (CppClass)"
-        self._class = class_
+    def get_class(self):
+        return self.method.class_
+    class_ = property(get_class)
 
-    def set_helper_class(self, helper_class):
-        "Set the C++ helper class, which is used for overriding virtual methods"
-        self._helper_class = helper_class
-        self.wrapper_base_name = "%s::_wrap_%s" % (self._helper_class.name, self.method_name)
-    def get_helper_class(self):
-        "Get the C++ helper class, which is used for overriding virtual methods"
-        return self._helper_class
-    helper_class = property(get_helper_class, set_helper_class)
+    #def set_class(self, class_):
+    #    "Set the class wrapper object (CppClass)"
+    #    self._class = class_
 
     def generate_declaration(self, code_sink, extra_wrapper_parameters=()):
         ## We need to fake generate the code (and throw away the
@@ -608,18 +627,16 @@ class CppVirtualMethodParentCaller(CppMethod):
                 ', '.join([join_ctype_and_name(param.ctype, param.name) for param in self.parameters])
                 ))
         if self.return_value.ctype == 'void':
-            code_sink.writeln('{ %s::%s(%s); }' % (self._class.full_name, self.method_name,
+            code_sink.writeln('{ %s::%s(%s); }' % (self.method.class_.full_name, self.method_name,
                                                    ', '.join([param.name for param in self.parameters])))
         else:
-            code_sink.writeln('{ return %s::%s(%s); }' % (self._class.full_name, self.method_name,
+            code_sink.writeln('{ return %s::%s(%s); }' % (self.method.class_.full_name, self.method_name,
                                                           ', '.join([param.name for param in self.parameters])))        
 
 
     def generate_call(self, class_=None):
         "virtual method implementation; do not call"
-        #assert isinstance(class_, CppClass)
-        if class_ is None:
-            class_ = self._class
+        class_ = self.class_
         method = 'reinterpret_cast< %s* >(self->obj)->%s__parent_caller' % (self._helper_class.name, self.method_name)
         if self.return_value.ctype == 'void':
             self.before_call.write_code(
@@ -646,7 +663,7 @@ class CppVirtualMethodParentCaller(CppMethod):
             method_name = self.method_name
         flags = self.get_py_method_def_flags()
         return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
-               ('_'+method_name,
+               (method_name,
                 self.wrapper_actual_name,#'::'.join((self._helper_class.name, self.wrapper_actual_name)),
                 '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
@@ -661,7 +678,8 @@ class CppVirtualMethodParentCaller(CppMethod):
             self.return_value,
             self.method_name,
             [copy(param) for param in self.parameters])
-        meth._class = self._class
+        #meth._class = self._class
+        meth.method = self.method
         meth._helper_class = self._helper_class
         meth.docstring = self.docstring
         meth.wrapper_base_name = self.wrapper_base_name
@@ -682,19 +700,12 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         super(CppVirtualMethodProxy, self).__init__(method.return_value, method.parameters)
         self.method_name = method.method_name
         self.method = method
-        self._class = None
         self._helper_class = None
 
-
-    def set_class(self, class_):
-        "Set the class wrapper object (CppClass)"
-        assert isinstance(class_, cppclass.CppClass)
-        self._class = class_
     def get_class(self):
         "Get the class wrapper object (CppClass)"
-        return self._class
-    class_ = property(get_class, set_class)
-
+        return self.method.class_
+    class_ = property(get_class)
 
     def set_helper_class(self, helper_class):
         "Set the C++ helper class, which is used for overriding virtual methods"
@@ -746,7 +757,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         if self.return_value.ctype == 'void':
             if not (self.method.is_pure_virtual or self.method.visibility == 'private'):
                 self.before_call.write_code(r'    %s::%s(%s);'
-                                            % (self._class.full_name, self.method_name, call_params))
+                                            % (self.class_.full_name, self.method_name, call_params))
             self.before_call.write_code(r'    return;')
         else:
             if self.method.is_pure_virtual or self.method.visibility == 'private':
@@ -760,7 +771,7 @@ Py_FatalError("Error detected, but parent virtual is pure virtual or private vir
               "and return is a class without trival constructor");''')
             else:
                 self.set_error_return("PyErr_Print();\nreturn %s::%s(%s);"
-                                      % (self._class.full_name, self.method_name, call_params))
+                                      % (self.class_.full_name, self.method_name, call_params))
             self.before_call.indent()
             self.before_call.write_code(self.error_return)
             self.before_call.unindent()
@@ -768,18 +779,18 @@ Py_FatalError("Error detected, but parent virtual is pure virtual or private vir
 
         ## Set "m_pyself->obj = this" around virtual method call invocation
         self_obj_before = self.declarations.declare_variable(
-            '%s*' % self._class.full_name, 'self_obj_before')
+            '%s*' % self.class_.full_name, 'self_obj_before')
         self.before_call.write_code("%s = reinterpret_cast< %s* >(m_pyself)->obj;" %
-                                    (self_obj_before, self._class.pystruct))
+                                    (self_obj_before, self.class_.pystruct))
         if self.method.is_const:
             this_expression = ("const_cast< %s* >((const %s*) this)" %
-                               (self._class.full_name, self._class.full_name))
+                               (self.class_.full_name, self.class_.full_name))
         else:
-            this_expression = "(%s*) this" % (self._class.full_name)
+            this_expression = "(%s*) this" % (self.class_.full_name)
         self.before_call.write_code("reinterpret_cast< %s* >(m_pyself)->obj = %s;" %
-                                    (self._class.pystruct, this_expression))
+                                    (self.class_.pystruct, this_expression))
         self.before_call.add_cleanup_code("reinterpret_cast< %s* >(m_pyself)->obj = %s;" %
-                                          (self._class.pystruct, self_obj_before))
+                                          (self.class_.pystruct, self_obj_before))
         
         super(CppVirtualMethodProxy, self).generate(
             code_sink, '::'.join((self._helper_class.name, self.method_name)),
@@ -810,7 +821,7 @@ class CustomCppMethodWrapper(CppMethod):
     def generate(self, code_sink, dummy_wrapper_name=None, extra_wrapper_params=()):
         assert extra_wrapper_params == ["PyObject **return_exception"]
 
-        self.wrapper_args = ["%s *self" % self._class.pystruct, "PyObject *args", "PyObject *kwargs", "PyObject **return_exception"]
+        self.wrapper_args = ["%s *self" % self.class_.pystruct, "PyObject *args", "PyObject *kwargs", "PyObject **return_exception"]
         self.wrapper_return = "PyObject *"
         if self.wrapper_body is not None:
             code_sink.writeln(self.wrapper_body)
@@ -848,7 +859,7 @@ class CustomCppConstructorWrapper(CppConstructor):
         assert extra_wrapper_params == ["PyObject **return_exception"]
         code_sink.writeln(self.wrapper_body)
         return ("int %s (%s *self, PyObject *args, PyObject *kwargs, PyObject **return_exception)"
-                % (self.wrapper_actual_name, self._class.pystruct))
+                % (self.wrapper_actual_name, self.class_.pystruct))
 
     def generate_call(self, *args, **kwargs):
         pass

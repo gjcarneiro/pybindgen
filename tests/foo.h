@@ -655,4 +655,18 @@ typedef void (*Callback) (void);
 void function_that_takes_callback (Callback cb);
 
 
+// <Bug #246069>
+struct Socket
+{
+    virtual int Bind () { return -1; }
+    virtual int Bind (int address) { return address; }
+};
+
+struct UdpSocket : public Socket
+{
+    virtual int Bind () { return 0; }
+};
+// </Bug #246069>
+
+
 #endif 	    /* !FOO_H_ */

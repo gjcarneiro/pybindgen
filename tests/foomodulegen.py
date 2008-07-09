@@ -345,7 +345,14 @@ int %s::custom_method_added_by_a_hook(int x)
     inner.add_method('Do', 'void', [])
     
 
+    Socket = mod.add_class('Socket', allow_subclassing=True)
+    Socket.add_constructor([])
+    Socket.add_method('Bind', ReturnValue.new('int'), [], is_virtual=True)
+    Socket.add_method('Bind', ReturnValue.new('int'), [Parameter.new('int', 'address')], is_virtual=True)
 
+    UdpSocket = mod.add_class('UdpSocket', parent=Socket)
+    UdpSocket.add_constructor([])
+    UdpSocket.add_method('Bind', ReturnValue.new('int'), [], is_virtual=True)
 
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):

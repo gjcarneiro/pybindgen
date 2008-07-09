@@ -78,6 +78,7 @@ class CppHelperClass(object):
 
     def add_virtual_method(self, method):
         assert method.is_virtual
+        assert method.class_ is not None
 
         for existing in self.virtual_methods:
             if method.matches_signature(existing):
@@ -91,11 +92,13 @@ class CppHelperClass(object):
             if not method.is_pure_virtual:
                 if method.visibility in ['public', 'protected']:
                     parent_caller = CppVirtualMethodParentCaller(method)
-                    parent_caller.main_wrapper = method
+                    #parent_caller.class_ = method.class_
+                    parent_caller.helper_class = self
+                    parent_caller.main_wrapper = method # XXX: need to explain this
                     self.add_virtual_parent_caller(parent_caller)
 
             proxy = CppVirtualMethodProxy(method)
-            proxy.main_wrapper = method
+            proxy.main_wrapper = method # XXX: need to explain this
             self.add_virtual_proxy(proxy)
         
         
@@ -116,8 +119,6 @@ class CppHelperClass(object):
             overload.pystruct = self.class_.pystruct
             self.virtual_parent_callers[name] = overload
             assert self.class_ is not None
-        parent_caller.class_ = self.class_
-        parent_caller.helper_class = self
         overload.add(parent_caller)
 
     def add_custom_method(self, declaration, body=None):
@@ -202,7 +203,7 @@ void set_pyobj(PyObject *pyobj)
             
         ## write the parent callers (_name)
         for parent_caller in self.virtual_parent_callers.itervalues():
-            parent_caller.class_ = self.class_
+            #parent_caller.class_ = self.class_
             parent_caller.helper_class = self
             parent_caller.reset_code_generation_state()
             ## test code generation
@@ -224,11 +225,11 @@ void set_pyobj(PyObject *pyobj)
 
         ## write the virtual proxies
         for virtual_proxy in self.virtual_proxies:
-            virtual_proxy.class_ = self.class_
+            #virtual_proxy.class_ = self.class_
             virtual_proxy.helper_class = self
             ## test code generation
-            virtual_proxy.class_ = self.class_
-            virtual_proxy.helper_class = self
+            #virtual_proxy.class_ = self.class_
+            #virtual_proxy.helper_class = self
             virtual_proxy.reset_code_generation_state()
             try:
                 try:
@@ -262,7 +263,7 @@ void set_pyobj(PyObject *pyobj)
         ## write the parent callers (_name)
         method_defs = []
         for name, parent_caller in self.virtual_parent_callers.iteritems():
-            parent_caller.class_ = self.class_
+            #parent_caller.class_ = self.class_
             parent_caller.helper_class = self
             code_sink.writeln()
 
@@ -272,11 +273,11 @@ void set_pyobj(PyObject *pyobj)
                                                (code_sink,), {}, parent_caller)
             except utils.SkipWrapper:
                 continue
-            method_defs.append(parent_caller.get_py_method_def(name))
+            method_defs.append(parent_caller.get_py_method_def('_' + name))
                 
         ## write the virtual proxies
         for virtual_proxy in self.virtual_proxies:
-            virtual_proxy.class_ = self.class_
+            #virtual_proxy.class_ = self.class_
             virtual_proxy.helper_class = self
             code_sink.writeln()
 
@@ -966,6 +967,8 @@ public:
         else:
             raise TypeError
         
+        method.class_ = self
+
         if method.visibility == 'public':
             try:
                 overload = self.methods[name]
@@ -974,11 +977,45 @@ public:
                 overload.pystruct = self.pystruct
                 self.methods[name] = overload
 
-            method.class_ = self
+            ## add it....
             try:
                 utils.call_with_error_handling(overload.add, (method,), {}, method)
             except utils.SkipWrapper:
                 return
+
+
+            # Grr! I hate C++.  Overloading + inheritance = disaster!
+            # So I ended up coding something which C++ does not in
+            # fact support, but I feel bad to just throw away my good
+            # code due to a C++ fault, so I am leaving here the code
+            # disabled.  Maybe some future C++ version will come along
+            # and fix this problem, who knows :P
+            if 0:
+                # due to a limitation of the pybindgen overloading
+                # strategy, we need to re-wrap for this class all
+                # methods with the same name and different signature
+                # from parent classes.
+                overload._compute_all_wrappers()
+                if isinstance(method, CppMethod):
+                    mro = self.get_mro()
+                    mro.next() # skip 'self'
+                    for cls in mro:
+                        try:
+                            parent_overload = cls.methods[name]
+                        except KeyError:
+                            continue
+                        parent_overload._compute_all_wrappers()
+                        for parent_method in parent_overload.all_wrappers:
+                            already_exists = False
+                            for existing_method in overload.all_wrappers:
+                                if existing_method.matches_signature(parent_method):
+                                    already_exists = True
+                                    break
+                            if not already_exists:
+                                new_method = parent_method.clone()
+                                new_method.class_ = self
+                                overload.add(new_method)
+            
         else:
             self.nonpublic_methods.append(method)
         if method.is_virtual:
@@ -1030,6 +1067,7 @@ public:
                     ## recorded in the class, even if the method is
                     ## not wrapped.
                     method = CppDummyMethod(*args, **kwargs)
+                    method.class_ = self
                     self._dummy_methods.append(method)
                     self._have_pure_virtual_methods = None
                     helper_class = self.get_helper_class()
@@ -1214,6 +1252,7 @@ public:
             for method in cls.get_all_methods():
                 if not method.is_virtual:
                     continue
+                method = method.clone()
                 self.helper_class.add_virtual_method(method)
 
 
