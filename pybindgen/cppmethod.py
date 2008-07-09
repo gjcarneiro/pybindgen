@@ -143,6 +143,7 @@ class CppMethod(ForwardWrapperBase):
                          is_static=self.is_static,
                          template_parameters=self.template_parameters,
                          is_virtual=self.is_virtual,
+                         is_pure_virtual=self.is_pure_virtual,
                          is_const=self.is_const,
                          visibility=self.visibility)
         meth._class = self._class
