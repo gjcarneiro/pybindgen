@@ -387,7 +387,7 @@ class CppClass(object):
                           name of the method that returns the current reference count.
         @param free_function: name of C function used to deallocate class instances
         @param incref_function: same as incref_method, but as a function instead of method
-        @param decref_method: same as decref_method, but as a function instead of method
+        @param decref_function: same as decref_method, but as a function instead of method
         @param python_name: name of the class as it will appear from Python side
         """
         assert outer_class is None or isinstance(outer_class, CppClass)
