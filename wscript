@@ -217,6 +217,7 @@ def shutdown():
                                    "--pstat=build/foomodulegen-auto.pstat",
                                    "--pstat=build/foomodulegen.pstat",
                                    "--pstat=build/hellomodulegen.pstat",
+                                   "--no-private",
                                    ]).wait()
         if retval:
             raise Params.fatal("epydoc returned with code %i" % retval)
