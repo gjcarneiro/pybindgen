@@ -77,9 +77,10 @@ The final program is pretty short:::
   mod.add_function('MyModuleDoAction', None, [])
   mod.generate(sys.stdout)
 
-This very small example is located in the tutorial/first-example directory
-together with a small makefile which will build our small C library, the
-bridging code, and a python module:::
+This very small example is located in the
+U{tutorial/first-example<http://pybindgen.googlecode.com/svn/trunk/tutorial/>}
+directory together with a small makefile which will build our small C
+library, the bridging code, and a python module:::
 
   mathieu@ns-test:~/code/pybindgen$ cd tutorial/first-example/
   mathieu@ns-test:~/code/pybindgen/tutorial/first-example$ make
