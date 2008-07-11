@@ -354,6 +354,11 @@ int %s::custom_method_added_by_a_hook(int x)
     UdpSocket.add_constructor([])
     UdpSocket.add_method('Bind', ReturnValue.new('int'), [], is_virtual=True)
 
+    simple_struct_t = mod.add_struct('simple_struct_t')
+    simple_struct_t.add_instance_attribute('xpto', 'int')
+
+
+
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):
         def __init__(self):

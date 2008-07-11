@@ -669,4 +669,10 @@ struct UdpSocket : public Socket
 // </Bug #246069>
 
 
+struct simple_struct_t
+{
+    int xpto;
+};
+
+
 #endif 	    /* !FOO_H_ */

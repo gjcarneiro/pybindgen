@@ -457,6 +457,35 @@ class ModuleBase(dict):
         self._add_class_obj(cls)
         return cls
 
+    def add_struct(self, *args, **kwargs):
+        """
+        Add a struct to the module.
+
+        In addition to the parameters accepted by
+        L{CppClass.__init__}, this method accepts the following
+        keyword parameters:
+
+          - no_constructor (bool): if True, the structure will not
+            have a constructor by default (if omitted, it will be
+            considered to have a trivial constructor).
+
+        """
+
+        try:
+            no_constructor = kwargs['no_constructor']
+        except KeyError:
+            no_constructor = False
+        else:
+            del kwargs['no_constructor']
+        
+        struct = CppClass(*args, **kwargs)
+        struct.stack_where_defined = traceback.extract_stack()
+        self._add_class_obj(struct)
+        if not no_constructor:
+            struct.add_constructor([])
+        return struct
+
+
     def add_cpp_namespace(self, name):
         """
         Add a nested module namespace corresponding to a C++

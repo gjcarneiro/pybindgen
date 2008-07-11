@@ -734,7 +734,12 @@ class TestFoo(unittest.TestCase):
             pass
         else:
             self.fail("UdpSocket.Bind(int) was not supposed to work")
-            
+
+    def test_struct(self):
+        struct = foo.simple_struct_t()
+        struct.xpto = 123
+        self.assertEqual(struct.xpto, 123)
+
 
 if __name__ == '__main__':
     unittest.main()
