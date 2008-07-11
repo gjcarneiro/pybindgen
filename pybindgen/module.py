@@ -73,7 +73,7 @@ class MultiSectionFactory(object):
        Typically this header file contains function prototypes and
        type definitions.
 
-    @see: L{Module.enable_multi_section}
+    @see: L{Module.generate}
 
     """
     def get_section_code_sink(self, section_name):
