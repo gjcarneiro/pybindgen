@@ -75,13 +75,6 @@ class CppMethod(ForwardWrapperBase):
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
 
-        return_value = utils.eval_retval(return_value, self)
-        parameters = [utils.eval_param(param, self) for param in parameters]
-
-        super(CppMethod, self).__init__(
-            return_value, parameters,
-            "return NULL;", "return NULL;",
-            unblock_threads=unblock_threads)
         assert visibility in ['public', 'protected', 'private']
         self.visibility = visibility
         self.method_name = method_name
@@ -93,12 +86,22 @@ class CppMethod(ForwardWrapperBase):
 
         self.custom_name = (custom_name or custom_template_method_name)
 
+        #self.static_decl = True
         self._class = None
         self._helper_class = None
         self.docstring = None
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
-        #self.static_decl = True
+        self.return_value = None
+        self.parameters = None
+
+        return_value = utils.eval_retval(return_value, self)
+        parameters = [utils.eval_param(param, self) for param in parameters]
+
+        super(CppMethod, self).__init__(
+            return_value, parameters,
+            "return NULL;", "return NULL;",
+            unblock_threads=unblock_threads)
 
     def set_helper_class(self, helper_class):
         "Set the C++ helper class, which is used for overriding virtual methods"
@@ -282,6 +285,7 @@ class CppMethod(ForwardWrapperBase):
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
 
     def __str__(self):
+        
         if self.class_ is None:
             cls_name = "???"
         else:
@@ -299,10 +303,19 @@ class CppMethod(ForwardWrapperBase):
         else:
             pure_virtual = ''
         
+        if self.return_value is None:
+            retval = "retval?"
+        else:
+            retval = self.return_value.ctype
+
+        if self.parameters is None:
+            params = 'params?'
+        else:
+            params = ', '.join(["%s %s" % (param.ctype, param.name) for param in self.parameters])
+
         return ("%s: %s%s %s::%s (%s)%s%s;" %
-                (self.visibility, virtual, self.return_value.ctype, cls_name, self.method_name,
-                 ', '.join(["%s %s" % (param.ctype, param.name) for param in self.parameters]),
-                 const, pure_virtual))
+                (self.visibility, virtual, retval, cls_name, self.method_name,
+                 params, const, pure_virtual))
 
 
 class CppOverloadedMethod(overloading.OverloadedWrapper):
