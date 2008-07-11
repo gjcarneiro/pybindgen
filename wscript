@@ -221,7 +221,11 @@ def shutdown():
         if retval:
             raise Params.fatal("epydoc returned with code %i" % retval)
 
-        # Patch the generated CSS file to highlight literal blocks (this is a copy of pre.py-src)
+        # Patch the generated CSS file to highlight literal blocks (this is a copy of pre.py-doctest)
         css = open("apidocs/epydoc.css", "at")
-        css.write("\npre.literalblock { border: 2px solid #000000; background: #f0f0f0; color: #000000; }\n")
+        css.write("""
+pre.literalblock {  padding: .5em; margin: 1em;
+                    background: #e8f0f8; color: #000000;
+                    border: 1px solid #708890; }
+""")
         css.close()
