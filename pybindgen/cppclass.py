@@ -2038,16 +2038,20 @@ class CppClassPtrParameter(CppClassParameterBase):
                               is given.
         @param custodian: the object (custodian) that is responsible for
                      managing the life cycle of the parameter.
-                     Possible values are: None: no object is
-                     custodian; the integer -1: the return value; the
-                     integer 0: the instance of the method in which
+                     Possible values are:
+                       - None: no object is custodian;
+                       - -1: the return value object;
+                       - 0: the instance of the method in which
                      the ReturnValue is being used will become the
-                     custodian; integer > 0: parameter number,
-                     starting at 1, whose object will be used as
-                     custodian.  Note: only C++ class parameters can
-                     be used as custodians, not parameters of builtin
-                     Python types.
+                     custodian;
+                       - integer > 0: parameter number, starting at 1
+                     (i.e. not counting the self/this parameter),
+                     whose object will be used as custodian.
+
         @param is_const: if true, the parameter has a const attached to the leftmost
+
+        @note: only arguments which are instances of C++ classes
+        wrapped by PyBindGen can be used as custodians.
         """
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
@@ -2250,16 +2254,18 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         @param caller_owns_return: if true, ownership of the object pointer
                               is transferred to the caller; should be
                               omitted when custodian is given.
-        @param custodian: the object (custodian) that is responsible for
+        @param custodian: the object (custodian) that becomes responsible for
                      managing the life cycle of the return value.
-                     Possible values are: None: no object is
-                     custodian; the integer 0: the instance of the
-                     method in which the ReturnValue is being used
-                     will become the custodian; integer > 0: parameter
-                     number, starting at 1, whose object will be used
-                     as custodian.  Note: only C++ class parameters
-                     can be used as custodians, not parameters of
-                     builtin Python types.
+                     Possible values are:
+                       - None: no object is custodian;
+                       - 0: the instance of the method in which
+                     the ReturnValue is being used will become the
+                     custodian;
+                       - integer > 0: parameter number, starting at 1
+                     (i.e. not counting the self/this parameter),
+                     whose object will be used as custodian.
+        @note: only arguments which are instances of C++ classes
+        wrapped by PyBindGen can be used as custodians.
         """
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
