@@ -41,7 +41,7 @@ def pre_scan_hook(dummy_module_parser,
 
 def my_module_gen(out_file):
     out = FileCodeSink(out_file)
-    pybindgen.write_preamble(out)
+    #pybindgen.write_preamble(out)
     out.writeln("#include \"hello.h\"")
     module_parser = ModuleParser('hello')
     module_parser.add_pre_scan_hook(pre_scan_hook)

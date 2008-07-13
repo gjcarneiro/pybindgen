@@ -8,8 +8,6 @@ from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
 
 
 def my_module_gen(out_file):
-    pybindgen.write_preamble(FileCodeSink(out_file))
-
     mod = Module('f')
     mod.add_include('"f.h"')
 

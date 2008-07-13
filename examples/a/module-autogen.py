@@ -11,7 +11,6 @@ def my_module_gen():
     module = module_parser.parse([sys.argv[1]])
     module.add_include('"a.h"')
 
-    pybindgen.write_preamble(FileCodeSink(sys.stdout))
     module.generate(FileCodeSink(sys.stdout))
 
 if __name__ == '__main__':

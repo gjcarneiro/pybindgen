@@ -6,8 +6,6 @@ import pybindgen
 from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
 
 def my_module_gen(out_file):
-    pybindgen.write_preamble(FileCodeSink(out_file))
-
     mod = Module('g')
     mod.add_include('"g.h"')
 
