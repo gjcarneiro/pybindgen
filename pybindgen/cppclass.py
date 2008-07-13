@@ -1803,7 +1803,7 @@ class CppClassRefParameter(CppClassParameterBase):
                   Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_INOUT]
 
-    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False, default_value=None):
+    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False, default_value=None, default_value_type=None):
         """
         @param ctype: C type, normally 'MyClass*'
         @param name: parameter name
@@ -1812,6 +1812,7 @@ class CppClassRefParameter(CppClassParameterBase):
             ctype = self.cpp_class.full_name
         super(CppClassRefParameter, self).__init__(
             ctype, name, direction, is_const, default_value)
+        self.default_value_type = default_value_type
     
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
@@ -1827,14 +1828,24 @@ class CppClassRefParameter(CppClassParameterBase):
                 implicit_conversion_sources = self.cpp_class.get_all_implicit_conversions()
                 if not (implicit_conversion_sources and self.is_const):
                     if self.default_value is not None:
-                        self.cpp_class.get_construct_name() # raises an exception if the class cannot be constructed
                         self.py_name = wrapper.declarations.declare_variable(
                             self.cpp_class.pystruct+'*', self.name, 'NULL')
+
                         wrapper.parse_params.add_parameter(
                             'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name, optional=True)
-                        wrapper.call_params.append(
-                            '(%s ? (*((%s *) %s)->obj) : %s)' % (self.py_name, self.cpp_class.pystruct,
-                                                                 self.py_name, self.default_value))
+
+                        if self.default_value_type is not None:
+                            default_value_name = wrapper.declarations.declare_variable(
+                                self.default_value_type, "%s_default" % self.name,
+                                self.default_value)
+                            wrapper.call_params.append(
+                                '(%s ? (*((%s *) %s)->obj) : %s)' % (self.py_name, self.cpp_class.pystruct,
+                                                                     self.py_name, default_value_name))
+                        else:
+                            self.cpp_class.get_construct_name() # raises an exception if the class cannot be constructed
+                            wrapper.call_params.append(
+                                '(%s ? (*((%s *) %s)->obj) : %s)' % (self.py_name, self.cpp_class.pystruct,
+                                                                     self.py_name, self.default_value))
                     else:
                         self.py_name = wrapper.declarations.declare_variable(
                             self.cpp_class.pystruct+'*', self.name)
