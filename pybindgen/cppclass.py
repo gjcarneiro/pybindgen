@@ -860,7 +860,7 @@ class CppClass(object):
 
     def get_helper_class(self):
         """gets the "helper class" for this class wrapper, creating it if necessary"""
-        if self.helper_class_disabled:
+        if self.helper_class_disabled or not self.allow_subclassing:
             return None
         if self.helper_class is None:
             if not self.is_singleton:
