@@ -846,7 +846,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                                        AnnotationsWarning, cls.location.file_name, cls.location.line)
                 
         if isinstance(cls, class_t):
-            if self._class_has_virtual_methods(cls):
+            if self._class_has_virtual_methods(cls) and not cls.bases:
                 kwargs.setdefault('allow_subclassing', True)
 
             if not self._has_public_destructor(cls):
