@@ -2,6 +2,10 @@
 # documented in base.py)
 # pylint: disable-msg=C0111
 
+import struct
+assert struct.calcsize('i') == 4 # assumption is made that sizeof(int) == 4 for all platforms pybindgen runs on
+
+
 from base import ReturnValue, Parameter, PointerParameter, PointerReturnValue, \
      ReverseWrapperBase, ForwardWrapperBase, TypeConfigurationError, NotSupportedError
 
@@ -9,7 +13,7 @@ from base import ReturnValue, Parameter, PointerParameter, PointerReturnValue, \
 class IntParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['int']
+    CTYPES = ['int', 'int32_t']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -110,7 +114,7 @@ class UnsignedIntPtrParam(PointerParameter):
 
 class IntReturn(ReturnValue):
 
-    CTYPES = ['int']
+    CTYPES = ['int', 'int32_t']
 
     def get_c_error_return(self):
         return "return INT_MIN;"
