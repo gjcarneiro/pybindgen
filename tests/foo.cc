@@ -92,6 +92,12 @@ namespace xpto
     {
         return "hello";
     }
+
+    std::string get_foo_datum(FooXpto const &foo)
+    {
+        return foo.get_datum();
+    }
+
 }
 
 

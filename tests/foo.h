@@ -420,6 +420,10 @@ namespace xpto
 
     FooType get_foo_type ();
     void set_foo_type (FooType type);
+
+    typedef Foo FooXpto;
+
+    std::string get_foo_datum(FooXpto const &foo);
 }
 
 // -#- @return(custodian=1) -#-

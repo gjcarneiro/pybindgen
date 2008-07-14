@@ -243,6 +243,10 @@ int %s::custom_method_added_by_a_hook(int x)
     xpto_SomeClass = xpto.add_class('SomeClass')
     xpto_SomeClass.add_constructor([])
 
+    xpto.add_typedef(Foo, 'FooXpto')
+    xpto.add_function('get_foo_datum', 'std::string', [Parameter.new('xpto::FooXpto&', 'foo', is_const=True)])
+    
+
     ## ---- some implicity conversion APIs
     mod.add_function('function_that_takes_foo', ReturnValue.new('void'),
                                [Parameter.new('Foo', 'foo')])

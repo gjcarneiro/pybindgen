@@ -740,6 +740,17 @@ class TestFoo(unittest.TestCase):
         struct.xpto = 123
         self.assertEqual(struct.xpto, 123)
 
+    def test_typedef(self):
+        try:
+            f = foo.xpto.FooXpto("hello")
+        except AttributeError:
+            self.fail()
+        try:
+            r = foo.xpto.get_foo_datum(f)
+        except TypeError:
+            self.fail()
+        self.assertEqual(r, "hello")
+
 
 if __name__ == '__main__':
     unittest.main()

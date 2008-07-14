@@ -1652,6 +1652,16 @@ static void
 
         return tp_richcompare_function_name
 
+    def generate_typedef(self, module, alias):
+        """
+        Generates the appropriate Module code to register the class
+        with a new name in that module (typedef alias).
+        """
+        module.after_init.write_code(
+            'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
+                alias, self.pytypestruct))
+        
+
 ###
 ### ------------ C++ class parameter type handlers ------------
 ###

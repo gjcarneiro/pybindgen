@@ -215,6 +215,7 @@ class ModuleBase(dict):
         self.docstring = docstring
         self.submodules = []
         self.enums = []
+        self.typedefs = [] # list of (wrapper, alias) tuples
         self._forward_declarations_declared = False
 
         self.cpp_namespace = cpp_namespace
@@ -675,6 +676,12 @@ class ModuleBase(dict):
                 class_.generate(sink, self)
                 sink.writeln()
 
+        # typedefs
+        for (wrapper, alias) in self.typedefs:
+            if isinstance(wrapper, CppClass):
+                cls = wrapper
+                cls.generate_typedef(self, alias)
+
         ## generate the enums
         if self.enums:
             main_sink.writeln('/* --- enumerations --- */')
@@ -727,7 +734,27 @@ class ModuleBase(dict):
 
     def __repr__(self):
         return "<pybindgen.module.Module %r>" % self.name
-        
+
+    def add_typedef(self, wrapper, alias):
+        """
+        Declares an equivalent to a typedef in C::
+          typedef Foo Bar;
+
+        @param wrapper: the wrapper object to alias (Foo in the example)
+        @param alias: name of the typedef alias
+
+        @note: only typedefs for CppClass objects have been
+        implemented so far; others will be implemented in the future.
+        """
+        assert isinstance(wrapper, CppClass)
+        assert isinstance(alias, str)
+        self.typedefs.append((wrapper, alias))
+        self.register_type(alias, alias, wrapper)
+        wrapper.register_alias(alias)
+        full_name = '::'.join(self.get_namespace_path() + [alias])
+        import sys; print >> sys.stderr, "***** full_name", full_name
+        wrapper.register_alias(full_name)
+
 
 class Module(ModuleBase):
     def __init__(self, name, docstring=None, cpp_namespace=None):
