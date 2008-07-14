@@ -752,7 +752,6 @@ class ModuleBase(dict):
         self.register_type(alias, alias, wrapper)
         wrapper.register_alias(alias)
         full_name = '::'.join(self.get_namespace_path() + [alias])
-        import sys; print >> sys.stderr, "***** full_name", full_name
         wrapper.register_alias(full_name)
 
 
