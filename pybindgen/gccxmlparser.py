@@ -928,71 +928,6 @@ pybindgen.settings.error_handler = ErrorHandler()
             module.add_enum(enum.name, [name for name, dummy_val in enum.values],
                             outer_class=outer_class)
 
-        for alias in module_namespace.typedefs(function=self.location_filter,
-                                               recursive=False, allow_empty=True):
-
-            ## handle "typedef int Something;"
-            if isinstance(alias.type, cpptypes.int_t):
-                param_cls, dummy_transf = typehandlers.base.param_type_matcher.lookup('int')
-                for ctype in param_cls.CTYPES:
-                    #print >> sys.stderr, "%s -> int" % ctype.replace('int', alias.name)
-                    typehandlers.base.param_type_matcher.register(ctype.replace('int', alias.name), param_cls)
-                return_cls, dummy_transf = typehandlers.base.return_type_matcher.lookup('int')
-                for ctype in return_cls.CTYPES:
-                    #print >> sys.stderr, "%s -> int" % ctype.replace('int', alias.name)
-                    typehandlers.base.return_type_matcher.register(ctype.replace('int', alias.name), return_cls)
-                continue
-
-            ## Look for forward declarations of class/structs like
-            ## "typedef struct _Foo Foo"; these are represented in
-            ## pygccxml by a typedef whose .type.declaration is a
-            ## class_declaration_t instead of class_t.
-            if isinstance(alias.type, cpptypes.declarated_t):
-                cls = alias.type.declaration
-                if templates.is_instantiation(cls.decl_string):
-                    continue # typedef to template instantiations, must be fully defined
-                if isinstance(cls, class_declaration_t):
-
-                    global_annotations, param_annotations = \
-                        annotations_scanner.get_annotations(cls.location.file_name,
-                                                            cls.location.line)
-                    for hook in self._pre_scan_hooks:
-                        hook(self, cls, global_annotations, param_annotations)
-                    if 'ignore' in global_annotations:
-                        continue
-
-                    kwargs = dict()
-                    self._apply_class_annotations(cls, global_annotations, kwargs)
-                    kwargs.setdefault("incomplete_type", True)
-                    kwargs.setdefault("automatic_type_narrowing", False)
-                    kwargs.setdefault("allow_subclassing", False)
-
-                    pygen_sink = self._get_pygen_sink_for_definition(cls)
-                    if pygen_sink:
-                        if 'pygen_comment' in global_annotations:
-                            pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
-                        pygen_sink.writeln("module.add_class(%s)" %
-                                           ", ".join([repr(alias.name)] + _pygen_kwargs(kwargs)))
-
-                    class_wrapper = module.add_class(alias.name, **kwargs)
-
-                    class_wrapper.gccxml_definition = cls
-                    self._registered_classes[cls] = class_wrapper
-                    if cls.name != alias.name:
-                        class_wrapper.register_alias(normalize_name(cls.name))
-                    self.type_registry.class_registered(class_wrapper)
-
-                ## Handle "typedef ClassName OtherName;"
-                elif isinstance(cls, class_t):
-                    #print >> sys.stderr, "***** typedef", cls, "=>", alias.name
-                    cls_wrapper = self._registered_classes[cls]
-                    module.add_typedef(cls_wrapper, alias.name)
-
-                    pygen_sink = self._get_pygen_sink_for_definition(cls)
-                    if pygen_sink:
-                        pygen_sink.writeln("module.add_typedef(root_module[%r], %r)" %
-                                           (cls_wrapper.full_name, alias.name))
-
         ## scan classes
         if outer_class is None:
             unregistered_classes = [cls for cls in
@@ -1171,6 +1106,74 @@ pybindgen.settings.error_handler = ErrorHandler()
 
         pygen_function_closed = False
         if outer_class is None:
+
+            ## --- look for typedefs ----
+            for alias in module_namespace.typedefs(function=self.location_filter,
+                                                   recursive=False, allow_empty=True):
+
+                ## handle "typedef int Something;"
+                if isinstance(alias.type, cpptypes.int_t):
+                    param_cls, dummy_transf = typehandlers.base.param_type_matcher.lookup('int')
+                    for ctype in param_cls.CTYPES:
+                        #print >> sys.stderr, "%s -> int" % ctype.replace('int', alias.name)
+                        typehandlers.base.param_type_matcher.register(ctype.replace('int', alias.name), param_cls)
+                    return_cls, dummy_transf = typehandlers.base.return_type_matcher.lookup('int')
+                    for ctype in return_cls.CTYPES:
+                        #print >> sys.stderr, "%s -> int" % ctype.replace('int', alias.name)
+                        typehandlers.base.return_type_matcher.register(ctype.replace('int', alias.name), return_cls)
+                    continue
+
+                ## Look for forward declarations of class/structs like
+                ## "typedef struct _Foo Foo"; these are represented in
+                ## pygccxml by a typedef whose .type.declaration is a
+                ## class_declaration_t instead of class_t.
+                if isinstance(alias.type, cpptypes.declarated_t):
+                    cls = alias.type.declaration
+                    if templates.is_instantiation(cls.decl_string):
+                        continue # typedef to template instantiations, must be fully defined
+                    if isinstance(cls, class_declaration_t):
+
+                        global_annotations, param_annotations = \
+                            annotations_scanner.get_annotations(cls.location.file_name,
+                                                                cls.location.line)
+                        for hook in self._pre_scan_hooks:
+                            hook(self, cls, global_annotations, param_annotations)
+                        if 'ignore' in global_annotations:
+                            continue
+
+                        kwargs = dict()
+                        self._apply_class_annotations(cls, global_annotations, kwargs)
+                        kwargs.setdefault("incomplete_type", True)
+                        kwargs.setdefault("automatic_type_narrowing", False)
+                        kwargs.setdefault("allow_subclassing", False)
+
+                        pygen_sink = self._get_pygen_sink_for_definition(cls)
+                        if pygen_sink:
+                            if 'pygen_comment' in global_annotations:
+                                pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
+                            pygen_sink.writeln("module.add_class(%s)" %
+                                               ", ".join([repr(alias.name)] + _pygen_kwargs(kwargs)))
+
+                        class_wrapper = module.add_class(alias.name, **kwargs)
+
+                        class_wrapper.gccxml_definition = cls
+                        self._registered_classes[cls] = class_wrapper
+                        if cls.name != alias.name:
+                            class_wrapper.register_alias(normalize_name(cls.name))
+                        self.type_registry.class_registered(class_wrapper)
+
+                    ## Handle "typedef ClassName OtherName;"
+                    elif isinstance(cls, class_t):
+                        #print >> sys.stderr, "***** typedef", cls, "=>", alias.name
+                        cls_wrapper = self._registered_classes[cls]
+                        module.add_typedef(cls_wrapper, alias.name)
+
+                        pygen_sink = self._get_pygen_sink_for_definition(cls)
+                        if pygen_sink:
+                            pygen_sink.writeln("module.add_typedef(root_module[%r], %r)" %
+                                               (cls_wrapper.full_name, alias.name))
+
+
             ## scan nested namespaces (mapped as python submodules)
             nested_modules = []
             for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
@@ -1204,6 +1207,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     self._scan_namespace_types(nested_module, nested_namespace,
                                                pygen_register_function_name=nested_module_type_init_func)
             assert not nested_modules # make sure all have been consumed by the second for loop
+
 
         if pygen_register_function_name and not pygen_function_closed:
             for pygen_sink in self._get_all_pygen_sinks():
