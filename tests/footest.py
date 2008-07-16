@@ -751,6 +751,9 @@ class TestFoo(unittest.TestCase):
             self.fail()
         self.assertEqual(r, "hello")
 
+    if 0:
+        def test_deprecations(self):
+            foo.print_something("zbr")
 
 if __name__ == '__main__':
     unittest.main()

@@ -1356,6 +1356,10 @@ pybindgen.settings.error_handler = ErrorHandler()
                     and not (kwargs.get('is_virtual', False) or kwargs.get('is_pure_virtual', False))):
                     continue
 
+                if member.attributes:
+                    if 'deprecated' in member.attributes:
+                        kwargs['deprecated'] = True
+
                 ## --- pygen ---
                 arglist_repr = ("[" + ', '.join([_pygen_param(args_, kwargs_) for (args_, kwargs_) in argument_specs]) +  "]")
                 if 'pygen_comment' in global_annotations:
@@ -1437,8 +1441,18 @@ pybindgen.settings.error_handler = ErrorHandler()
                 arglist_repr = ("[" + ', '.join([_pygen_param(args_, kwargs_) for (args_, kwargs_) in argument_specs]) +  "]")
                 if 'pygen_comment' in global_annotations:
                     pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
+
+                kwargs = {}
+
+                if member.attributes:
+                    if 'deprecated' in member.attributes:
+                        kwargs['deprecated'] = True
+
+                if member.access_type != 'public':
+                    kwargs['visibility'] = member.access_type
+
                 pygen_sink.writeln("cls.add_constructor(%s)" %
-                                   ", ".join([arglist_repr, "visibility=%r" % member.access_type]))
+                                   ", ".join([arglist_repr] + _pygen_kwargs(kwargs)))
 
 
                 arguments = []
@@ -1455,7 +1469,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     ok = True
                 if not ok:
                     continue
-                constructor_wrapper = class_wrapper.add_constructor(arguments, visibility=member.access_type)
+                constructor_wrapper = class_wrapper.add_constructor(arguments, **kwargs)
                 constructor_wrapper.gccxml_definition = member
                 for hook in self._post_scan_hooks:
                     hook(self, member, constructor_wrapper)
@@ -1685,6 +1699,10 @@ pybindgen.settings.error_handler = ErrorHandler()
                 
             if alt_name:
                 kwargs['custom_name'] = alt_name
+
+            if fun.attributes:
+                if 'deprecated' in fun.attributes:
+                    kwargs['deprecated'] = True
 
             pygen_sink = self._get_pygen_sink_for_definition(fun)
             if pygen_sink:

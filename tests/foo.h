@@ -6,9 +6,22 @@
 #include <iostream>
 #include <sstream>
 
+// Deprecation warnings look ugly and confusing; better to just
+// disable them and change this macro when we want to specifically
+// test them.
+#define ENABLE_DEPRECATIONS 0
+
+#ifndef DEPRECATED
+# if ENABLE_DEPRECATIONS && __GNUC__ > 2
+#  define DEPRECATED  __attribute__((deprecated))
+# else
+#  define DEPRECATED
+# endif
+#endif
+
 // Yes, this code is stupid, I know; it is only meant as an example!
 
-int print_something(const char *message);
+int print_something(const char *message) DEPRECATED;
 int print_something_else(const char *message2);
 
 /* -#- name=get_int -#- */
@@ -36,9 +49,14 @@ public:
 
     Foo () : m_datum (""), m_initialized (false)
         { Foo::instance_count++; }
+
+    Foo (int xpto)  DEPRECATED : m_initialized (false) {}
+
     Foo (std::string const &datum) : m_datum (datum), m_initialized (false)
         { Foo::instance_count++; }
     std::string get_datum () const { return m_datum; }
+
+    std::string get_datum_deprecated () const DEPRECATED { return m_datum; }
 
     Foo (Foo const & other) : m_datum (other.get_datum ()), m_initialized (false)
         { Foo::instance_count++; }
