@@ -23,7 +23,7 @@ class CppMethod(ForwardWrapperBase):
                  template_parameters=(), is_virtual=False, is_const=False,
                  unblock_threads=None, is_pure_virtual=False,
                  custom_template_method_name=None, visibility='public',
-                 custom_name=None):
+                 custom_name=None, deprecated=False):
         """
         Create an object the generates code to wrap a C++ class method.
 
@@ -60,6 +60,11 @@ class CppMethod(ForwardWrapperBase):
 
         @param visibility: visibility of the method within the C++ class
         @type visibility: a string (allowed values are 'public', 'protected', 'private')
+
+        @param deprecated: deprecation state for this API:
+          - False: Not deprecated
+          - True: Deprecated
+          - "message": Deprecated, and deprecation warning contains the given message
         """
         self.stack_where_defined = traceback.extract_stack()
 
@@ -102,6 +107,7 @@ class CppMethod(ForwardWrapperBase):
             return_value, parameters,
             "return NULL;", "return NULL;",
             unblock_threads=unblock_threads)
+        self.deprecated = deprecated
 
     def set_helper_class(self, helper_class):
         "Set the C++ helper class, which is used for overriding virtual methods"
@@ -393,9 +399,14 @@ class CppConstructor(ForwardWrapperBase):
     wrapper is used as the python class __init__ method.
     """
 
-    def __init__(self, parameters, unblock_threads=None, visibility='public'):
+    def __init__(self, parameters, unblock_threads=None, visibility='public', deprecated=False):
         """
-        parameters -- the constructor parameters
+        @param parameters: the constructor parameters
+
+        @param deprecated: deprecation state for this API:
+          - False: Not deprecated
+          - True: Deprecated
+          - "message": Deprecated, and deprecation warning contains the given message
         """
         self.stack_where_defined = traceback.extract_stack()
         if unblock_threads is None:
@@ -408,6 +419,7 @@ class CppConstructor(ForwardWrapperBase):
             "return -1;", "return -1;",
             force_parse=ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS,
             unblock_threads=unblock_threads)
+        self.deprecated = deprecated
         assert visibility in ['public', 'protected', 'private']
         self.visibility = visibility
         self.wrapper_base_name = None

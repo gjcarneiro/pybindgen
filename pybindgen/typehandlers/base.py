@@ -718,6 +718,7 @@ class ForwardWrapperBase(object):
         self.unblock_threads = unblock_threads
         self.no_c_retval = no_c_retval
         self.overload_index = None
+        self.deprecated = False
 
         # The following 3 variables describe the C wrapper function
         # prototype; do not confuse with the python function/method!
@@ -811,6 +812,13 @@ class ForwardWrapperBase(object):
                 raise CodeGenerationError(
                     'convert_python_to_c method of parameter %s not implemented'
                     % (param.ctype,))
+
+        if self.deprecated:
+            if isinstance(self.deprecated, basestring):
+                msg = self.deprecated
+            else:
+                msg = "Deprecated"
+            self.before_call.write_error_check( 'PyErr_WarnEx(PyExc_DeprecationWarning, "%s", 1)' % msg)
 
         if self.unblock_threads:
             self.before_call.write_code(

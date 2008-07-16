@@ -18,13 +18,17 @@ class Function(ForwardWrapperBase):
     """
 
     def __init__(self, function_name, return_value, parameters, docstring=None, unblock_threads=None,
-                 template_parameters=(), custom_name=None):
+                 template_parameters=(), custom_name=None, deprecated=False):
         """
         @param function_name: name of the C function
         @param return_value: the function return value
         @type return_value: L{ReturnValue}
         @param parameters: the function parameters
         @type parameters: list of L{Parameter}
+        @param deprecated: deprecation state for this API:
+          - False: Not deprecated
+          - True: Deprecated
+          - "message": Deprecated, and deprecation warning contains the given message
         """
         self.stack_where_defined = traceback.extract_stack()
 
@@ -48,6 +52,7 @@ class Function(ForwardWrapperBase):
             parse_error_return="return NULL;",
             error_return="return NULL;",
             unblock_threads=unblock_threads)
+        self.deprecated = deprecated
         self._module = None
         assert isinstance(function_name, str)
         self.function_name = function_name
