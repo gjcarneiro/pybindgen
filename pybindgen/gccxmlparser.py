@@ -1364,10 +1364,16 @@ pybindgen.settings.error_handler = ErrorHandler()
                 arglist_repr = ("[" + ', '.join([_pygen_param(args_, kwargs_) for (args_, kwargs_) in argument_specs]) +  "]")
                 if 'pygen_comment' in global_annotations:
                     pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
+
+                kwargs_repr = _pygen_kwargs(kwargs)
+                if kwargs_repr:
+                    kwargs_repr[0] = '\n' + 15*' ' + kwargs_repr[0]
+
                 pygen_sink.writeln("cls.add_method(%s)" %
                                    ", ".join(
-                        [repr(member.name), _pygen_retval(return_type_spec[0], return_type_spec[1]), arglist_repr]
-                        + _pygen_kwargs(kwargs)))
+                        [repr(member.name),
+                         '\n' + 15*' ' + _pygen_retval(return_type_spec[0], return_type_spec[1]),
+                         '\n' + 15*' ' + arglist_repr] + kwargs_repr))
 
                 ## --- realize the return type and parameters
                 try:
@@ -1451,9 +1457,11 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if member.access_type != 'public':
                     kwargs['visibility'] = member.access_type
 
+                kwargs_repr = _pygen_kwargs(kwargs)
+                if kwargs_repr:
+                    kwargs_repr[0] = '\n' + 20*' '+ kwargs_repr[0]
                 pygen_sink.writeln("cls.add_constructor(%s)" %
-                                   ", ".join([arglist_repr] + _pygen_kwargs(kwargs)))
-
+                                   ", ".join([arglist_repr] + kwargs_repr))
 
                 arguments = []
                 for a, kw in argument_specs:
@@ -1708,8 +1716,14 @@ pybindgen.settings.error_handler = ErrorHandler()
             if pygen_sink:
                 if 'pygen_comment' in global_annotations:
                     pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
+                kwargs_repr = _pygen_kwargs(kwargs)
+                if kwargs_repr:
+                    kwargs_repr[0] = "\n" + 20*' ' + kwargs_repr[0]
                 pygen_sink.writeln("module.add_function(%s)" %
-                                   (", ".join([repr(fun.name), retval_repr, arglist_repr] + _pygen_kwargs(kwargs))))
+                                   (", ".join([repr(fun.name),
+                                               "\n" + 20*' ' + retval_repr,
+                                               "\n" + 20*' ' + arglist_repr]
+                                              + kwargs_repr)))
 
             if params_ok:
                 func_wrapper = module.add_function(fun.name, return_type, arguments, **kwargs)
