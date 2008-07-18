@@ -18,6 +18,12 @@ def create_pyext_obj(bld, c_or_cpp_type):
         return bld.create_obj(c_or_cpp_type, 'plugin', 'pyext')
 
 
+if 0:
+    DEPRECATION_ERRORS = '-Werror::DeprecationWarning' # deprecations become errors
+else:
+    DEPRECATION_ERRORS = '-Wdefault::DeprecationWarning' # normal python behaviour
+
+
 def build(bld):
     top_srcdir = bld.m_srcnode.abspath()
 
@@ -38,7 +44,7 @@ def build(bld):
     bindgen = bld.create_obj('command-output')
     bindgen.stdout = 'foomodule.cc'
     bindgen.argv = [
-        '-Werror::DeprecationWarning',
+        DEPRECATION_ERRORS,
         bindgen.input_file('foomodulegen.py'),
         ]
     bindgen.command = bindgen.env['PYTHON']
@@ -60,7 +66,7 @@ def build(bld):
         bindgen = bld.create_obj('command-output')
         bindgen.stdout = 'foomodule2.cc'
         bindgen.argv = [
-            '-Werror::DeprecationWarning',
+            DEPRECATION_ERRORS,
             bindgen.input_file('foomodulegen-auto.py'),
             bindgen.input_file('foo.h'),
             bindgen.output_file('foomodulegen_generated.py'),
@@ -73,7 +79,7 @@ def build(bld):
         bindgen = bld.create_obj('command-output')
         bindgen.stdout = 'foomodule3.cc'
         bindgen.argv = [
-            '-Werror::DeprecationWarning',
+            DEPRECATION_ERRORS,
             bindgen.input_file('foomodulegen3.py'),
             bindgen.output_file('foomodule3.cc'),
             ]
@@ -99,7 +105,7 @@ def build(bld):
         ### using gccxml autoscanning, but split the generated python script into modules
         bindgen = bld.create_obj('command-output')
         bindgen.argv = [
-            '-Werror::DeprecationWarning',
+            DEPRECATION_ERRORS,
             bindgen.input_file('foomodulegen-auto-split.py'),
             bindgen.input_file('foo.h'),
             bindgen.output_file('foomodulegen_split.py'),
@@ -122,7 +128,7 @@ def build(bld):
         ### Run the generated python script with split modules
         bindgen = bld.create_obj('command-output')
         bindgen.argv = [
-            '-Werror::DeprecationWarning',
+            DEPRECATION_ERRORS,
             bindgen.input_file('foomodulegen4.py'),
             bindgen.output_file('foomodule4.cc'),
             ]
