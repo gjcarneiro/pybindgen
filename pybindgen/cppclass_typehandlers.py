@@ -3,7 +3,7 @@ import warnings
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
     Parameter, ReturnValue, TypeConfigurationError
 
-from cppclass import CppClass
+import cppclass
 
 
 ###
@@ -12,7 +12,7 @@ from cppclass import CppClass
 class CppClassParameterBase(Parameter):
     "Base class for all C++ Class parameter handlers"
     CTYPES = []
-    cpp_class = CppClass('dummy') # CppClass instance
+    cpp_class = cppclass.CppClass('dummy') # CppClass instance
     DIRECTIONS = [Parameter.DIRECTION_IN]
 
     def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False, default_value=None):
@@ -37,7 +37,7 @@ class CppClassParameterBase(Parameter):
 class CppClassReturnValueBase(ReturnValue):
     "Class return handlers -- base class"
     CTYPES = []
-    cpp_class = CppClass('dummy') # CppClass instance
+    cpp_class = cppclass.CppClass('dummy') # CppClass instance
 
     def __init__(self, ctype):
         super(CppClassReturnValueBase, self).__init__(ctype)
@@ -48,13 +48,13 @@ class CppClassReturnValueBase(ReturnValue):
 class CppClassParameter(CppClassParameterBase):
     "Class handlers"
     CTYPES = []
-    cpp_class = CppClass('dummy') # CppClass instance
+    cpp_class = cppclass.CppClass('dummy') # CppClass instance
     DIRECTIONS = [Parameter.DIRECTION_IN]
     
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
         assert isinstance(wrapper, ForwardWrapperBase)
-        assert isinstance(self.cpp_class, CppClass)
+        assert isinstance(self.cpp_class, cppclass.CppClass)
 
         if self.take_value_from_python_self:
             self.py_name = 'self'
@@ -152,12 +152,13 @@ class CppClassParameter(CppClassParameterBase):
 class CppClassRefParameter(CppClassParameterBase):
     "Class& handlers"
     CTYPES = []
-    cpp_class = CppClass('dummy') # CppClass instance
+    cpp_class = cppclass.CppClass('dummy') # CppClass instance
     DIRECTIONS = [Parameter.DIRECTION_IN,
                   Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_INOUT]
 
-    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False, default_value=None, default_value_type=None):
+    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False,
+                 default_value=None, default_value_type=None):
         """
         @param ctype: C type, normally 'MyClass*'
         @param name: parameter name
@@ -171,7 +172,7 @@ class CppClassRefParameter(CppClassParameterBase):
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
         assert isinstance(wrapper, ForwardWrapperBase)
-        assert isinstance(self.cpp_class, CppClass)
+        assert isinstance(self.cpp_class, cppclass.CppClass)
 
         if self.direction == Parameter.DIRECTION_IN:
             if self.take_value_from_python_self:
@@ -336,7 +337,7 @@ class CppClassRefParameter(CppClassParameterBase):
 class CppClassReturnValue(CppClassReturnValueBase):
     "Class return handlers"
     CTYPES = []
-    cpp_class = CppClass('dummy') # CppClass instance
+    cpp_class = cppclass.CppClass('dummy') # CppClass instance
     REQUIRES_ASSIGNMENT_CONSTRUCTOR = True
 
     def __init__(self, ctype, is_const=False):
@@ -388,7 +389,7 @@ class CppClassReturnValue(CppClassReturnValueBase):
 class CppClassPtrParameter(CppClassParameterBase):
     "Class* handlers"
     CTYPES = []
-    cpp_class = CppClass('dummy') # CppClass instance
+    cpp_class = cppclass.CppClass('dummy') # CppClass instance
     DIRECTIONS = [Parameter.DIRECTION_IN]
     SUPPORTS_TRANSFORMATIONS = True
 
@@ -437,7 +438,7 @@ class CppClassPtrParameter(CppClassParameterBase):
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
         assert isinstance(wrapper, ForwardWrapperBase)
-        assert isinstance(self.cpp_class, CppClass)
+        assert isinstance(self.cpp_class, cppclass.CppClass)
 
         if self.take_value_from_python_self:
             self.py_name = 'self'
@@ -452,10 +453,10 @@ class CppClassPtrParameter(CppClassParameterBase):
         wrapper.call_params.append(value)
         
         if self.transfer_ownership:
-            if not self.cpp_class.has_reference_counting:
+            if not isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
                 wrapper.after_call.write_code('%s->obj = NULL;' % (self.py_name,))
             else:
-                self.cpp_class.write_incref(wrapper.before_call, "%s->obj" % self.py_name)
+                self.cpp_class.memory_policy.write_incref(wrapper.before_call, "%s->obj" % self.py_name)
 
 
     def convert_c_to_python(self, wrapper):
@@ -477,7 +478,8 @@ class CppClassPtrParameter(CppClassParameterBase):
             ## automatic_type_narrowing is active and we are not forced to
             ## make a copy of the object
             if (self.cpp_class.automatic_type_narrowing
-                and (self.transfer_ownership or self.cpp_class.has_reference_counting)):
+                and (self.transfer_ownership or isinstance(self.cpp_class.memory_policy,
+                                                           cppclass.ReferenceCountingPolicy))):
 
                 typeid_map_name = self.cpp_class.get_type_narrowing_root().typeid_map_name
                 wrapper_type = wrapper.declarations.declare_variable(
@@ -507,7 +509,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                 wrapper.before_call.write_code("%s->obj = %s;" % (py_name, value))
                 wrapper.build_params.add_parameter("N", [py_name])
             else:
-                if not self.cpp_class.has_reference_counting:
+                if not isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
                     ## The PyObject gets a temporary pointer to the
                     ## original value; the pointer is converted to a
                     ## copy in case the callee retains a reference to
@@ -550,7 +552,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                         wrapper.after_call.write_code('}')
                 else:
                     ## The PyObject gets a new reference to the same obj
-                    self.cpp_class.write_incref(wrapper.before_call, value)
+                    self.cpp_class.memory_policy.write_incref(wrapper.before_call, value)
                     if self.is_const:
                         wrapper.before_call.write_code("%s->obj = (%s*) (%s);" %
                                                        (py_name, self.cpp_class.full_name, value))
@@ -611,7 +613,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
     "Class* return handler"
     CTYPES = []
     SUPPORTS_TRANSFORMATIONS = True
-    cpp_class = CppClass('dummy') # CppClass instance
+    cpp_class = cppclass.CppClass('dummy') # CppClass instance
 
     def __init__(self, ctype, caller_owns_return=None, custodian=None, is_const=False):
         """
@@ -673,7 +675,8 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             ## automatic_type_narrowing is active and we are not forced to
             ## make a copy of the object
             if (self.cpp_class.automatic_type_narrowing
-                and (self.caller_owns_return or self.cpp_class.has_reference_counting)):
+                and (self.caller_owns_return or isinstance(self.cpp_class.memory_policy,
+                                                           cppclass.ReferenceCountingPolicy))):
 
                 typeid_map_name = self.cpp_class.get_type_narrowing_root().typeid_map_name
                 wrapper_type = wrapper.declarations.declare_variable(
@@ -704,14 +707,14 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             if self.caller_owns_return:
                 wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
             else:
-                if not self.cpp_class.has_reference_counting:
+                if not isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
                     ## The PyObject creates its own copy
                     self.cpp_class.write_create_instance(wrapper.after_call,
                                                          "%s->obj" % py_name,
                                                          '*'+value)
                 else:
                     ## The PyObject gets a new reference to the same obj
-                    self.cpp_class.write_incref(wrapper.after_call, value)
+                    self.cpp_class.memory_policy.write_incref(wrapper.after_call, value)
                     if self.is_const:
                         wrapper.after_call.write_code("%s->obj = (%s*) (%s);" %
                                                       (py_name, self.cpp_class.full_name, value))
@@ -771,14 +774,14 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
 
         ## now the hairy part :)
         if self.caller_owns_return:
-            if not self.cpp_class.has_reference_counting:
+            if not isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
                 ## the caller receives a copy
                 self.cpp_class.write_create_instance(wrapper.after_call,
                                                      "%s" % self.value,
                                                      '*'+value)
             else:
                 ## the caller gets a new reference to the same obj
-                self.cpp_class.write_incref(wrapper.after_call, value)
+                self.cpp_class.memory_policy.write_incref(wrapper.after_call, value)
                 if self.is_const:
                     wrapper.after_call.write_code(
                         "%s = const_cast< %s* >(%s);" %

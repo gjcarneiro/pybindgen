@@ -19,6 +19,82 @@ import settings
 import utils
 
 
+class MemoryPolicy(object):
+    """memory management policy for a C++ class or C/C++ struct"""
+    def __init__(self):
+        if type(self) is MemoryPolicy:
+            raise NotImplementedError("class is abstract")
+
+    def get_free_code(self, object_expression):
+        """
+        Return a code statement to free an underlying C/C++ object.
+        """
+        raise NotImplementedError
+
+
+class ReferenceCountingPolicy(MemoryPolicy):
+    def write_incref(self, code_block, obj_expr):
+        """
+        Write code to increase the reference code of an object of this
+        class (the real C++ class, not the wrapper).  Should only be
+        called if the class supports reference counting, as reported
+        by the attribute `has_reference_counting'.
+        """
+        raise NotImplementedError
+
+    def write_decref(self, code_block, obj_expr):
+        """
+        Write code to decrease the reference code of an object of this
+        class (the real C++ class, not the wrapper).  Should only be
+        called if the class supports reference counting, as reported
+        by the attribute `has_reference_counting'.
+        """
+        raise NotImplementedError
+
+
+class ReferenceCountingMethodsPolicy(ReferenceCountingPolicy):
+    def __init__(self, incref_method, decref_method, peekref_method=None):
+        super(ReferenceCountingMethodsPolicy, self).__init__()
+        self.incref_method = incref_method
+        self.decref_method = decref_method
+        self.peekref_method = peekref_method
+
+    def write_incref(self, code_block, obj_expr):
+        code_block.write_code('%s->%s();' % (obj_expr, self.incref_method))
+
+    def write_decref(self, code_block, obj_expr):
+        code_block.write_code('%s->%s();' % (obj_expr, self.decref_method))
+
+    def get_free_code(self, obj_expr):
+        return ('%s->%s();' % (obj_expr, self.decref_method))
+
+
+class ReferenceCountingFunctionsPolicy(ReferenceCountingPolicy):
+    def __init__(self, incref_function, decref_function, peekref_function=None):
+        super(ReferenceCountingFunctionsPolicy, self).__init__()
+        self.incref_function = incref_function
+        self.decref_function = decref_function
+        self.peekref_function = peekref_function
+
+    def write_incref(self, code_block, obj_expr):
+        code_block.write_code('%s(%s);' % (self.incref_function, obj_expr))
+
+    def write_decref(self, code_block, obj_expr):
+        code_block.write_code('%s(%s);' % (self.decref_function, obj_expr))
+
+    def get_free_code(self, obj_expr):
+        return ('%s(%s);' % (obj_expr, self.decref_function))
+
+
+class FreeFunctionPolicy(MemoryPolicy):
+    def __init__(self, free_function):
+        super(FreeFunctionPolicy, self).__init__()
+        self.free_function = free_function
+
+    def get_free_code(self, obj_expr):
+        return ('%s(%s);' % (self.free_function, obj_expr))
+
+
 def default_instance_creation_function(cpp_class, code_block, lvalue,
                                        parameters, construct_type_name):
     """
@@ -347,7 +423,7 @@ class CppClass(object):
                  template_parameters=(), custom_template_class_name=None,
                  incomplete_type=False, free_function=None,
                  incref_function=None, decref_function=None,
-                 python_name=None):
+                 python_name=None, memory_policy=None):
         """
         @param name: class name
         @param parent: optional parent class wrapper
@@ -375,6 +451,11 @@ class CppClass(object):
         @param incref_function: same as incref_method, but as a function instead of method
         @param decref_function: same as decref_method, but as a function instead of method
         @param python_name: name of the class as it will appear from Python side
+
+        @param memory_policy: memory management policy; if None, it
+        inherits from the parent class.  Only root classes can have a
+        memory policy defined.
+        @type memory_policy: L{MemoryPolicy}
         """
         assert outer_class is None or isinstance(outer_class, CppClass)
         self.incomplete_type = incomplete_type
@@ -421,31 +502,26 @@ class CppClass(object):
         self.parent = parent
         assert parent is None or isinstance(parent, CppClass)
 
-        assert (incref_method is None and decref_method is None) \
-               or (incref_method is not None and decref_method is not None)
-        if incref_method is None and parent is not None:
-            self.incref_method = parent.incref_method
-            self.decref_method = parent.decref_method
-            self.peekref_method = parent.peekref_method
+        if parent is None:
+            assert memory_policy is None or isinstance(memory_policy, MemoryPolicy)
+            self.memory_policy = memory_policy
+            if free_function:
+                warnings.warn("Use FreeFunctionPolicy and memory_policy parameter.", DeprecationWarning)
+                assert self.memory_policy is None
+                self.memory_policy = FreeFunctionPolicy(free_function)
+            elif incref_method:
+                warnings.warn("Use ReferenceCountingMethodsPolicy and memory_policy parameter.", DeprecationWarning)
+                assert self.memory_policy is None
+                self.memory_policy = ReferenceCountingMethodsPolicy(incref_method, decref_method, peekref_method)
+            elif incref_function:
+                warnings.warn("Use ReferenceCountingFunctionsPolicy and memory_policy parameter.", DeprecationWarning)
+                assert self.memory_policy is None
+                self.memory_policy = ReferenceCountingFunctionsPolicy(incref_function, decref_function)
         else:
-            self.incref_method = incref_method
-            self.decref_method = decref_method
-            self.peekref_method = peekref_method
+            assert memory_policy is None, "only root classes may define memory policies"
+            assert not (free_function or incref_method or incref_function), "only root classes may define memory policies"
+            self.memory_policy = None
 
-        self.free_function = free_function
-
-        assert (incref_function is None and decref_function is None) \
-               or (incref_function is not None and decref_function is not None)
-        if incref_function is None and parent is not None:
-            self.incref_function = parent.incref_function
-            self.decref_function = parent.decref_function
-        else:
-            self.incref_function = incref_function
-            self.decref_function = decref_function
-
-        self.has_reference_counting = (self.incref_function is not None
-                                       or self.incref_method is not None)
-            
         if automatic_type_narrowing is None:
             if parent is None:
                 self.automatic_type_narrowing = settings.automatic_type_narrowing
@@ -600,38 +676,6 @@ class CppClass(object):
                 return True
             cls = cls.parent
         return False
-
-    def write_incref(self, code_block, obj_expr):
-        """
-        Write code to increase the reference code of an object of this
-        class (the real C++ class, not the wrapper).  Should only be
-        called if the class supports reference counting, as reported
-        by the attribute `has_reference_counting'.
-        """
-        if self.incref_method is not None:
-            assert self.incref_function is None
-            code_block.write_code('%s->%s();' % (obj_expr, self.incref_method))
-        elif self.incref_function is not None:
-            assert self.incref_method is None
-            code_block.write_code('%s(%s);' % (self.incref_function, obj_expr))
-        else:
-            raise AssertionError
-
-    def write_decref(self, code_block, obj_expr):
-        """
-        Write code to decrease the reference code of an object of this
-        class (the real C++ class, not the wrapper).  Should only be
-        called if the class supports reference counting, as reported
-        by the attribute `has_reference_counting'.
-        """
-        if self.decref_method is not None:
-            assert self.decref_function is None
-            code_block.write_code('%s->%s();' % (obj_expr, self.decref_method))
-        elif self.decref_function is not None:
-            assert self.decref_method is None
-            code_block.write_code('%s(%s);' % (self.decref_function, obj_expr))
-        else:
-            raise AssertionError
 
     def add_helper_class_hook(self, hook):
         """
@@ -1482,27 +1526,13 @@ typedef struct {
         if self.is_singleton:
             delete_code = ''
         else:
-            if self.decref_method is not None:
+            if self.memory_policy is not None:
                 delete_code = ("if (self->obj) {\n"
                                "    %s *tmp = self->obj;\n"
                                "    self->obj = NULL;\n"
-                               "    tmp->%s();\n"
+                               "    %s\n"
                                "}"
-                               % (self.full_name, self.decref_method,))
-            elif self.decref_function is not None:
-                delete_code = ("if (self->obj) {\n"
-                               "    %s *tmp = self->obj;\n"
-                               "    self->obj = NULL;\n"
-                               "    %s(tmp);\n"
-                               "}"
-                               % (self.full_name, self.decref_function,))
-            elif self.free_function is not None:
-                delete_code = ("if (self->obj) {\n"
-                               "    %s *tmp = self->obj;\n"
-                               "    self->obj = NULL;\n"
-                               "    %s(tmp);\n"
-                               "}"
-                               % (self.full_name, self.free_function,))
+                               % (self.full_name, self.memory_policy.get_free_code('tmp')))
             else:
                 if self.incomplete_type:
                     raise CodeGenerationError("Cannot finish generating class %s: "
@@ -1537,10 +1567,10 @@ static void
         if self.helper_class is None:
             visit_self = ''
         else:
-            if self.peekref_method is None:
+            if not isinstance(self.memory_policy, ReferenceCountingMethodsPolicy):
                 peekref_code = ''
             else:
-                peekref_code = " && self->obj->%s() == 1" % self.peekref_method
+                peekref_code = " && self->obj->%s() == 1" % self.memory_policy.peekref_method
             visit_self = '''
     if (self->obj %s)
         Py_VISIT((PyObject *) self);

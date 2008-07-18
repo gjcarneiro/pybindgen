@@ -11,7 +11,7 @@ from typehandlers.codesink import FileCodeSink, CodeSink, NullCodeSink
 import typehandlers.base
 from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
 from pygccxml.declarations.enumeration import enumeration_t
-from cppclass import CppClass
+from cppclass import CppClass, ReferenceCountingMethodsPolicy
 from pygccxml.declarations import type_traits
 from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
@@ -1273,9 +1273,15 @@ pybindgen.settings.error_handler = ErrorHandler()
                     if cpp_type is class_wrapper and is_reference:
                         have_copy_constructor = True
 
+        methods_to_ignore = []
+        if isinstance(class_wrapper.memory_policy, ReferenceCountingMethodsPolicy):
+            methods_to_ignore.extend([class_wrapper.memory_policy.incref_method,
+                                      class_wrapper.memory_policy.decref_method,
+                                      class_wrapper.memory_policy.peekref_method,
+                                      ])
+            
         for member in cls.get_members():
-            if member.name in [class_wrapper.incref_method, class_wrapper.decref_method,
-                               class_wrapper.peekref_method]:
+            if member.name in methods_to_ignore:
                 continue
 
             global_annotations, parameter_annotations = \
