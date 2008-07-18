@@ -117,7 +117,7 @@ class Function(ForwardWrapperBase):
 
     def _before_return_hook(self):
         "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
-        cppclass.implement_parameter_custodians(self)
+        cppclass_typehandlers.implement_parameter_custodians(self)
 
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """
@@ -216,4 +216,4 @@ class OverloadedFunction(overloading.OverloadedWrapper):
     RETURN_TYPE = 'PyObject *'
     ERROR_RETURN = 'return NULL;'
 
-import cppclass
+import cppclass_typehandlers

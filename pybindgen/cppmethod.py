@@ -7,7 +7,7 @@ import traceback
 from copy import copy
 
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
-    join_ctype_and_name, CodeGenerationError, ReturnValue
+    join_ctype_and_name, CodeGenerationError
 from typehandlers.base import ReturnValue, Parameter
 from typehandlers import codesink
 import overloading
@@ -201,7 +201,7 @@ class CppMethod(ForwardWrapperBase):
     def _before_return_hook(self):
         """hook that post-processes parameters and check for custodian=<n>
         CppClass parameters"""
-        cppclass.implement_parameter_custodians(self)
+        cppclass_typehandlers.implement_parameter_custodians(self)
 
     def _get_pystruct(self):
         # When a method is used in the context of a helper class, we
@@ -487,7 +487,7 @@ class CppConstructor(ForwardWrapperBase):
 
     def _before_return_hook(self):
         "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
-        cppclass.implement_parameter_custodians(self)
+        cppclass_typehandlers.implement_parameter_custodians(self)
 
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """
@@ -913,5 +913,5 @@ class CustomCppConstructorWrapper(CppConstructor):
     def generate_call(self, *args, **kwargs):
         pass
 
-
 import cppclass
+import cppclass_typehandlers
