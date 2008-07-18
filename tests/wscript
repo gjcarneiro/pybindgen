@@ -37,7 +37,10 @@ def build(bld):
     ## manual code generation using simple pybindgen API calls
     bindgen = bld.create_obj('command-output')
     bindgen.stdout = 'foomodule.cc'
-    bindgen.argv = [bindgen.input_file('foomodulegen.py')]
+    bindgen.argv = [
+        '-Werror::DeprecationWarning',
+        bindgen.input_file('foomodulegen.py'),
+        ]
     bindgen.command = bindgen.env['PYTHON']
     bindgen.command_is_external = True
     bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
@@ -56,9 +59,12 @@ def build(bld):
         ### Same thing, but using gccxml autoscanning
         bindgen = bld.create_obj('command-output')
         bindgen.stdout = 'foomodule2.cc'
-        bindgen.argv = [bindgen.input_file('foomodulegen-auto.py'),
-                        bindgen.input_file('foo.h'),
-                        bindgen.output_file('foomodulegen_generated.py')]
+        bindgen.argv = [
+            '-Werror::DeprecationWarning',
+            bindgen.input_file('foomodulegen-auto.py'),
+            bindgen.input_file('foo.h'),
+            bindgen.output_file('foomodulegen_generated.py'),
+            ]
         bindgen.command = bindgen.env['PYTHON']
         bindgen.command_is_external = True
         bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
@@ -66,8 +72,11 @@ def build(bld):
         ### Now using the generated python script
         bindgen = bld.create_obj('command-output')
         bindgen.stdout = 'foomodule3.cc'
-        bindgen.argv = [bindgen.input_file('foomodulegen3.py'),
-                        bindgen.output_file('foomodule3.cc')]
+        bindgen.argv = [
+            '-Werror::DeprecationWarning',
+            bindgen.input_file('foomodulegen3.py'),
+            bindgen.output_file('foomodule3.cc'),
+            ]
         bindgen.command = bindgen.env['PYTHON']
         bindgen.command_is_external = True
         bindgen.prio = 56 # run after the previous bindgen
@@ -89,12 +98,14 @@ def build(bld):
 
         ### using gccxml autoscanning, but split the generated python script into modules
         bindgen = bld.create_obj('command-output')
-        bindgen.argv = [bindgen.input_file('foomodulegen-auto-split.py'),
-                        bindgen.input_file('foo.h'),
-                        bindgen.output_file('foomodulegen_split.py'),
-                        bindgen.output_file('foomodulegen_module1.py'),
-                        bindgen.output_file('foomodulegen_module2.py'),
-                        ]
+        bindgen.argv = [
+            '-Werror::DeprecationWarning',
+            bindgen.input_file('foomodulegen-auto-split.py'),
+            bindgen.input_file('foo.h'),
+            bindgen.output_file('foomodulegen_split.py'),
+            bindgen.output_file('foomodulegen_module1.py'),
+            bindgen.output_file('foomodulegen_module2.py'),
+            ]
         bindgen.command = bindgen.env['PYTHON']
         bindgen.command_is_external = True
         bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
@@ -110,8 +121,11 @@ def build(bld):
 
         ### Run the generated python script with split modules
         bindgen = bld.create_obj('command-output')
-        bindgen.argv = [bindgen.input_file('foomodulegen4.py'),
-                        bindgen.output_file('foomodule4.cc')]
+        bindgen.argv = [
+            '-Werror::DeprecationWarning',
+            bindgen.input_file('foomodulegen4.py'),
+            bindgen.output_file('foomodule4.cc'),
+            ]
         bindgen.command = bindgen.env['PYTHON']
         bindgen.command_is_external = True
         bindgen.prio = 56 # run after the previous bindgen

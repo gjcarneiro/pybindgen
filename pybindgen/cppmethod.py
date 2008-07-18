@@ -146,8 +146,8 @@ class CppMethod(ForwardWrapperBase):
         method wrapper clone contains copies of all parameters, so
         they can be modified at will.
         """
-        meth = CppMethod(self.return_value,
-                         self.method_name,
+        meth = CppMethod(self.method_name,
+                         self.return_value,
                          [copy(param) for param in self.parameters],
                          is_static=self.is_static,
                          template_parameters=self.template_parameters,

@@ -13,7 +13,10 @@ def build(bld):
     ## manual code generation using simple pybindgen API calls
     bindgen = bld.create_obj('command-output')
     bindgen.stdout = 'hmodule.cc'
-    bindgen.argv = [bindgen.input_file('modulegen.py')]
+    bindgen.argv = [
+        '-Werror::DeprecationWarning',
+        bindgen.input_file('modulegen.py'),
+        ]
     bindgen.command = bindgen.env['PYTHON']
     bindgen.command_is_external = True
     bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen

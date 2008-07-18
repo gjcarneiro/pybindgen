@@ -669,7 +669,7 @@ class ModuleParser(object):
             self.module.add_include(inc)
 
         for pygen_sink in self._get_all_pygen_sinks():
-            pygen_sink.writeln("from pybindgen import Module, FileCodeSink, write_preamble, param, retval")
+            pygen_sink.writeln("from pybindgen import Module, FileCodeSink, param, retval")
             pygen_sink.writeln()
 
         pygen_sink = self._get_main_pygen_sink()
@@ -808,7 +808,6 @@ pybindgen.settings.error_handler = ErrorHandler()
             pygen_sink.writeln("register_types(root_module)")
             pygen_sink.writeln("register_methods(root_module)")
             pygen_sink.writeln("register_functions(root_module)")
-            pygen_sink.writeln("write_preamble(out)")
             pygen_sink.writeln("root_module.generate(out)")
             pygen_sink.unindent()
             pygen_sink.writeln()
@@ -1767,7 +1766,6 @@ def _test():
     if 0:
         out = FileCodeSink(sys.stdout)
         import utils
-        utils.write_preamble(out)
         module.generate(out)
 
 if __name__ == '__main__':

@@ -13,7 +13,10 @@ def build(bld):
     ## manual code generation using simple pybindgen API calls
     bindgen = bld.create_obj('command-output')
     bindgen.stdout = 'amodule.cc'
-    bindgen.argv = [bindgen.input_file('modulegen.py')]
+    bindgen.argv = [
+        '-Werror::DeprecationWarning',
+        bindgen.input_file('modulegen.py'),
+        ]
     bindgen.command = bindgen.env['PYTHON']
     bindgen.command_is_external = True
     bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
@@ -32,8 +35,11 @@ def build(bld):
         ## gccxml direct generation method
         bindgen = bld.create_obj('command-output')
         bindgen.stdout = 'a1module.cc'
-        bindgen.argv = [bindgen.input_file('module-autogen.py'),
-                        bindgen.input_file('a.h')]
+        bindgen.argv = [
+            '-Werror::DeprecationWarning',
+            bindgen.input_file('module-autogen.py'),
+            bindgen.input_file('a.h'),
+            ]
         bindgen.command = bindgen.env['PYTHON']
         bindgen.command_is_external = True
         bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
@@ -51,15 +57,21 @@ def build(bld):
         ## gccxml indirect generation method
         bindgen = bld.create_obj('command-output')
         bindgen.stdout = 'a2modulegen.py'
-        bindgen.argv = [bindgen.input_file('module-autoscan.py'),
-                        bindgen.input_file('a.h')]
+        bindgen.argv = [
+            '-Werror::DeprecationWarning',
+            bindgen.input_file('module-autoscan.py'),
+            bindgen.input_file('a.h'),
+            ]
         bindgen.command = bindgen.env['PYTHON']
         bindgen.command_is_external = True
         bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
         bindgen = bld.create_obj('command-output')
         bindgen.stdout = 'a2module.cc'
-        bindgen.argv = [bindgen.input_file('a2modulegen.py')]
+        bindgen.argv = [
+            '-Werror::DeprecationWarning',
+            bindgen.input_file('a2modulegen.py'),
+            ]
         bindgen.command = bindgen.env['PYTHON']
         bindgen.command_is_external = True
         bindgen.prio = 56 # must run after the 'py' objects in ../pybindgen
