@@ -5,6 +5,7 @@ Wraps C++ class instance/static attributes.
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase
 from typehandlers import codesink
 import settings
+import utils
 
 
 class PyGetter(ForwardWrapperBase):
@@ -355,27 +356,44 @@ class PyGetSetDef(object):
         if not self.attributes:
             return '0'
 
+        getsets = {} # attrname -> (getter, setter)
         for name, getter, setter in self.attributes:
+
+            getter_name = 'NULL'
             if getter is not None:
-                getter.generate(code_sink)
+                # getter.generate(code_sink)
+                try:
+                    utils.call_with_error_handling(getter.generate, (code_sink,), {}, getter)
+                except utils.SkipWrapper:
+                    pass
+                else:
+                    getter_name = getter.c_function_name
+
+            setter_name = 'NULL'
             if setter is not None:
-                setter.generate(code_sink)
+                #setter.generate(code_sink)
+                try:
+                    utils.call_with_error_handling(setter.generate, (code_sink,), {}, setter)
+                except utils.SkipWrapper:
+                    pass
+                else:
+                    setter_name = setter.c_function_name
+            assert name not in getsets
+            getsets[name] = (getter_name, setter_name)
         
         code_sink.writeln("static PyGetSetDef %s[] = {" % self.cname)
         code_sink.indent()
-        for name, getter, setter in self.attributes:
+        for name, (getter_c_name, setter_c_name) in getsets.iteritems():
             code_sink.writeln('{')
             code_sink.indent()
             code_sink.writeln('(char*) "%s", /* attribute name */' % name)
 
             ## getter
-            getter_c_name = (getter and getter.c_function_name or "NULL")
             code_sink.writeln(
                 '(getter) %s, /* C function to get the attribute */'
                 % getter_c_name)
 
             ## setter
-            setter_c_name = setter and setter.c_function_name or "NULL"
             code_sink.writeln(
                 '(setter) %s, /* C function to set the attribute */'
                 % setter_c_name)
