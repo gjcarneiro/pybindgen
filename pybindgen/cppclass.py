@@ -528,9 +528,17 @@ class CppClass(object):
                 assert self.memory_policy is None
                 self.memory_policy = ReferenceCountingFunctionsPolicy(incref_function, decref_function)
         else:
-            assert memory_policy is None, "only root classes may define memory policies"
-            assert not (free_function or incref_method or incref_function), "only root classes may define memory policies"
-            self.memory_policy = None
+            parent_tmp = None
+            have_parent_memory_policy = False
+            while parent_tmp is not None:
+                if parent.memory_policy is not None:
+                    have_parent_memory_policy = True
+                    break
+            assert memory_policy is None or not have_parent_memory_policy, \
+                "changing memory policy from parent to child class not permitted"
+            assert not (free_function or incref_method or incref_function) or not have_parent_memory_policy, \
+                "changing memory policy from parent to child class not permitted"
+            self.memory_policy = memory_policy
 
         if automatic_type_narrowing is None:
             if parent is None:
