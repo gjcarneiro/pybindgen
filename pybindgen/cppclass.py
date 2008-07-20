@@ -437,11 +437,11 @@ class CppClass(object):
         """
         @param name: class name
         @param parent: optional parent class wrapper
-        @param incref_method: if the class supports reference counting, the
+        @param incref_method: (deprecated in favour of memory_policy) if the class supports reference counting, the
                          name of the method that increments the
                          reference count (may be inherited from parent
                          if not given)
-        @param decref_method: if the class supports reference counting, the
+        @param decref_method: (deprecated in favour of memory_policy) if the class supports reference counting, the
                          name of the method that decrements the
                          reference count (may be inherited from parent
                          if not given)
@@ -455,11 +455,11 @@ class CppClass(object):
         @param is_singleton: if True, the class is considered a singleton,
                         and so the python wrapper will never call the
                         C++ class destructor to free the value.
-        @param peekref_method: if the class supports reference counting, the
+        @param peekref_method: (deprecated in favour of memory_policy) if the class supports reference counting, the
                           name of the method that returns the current reference count.
-        @param free_function: name of C function used to deallocate class instances
-        @param incref_function: same as incref_method, but as a function instead of method
-        @param decref_function: same as decref_method, but as a function instead of method
+        @param free_function: (deprecated in favour of memory_policy) name of C function used to deallocate class instances
+        @param incref_function: (deprecated in favour of memory_policy) same as incref_method, but as a function instead of method
+        @param decref_function: (deprecated in favour of memory_policy) same as decref_method, but as a function instead of method
         @param python_name: name of the class as it will appear from Python side
 
         @param memory_policy: memory management policy; if None, it
