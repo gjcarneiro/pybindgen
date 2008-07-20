@@ -5,14 +5,14 @@ import sys
 import pybindgen
 from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
 from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
-
+from pybindgen import cppclass
 
 def my_module_gen(out_file):
 
     mod = Module('d')
     mod.add_include('"d.h"')
 
-    D = mod.add_class('D', free_function='DDestroy')
+    D = mod.add_class('D', memory_policy=cppclass.FreeFunctionPolicy('DDestroy'))
     D.add_instance_attribute('d', ReturnValue.new('bool'))
     D.add_function_as_constructor("DCreate", ReturnValue.new("D*", caller_owns_return=True), [])
     mod.add_function('DDoA', None, [Parameter.new('D*', 'd', transfer_ownership=False)])
