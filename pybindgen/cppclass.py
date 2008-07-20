@@ -512,33 +512,30 @@ class CppClass(object):
         self.parent = parent
         assert parent is None or isinstance(parent, CppClass)
 
+        if free_function:
+            warnings.warn("Use FreeFunctionPolicy and memory_policy parameter.", DeprecationWarning)
+            assert memory_policy is None
+            memory_policy = FreeFunctionPolicy(free_function)
+        elif incref_method:
+            warnings.warn("Use ReferenceCountingMethodsPolicy and memory_policy parameter.", DeprecationWarning)
+            assert memory_policy is None
+            memory_policy = ReferenceCountingMethodsPolicy(incref_method, decref_method, peekref_method)
+        elif incref_function:
+            warnings.warn("Use ReferenceCountingFunctionsPolicy and memory_policy parameter.", DeprecationWarning)
+            assert memory_policy is None
+            memory_policy = ReferenceCountingFunctionsPolicy(incref_function, decref_function)
+
         if parent is None:
             assert memory_policy is None or isinstance(memory_policy, MemoryPolicy)
             self.memory_policy = memory_policy
-            if free_function:
-                warnings.warn("Use FreeFunctionPolicy and memory_policy parameter.", DeprecationWarning)
-                assert self.memory_policy is None
-                self.memory_policy = FreeFunctionPolicy(free_function)
-            elif incref_method:
-                warnings.warn("Use ReferenceCountingMethodsPolicy and memory_policy parameter.", DeprecationWarning)
-                assert self.memory_policy is None
-                self.memory_policy = ReferenceCountingMethodsPolicy(incref_method, decref_method, peekref_method)
-            elif incref_function:
-                warnings.warn("Use ReferenceCountingFunctionsPolicy and memory_policy parameter.", DeprecationWarning)
-                assert self.memory_policy is None
-                self.memory_policy = ReferenceCountingFunctionsPolicy(incref_function, decref_function)
         else:
-            parent_tmp = None
-            have_parent_memory_policy = False
-            while parent_tmp is not None:
-                if parent.memory_policy is not None:
-                    have_parent_memory_policy = True
-                    break
-            assert memory_policy is None or not have_parent_memory_policy, \
-                "changing memory policy from parent to child class not permitted"
-            assert not (free_function or incref_method or incref_function) or not have_parent_memory_policy, \
-                "changing memory policy from parent to child class not permitted"
-            self.memory_policy = memory_policy
+            if parent.memory_policy is None:
+                self.memory_policy = memory_policy
+            else:
+                self.memory_policy = parent.memory_policy
+                assert memory_policy is None, \
+                    "changing memory policy from parent (%s) to child (%s) class not permitted" \
+                    % (parent.name, self.name)
 
         if automatic_type_narrowing is None:
             if parent is None:
