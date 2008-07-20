@@ -657,4 +657,3 @@ from enum import Enum
 from utils import write_preamble, param, retval
 import version
 
-

@@ -68,6 +68,10 @@ class ReferenceCountingMethodsPolicy(ReferenceCountingPolicy):
     def get_free_code(self, obj_expr):
         return ('%s->%s();' % (obj_expr, self.decref_method))
 
+    def __repr__(self):
+        return 'cppclass.ReferenceCountingMethodsPolicy(incref_method=%r, decref_method=%r, peekref_method=%r)' \
+            % (self.incref_method, self.decref_method, self.peekref_method)
+
 
 class ReferenceCountingFunctionsPolicy(ReferenceCountingPolicy):
     def __init__(self, incref_function, decref_function, peekref_function=None):
@@ -85,6 +89,9 @@ class ReferenceCountingFunctionsPolicy(ReferenceCountingPolicy):
     def get_free_code(self, obj_expr):
         return ('%s(%s);' % (obj_expr, self.decref_function))
 
+    def __repr__(self):
+        return 'cppclass.ReferenceCountingFunctionsPolicy(incref_function=%r, decref_function=%r, peekref_function=%r)' \
+            % (self.incref_function, self.decref_function, self.peekref_function)
 
 class FreeFunctionPolicy(MemoryPolicy):
     def __init__(self, free_function):
@@ -93,6 +100,9 @@ class FreeFunctionPolicy(MemoryPolicy):
 
     def get_free_code(self, obj_expr):
         return ('%s(%s);' % (self.free_function, obj_expr))
+
+    def __repr__(self):
+        return 'cppclass.FreeFunctionPolicy(%r)' % self.free_function
 
 
 def default_instance_creation_function(cpp_class, code_block, lvalue,

@@ -10,6 +10,7 @@ from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
 from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
 from pybindgen.function import CustomFunctionWrapper
 from pybindgen.cppmethod import CustomCppMethodWrapper
+from pybindgen import cppclass
 
 import foomodulegen_common
 
@@ -52,8 +53,9 @@ def my_module_gen(out_file):
 
 
     ## Zbr is a reference counted class
-    Zbr = mod.add_class('Zbr', incref_method='Ref', decref_method='Unref',
-                        peekref_method="GetReferenceCount", allow_subclassing=True)
+    Zbr = mod.add_class('Zbr', memory_policy=cppclass.ReferenceCountingMethodsPolicy(
+            incref_method='Ref', decref_method='Unref', peekref_method="GetReferenceCount"),
+                        allow_subclassing=True)
 
     def helper_class_hook(helper_class):
         helper_class.add_custom_method(

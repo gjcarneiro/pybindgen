@@ -18,7 +18,7 @@ def create_pyext_obj(bld, c_or_cpp_type):
         return bld.create_obj(c_or_cpp_type, 'plugin', 'pyext')
 
 
-if 0:
+if 1:
     DEPRECATION_ERRORS = '-Werror::DeprecationWarning' # deprecations become errors
 else:
     DEPRECATION_ERRORS = '-Wdefault::DeprecationWarning' # normal python behaviour

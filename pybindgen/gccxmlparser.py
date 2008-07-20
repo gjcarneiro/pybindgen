@@ -11,7 +11,7 @@ from typehandlers.codesink import FileCodeSink, CodeSink, NullCodeSink
 import typehandlers.base
 from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
 from pygccxml.declarations.enumeration import enumeration_t
-from cppclass import CppClass, ReferenceCountingMethodsPolicy
+from cppclass import CppClass, ReferenceCountingMethodsPolicy, FreeFunctionPolicy, ReferenceCountingFunctionsPolicy
 from pygccxml.declarations import type_traits
 from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
@@ -669,7 +669,7 @@ class ModuleParser(object):
             self.module.add_include(inc)
 
         for pygen_sink in self._get_all_pygen_sinks():
-            pygen_sink.writeln("from pybindgen import Module, FileCodeSink, param, retval")
+            pygen_sink.writeln("from pybindgen import Module, FileCodeSink, param, retval, cppclass")
             pygen_sink.writeln()
 
         pygen_sink = self._get_main_pygen_sink()
@@ -823,19 +823,22 @@ pybindgen.settings.error_handler = ErrorHandler()
             elif name == 'is_singleton':
                 kwargs.setdefault('is_singleton', annotations_scanner.parse_boolean(value))
             elif name == 'incref_method':
-                kwargs.setdefault('incref_method', value)
+                kwargs.setdefault('memory_policy', ReferenceCountingMethodsPolicy(
+                        incref_method=value, decref_method=annotations.get('decref_method', None),
+                        peekref_method=annotations.get('peekref_method', None)))
             elif name == 'decref_method':
-                kwargs.setdefault('decref_method', value)
+                pass
             elif name == 'peekref_method':
-                kwargs.setdefault('peekref_method', value)
+                pass
             elif name == 'automatic_type_narrowing':
                 kwargs.setdefault('automatic_type_narrowing', annotations_scanner.parse_boolean(value))
             elif name == 'free_function':
-                kwargs.setdefault('free_function', value)
+                kwargs.setdefault('memory_policy', FreeFunctionPolicy(value))
             elif name == 'incref_function':
-                kwargs.setdefault('incref_function', value)
+                kwargs.setdefault('memory_policy', ReferenceCountingFunctionsPolicy(
+                        incref_function=value, decref_function=annotations.get('decref_function', None)))
             elif name == 'decref_function':
-                kwargs.setdefault('decref_function', value)
+                pass
             elif name == 'python_name':
                 kwargs.setdefault('python_name', value)
             elif name == 'pygen_comment':
