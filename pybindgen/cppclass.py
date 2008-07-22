@@ -1587,9 +1587,9 @@ static void
             else:
                 peekref_code = " && self->obj->%s() == 1" % self.memory_policy.peekref_method
             visit_self = '''
-    if (self->obj %s)
+    if (self->obj && typeid(*self->obj) == typeid(%s) %s)
         Py_VISIT((PyObject *) self);
-''' % (peekref_code)
+''' % (self.helper_class.name, peekref_code)
 
         code_sink.writeln(r'''
 static int
