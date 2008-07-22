@@ -132,7 +132,7 @@ class CppInstanceAttributeSetter(PySetter):
 
         self.declarations.declare_variable('PyObject*', 'py_retval')
         self.before_call.write_code(
-            'py_retval = Py_BuildValue("(O)", value);')
+            'py_retval = Py_BuildValue((char *) "(O)", value);')
         self.before_call.add_cleanup_code('Py_DECREF(py_retval);')
 
         if self.setter is not None:
@@ -150,7 +150,10 @@ class CppInstanceAttributeSetter(PySetter):
         self.return_value.convert_python_to_c(self)
 
         parse_tuple_params = ['py_retval']
-        parse_tuple_params.extend(self.parse_params.get_parameters())
+        params = self.parse_params.get_parameters()
+        assert params[0][0] == '"'
+        params[0] = '(char *) ' + params[0]
+        parse_tuple_params.extend(params)
         self.before_call.write_error_check('!PyArg_ParseTuple(%s)' %
                                            (', '.join(parse_tuple_params),))
 
@@ -203,11 +206,14 @@ class CppStaticAttributeSetter(PySetter):
 
         self.declarations.declare_variable('PyObject*', 'py_retval')
         self.before_call.write_code(
-            'py_retval = Py_BuildValue("(O)", value);')
+            'py_retval = Py_BuildValue((char *) "(O)", value);')
         self.before_call.add_cleanup_code('Py_DECREF(py_retval);')
         self.return_value.convert_python_to_c(self)
         parse_tuple_params = ['py_retval']
-        parse_tuple_params.extend(self.parse_params.get_parameters())
+        params = self.parse_params.get_parameters()
+        assert params[0][0] == '"'
+        params[0] = '(char *) ' + params[0]
+        parse_tuple_params.extend(params)
         self.before_call.write_error_check('!PyArg_ParseTuple(%s)' %
                                            (', '.join(parse_tuple_params),))
         ## cleanup and return
@@ -261,7 +267,7 @@ class PyMetaclass(object):
 PyTypeObject %(pytypestruct)s = {
 	PyObject_HEAD_INIT(NULL)
 	0,					/* ob_size */
-	"%(name)s",			        /* tp_name */
+	(char *) "%(name)s",		        /* tp_name */
 	0,					/* tp_basicsize */
 	0,					/* tp_itemsize */
 	0,	 				/* tp_dealloc */

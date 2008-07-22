@@ -596,13 +596,13 @@ def _add_ward(wrapper, custodian, ward):
     wards = wrapper.declarations.declare_variable(
         'PyObject*', 'wards')
     wrapper.after_call.write_code(
-        "%(wards)s = PyObject_GetAttrString(%(custodian)s, \"__wards__\");"
+        "%(wards)s = PyObject_GetAttrString(%(custodian)s, (char *) \"__wards__\");"
         % vars())
     wrapper.after_call.write_code(
         "if (%(wards)s == NULL) {\n"
         "    PyErr_Clear();\n"
         "    %(wards)s = PyList_New(0);\n"
-        "    PyObject_SetAttrString(%(custodian)s, \"__wards__\", %(wards)s);\n"
+        "    PyObject_SetAttrString(%(custodian)s, (char *) \"__wards__\", %(wards)s);\n"
         "}" % vars())
     wrapper.after_call.write_code("PyList_Append(%s, %s);" % (wards, ward))
     wrapper.after_call.add_cleanup_code("Py_DECREF(%s);" % wards)

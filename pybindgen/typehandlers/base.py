@@ -11,6 +11,7 @@ import warnings
 from ctypeparser import normalize_type_string
 
 
+
 try:
     all
 except NameError: # for compatibility with Python < 2.5
@@ -20,6 +21,13 @@ except NameError: # for compatibility with Python < 2.5
             if not element:
                 return False
         return True
+try: 
+    set 
+except NameError: 
+    from sets import Set as set   # Python 2.3 fallback 
+
+
+
 
 class CodegenErrorBase(Exception):
     pass
@@ -593,10 +601,13 @@ class ReverseWrapperBase(object):
         else:
             ## parse the return value
             ## this ensures that py_retval is always a tuple
-            self.before_call.write_code('py_retval = Py_BuildValue("(N)", py_retval);')
+            self.before_call.write_code('py_retval = Py_BuildValue((char*) "(N)", py_retval);')
 
             parse_tuple_params = ['py_retval']
-            parse_tuple_params.extend(self.parse_params.get_parameters())
+            parse_params = self.parse_params.get_parameters()
+            assert parse_params[0][0] == '"'
+            parse_params[0] = '(char *) ' + parse_params[0]
+            parse_tuple_params.extend(parse_params)
             self.before_call.write_error_check('!PyArg_ParseTuple(%s)' %
                                                (', '.join(parse_tuple_params),))
 
@@ -829,11 +840,15 @@ class ForwardWrapperBase(object):
         self.generate_call(*gen_call_params)
 
         params = self.parse_params.get_parameters()
+        assert params[0][0] == '"'
+        params_empty = (params == ['""'])
+        params[0] = '(char *) ' + params[0]
         keywords = self.parse_params.get_keywords()
-        if params != ['""'] or self.force_parse != None:
+        if not params_empty or self.force_parse != None:
             self.meth_flags.append("METH_VARARGS")
-            if (keywords is None
-                and self.force_parse != self.PARSE_TUPLE_AND_KEYWORDS):
+            if keywords is None \
+                    and self.force_parse != self.PARSE_TUPLE_AND_KEYWORDS:
+
                 param_list = ['args'] + params
                 self.before_parse.write_error_check('!PyArg_ParseTuple(%s)' %
                                                     (', '.join(param_list),))
@@ -869,8 +884,14 @@ class ForwardWrapperBase(object):
 
             params = self.build_params.get_parameters()
             if params:
-                self.after_call.write_code('py_retval = Py_BuildValue(%s);' %
-                                           (', '.join(params),))
+                if params == ['""']:
+                    self.after_call.write_code('Py_INCREF(Py_None);')
+                    self.after_call.write_code('py_retval = Py_None;')
+                else:
+                    assert params[0][0] == '"'
+                    params[0] = "(char *) " + params[0]
+                    self.after_call.write_code('py_retval = Py_BuildValue(%s);' %
+                                               (', '.join(params),))
 
             ## cleanup and return
             self.after_call.write_cleanup()
@@ -1007,7 +1028,7 @@ class ReturnValue(object):
             for ctype in mcs.CTYPES:
                 return_type_matcher.register(ctype, mcs)
 
-    @classmethod
+    #@classmethod
     def new(cls, *args, **kwargs):
         """
         >>> import inttype
@@ -1029,6 +1050,8 @@ class ReturnValue(object):
                 return transformation.create_type_handler(type_handler_class, *args, **kwargs)
         else:
             return cls(*args, **kwargs)
+
+    new = classmethod(new)
 
     def __init__(self, ctype, is_const=False):
         '''
@@ -1130,8 +1153,7 @@ class Parameter(object):
             for ctype in mcs.CTYPES:
                 param_type_matcher.register(ctype, mcs)
 
-
-    @classmethod
+    #@classmethod
     def new(cls, *args, **kwargs):
         """
         >>> import inttype
@@ -1155,6 +1177,7 @@ class Parameter(object):
         else:
             return cls(*args, **kwargs)
 
+    new = classmethod(new)
 
     def __init__(self, ctype, name, direction=DIRECTION_IN, is_const=False, default_value=None):
         '''

@@ -6,8 +6,8 @@ import re
 import pybindgen
 import pybindgen.utils
 from pybindgen.typehandlers import base as typehandlers
-from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
-from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
+from pybindgen import ReturnValue, Parameter, Module, Function, FileCodeSink
+from pybindgen import CppMethod, CppConstructor, CppClass, Enum
 from pybindgen.function import CustomFunctionWrapper
 from pybindgen.cppmethod import CustomCppMethodWrapper
 from pybindgen import cppclass

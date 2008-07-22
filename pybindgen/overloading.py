@@ -6,6 +6,13 @@ from typehandlers.base import ForwardWrapperBase
 from typehandlers.codesink import NullCodeSink
 import utils
 
+
+try: 
+    set 
+except NameError: 
+    from sets import Set as set   # Python 2.3 fallback 
+
+
 def isiterable(obj): 
     """Returns True if an object appears to be iterable"""
     return hasattr(obj, '__iter__') or isinstance(obj, basestring)
@@ -282,7 +289,7 @@ class OverloadedWrapper(object):
             assert isinstance(self.wrapper_actual_name, str)
             assert isinstance(self.wrapper_args, list)
 
-            return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
+            return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
                 (name, self.wrapper_actual_name, '|'.join(flags),
                  (docstring is None and "NULL" or ('"'+docstring+'"')))
 

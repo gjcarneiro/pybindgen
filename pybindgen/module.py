@@ -16,9 +16,9 @@ In Python, a sub-module will appear as a I{built-in} Python module
 that is available as an attribute of its parent module.  For instance,
 a module I{foo} having a sub-module I{xpto} appears like this::
 
-    >>> import foo
-    >>> foo.xpto
-    <module 'foo.xpto' (built-in)>
+    |>>> import foo
+    |>>> foo.xpto
+    |<module 'foo.xpto' (built-in)>
 
 Modules and C++ namespaces
 ==========================
@@ -27,21 +27,21 @@ Modules can be associated with specific C++ namespaces.  This means,
 for instance, that any C++ class wrapped inside that module must
 belong to that C++ namespace.  Example::
 
-    >>> from cppclass import *
-    >>> mod = Module("foo", cpp_namespace="::foo")
-    >>> mod.add_class("Bar")
-    <pybindgen.CppClass 'foo::Bar'>
+    |>>> from cppclass import *
+    |>>> mod = Module("foo", cpp_namespace="::foo")
+    |>>> mod.add_class("Bar")
+    |<pybindgen.CppClass 'foo::Bar'>
 
 When we have a toplevel C++ namespace which contains another nested
 namespace, we want to wrap the nested namespace as a Python
 sub-module.  The method L{ModuleBase.add_cpp_namespace} makes it easy
 to create sub-modules for wrapping nested namespaces.  For instance::
 
-    >>> from cppclass import *
-    >>> mod = Module("foo", cpp_namespace="::foo")
-    >>> submod = mod.add_cpp_namespace('xpto')
-    >>> submod.add_class("Bar")
-    <pybindgen.CppClass 'foo::xpto::Bar'>
+    |>>> from cppclass import *
+    |>>> mod = Module("foo", cpp_namespace="::foo")
+    |>>> submod = mod.add_cpp_namespace('xpto')
+    |>>> submod.add_class("Bar")
+    |<pybindgen.CppClass 'foo::xpto::Bar'>
 
 """
 
@@ -628,7 +628,7 @@ class ModuleBase(dict):
         else:
             mod_init_name = module_file_base_name
         self.before_init.write_code(
-            "m = Py_InitModule3(\"%s\", %s_functions, %s);"
+            "m = Py_InitModule3((char *) \"%s\", %s_functions, %s);"
             % (mod_init_name, self.prefix,
                self.docstring and '"'+self.docstring+'"' or 'NULL'))
         self.before_init.write_error_check("m == NULL")
@@ -701,7 +701,7 @@ class ModuleBase(dict):
                     submodule_var, submodule.init_function_name))
             self.after_init.write_error_check('%s == NULL' % submodule_var)
             self.after_init.write_code('Py_INCREF(%s);' % (submodule_var,))
-            self.after_init.write_code('PyModule_AddObject(m, "%s", %s);'
+            self.after_init.write_code('PyModule_AddObject(m, (char *) "%s", %s);'
                                        % (submodule.name, submodule_var,))
 
         ## flush the header section

@@ -69,7 +69,7 @@ if __name__ == '__main__':
         module,
         cppclass,
         overloading,
-        utils,
+        #utils,
         stringtype,
         ctypeparser,
         ]:

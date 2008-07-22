@@ -11,9 +11,9 @@ from typehandlers.base import ReturnValue, \
 
 from typehandlers.codesink import NullCodeSink, MemoryCodeSink
 
-from cppattribute import (CppInstanceAttributeGetter, CppInstanceAttributeSetter,
-                          CppStaticAttributeGetter, CppStaticAttributeSetter,
-                          PyGetSetDef, PyMetaclass)
+from cppattribute import CppInstanceAttributeGetter, CppInstanceAttributeSetter, \
+    CppStaticAttributeGetter, CppStaticAttributeSetter, \
+    PyGetSetDef, PyMetaclass
 
 import settings
 import utils
@@ -377,7 +377,7 @@ class CppClass(object):
         'PyTypeObject %(typestruct)s = {\n'
         '    PyObject_HEAD_INIT(NULL)\n'
         '    0,                                 /* ob_size */\n'
-        '    "%(tp_name)s",                   /* tp_name */\n'
+        '    (char *) "%(tp_name)s",            /* tp_name */\n'
         '    %(tp_basicsize)s,                  /* tp_basicsize */\n'
         '    0,                                 /* tp_itemsize */\n'
         '    /* methods */\n'
@@ -1406,11 +1406,11 @@ typedef struct {
 
         if self.outer_class is None:
             module.after_init.write_code(
-                'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
+                'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) &%s);' % (
                 class_python_name, self.pytypestruct))
         else:
             module.after_init.write_code(
-                'PyDict_SetItemString((PyObject*) %s.tp_dict, \"%s\", (PyObject *) &%s);' % (
+                'PyDict_SetItemString((PyObject*) %s.tp_dict, (char *) \"%s\", (PyObject *) &%s);' % (
                 self.outer_class.pytypestruct, class_python_name, self.pytypestruct))
 
         have_constructor = self._generate_constructor(code_sink)
@@ -1689,7 +1689,7 @@ static void
         with a new name in that module (typedef alias).
         """
         module.after_init.write_code(
-            'PyModule_AddObject(m, \"%s\", (PyObject *) &%s);' % (
+            'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) &%s);' % (
                 alias, self.pytypestruct))
         
 

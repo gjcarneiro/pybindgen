@@ -286,7 +286,7 @@ class CppMethod(ForwardWrapperBase):
     def get_py_method_def(self, method_name):
         "Get the PyMethodDef entry suitable for this method"
         flags = self.get_py_method_def_flags()
-        return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
+        return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
                (method_name, self.wrapper_actual_name, '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
 
@@ -711,7 +711,7 @@ class CppVirtualMethodParentCaller(CppMethod):
         if method_name is None:
             method_name = self.method_name
         flags = self.get_py_method_def_flags()
-        return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
+        return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
                (method_name,
                 self.wrapper_actual_name,#'::'.join((self._helper_class.name, self.wrapper_actual_name)),
                 '|'.join(flags),
@@ -802,7 +802,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         ## just chain to parent class and don't do anything else
         call_params = ', '.join([param.name for param in self.parameters])
         self.before_call.write_code(
-            r'if (!PyObject_HasAttrString(m_pyself, "_%s")) {' % self.method_name)
+            r'if (!PyObject_HasAttrString(m_pyself, (char *) "_%s")) {' % self.method_name)
         if self.return_value.ctype == 'void':
             if not (self.method.is_pure_virtual or self.method.visibility == 'private'):
                 self.before_call.write_code(r'    %s::%s(%s);'

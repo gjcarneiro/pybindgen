@@ -172,7 +172,7 @@ class Function(ForwardWrapperBase):
         assert isinstance(self.wrapper_return, str)
         assert isinstance(self.wrapper_actual_name, str)
         assert isinstance(self.wrapper_args, list)
-        return "{\"%s\", (PyCFunction) %s, %s, %s }," % \
+        return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
                (name, self.wrapper_actual_name, '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
 

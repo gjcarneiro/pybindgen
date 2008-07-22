@@ -5,9 +5,8 @@ import re
 
 import pybindgen
 from pybindgen.typehandlers import base as typehandlers
-from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
-from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
-from pybindgen.gccxmlparser import ModuleParser
+from pybindgen import ReturnValue, Parameter, Module, Function, FileCodeSink
+from pybindgen import CppMethod, CppConstructor, CppClass, Enum
 from pybindgen.function import CustomFunctionWrapper
 from pybindgen.cppmethod import CustomCppMethodWrapper
 
@@ -61,7 +60,7 @@ _wrap_foofunction_that_takes_foo_from_string(PyObject * PYBINDGEN_UNUSED(dummy),
     char *datum;
     const char *keywords[] = {"foo", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", (char **) keywords, &datum)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "s", (char **) keywords, &datum)) {
         {
             PyObject *exc_type, *traceback;
             PyErr_Fetch(&exc_type, return_exception, &traceback);
@@ -71,7 +70,8 @@ _wrap_foofunction_that_takes_foo_from_string(PyObject * PYBINDGEN_UNUSED(dummy),
         return NULL;
     }
     function_that_takes_foo(Foo(datum));
-    py_retval = Py_BuildValue("");
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
     return py_retval;
 }
 '''
@@ -91,7 +91,7 @@ _wrap_PyBar_Hooray_lenx(PyBar *PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject
     int x;
     const char *keywords[] = {"x", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i", (char **) keywords, &x)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "i", (char **) keywords, &x)) {
         PyObject *exc_type, *traceback;
         PyErr_Fetch(&exc_type, return_exception, &traceback);
         Py_XDECREF(exc_type);
@@ -101,7 +101,7 @@ _wrap_PyBar_Hooray_lenx(PyBar *PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject
 
     std::string retval;
     retval = Bar::Hooray();
-    py_retval = Py_BuildValue("i", int(retval.size() + x));
+    py_retval = Py_BuildValue((char *) "i", int(retval.size() + x));
     return py_retval;
 }
 '''

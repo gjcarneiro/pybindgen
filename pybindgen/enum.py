@@ -104,7 +104,7 @@ class Enum(object):
                 namespace.append(self.cpp_namespace)
             for value in self.values:
                 module.after_init.write_code(
-                    "PyModule_AddIntConstant(m, \"%s\", %s);"
+                    "PyModule_AddIntConstant(m, (char *) \"%s\", %s);"
                     % (value, '::'.join(namespace + [self.values_prefix + value])))
         else:
             module.after_init.write_code("{")
