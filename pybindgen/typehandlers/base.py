@@ -829,7 +829,7 @@ class ForwardWrapperBase(object):
                 msg = self.deprecated
             else:
                 msg = "Deprecated"
-            self.before_call.write_error_check( 'PyErr_WarnEx(PyExc_DeprecationWarning, "%s", 1)' % msg)
+            self.before_call.write_error_check( 'PyErr_Warn(PyExc_DeprecationWarning, (char *) "%s")' % msg)
 
         if self.unblock_threads:
             self.before_call.write_code(

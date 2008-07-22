@@ -82,7 +82,8 @@ int %s::custom_method_added_by_a_hook(int x)
 
 
     mod.add_function('print_something', ReturnValue.new('int'),
-                     [Parameter.new('char*', 'message', is_const=True)])
+                     [Parameter.new('char*', 'message', is_const=True)],
+                     deprecated=True)
     mod.add_function('print_something_else', ReturnValue.new('int'),
                      [Parameter.new('char*', 'message2', is_const=True)])
 
