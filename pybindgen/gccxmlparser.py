@@ -583,7 +583,8 @@ class ModuleParser(object):
         return self.module
 
     def parse_init(self, header_files, include_paths=None,
-                   whitelist_paths=None, includes=(), pygen_sink=None, pygen_classifier=None):
+                   whitelist_paths=None, includes=(), pygen_sink=None, pygen_classifier=None,
+                   gccxml_options=None):
         """
         Prepares to parse a set of header files.  The following
         methods should then be called in order to finish the rest of
@@ -596,7 +597,7 @@ class ModuleParser(object):
          @param header_files: header files to parse
          @type header_files: list of string
 
-         @param include_paths: list of include paths
+         @param include_paths: (deprecated, use the parameter gccxml_options) list of include paths
          @type include_paths: list of string
 
          @param whitelist_paths: additional directories for definitions to be included
@@ -625,6 +626,15 @@ class ModuleParser(object):
          @type pygen_sink: L{CodeSink} or list of L{PygenSection} objects
 
          @param pygen_classifier: the classifier to use when pygen is given and is a dict
+
+
+         @param gccxml_options: extra options to pass into
+         the gccxml_configuration_t object as keyword arguments (see 
+         L{pygccxml API documentation<http://www.language-binding.net/pyplusplus/documentation/apidocs/pygccxml.parser.config.gccxml_configuration_t-class.html>}
+         for more information).
+
+         @type gccxml_options: dict
+
         """
         assert isinstance(header_files, list)
         assert isinstance(includes, (list, tuple))
@@ -652,11 +662,16 @@ class ModuleParser(object):
             assert isinstance(whitelist_paths, list)
             self.whitelist_paths = [os.path.abspath(p) for p in whitelist_paths]
 
+        if gccxml_options is None:
+            gccxml_options = {}
+
         if include_paths is not None:
             assert isinstance(include_paths, list)
-            self.gccxml_config = parser.config_t(include_paths=include_paths)
+            warnings.warn("Parameter include_paths is deprecated, use gccxml_options instead", DeprecationWarning,
+                          stacklevel=2)
+            self.gccxml_config = parser.config_t(include_paths=include_paths, **gccxml_options)
         else:
-            self.gccxml_config = parser.config_t()
+            self.gccxml_config = parser.config_t(**gccxml_options)
 
         self.declarations = parser.parse(header_files, self.gccxml_config)
         if self.module_namespace_name == '::':
