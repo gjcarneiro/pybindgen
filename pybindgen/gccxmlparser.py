@@ -299,6 +299,8 @@ class GccXmlTypeRegistry(object):
                 kwargs['custodian'] = int(value)
             elif name == 'array_length':
                 kwargs['array_length'] = int(value)
+            elif name == 'default_value':
+                kwargs['default_value'] = value
             else:
                 warnings.warn("invalid annotation name %r" % name, AnnotationsWarning)
 

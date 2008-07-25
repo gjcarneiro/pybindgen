@@ -20,9 +20,9 @@ int get_int_from_string(const char *from_string, int multiplier)
     return atoi(from_string)*multiplier;
 }
 
-int get_int_from_float(double from_float)
+int get_int_from_float(double from_float, int multiplier)
 {
-    return (int) from_float;
+    return (int) from_float*multiplier;
 }
 
 

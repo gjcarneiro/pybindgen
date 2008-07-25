@@ -115,6 +115,13 @@ class TestFoo(unittest.TestCase):
 
         self.assertRaises(TypeError, foo.get_int, [123])
 
+    def test_default_value(self):
+        v1 = foo.get_int(123.0)
+        self.assertEqual(v1, 123)
+
+        v1 = foo.get_int(123.0, 2)
+        self.assertEqual(v1, 123*2)
+
     def test_overloaded_methods(self):
         obj = foo.SomeObject("zbr")
         

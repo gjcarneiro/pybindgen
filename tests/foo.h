@@ -26,8 +26,8 @@ int print_something_else(const char *message2);
 
 /* -#- name=get_int -#- */
 int get_int_from_string(const char *from_string, int multiplier=1);
-// -#- name=get_int -#-
-int get_int_from_float(double from_float);
+// -#- name=get_int; @multiplier(default_value=1) -#-
+int get_int_from_float(double from_float, int multiplier);
 
 // In this example PointerHolder<T> automatically implies
 // caller_owns_return=True when used as ReturnValue, and
