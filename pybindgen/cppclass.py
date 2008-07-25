@@ -910,6 +910,7 @@ class CppClass(object):
         if self.helper_class is None:
             if not self.is_singleton:
                 self.helper_class = CppHelperClass(self)
+                self.module.add_include('<typeinfo>')
         return self.helper_class
     
     def get_type_narrowing_root(self):
