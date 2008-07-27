@@ -632,7 +632,7 @@ class ModuleParser(object):
 
          @param gccxml_options: extra options to pass into
          the gccxml_configuration_t object as keyword arguments (see 
-         L{pygccxml API documentation<http://www.language-binding.net/pyplusplus/documentation/apidocs/pygccxml.parser.config.gccxml_configuration_t-class.html>}
+         U{pygccxml API documentation<http://www.language-binding.net/pyplusplus/documentation/apidocs/pygccxml.parser.config.gccxml_configuration_t-class.html>}
          for more information).
 
          @type gccxml_options: dict
