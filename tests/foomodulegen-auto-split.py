@@ -16,7 +16,7 @@ import foomodulegen_common
 
 class MyPygenClassifier(PygenClassifier):
     def classify(self, pygccxml_definition):
-        if pygccxml_definition.name.lower() <= 'l':
+        if pygccxml_definition.name and pygccxml_definition.name.lower() <= 'l':
             return 'foomodulegen_module1'
         else:
             return 'foomodulegen_module2'

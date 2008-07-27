@@ -762,5 +762,11 @@ class TestFoo(unittest.TestCase):
         def test_deprecations(self):
             foo.print_something("zbr")
 
+    def test_anon_enum(self):
+        try:
+            self.assertEqual(foo.SomeObject.CONSTANT_A, 0)
+        except AttributeError:
+            self.fail()
+
 if __name__ == '__main__':
     unittest.main()

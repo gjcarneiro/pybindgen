@@ -32,8 +32,8 @@ class Enum(object):
             if not isinstance(val, basestring):
                 raise TypeError
 
-        if not name:
-            raise ValueError
+        #if not name:
+        #    raise ValueError
         self.name = name
         self.full_name = None
         self.values = list(values)
@@ -51,6 +51,9 @@ class Enum(object):
         """Set the Module object this class belongs to; can only be set once"""
         assert self._module is None
         self._module = module
+
+        if not self.name:
+            return
 
         if self.outer_class is None:
             if self._module.cpp_namespace_prefix:

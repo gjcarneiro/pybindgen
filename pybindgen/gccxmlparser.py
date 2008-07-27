@@ -917,11 +917,11 @@ pybindgen.settings.error_handler = ErrorHandler()
                     continue
                 if enum.name.startswith('__'):
                     continue
-                if not enum.name:
-                    warnings.warn_explicit("Enum %s ignored because it has no name"
-                                           % (enum, ),
-                                           NotSupportedWarning, enum.location.file_name, enum.location.line)
-                    continue
+                #if not enum.name:
+                #    warnings.warn_explicit("Enum %s ignored because it has no name"
+                #                           % (enum, ),
+                #                           NotSupportedWarning, enum.location.file_name, enum.location.line)
+                #    continue
                 enums.append(enum)
 
         for enum in enums:

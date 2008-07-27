@@ -211,6 +211,14 @@ public:
     };
 
 
+    // An anonymous nested enum
+    enum  {
+        CONSTANT_A,
+        CONSTANT_B,
+        CONSTANT_C
+    };
+
+
 private:
     Foo m_foo_value;
     Foo *m_foo_ptr;

@@ -299,6 +299,8 @@ int %s::custom_method_added_by_a_hook(int x)
     #mod.add_enum('NestedEnum', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'], outer_class=SomeObject)
     SomeObject.add_enum('NestedEnum', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'])
 
+    ## anonymous enum
+    SomeObject.add_enum('', ['CONSTANT_A', 'CONSTANT_B', 'CONSTANT_C'])
 
 
     AbstractBaseClass2 = mod.add_class('AbstractBaseClass2', allow_subclassing=True)
