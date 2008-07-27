@@ -288,14 +288,16 @@ int %s::custom_method_added_by_a_hook(int x)
 
 
     ## A nested class
-    NestedClass = mod.add_class('NestedClass', automatic_type_narrowing=True, outer_class=SomeObject)
+    #NestedClass = mod.add_class('NestedClass', automatic_type_narrowing=True, outer_class=SomeObject)
+    NestedClass = SomeObject.add_class('NestedClass', automatic_type_narrowing=True)
     NestedClass.add_static_attribute('instance_count', ReturnValue.new('int'))
     NestedClass.add_constructor([Parameter.new('std::string', 'datum')])
     NestedClass.add_constructor([])
     NestedClass.add_method('get_datum', ReturnValue.new('std::string'), [])
 
     ## A nested enum..
-    mod.add_enum('NestedEnum', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'], outer_class=SomeObject)
+    #mod.add_enum('NestedEnum', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'], outer_class=SomeObject)
+    SomeObject.add_enum('NestedEnum', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'])
 
 
 

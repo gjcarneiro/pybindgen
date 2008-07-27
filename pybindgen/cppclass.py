@@ -617,6 +617,25 @@ class CppClass(object):
     def __repr__(self):
         return "<pybindgen.CppClass %r>" % self.full_name
 
+
+    def add_class(self, *args, **kwargs):
+        """
+        Add a nested class.  See L{CppClass} for information about accepted parameters.
+        """
+        assert 'outer_class' not in kwargs
+        kwargs['outer_class'] = self
+        return self.module.add_class(*args, **kwargs)
+
+
+    def add_enum(self, *args, **kwargs):
+        """
+        Add a nested enum.  See L{Enum} for information about accepted parameters.
+        """
+        assert 'outer_class' not in kwargs
+        kwargs['outer_class'] = self
+        return self.module.add_enum(*args, **kwargs)
+
+
     def get_mro(self):
         """
         Get the method resolution order (MRO) of this class.
