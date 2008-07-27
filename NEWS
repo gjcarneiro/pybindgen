@@ -1,6 +1,7 @@
 === pybindgen 0.9 ===
     - Fix GCC 4.2 compilation warnings;
-    - Works with GCCXML 0.9/cvs (in addition to stable 0.7);
+    - Works with some GCCXML 0.9/cvs snapshots (tested with 2008-04-20),
+      in addition to stable 0.7;
     - Support for overloaded virtual methods;
     - Add 'ignore' annotation support, allowing to ignore functions
       and methods;
@@ -17,7 +18,14 @@
       smaller methods, to allow greater customization and flexibility;
     - Add support for customising C++ class instance creation code;
     - Much improved support for wrapping pure C code;
-    - Lots of small bug fixes.
+    - Support std::ostream << myobject mapped as str(myobject) (Mathieu Lacage)
+    - Support default values in parameters;
+    - More intuitive API (thanks Mathieu Lacage for feedback)
+    - Support generation of a Python pybindgen script from scanned API;
+    - Support splitting of generated python script and/or C/C++ module into several files;
+    - Lots of small bug fixes, and other features I probably forgot;
+    - New tutorial (thanks Mathieu Lacage), and API docs.
+
 
 === pybindgen 0.8 ===
     - Support C++ instance attributes through getter/setter methods
@@ -29,6 +37,7 @@
       header file scanner and annotations in comments, using pygccxml
     - Some bug fixes
 
+
 === pybindgen 0.7 ===
 	- Automatic C++ pointer-to-class return type narrowing
 	- Optionally allow subclassing in Python of certain C++ classes 
@@ -38,13 +47,16 @@
 	- Add support for a "custodian and ward" memory management model
 	- Assorted bug fixes
 
+
 === pybindgen 0.6 ===
 	- Supports function/method/constructor overloading
         - Supports automatic type narrowing on C++ class pointer return values
 
+
 === pybindgen 0.5 ===
 	- Support C++ class instance/static attribute setters (only
           getters supported before).
+
 
 === pybindgen 0.4 ===
         - Support reference counted C++ classes
@@ -58,6 +70,7 @@
           (both instance and static attributes supported)
         - Win32 build fixes
         - Other bug fixes
+
 
 === pybindgen 0.3 ===
         - Supports methods and functions with parameters of a class

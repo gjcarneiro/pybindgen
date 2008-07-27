@@ -52,7 +52,8 @@ To install PyBindGen, issue the following commands:
 
 The following documentation is available:
 
-1. API docs (with introduction): http://telecom.inescporto.pt/~gjc/pybindgen/doc/
+1. API docs (with introductory tutorial):
+   http://pybindgen.googlecode.com/svn/trunk/apidocs/index.html
 2. Many simple examples, in the 'examples' directory
 3. Advanced examples in the unit tests (tests/)
-
+4. The source code!
