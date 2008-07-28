@@ -307,6 +307,8 @@ class GccXmlTypeRegistry(object):
                 kwargs['array_length'] = int(value)
             elif name == 'default_value':
                 kwargs['default_value'] = value
+            elif name == 'null_ok':
+                kwargs['null_ok'] = annotations_scanner.parse_boolean(value)
             else:
                 warnings.warn("invalid annotation name %r" % name, AnnotationsWarning)
 

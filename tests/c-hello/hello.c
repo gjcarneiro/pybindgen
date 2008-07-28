@@ -91,3 +91,13 @@ const HelloFoo* hello_foo_get_self  (HelloFoo *foo)
     return foo;
 }
 
+int hello_get_hash  (const HelloFoo *foo)
+{
+    if (foo)
+    {
+        return (int) (long) foo;
+    } else {
+        return -1;
+    }
+}
+

@@ -27,6 +27,10 @@ const char * hello_foo_get_data        (HelloFoo   *foo);
 const HelloFoo* hello_foo_get_self  (HelloFoo *foo);
 
 
+/* -#- @foo(null_ok=true, default_value=NULL) -#- */
+int hello_get_hash  (const HelloFoo *foo);
+
+
 #ifdef __cplusplus
 }
 #endif

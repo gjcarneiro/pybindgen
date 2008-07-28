@@ -37,6 +37,18 @@ class TestHello(unittest.TestCase):
         while gc.collect():
             pass
 
+    def test_null_ok(self):
+        foo = hello.Foo(3)
+
+        h1 = hello.get_hash(foo)
+        self.assertNotEqual(h1, -1)
+
+        h2 = hello.get_hash(None)
+        self.assertEqual(h2, -1)
+
+        h3 = hello.get_hash()
+        self.assertEqual(h3, -1)
+        
 
 if __name__ == '__main__':
     unittest.main()

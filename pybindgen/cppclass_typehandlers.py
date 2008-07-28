@@ -393,7 +393,8 @@ class CppClassPtrParameter(CppClassParameterBase):
     DIRECTIONS = [Parameter.DIRECTION_IN]
     SUPPORTS_TRANSFORMATIONS = True
 
-    def __init__(self, ctype, name, transfer_ownership=None, custodian=None, is_const=False):
+    def __init__(self, ctype, name, transfer_ownership=None, custodian=None, is_const=False,
+                 null_ok=False, default_value=None):
         """
         @param ctype: C type, normally 'MyClass*'
         @param name: parameter name
@@ -416,6 +417,12 @@ class CppClassPtrParameter(CppClassParameterBase):
 
         @param is_const: if true, the parameter has a const attached to the leftmost
 
+        @param null_ok: if true, None is accepted and mapped into a C NULL pointer
+
+        @param default_value: default parameter value (as C expression
+        string); probably, the only default value that makes sense
+        here is probably 'NULL'.
+
         @note: only arguments which are instances of C++ classes
         wrapped by PyBindGen can be used as custodians.
         """
@@ -434,6 +441,8 @@ class CppClassPtrParameter(CppClassParameterBase):
                                              "not be given when there is a custodian")
             self.transfer_ownership = False
         self.custodian = custodian
+        self.null_ok = null_ok
+        self.default_value = default_value
 
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
@@ -442,21 +451,53 @@ class CppClassPtrParameter(CppClassParameterBase):
 
         if self.take_value_from_python_self:
             self.py_name = 'self'
+            value_ptr = 'self->obj'
         else:
             self.py_name = wrapper.declarations.declare_variable(
-                self.cpp_class.pystruct+'*', self.name)
-            wrapper.parse_params.add_parameter(
-                'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
+                self.cpp_class.pystruct+'*', self.name,
+                initializer=(self.default_value and 'NULL' or None))
 
-        value = self.transformation.transform(
-            self, wrapper.declarations, wrapper.before_call, '%s->obj' % self.py_name)
+            value_ptr = wrapper.declarations.declare_variable("%s*" % self.cpp_class.full_name,
+                                                              "%s_ptr" % self.name)
+
+            if self.null_ok:
+                num = wrapper.parse_params.add_parameter('O', ['&'+self.py_name], self.name, optional=bool(self.default_value))
+
+                wrapper.before_call.write_error_check(
+
+                    "%s && ((PyObject *) %s != Py_None) && !PyObject_IsInstance((PyObject *) %s, (PyObject *) &%s)"
+                    % (self.py_name, self.py_name, self.py_name, self.cpp_class.pytypestruct),
+
+                    'PyErr_SetString(PyExc_TypeError, "Parameter %i must be %s");' % (num, self.cpp_class.name))
+
+                wrapper.before_call.write_code("if (%(PYNAME)s) {\n"
+                                               "    if ((PyObject *) %(PYNAME)s == Py_None)\n"
+                                               "        %(VALUE)s = NULL;\n"
+                                               "    else\n"
+                                               "        %(VALUE)s = %(PYNAME)s->obj;\n"
+                                               "} else {\n"
+                                               "    %(VALUE)s = NULL;\n"
+                                               "}" % dict(PYNAME=self.py_name, VALUE=value_ptr))
+
+            else:
+
+                wrapper.parse_params.add_parameter(
+                    'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name, optional=bool(self.default_value))
+                wrapper.before_call.write_code("%s = (%s ? %s->obj : NULL);" % (value_ptr, self.py_name, self.py_name))
+
+        value = self.transformation.transform(self, wrapper.declarations, wrapper.before_call, value_ptr)
         wrapper.call_params.append(value)
         
         if self.transfer_ownership:
             if not isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
-                wrapper.after_call.write_code('%s->obj = NULL;' % (self.py_name,))
+                # if we transfer ownership, in the end we no longer own the object, so clear our pointer
+                wrapper.after_call.write_code('if (%s)\n    %s->obj = NULL;' % (self.py_name, self.py_name,))
             else:
+                wrapper.before_call.write_code("if (%s) {" % self.py_name)
+                wrapper.before_call.indent()
                 self.cpp_class.memory_policy.write_incref(wrapper.before_call, "%s->obj" % self.py_name)
+                wrapper.before_call.unindent()
+                wrapper.before_call.write_code("}")
 
 
     def convert_c_to_python(self, wrapper):
