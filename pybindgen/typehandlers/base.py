@@ -239,7 +239,9 @@ class ParseTupleParameters(object):
         """
         >>> tuple_params = ParseTupleParameters()
         >>> tuple_params.add_parameter('i', ['&foo'], 'foo')
+        1
         >>> tuple_params.add_parameter('s', ['&bar'], 'bar', optional=True)
+        2
         >>> tuple_params.get_parameters()
         ['"i|s"', '&foo', '&bar']
         >>> tuple_params.get_keywords()
@@ -247,7 +249,9 @@ class ParseTupleParameters(object):
 
         >>> tuple_params = ParseTupleParameters()
         >>> tuple_params.add_parameter('i', ['&foo'], 'foo')
+        1
         >>> tuple_params.add_parameter('s', ['&bar'], 'bar', prepend=True)
+        2
         >>> tuple_params.get_parameters()
         ['"si"', '&bar', '&foo']
         >>> tuple_params.get_keywords()
@@ -255,6 +259,7 @@ class ParseTupleParameters(object):
 
         >>> tuple_params = ParseTupleParameters()
         >>> tuple_params.add_parameter('i', ['&foo'])
+        1
         >>> print tuple_params.get_keywords()
         None
         """
@@ -284,6 +289,7 @@ class ParseTupleParameters(object):
             self._parse_tuple_items.insert(0, item)
         else:
             self._parse_tuple_items.append(item)
+        return len(self._parse_tuple_items)
 
     def is_empty(self):
         return self.get_parameters() == ['""']
