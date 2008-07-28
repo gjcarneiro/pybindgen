@@ -747,7 +747,7 @@ class ModuleBase(dict):
         implemented so far; others will be implemented in the future.
         """
         assert isinstance(wrapper, CppClass)
-        assert isinstance(alias, str)
+        alias = utils.ascii(alias)
         self.typedefs.append((wrapper, alias))
         self.register_type(alias, alias, wrapper)
         wrapper.register_alias(alias)

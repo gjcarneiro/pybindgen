@@ -54,7 +54,7 @@ class Function(ForwardWrapperBase):
             unblock_threads=unblock_threads)
         self.deprecated = deprecated
         self._module = None
-        assert isinstance(function_name, str)
+        function_name = utils.ascii(function_name)
         self.function_name = function_name
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
@@ -169,8 +169,8 @@ class Function(ForwardWrapperBase):
         @param name: python function/method name
         """
         flags = self.get_py_method_def_flags()
-        assert isinstance(self.wrapper_return, str)
-        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_return, basestring)
+        assert isinstance(self.wrapper_actual_name, basestring)
         assert isinstance(self.wrapper_args, list)
         return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
                (name, self.wrapper_actual_name, '|'.join(flags),

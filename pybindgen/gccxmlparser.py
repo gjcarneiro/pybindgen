@@ -18,6 +18,7 @@ from pygccxml.declarations import calldef
 from pygccxml.declarations import templates
 from pygccxml.declarations.class_declaration import class_declaration_t, class_t
 import settings
+import utils
 
 #from pygccxml.declarations.calldef import \
 #    destructor_t, constructor_t, member_function_t
@@ -128,6 +129,7 @@ settings.error_handler = ErrorHandler()
 
 _digits = re.compile(r"\s*\d+\s*")
 def normalize_name(decl_string):
+    decl_string = utils.ascii(decl_string)
     if templates.is_instantiation(decl_string):
         cls_name, template_parameters = templates.split(decl_string)
     else:
@@ -142,6 +144,7 @@ def normalize_name(decl_string):
         return "%s< %s >" % (cls_name, ', '.join([normalize_name(name) for name in template_parameters]))
 
 def normalize_class_name(class_name, module_namespace):
+    class_name = utils.ascii(class_name)
     if not class_name.startswith(module_namespace):
         class_name = module_namespace + class_name
     class_name = normalize_name(class_name)
@@ -152,7 +155,7 @@ def _pygen_kwargs(kwargs):
     l = []
     for key, val in kwargs.iteritems():
         if isinstance(val, CppClass):
-            l.append("%s=root_module[%r]" % (key, val.full_name))
+            l.append("%s=root_module[%r]" % (key, utils.ascii(val.full_name)))
         else:
             l.append("%s=%r" % (key, val))
     return l
@@ -234,6 +237,7 @@ class GccXmlTypeRegistry(object):
         return (cpp_type, is_const, is_pointer, is_reference)
 
     def _fixed_std_type_name(self, type_name):
+        type_name = utils.ascii(type_name)
         decl = self._root_ns_rx.sub('', type_name)
         return decl
         
@@ -261,6 +265,8 @@ class GccXmlTypeRegistry(object):
                 cpp_type = normalize_name(cpp_type)
             else:
                 cpp_type = self._fixed_std_type_name(cpp_type)
+
+        cpp_type = utils.ascii(cpp_type)
 
         if not is_pointer and not is_reference:
             return (cpp_type,), kwargs
@@ -310,7 +316,7 @@ class GccXmlTypeRegistry(object):
         if is_const:
             kwargs['is_const'] = True
         if default_value:
-            kwargs['default_value'] = default_value
+            kwargs['default_value'] = utils.ascii(default_value)
 
         if isinstance(cpp_type, CppClass):
             cpp_type = cpp_type.full_name
@@ -319,6 +325,9 @@ class GccXmlTypeRegistry(object):
                 cpp_type = normalize_name(cpp_type)
             else:
                 cpp_type = self._fixed_std_type_name(cpp_type)
+
+        cpp_type = utils.ascii(cpp_type)
+        param_name = utils.ascii(param_name)
 
         if not is_pointer and not is_reference:
             return (cpp_type, param_name), kwargs
@@ -712,7 +721,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             pygen_sink.writeln("def module_init():")
             pygen_sink.indent()
             pygen_sink.writeln("root_module = Module(%r, cpp_namespace=%r)"
-                               % (self.module_name, self.module_namespace.decl_string))
+                               % (self.module_name, utils.ascii(self.module_namespace.decl_string)))
             for inc in includes:
                 pygen_sink.writeln("root_module.add_include(%r)" % inc)
             pygen_sink.writeln("return root_module")
@@ -934,8 +943,8 @@ pybindgen.settings.error_handler = ErrorHandler()
             if 'ignore' in global_annotations:
                 continue
 
-            enum_values_repr = '[' + ', '.join([repr(name) for name, dummy_val in enum.values]) + ']'
-            l = [repr(enum.name), enum_values_repr]
+            enum_values_repr = '[' + ', '.join([repr(utils.ascii(name)) for name, dummy_val in enum.values]) + ']'
+            l = [repr(utils.ascii(enum.name)), enum_values_repr]
             if outer_class is not None:
                 l.append('outer_class=root_module[%r]' % outer_class.full_name)
             pygen_sink = self._get_pygen_sink_for_definition(enum)
@@ -944,7 +953,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
                 pygen_sink.writeln('module.add_enum(%s)' % ', '.join(l))
 
-            module.add_enum(enum.name, [name for name, dummy_val in enum.values],
+            module.add_enum(utils.ascii(enum.name), [utils.ascii(name) for name, dummy_val in enum.values],
                             outer_class=outer_class)
 
         ## scan classes
@@ -1190,7 +1199,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                         pygen_sink = self._get_pygen_sink_for_definition(cls)
                         if pygen_sink:
                             pygen_sink.writeln("module.add_typedef(root_module[%r], %r)" %
-                                               (cls_wrapper.full_name, alias.name))
+                                               (cls_wrapper.full_name, utils.ascii(alias.name)))
 
 
             ## scan nested namespaces (mapped as python submodules)
@@ -1200,13 +1209,13 @@ pybindgen.settings.error_handler = ErrorHandler()
                     continue
 
                 if pygen_register_function_name:
-                    nested_module = module.add_cpp_namespace(nested_namespace.name)
+                    nested_module = module.add_cpp_namespace(utils.ascii(nested_namespace.name))
                     nested_modules.append(nested_module)
                     for pygen_sink in self._get_all_pygen_sinks():
                         pygen_sink.writeln()
-                        pygen_sink.writeln("## Register a nested module for the namespace %s" % nested_namespace.name)
+                        pygen_sink.writeln("## Register a nested module for the namespace %s" % utils.ascii(nested_namespace.name))
                         pygen_sink.writeln()
-                        pygen_sink.writeln("nested_module = module.add_cpp_namespace(%r)" % nested_namespace.name)
+                        pygen_sink.writeln("nested_module = module.add_cpp_namespace(%r)" % utils.ascii(nested_namespace.name))
                         nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
                         pygen_sink.writeln("%s(nested_module)" % nested_module_type_init_func)
                         pygen_sink.writeln()
@@ -1791,7 +1800,6 @@ def _test():
     module = module_parser.parse(sys.argv[1:])
     if 0:
         out = FileCodeSink(sys.stdout)
-        import utils
         module.generate(out)
 
 if __name__ == '__main__':

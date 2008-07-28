@@ -285,8 +285,8 @@ class OverloadedWrapper(object):
                         pass
             docstring = None # FIXME
 
-            assert isinstance(self.wrapper_return, str)
-            assert isinstance(self.wrapper_actual_name, str)
+            assert isinstance(self.wrapper_return, basestring)
+            assert isinstance(self.wrapper_actual_name, basestring)
             assert isinstance(self.wrapper_args, list)
 
             return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
@@ -297,8 +297,8 @@ class OverloadedWrapper(object):
         self.reset_code_generation_state()
         self._compute_all_wrappers()
         self.generate(NullCodeSink())
-        assert isinstance(self.wrapper_return, str)
-        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_return, basestring)
+        assert isinstance(self.wrapper_actual_name, basestring)
         assert isinstance(self.wrapper_args, list)
         code_sink.writeln("%s %s(%s);" % (self.wrapper_return, self.wrapper_actual_name, ', '.join(self.wrapper_args)))
         self.reset_code_generation_state()
@@ -307,8 +307,8 @@ class OverloadedWrapper(object):
         self.reset_code_generation_state()
         self._compute_all_wrappers()
         self.generate(NullCodeSink())
-        assert isinstance(self.wrapper_return, str)
-        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_return, basestring)
+        assert isinstance(self.wrapper_actual_name, basestring)
         assert isinstance(self.wrapper_args, list)
         name = self.wrapper_actual_name.split('::')[-1]
         code_sink.writeln("static %s %s(%s);" % (self.wrapper_return, name, ', '.join(self.wrapper_args)))
