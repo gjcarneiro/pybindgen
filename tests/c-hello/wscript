@@ -1,23 +1,21 @@
 ## -*- python -*-
-import Action
-import Object
-import Params
-import Task
+#import Action
+#import Object
+#import Params
+#import Task
 
 def create_pyext_obj(bld, c_or_cpp_type):
-    waf_version = [int (s) for s in Params.g_version.split('.')]
-    if waf_version >= [1,4]:
-        return bld.create_obj(c_or_cpp_type, 'shlib', 'pyext')
-    else:
-        return bld.create_obj(c_or_cpp_type, 'plugin', 'pyext')
+    return bld.new_task_gen(c_or_cpp_type, 'shlib', 'pyext')
 
 
 def build(bld):
-    if not bld.env()['ENABLE_PYGCCXML']:
+    if not bld.env['ENABLE_PYGCCXML']:
         print "gccxml not available; skipping the C hello demo"
         return
 
-    bindgen = bld.create_obj('command-output')
+    bld.add_group()
+
+    bindgen = bld.new_task_gen('command-output')
     bindgen.stdout = 'hellomodule.c'
     bindgen.argv = [bindgen.input_file('hellomodulegen.py'),
                     bindgen.input_file('hello.h')]
@@ -25,6 +23,7 @@ def build(bld):
     bindgen.command_is_external = True
     bindgen.prio = 55 # must run after the 'py' objects in ../../pybindgen
 
+    bld.add_group()
     obj = create_pyext_obj(bld, 'cc')
     obj.source = [
         'hello.c',

@@ -2,18 +2,18 @@
 
 def build(bld):
     
-    obj = bld.create_obj('py')
+    obj = bld.new_task_gen('py')
     obj.find_sources_in_dirs('.')
     obj.source.append('version.py')
     obj.inst_dir = 'pybindgen'
     obj.prio = 50
 
-    obj = bld.create_obj('py')
+    obj = bld.new_task_gen('py')
     obj.find_sources_in_dirs('typehandlers')
     obj.inst_dir = 'pybindgen/typehandlers'
     obj.prio = 50
 
-    obj = bld.create_obj('py')
+    obj = bld.new_task_gen('py')
     obj.find_sources_in_dirs('typehandlers/ctypeparser')
     obj.inst_dir = 'pybindgen/typehandlers/ctypeparser'
     obj.prio = 50

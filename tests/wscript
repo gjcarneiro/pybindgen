@@ -1,7 +1,7 @@
 ## -*- python -*-
-import Action
-import Object
-import Params
+#import Action
+#import Object
+#import Params
 import Task
 
 import sys
@@ -11,12 +11,7 @@ import pproc as subprocess
 
 
 def create_pyext_obj(bld, c_or_cpp_type):
-    waf_version = [int (s) for s in Params.g_version.split('.')]
-    if waf_version >= [1,4]:
-        return bld.create_obj(c_or_cpp_type, 'shlib', 'pyext')
-    else:
-        return bld.create_obj(c_or_cpp_type, 'plugin', 'pyext')
-
+    return bld.new_task_gen(c_or_cpp_type, 'shlib', 'pyext')
 
 if 1:
     DEPRECATION_ERRORS = '-Werror::DeprecationWarning' # deprecations become errors
@@ -25,23 +20,23 @@ else:
 
 
 def build(bld):
-    top_srcdir = bld.m_srcnode.abspath()
+    top_srcdir = bld.srcnode.abspath()
 
-    gen = bld.create_obj('command-output')
+    gen = bld.new_task_gen('command-output')
     gen.command = 'test-generation.py'
     gen.stdout = 'test.cc'
     gen.argv = [gen.input_file('test-generation.py'), top_srcdir]
-    gen.command = bld.env()['PYTHON']
+    gen.command = bld.env['PYTHON']
     gen.command_is_external = True
     gen.prio = 55
     
-    obj = bld.create_obj('cpp', 'objects', 'pyext')
+    obj = bld.new_task_gen('cxx', 'objects', 'pyext')
     obj.source = 'test.cc'
     if os.path.basename(obj.env['CXX']).startswith("g++"):
         obj.env.append_value('CXXFLAGS', ['-Werror', '-Wno-unused'])
     
     ## manual code generation using simple pybindgen API calls
-    bindgen = bld.create_obj('command-output')
+    bindgen = bld.new_task_gen('command-output')
     bindgen.stdout = 'foomodule.cc'
     bindgen.argv = [
         DEPRECATION_ERRORS,
@@ -51,7 +46,7 @@ def build(bld):
     bindgen.command_is_external = True
     bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
-    obj = create_pyext_obj(bld, 'cpp')
+    obj = create_pyext_obj(bld, 'cxx')
     obj.source = [
         'foo.cc',
         'foomodule.cc'
@@ -61,9 +56,9 @@ def build(bld):
     obj.includes = '.'
 
     ## automatic code scanning using gccxml
-    if bld.env()['ENABLE_PYGCCXML']:
+    if bld.env['ENABLE_PYGCCXML']:
         ### Same thing, but using gccxml autoscanning
-        bindgen = bld.create_obj('command-output')
+        bindgen = bld.new_task_gen('command-output')
         bindgen.stdout = 'foomodule2.cc'
         bindgen.argv = [
             DEPRECATION_ERRORS,
@@ -76,7 +71,7 @@ def build(bld):
         bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
         ### Now using the generated python script
-        bindgen = bld.create_obj('command-output')
+        bindgen = bld.new_task_gen('command-output')
         bindgen.stdout = 'foomodule3.cc'
         bindgen.argv = [
             DEPRECATION_ERRORS,
@@ -91,7 +86,7 @@ def build(bld):
         ## TODO: add WAF command-output support for customising command OS environment
         os.environ["PYTHONPATH"] = os.pathsep.join([os.environ.get("PYTHONPATH", ''), bindgen.path.abspath(bindgen.env)])
 
-        obj = create_pyext_obj(bld, 'cpp')
+        obj = create_pyext_obj(bld, 'cxx')
         obj.source = [
             'foo.cc',
             'foomodule3.cc'
@@ -103,7 +98,7 @@ def build(bld):
         ## ---
 
         ### using gccxml autoscanning, but split the generated python script into modules
-        bindgen = bld.create_obj('command-output')
+        bindgen = bld.new_task_gen('command-output')
         bindgen.argv = [
             DEPRECATION_ERRORS,
             bindgen.input_file('foomodulegen-auto-split.py'),
@@ -116,7 +111,7 @@ def build(bld):
         bindgen.command_is_external = True
         bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
-        obj = create_pyext_obj(bld, 'cpp')
+        obj = create_pyext_obj(bld, 'cxx')
         obj.source = [
             'foo.cc',
             'foomodule2.cc'
@@ -126,7 +121,7 @@ def build(bld):
         obj.includes = '.'
 
         ### Run the generated python script with split modules
-        bindgen = bld.create_obj('command-output')
+        bindgen = bld.new_task_gen('command-output')
         bindgen.argv = [
             DEPRECATION_ERRORS,
             bindgen.input_file('foomodulegen4.py'),
@@ -146,7 +141,7 @@ def build(bld):
             'foomodulegen_module2.cc',
             ]
 
-        obj = create_pyext_obj(bld, 'cpp')
+        obj = create_pyext_obj(bld, 'cxx')
         obj.source = [
             'foo.cc',
             'foomodule4.cc',

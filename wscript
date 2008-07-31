@@ -1,10 +1,11 @@
 ## -*- python -*-
 ## (C) 2007,2008 Gustavo J. A. M. Carneiro
 
-import Params
-Params.g_autoconfig = True
+import Options
+#Params.g_autoconfig = True
+import Logs
+#from Params import fatal
 
-from Params import fatal
 import os
 import pproc as subprocess
 import shutil
@@ -14,14 +15,7 @@ import tarfile
 
 
 ## Add the pybindgen dir to PYTHONPATH, so that the examples and tests are properly built before pybindgen is installed.
-waf_version = [int (s) for s in Params.g_version.split('.')]
-if waf_version >= [1,4,1]:
-    ## Since WAF 1.4.1, WAF does not byte-compile python files during
-    ## build, so we add the source dir instead of the build dir.
-    os.environ['PYTHONPATH'] = os.getcwd()
-else:
-    os.environ['PYTHONPATH'] = os.path.join(os.getcwd(), 'build', 'default')
-del waf_version
+os.environ['PYTHONPATH'] = os.getcwd()
 
 
 _version = None
@@ -110,7 +104,7 @@ def dist_hook():
     ## Package the api docs in a separate tarball
     apidocs = 'apidocs'
     if not os.path.isdir('apidocs'):
-        Params.warning("Not creating apidocs archive: the `apidocs' directory does not exist")
+        Logs.warning("Not creating apidocs archive: the `apidocs' directory does not exist")
     else:
         tar = tarfile.open(os.path.join("..", "pybindgen-%s-apidocs.tar.bz2" % version), 'w:bz2')
         tar.add('apidocs', "pybindgen-%s-apidocs" % version)
@@ -152,7 +146,7 @@ def configure(conf):
     conf.check_tool('compiler_cxx')
     if os.path.basename(conf.env['CXX']).startswith("g++"):
         conf.env.append_value('CXXFLAGS', ['-Wall', '-fno-strict-aliasing'])
-        if Params.g_options.debug_level == 'ultradebug':
+        if Options.options.debug_level == 'ultradebug':
             conf.env.append_value('CXXFLAGS', ['-Wextra'])
     conf.check_tool('python')
     conf.check_python_version((2,3))
@@ -171,22 +165,22 @@ def configure(conf):
 
 
 def build(bld):
-    if getattr(Params.g_options, 'generate_version', False):
+    if getattr(Options.options, 'generate_version', False):
         generate_version_py(force=True)
 
     bld.add_subdirs('pybindgen')
-    if Params.g_options.examples:
+    if Options.options.examples:
         bld.add_subdirs('examples')
-    if Params.g_commands['check'] or Params.g_commands['clean']:
+    if Options.commands['check'] or Options.commands['clean']:
         bld.add_subdirs('tests')
 
 def shutdown():
-    if Params.g_commands['check']:
+    if Options.commands['check']:
 
         print "Running pure python unit tests..."
-        retval1 = subprocess.Popen([Params.g_build.env()['PYTHON'], 'tests/test.py']).wait()
+        retval1 = subprocess.Popen([Build.bld.env()['PYTHON'], 'tests/test.py']).wait()
 
-        env = Params.g_build.env()
+        env = Build.bld.env()
         print "Running manual module generation unit tests (module foo)..."
         retval2 = subprocess.Popen([env['PYTHON'], 'tests/footest.py', '1']).wait()
 
@@ -208,9 +202,10 @@ def shutdown():
             retval3 = retval3b = retval3c = retval4 = 0
 
         if retval1 or retval2 or retval3 or retval3b or retval3c or retval4:
-            raise Params.fatal("Unit test failures")
+            Logs.error("Unit test failures")
+            raise SystemExit(2)
 
-    if Params.g_options.generate_api_docs:
+    if Options.options.generate_api_docs:
         generate_version_py(force=True)
         retval = subprocess.Popen(["epydoc", "-v", "--html", "--graph=all",  "pybindgen",
                                    "-o", "apidocs",
@@ -220,7 +215,8 @@ def shutdown():
                                    "--no-private",
                                    ]).wait()
         if retval:
-            raise Params.fatal("epydoc returned with code %i" % retval)
+            Logs.error("epydoc returned with code %i" % retval)
+            raise SystemExit(2)
 
         # Patch the generated CSS file to highlight literal blocks (this is a copy of pre.py-doctest)
         css = open("apidocs/epydoc.css", "at")
