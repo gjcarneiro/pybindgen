@@ -13,8 +13,6 @@ def build(bld):
         print "gccxml not available; skipping the C hello demo"
         return
 
-    bld.add_group()
-
     bindgen = bld.new_task_gen('command-output')
     bindgen.stdout = 'hellomodule.c'
     bindgen.argv = [bindgen.input_file('hellomodulegen.py'),
@@ -23,7 +21,6 @@ def build(bld):
     bindgen.command_is_external = True
     bindgen.prio = 55 # must run after the 'py' objects in ../../pybindgen
 
-    bld.add_group()
     obj = create_pyext_obj(bld, 'cc')
     obj.source = [
         'hello.c',
