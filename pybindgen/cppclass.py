@@ -1443,6 +1443,9 @@ typedef struct {
         self._generate_destructor(code_sink, have_constructor)
         if self.has_output_stream_operator:
             self._generate_str(code_sink)
+        
+        self._generate_tp_hash(code_sink)
+        #self._generate_tp_compare(code_sink)
 
         if self.slots.get("tp_richcompare", "NULL") == "NULL":
             self.slots["tp_richcompare"] = self._generate_tp_richcompare(code_sink)
@@ -1628,6 +1631,7 @@ static int
         self.slots.setdefault("tp_str", tp_str_function_name )
 
         code_sink.writeln('''
+
 static PyObject *
 %s(%s *self)
 {
@@ -1635,9 +1639,43 @@ static PyObject *
     oss << *self->obj;
     return PyString_FromString(oss.str ().c_str ());
 }
-''' % (tp_str_function_name, self.pystruct))
-        code_sink.writeln()
 
+''' % (tp_str_function_name, self.pystruct))
+
+    def _generate_tp_hash(self, code_sink):
+        """generates a tp_hash function, which returns a hash of the self->obj pointer"""
+
+        tp_hash_function_name = "_wrap_%s__tp_hash" % (self.pystruct,)
+        self.slots.setdefault("tp_hash", tp_hash_function_name )
+
+        code_sink.writeln('''
+
+static long
+%s(%s *self)
+{
+    return (long) self->obj;
+}
+
+''' % (tp_hash_function_name, self.pystruct))
+
+    def _generate_tp_compare(self, code_sink):
+        """generates a tp_compare function, which compares the ->obj pointers"""
+
+        tp_compare_function_name = "_wrap_%s__tp_compare" % (self.pystruct,)
+        self.slots.setdefault("tp_compare", tp_compare_function_name )
+
+        code_sink.writeln('''
+
+static int
+%s(%s *self, %s *other)
+{
+    if (self->obj == other->obj) return 0;
+    if (self->obj > other->obj)  return -1;
+    return 1;
+}
+
+''' % (tp_compare_function_name, self.pystruct, self.pystruct))
+        
 
     def _generate_destructor(self, code_sink, have_constructor):
         """Generate a tp_dealloc function and register it in the type"""
