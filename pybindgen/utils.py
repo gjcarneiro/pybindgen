@@ -40,6 +40,8 @@ def write_preamble(code_sink, min_python_version=None):
         code_sink.writeln(r'''
 #if PY_VERSION_HEX < 0x02040000
 
+#define PyEval_ThreadsInitialized() 1
+
 #define Py_CLEAR(op)				\
         do {                            	\
                 if (op) {			\

@@ -585,6 +585,16 @@ class ReverseWrapperBase(object):
         assert isinstance(decl_modifiers, (list, tuple))
         assert all([isinstance(mod, str) for mod in decl_modifiers])
 
+
+        ## reverse wrappers are called from C/C++ code, when the Python GIL may not be held...
+        gil_state_var = self.declarations.declare_variable('PyGILState_STATE', '__py_gil_state')
+        self.before_call.write_code('%s = (PyEval_ThreadsInitialized() ? PyGILState_Ensure() : (PyGILState_STATE) 0);'
+                                    % gil_state_var)
+        self.before_call.add_cleanup_code('if (PyEval_ThreadsInitialized())\n'
+                                          '    PyGILState_Release(%s);' % gil_state_var)
+
+
+
         self.declarations.declare_variable('PyObject*', 'py_retval')
         if self.return_value.ctype != 'void' \
                 and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
