@@ -807,6 +807,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
             if not (self.method.is_pure_virtual or self.method.visibility == 'private'):
                 self.before_call.write_code(r'    %s::%s(%s);'
                                             % (self.class_.full_name, self.method_name, call_params))
+            self.before_call.write_cleanup()
             self.before_call.write_code(r'    return;')
         else:
             if self.method.is_pure_virtual or self.method.visibility == 'private':
@@ -819,10 +820,10 @@ PyErr_Print();
 Py_FatalError("Error detected, but parent virtual is pure virtual or private virtual, "
               "and return is a class without trival constructor");''')
             else:
-                #self.after_call.add_cleanup_code("PyErr_Print();") # FIXME
                 self.set_error_return("return %s::%s(%s);"
                                       % (self.class_.full_name, self.method_name, call_params))
             self.before_call.indent()
+            self.before_call.write_cleanup()
             self.before_call.write_code(self.error_return)
             self.before_call.unindent()
         self.before_call.write_code('}')
