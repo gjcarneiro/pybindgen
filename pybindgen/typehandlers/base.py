@@ -190,15 +190,14 @@ class CodeBlock(object):
         '''return a new list with all cleanup actions, including the
         ones from predecessor code blocks; Note: cleanup actions are
         executed in reverse order than when they were added.'''
-        if self.predecessor is None:
-            cleanup = []
-        else:
-            cleanup = self.predecessor.get_cleanup_code()
+        cleanup = []
         items = self._cleanup_actions.items()
         items.sort()
         for dummy, code in items:
             cleanup.append(code)
         cleanup.reverse()
+        if self.predecessor is not None:
+            cleanup.extend(self.predecessor.get_cleanup_code())
         return cleanup
 
     def write_error_check(self, failure_expression, failure_cleanup=None):
@@ -547,7 +546,7 @@ class ReverseWrapperBase(object):
         self.parameters = parameters
 
         if error_return is None:
-            error_return = "PyErr_Print();\n" + return_value.get_c_error_return()
+            error_return = return_value.get_c_error_return()
         self.error_return = error_return
         self.declarations = DeclarationsScope()
         self.before_call = CodeBlock(error_return, self.declarations)
@@ -555,6 +554,7 @@ class ReverseWrapperBase(object):
                                     predecessor=self.before_call)
         self.build_params = BuildValueParameters()
         self.parse_params = ParseTupleParameters()
+        self._generate_gil_code()
 
     def set_error_return(self, error_return):
         self.error_return = error_return
@@ -566,7 +566,17 @@ class ReverseWrapperBase(object):
         self.before_call.clear()
         self.after_call.clear()
         self.build_params.clear()
-        self.parse_params.clear()        
+        self.parse_params.clear()
+        self._generate_gil_code()
+
+    def _generate_gil_code(self):
+        ## reverse wrappers are called from C/C++ code, when the Python GIL may not be held...
+        gil_state_var = self.declarations.declare_variable('PyGILState_STATE', '__py_gil_state')
+        self.before_call.write_code('%s = (PyEval_ThreadsInitialized() ? PyGILState_Ensure() : (PyGILState_STATE) 0);'
+                                    % gil_state_var)
+        self.before_call.add_cleanup_code('if (PyEval_ThreadsInitialized())\n'
+                                          '    PyGILState_Release(%s);' % gil_state_var)
+
 
     def generate_python_call(self):
         """Generates the code (into self.before_call) to call into
@@ -584,16 +594,6 @@ class ReverseWrapperBase(object):
         """
         assert isinstance(decl_modifiers, (list, tuple))
         assert all([isinstance(mod, str) for mod in decl_modifiers])
-
-
-        ## reverse wrappers are called from C/C++ code, when the Python GIL may not be held...
-        gil_state_var = self.declarations.declare_variable('PyGILState_STATE', '__py_gil_state')
-        self.before_call.write_code('%s = (PyEval_ThreadsInitialized() ? PyGILState_Ensure() : (PyGILState_STATE) 0);'
-                                    % gil_state_var)
-        self.before_call.add_cleanup_code('if (PyEval_ThreadsInitialized())\n'
-                                          '    PyGILState_Release(%s);' % gil_state_var)
-
-
 
         self.declarations.declare_variable('PyObject*', 'py_retval')
         if self.return_value.ctype != 'void' \
@@ -625,7 +625,8 @@ class ReverseWrapperBase(object):
             parse_params[0] = '(char *) ' + parse_params[0]
             parse_tuple_params.extend(parse_params)
             self.before_call.write_error_check('!PyArg_ParseTuple(%s)' %
-                                               (', '.join(parse_tuple_params),))
+                                               (', '.join(parse_tuple_params),),
+                                               failure_cleanup='PyErr_Print();')
 
         ## cleanup and return
         self.after_call.write_cleanup()

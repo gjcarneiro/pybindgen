@@ -775,7 +775,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         params.extend(build_params)
         self.before_call.write_code('py_retval = PyObject_CallMethod(%s);'
                                     % (', '.join(params),))
-        self.before_call.write_error_check('py_retval == NULL')
+        self.before_call.write_error_check('py_retval == NULL', failure_cleanup='PyErr_Print();')
         self.before_call.add_cleanup_code('Py_DECREF(py_retval);')
 
     def generate_declaration(self, code_sink):
@@ -819,7 +819,8 @@ PyErr_Print();
 Py_FatalError("Error detected, but parent virtual is pure virtual or private virtual, "
               "and return is a class without trival constructor");''')
             else:
-                self.set_error_return("PyErr_Print();\nreturn %s::%s(%s);"
+                #self.after_call.add_cleanup_code("PyErr_Print();") # FIXME
+                self.set_error_return("return %s::%s(%s);"
                                       % (self.class_.full_name, self.method_name, call_params))
             self.before_call.indent()
             self.before_call.write_code(self.error_return)
