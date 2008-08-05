@@ -414,6 +414,8 @@ class AnnotationsScanner(object):
         return global_annotations, parameter_annotations
 
     def parse_boolean(self, value):
+        if isinstance(value, (int, long)):
+            return bool(value)
         if value.lower() in ['false', 'off']:
             return False
         elif value.lower() in ['true', 'on']:
@@ -1329,12 +1331,16 @@ pybindgen.settings.error_handler = ErrorHandler()
                 is_virtual = (member.virtuality != calldef.VIRTUALITY_TYPES.NOT_VIRTUAL)
                 pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
 
+                kwargs = {} # kwargs passed into the add_method call
+
                 for key, val in global_annotations.iteritems():
                     if key == 'template_instance_names' \
                             and templates.is_instantiation(member.demangled_name):
                         pass
                     elif key == 'pygen_comment':
                         pass
+                    elif key == 'unblock_threads':
+                        kwargs['unblock_threads'] = annotations_scanner.parse_boolean(val)
                     else:
                         warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
                                                % (key, val, member),
@@ -1369,7 +1375,6 @@ pybindgen.settings.error_handler = ErrorHandler()
                 else:
                     template_parameters = ()
 
-                kwargs = {}
                 if member.has_const:
                     kwargs['is_const'] = True
                 if member.has_static:
@@ -1631,6 +1636,8 @@ pybindgen.settings.error_handler = ErrorHandler()
             of_class = None
             alt_name = None
             ignore = False
+            kwargs = {}
+
             for name, value in global_annotations.iteritems():
                 if name == 'as_method':
                     as_method = value
@@ -1644,6 +1651,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     pass
                 elif name == 'pygen_comment':
                     pass
+                elif key == 'unblock_threads':
+                    kwargs['unblock_threads'] = annotations_scanner.parse_boolean(val)
                 else:
                     warnings.warn_explicit("Incorrect annotation %s=%s" % (name, value),
                                            AnnotationsWarning, fun.location.file_name, fun.location.line)
@@ -1735,8 +1744,6 @@ pybindgen.settings.error_handler = ErrorHandler()
 
 
                 continue
-
-            kwargs = {}
 
             if templates.is_instantiation(fun.demangled_name):
                 kwargs['template_parameters'] = templates.args(fun.demangled_name)
