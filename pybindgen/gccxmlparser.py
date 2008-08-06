@@ -1651,8 +1651,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     pass
                 elif name == 'pygen_comment':
                     pass
-                elif key == 'unblock_threads':
-                    kwargs['unblock_threads'] = annotations_scanner.parse_boolean(val)
+                elif name == 'unblock_threads':
+                    kwargs['unblock_threads'] = annotations_scanner.parse_boolean(value)
                 else:
                     warnings.warn_explicit("Incorrect annotation %s=%s" % (name, value),
                                            AnnotationsWarning, fun.location.file_name, fun.location.line)
