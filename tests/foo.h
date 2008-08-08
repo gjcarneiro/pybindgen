@@ -494,13 +494,24 @@ private:
 
 InterfaceId make_interface_id ();
 
-template <typename T>
-std::string TypeNameGet (void)
+template <typename T> std::string TypeNameGet (void)
 {
   return "unknown";
 }
 
+
+// -#- template_instance_names=int=>IntegerTypeNameGet -#-
 template <> std::string TypeNameGet<int> (void);
+
+
+// just to force a template instantiation
+struct __foo__
+{
+     std::string get ()
+        {
+            return TypeNameGet<int> ();
+        }
+};
 
 
 // Test code generation errors and error handling

@@ -1638,6 +1638,9 @@ pybindgen.settings.error_handler = ErrorHandler()
             ignore = False
             kwargs = {}
 
+            if fun.name == 'TypeNameGet':
+                print >> sys.stderr, "***** TypeNameGet: ", fun.location.file_name, fun.location.line
+
             for name, value in global_annotations.iteritems():
                 if name == 'as_method':
                     as_method = value
@@ -1650,6 +1653,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                 elif name == 'is_constructor_of':
                     pass
                 elif name == 'pygen_comment':
+                    pass
+                elif name == 'template_instance_names':
                     pass
                 elif name == 'unblock_threads':
                     kwargs['unblock_threads'] = annotations_scanner.parse_boolean(value)
@@ -1746,7 +1751,16 @@ pybindgen.settings.error_handler = ErrorHandler()
                 continue
 
             if templates.is_instantiation(fun.demangled_name):
-                kwargs['template_parameters'] = templates.args(fun.demangled_name)
+                template_parameters = templates.args(fun.demangled_name)
+                kwargs['template_parameters'] = template_parameters
+                template_instance_names = global_annotations.get('template_instance_names', '')
+                if template_instance_names:
+                    for mapping in template_instance_names.split('|'):
+                        type_names, name = mapping.split('=>')
+                        instance_types = type_names.split(',')
+                        if instance_types == template_parameters:
+                            kwargs['custom_name'] = name
+                            break
                 
             if alt_name:
                 kwargs['custom_name'] = alt_name

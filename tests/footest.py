@@ -768,5 +768,12 @@ class TestFoo(unittest.TestCase):
         except AttributeError:
             self.fail()
 
+    def test_template_function(self):
+        if not hasattr(foo, 'IntegerTypeNameGet'):
+            self.fail()
+        else:
+            self.assertEqual(foo.IntegerTypeNameGet(), 'int')
+        
+
 if __name__ == '__main__':
     unittest.main()

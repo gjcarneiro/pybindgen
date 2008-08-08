@@ -364,12 +364,12 @@ class ModuleBase(dict):
         name = utils.ascii(wrapper.custom_name)
         if name is None:
             name = self.c_function_name_transformer(wrapper.function_name)
-        mangled_name = utils.get_mangled_name(name, wrapper.template_parameters)
+            name = utils.get_mangled_name(name, wrapper.template_parameters)
         try:
-            overload = self.functions[mangled_name]
+            overload = self.functions[name]
         except KeyError:
-            overload = OverloadedFunction(mangled_name)
-            self.functions[mangled_name] = overload
+            overload = OverloadedFunction(name)
+            self.functions[name] = overload
         wrapper.module = self
         wrapper.section = self.current_section
         overload.add(wrapper)

@@ -22,6 +22,11 @@ def my_module_gen(out_file):
 
     mod.add_include ('"foo.h"')
 
+    mod.add_function('TypeNameGet', 
+                     'std::string', 
+                     [], 
+                     custom_name='IntegerTypeNameGet', template_parameters=['int'])
+
     Foo = mod.add_class('Foo', automatic_type_narrowing=True)
 
     Foo.add_static_attribute('instance_count', ReturnValue.new('int'))
