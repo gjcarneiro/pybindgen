@@ -1638,9 +1638,6 @@ pybindgen.settings.error_handler = ErrorHandler()
             ignore = False
             kwargs = {}
 
-            if fun.name == 'TypeNameGet':
-                print >> sys.stderr, "***** TypeNameGet: ", fun.location.file_name, fun.location.line
-
             for name, value in global_annotations.iteritems():
                 if name == 'as_method':
                     as_method = value
