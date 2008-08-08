@@ -15,6 +15,8 @@ from cppattribute import CppInstanceAttributeGetter, CppInstanceAttributeSetter,
     CppStaticAttributeGetter, CppStaticAttributeSetter, \
     PyGetSetDef, PyMetaclass
 
+from pytypeobject import PyTypeObject
+
 import settings
 import utils
 
@@ -373,59 +375,6 @@ class CppClass(object):
     A CppClass object takes care of generating the code for wrapping a C++ class
     """
 
-    TYPE_TMPL = (
-        'PyTypeObject %(typestruct)s = {\n'
-        '    PyObject_HEAD_INIT(NULL)\n'
-        '    0,                                 /* ob_size */\n'
-        '    (char *) "%(tp_name)s",            /* tp_name */\n'
-        '    %(tp_basicsize)s,                  /* tp_basicsize */\n'
-        '    0,                                 /* tp_itemsize */\n'
-        '    /* methods */\n'
-        '    (destructor)%(tp_dealloc)s,        /* tp_dealloc */\n'
-        '    (printfunc)0,                      /* tp_print */\n'
-        '    (getattrfunc)%(tp_getattr)s,       /* tp_getattr */\n'
-        '    (setattrfunc)%(tp_setattr)s,       /* tp_setattr */\n'
-        '    (cmpfunc)%(tp_compare)s,           /* tp_compare */\n'
-        '    (reprfunc)%(tp_repr)s,             /* tp_repr */\n'
-        '    (PyNumberMethods*)%(tp_as_number)s,     /* tp_as_number */\n'
-        '    (PySequenceMethods*)%(tp_as_sequence)s, /* tp_as_sequence */\n'
-        '    (PyMappingMethods*)%(tp_as_mapping)s,   /* tp_as_mapping */\n'
-        '    (hashfunc)%(tp_hash)s,             /* tp_hash */\n'
-        '    (ternaryfunc)%(tp_call)s,          /* tp_call */\n'
-        '    (reprfunc)%(tp_str)s,              /* tp_str */\n'
-        '    (getattrofunc)%(tp_getattro)s,     /* tp_getattro */\n'
-        '    (setattrofunc)%(tp_setattro)s,     /* tp_setattro */\n'
-        '    (PyBufferProcs*)%(tp_as_buffer)s,  /* tp_as_buffer */\n'
-        '    %(tp_flags)s,                      /* tp_flags */\n'
-        '    %(tp_doc)s,                        /* Documentation string */\n'
-        '    (traverseproc)%(tp_traverse)s,     /* tp_traverse */\n'
-        '    (inquiry)%(tp_clear)s,             /* tp_clear */\n'
-        '    (richcmpfunc)%(tp_richcompare)s,   /* tp_richcompare */\n'
-        '    %(tp_weaklistoffset)s,             /* tp_weaklistoffset */\n'
-        '    (getiterfunc)%(tp_iter)s,          /* tp_iter */\n'
-        '    (iternextfunc)%(tp_iternext)s,     /* tp_iternext */\n'
-        '    (struct PyMethodDef*)%(tp_methods)s, /* tp_methods */\n'
-        '    (struct PyMemberDef*)0,              /* tp_members */\n'
-        '    %(tp_getset)s,                     /* tp_getset */\n'
-        '    NULL,                              /* tp_base */\n'
-        '    NULL,                              /* tp_dict */\n'
-        '    (descrgetfunc)%(tp_descr_get)s,    /* tp_descr_get */\n'
-        '    (descrsetfunc)%(tp_descr_set)s,    /* tp_descr_set */\n'
-        '    %(tp_dictoffset)s,                 /* tp_dictoffset */\n'
-        '    (initproc)%(tp_init)s,             /* tp_init */\n'
-        '    (allocfunc)%(tp_alloc)s,           /* tp_alloc */\n'
-        '    (newfunc)%(tp_new)s,               /* tp_new */\n'
-        '    (freefunc)%(tp_free)s,             /* tp_free */\n'
-        '    (inquiry)%(tp_is_gc)s,             /* tp_is_gc */\n'
-        '    NULL,                              /* tp_bases */\n'
-        '    NULL,                              /* tp_mro */\n'
-        '    NULL,                              /* tp_cache */\n'
-        '    NULL,                              /* tp_subclasses */\n'
-        '    NULL,                              /* tp_weaklist */\n'
-        '    (destructor) NULL                  /* tp_del */\n'
-        '};\n'
-        )
-
     def __init__(self, name, parent=None, incref_method=None, decref_method=None,
                  automatic_type_narrowing=None, allow_subclassing=None,
                  is_singleton=False, outer_class=None,
@@ -483,7 +432,8 @@ class CppClass(object):
         self._dummy_methods = [] # methods that have parameter/retval binding problems
         self.nonpublic_methods = []
         self.constructors = [] # (name, wrapper) pairs
-        self.slots = dict()
+        self.pytype = PyTypeObject()
+        self.slots = self.pytype.slots
         self.helper_class = None
         self.instance_creation_function = None
         ## set to True when we become aware generating the helper
@@ -1456,19 +1406,7 @@ typedef struct {
         """generate the type structure"""
         self.slots.setdefault("tp_basicsize",
                               "sizeof(%s)" % (self.pystruct,))
-        for slot in ["tp_getattr", "tp_setattr", "tp_compare", "tp_repr",
-                     "tp_as_number", "tp_as_sequence", "tp_as_mapping",
-                     "tp_hash", "tp_call", "tp_str", "tp_getattro", "tp_setattro",
-                     "tp_as_buffer", "tp_traverse", "tp_clear", "tp_richcompare",
-                     "tp_iter", "tp_iternext", "tp_descr_get",
-                     "tp_descr_set", "tp_is_gc"]:
-            self.slots.setdefault(slot, "NULL")
 
-        self.slots.setdefault("tp_alloc", "PyType_GenericAlloc")
-        self.slots.setdefault("tp_new", "PyType_GenericNew")
-        #self.slots.setdefault("tp_free", "_PyObject_Del")
-        self.slots.setdefault("tp_free", "0")
-        self.slots.setdefault("tp_weaklistoffset", "0")
         if self.allow_subclassing:
             self.slots.setdefault("tp_flags", ("Py_TPFLAGS_DEFAULT|"
                                                "Py_TPFLAGS_HAVE_GC|"
@@ -1489,8 +1427,8 @@ typedef struct {
             dict_.setdefault("tp_name", '.'.join(mod_path))
         else:
             dict_.setdefault("tp_name", '%s.%s' % (self.outer_class.slots['tp_name'], self.name))
-            
-        code_sink.writeln(self.TYPE_TMPL % dict_)
+
+        self.pytype.generate(code_sink)
 
 
     def _generate_constructor(self, code_sink):
