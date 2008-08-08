@@ -38,7 +38,7 @@ def write_preamble(code_sink, min_python_version=None):
 
     if min_python_version < (2, 4):
         code_sink.writeln(r'''
-#if PY_VERSION_HEX < 0x02040000
+#if PY_VERSION_HEX < 0x020400F0
 
 #define PyEval_ThreadsInitialized() 1
 
@@ -67,7 +67,7 @@ def write_preamble(code_sink, min_python_version=None):
 
     if min_python_version < (2, 5):
         code_sink.writeln(r'''
-#if PY_VERSION_HEX < 0x02050000
+#if PY_VERSION_HEX < 0x020500F0
 
 typedef int Py_ssize_t;
 # define PY_SSIZE_T_MAX INT_MAX
