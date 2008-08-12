@@ -55,8 +55,9 @@ class CppMethod(ForwardWrapperBase):
         virtual", i.e. virtual method with no default implementation
         in the class being wrapped.
 
-        @param custom_name: alternate name to give to
-        the method, in python side.
+        @param custom_name: alternate name to give to the method, in python side.
+
+        @param custom_template_method_name: (deprecated) same as parameter 'custom_name'.
 
         @param visibility: visibility of the method within the C++ class
         @type visibility: a string (allowed values are 'public', 'protected', 'private')
