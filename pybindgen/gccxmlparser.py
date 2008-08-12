@@ -1269,7 +1269,7 @@ pybindgen.settings.error_handler = ErrorHandler()
         for op in self.module_namespace.free_operators(function=self.location_filter,
                                                        allow_empty=True, 
                                                        recursive=True):
-            if op.name == 'operator<<' \
+            if op.symbol == '<<' \
                     and self._is_ostream (op.return_type) \
                     and len (op.arguments) >= 2 \
                     and self._is_ostream (op.arguments[0].type) \
@@ -1279,7 +1279,7 @@ pybindgen.settings.error_handler = ErrorHandler()
         for op in cls.member_operators(function=self.location_filter,
                                        allow_empty=True, 
                                        recursive=True):
-            if op.name == 'operator<<' \
+            if op.symbol == '<<' \
                     and self._is_ostream (op.return_type) \
                     and len (op.arguments) >= 2 \
                     and self._is_ostream (op.arguments[0].type) \
@@ -1329,7 +1329,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 continue
 
             ## ------------ method --------------------
-            if isinstance(member, calldef.member_function_t):
+            if isinstance(member, (calldef.member_function_t, calldef.member_operator_t)):
                 is_virtual = (member.virtuality != calldef.VIRTUALITY_TYPES.NOT_VIRTUAL)
                 pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
 
@@ -1347,6 +1347,12 @@ pybindgen.settings.error_handler = ErrorHandler()
                         warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
                                                % (key, val, member),
                                                AnnotationsWarning, member.location.file_name, member.location.line)
+
+                if isinstance(member, calldef.member_operator_t):
+                    if member.symbol == '()':
+                        kwargs['custom_name'] = '__call__'
+                    else:
+                        continue
 
                 ## --- pygen ---
                 return_type_spec = self.type_registry.lookup_return(member.return_type,
