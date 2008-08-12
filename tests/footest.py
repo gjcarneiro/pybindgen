@@ -773,6 +773,12 @@ class TestFoo(unittest.TestCase):
             self.fail()
         else:
             self.assertEqual(foo.IntegerTypeNameGet(), 'int')
+
+    def test_operator_call(self):
+        obj = foo.SomeObject("xpto_")
+        l, s = obj("hello")
+        self.assertEqual(s, "xpto_hello")
+        self.assertEqual(l, len("xpto_hello"))
         
 
 if __name__ == '__main__':

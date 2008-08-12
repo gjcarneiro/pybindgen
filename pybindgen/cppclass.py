@@ -985,6 +985,9 @@ public:
         method.class_ = self
 
         if method.visibility == 'public':
+            if name == '__call__': # needs special handling
+                method.force_parse = method.PARSE_TUPLE_AND_KEYWORDS
+
             try:
                 overload = self.methods[name]
             except KeyError:
@@ -1428,6 +1431,14 @@ typedef struct {
         else:
             dict_.setdefault("tp_name", '%s.%s' % (self.outer_class.slots['tp_name'], self.name))
 
+        ## tp_call support
+        try:
+            call_method = self.methods['__call__']
+        except KeyError:
+            pass
+        else:
+            dict_.setdefault("tp_call", call_method.wrapper_actual_name)
+
         self.pytype.generate(code_sink)
 
 
@@ -1485,7 +1496,8 @@ typedef struct {
                 utils.call_with_error_handling(overload.generate, (code_sink,), {}, overload)
             except utils.SkipWrapper:
                 continue
-            method_defs.append(overload.get_py_method_def(meth_name))
+            if meth_name not in ['__call__']: # need to be converted to slots
+                method_defs.append(overload.get_py_method_def(meth_name))
             code_sink.writeln()
         method_defs.extend(parent_caller_methods)
         ## generate the method table

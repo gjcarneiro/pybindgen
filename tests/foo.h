@@ -256,6 +256,12 @@ public:
         return message.size ();
     }
 
+    // -#- @message(direction=inout) -#-
+    int operator() (std::string& message) {
+        message = m_prefix + message;
+        return message.size ();
+    }
+
     // --------  Virtual methods ----------
     virtual std::string get_prefix () const {
         return m_prefix;

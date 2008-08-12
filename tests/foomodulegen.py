@@ -119,6 +119,12 @@ int %s::custom_method_added_by_a_hook(int x)
     SomeObject.add_constructor([Parameter.new('std::string', 'prefix')])
     SomeObject.add_constructor([Parameter.new('int', 'prefix_len')])
 
+    SomeObject.add_method('operator()', ReturnValue.new('int'),
+                          [Parameter.new('std::string&', 'message',
+                                         direction=Parameter.DIRECTION_INOUT)],
+                          custom_name='__call__')
+
+
     # --- some virtual methods ---
     SomeObject.add_method('get_prefix', ReturnValue.new('std::string'), [],
                           is_virtual=True, is_const=True)
