@@ -1269,7 +1269,8 @@ pybindgen.settings.error_handler = ErrorHandler()
         for op in self.module_namespace.free_operators(function=self.location_filter,
                                                        allow_empty=True, 
                                                        recursive=True):
-            if self._is_ostream (op.return_type) \
+            if op.name == 'operator<<' \
+                    and self._is_ostream (op.return_type) \
                     and len (op.arguments) >= 2 \
                     and self._is_ostream (op.arguments[0].type) \
                     and type_traits.is_convertible (cls, op.arguments[1].type):
@@ -1278,7 +1279,8 @@ pybindgen.settings.error_handler = ErrorHandler()
         for op in cls.member_operators(function=self.location_filter,
                                        allow_empty=True, 
                                        recursive=True):
-            if self._is_ostream (op.return_type) \
+            if op.name == 'operator<<' \
+                    and self._is_ostream (op.return_type) \
                     and len (op.arguments) >= 2 \
                     and self._is_ostream (op.arguments[0].type) \
                     and type_traits.is_convertible (cls, op.arguments[1].type):
