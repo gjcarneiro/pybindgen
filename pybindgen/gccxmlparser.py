@@ -16,6 +16,7 @@ from pygccxml.declarations import type_traits
 from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
 from pygccxml.declarations import templates
+from pygccxml.declarations import container_traits
 from pygccxml.declarations.class_declaration import class_declaration_t, class_t
 import settings
 import utils
@@ -194,7 +195,7 @@ class GccXmlTypeRegistry(object):
         self.ordered_classes.append(cpp_class)
 
     def get_type_traits(self, type_info):
-        assert isinstance(type_info, cpptypes.type_t)
+        #assert isinstance(type_info, cpptypes.type_t)
 
         debug = False #('int64_t' in type_info.decl_string)
 
@@ -242,7 +243,7 @@ class GccXmlTypeRegistry(object):
         return decl
         
     def lookup_return(self, type_info, annotations={}):
-        assert isinstance(type_info, cpptypes.type_t)
+        #assert isinstance(type_info, cpptypes.type_t)
         cpp_type, is_const, is_pointer, is_reference = \
             self.get_type_traits(type_info)
 
@@ -966,8 +967,13 @@ pybindgen.settings.error_handler = ErrorHandler()
                                     module_namespace.classes(function=self.location_filter,
                                                              recursive=False, allow_empty=True)
                                     if not cls.name.startswith('__')]
+            typedefs = [typedef for typedef in
+                        module_namespace.typedefs(function=self.location_filter,
+                                                  recursive=False, allow_empty=True)
+                        if not typedef.name.startswith('__')]
         else:
             unregistered_classes = []
+            typedefs = []
             for cls in outer_class.gccxml_definition.classes(function=self.location_filter,
                                                              recursive=False, allow_empty=True):
                 if outer_class.gccxml_definition.find_out_member_access_type(cls) != 'public':
@@ -975,6 +981,14 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if cls.name.startswith('__'):
                     continue
                 unregistered_classes.append(cls)
+
+            for typedef in outer_class.gccxml_definition.typedefs(function=self.location_filter,
+                                                                  recursive=False, allow_empty=True):
+                if outer_class.gccxml_definition.find_out_member_access_type(typedef) != 'public':
+                    continue
+                if typedef.name.startswith('__'):
+                    continue
+                typedefs.append(typedef)
 
         def postpone_class(cls, reason):
             ## detect the case of a class being postponed many times; that
@@ -1136,6 +1150,44 @@ pybindgen.settings.error_handler = ErrorHandler()
                     pygen_sink.writeln("root_module[%r].implicitly_converts_to(root_module[%r])"
                                        % (class_wrapper.full_name, other_class.full_name))
 
+
+
+        # -- check for std container typedefs --
+        for typedef in typedefs:
+            print >> sys.stderr, "typedef >>>>>", typedef
+            traits = container_traits.find_container_traits(typedef.type)
+            if traits is None:
+                continue
+            element_type = traits.element_type(typedef.type)
+            print >> sys.stderr, "traits >>>>>", traits, repr(element_type)
+            kwargs = {}
+            if outer_class is not None:
+                kwargs['outer_class'] = outer_class
+            print >> sys.stderr, "container >>>>>", repr(typedef.name)
+
+
+            return_type_spec = self.type_registry.lookup_return(element_type)
+
+            ## pygen...
+            pygen_sink = self._get_pygen_sink_for_definition(typedef)
+            if pygen_sink:
+                pygen_sink.writeln("module.add_container(%s)" %
+                                   ", ".join([repr(typedef.name), _pygen_retval(*return_type_spec)] + _pygen_kwargs(kwargs)))
+
+            ## convert the return value
+            try:
+                return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
+            except (TypeLookupError, TypeConfigurationError), ex:
+                warnings.warn_explicit("Return value '%s' error (used in %s): %r"
+                                       % (typedef.decl_string, typedef, ex),
+                                       WrapperWarning, typedef.location.file_name, typedef.location.line)
+                continue
+
+            module.add_container(typedef.name, return_type, **kwargs)
+        
+
+
+
         pygen_function_closed = False
         if outer_class is None:
 
@@ -1204,6 +1256,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                         if pygen_sink:
                             pygen_sink.writeln("module.add_typedef(root_module[%r], %r)" %
                                                (cls_wrapper.full_name, utils.ascii(alias.name)))
+
 
 
             ## scan nested namespaces (mapped as python submodules)

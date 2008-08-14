@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 // Deprecation warnings look ugly and confusing; better to just
 // disable them and change this macro when we want to specifically
@@ -721,5 +722,10 @@ struct simple_struct_t
     int xpto;
 };
 
+// -- Containers:
+
+typedef std::vector<simple_struct_t> SimpleStructList;
+
+SimpleStructList get_simple_list ();
 
 #endif 	    /* !FOO_H_ */

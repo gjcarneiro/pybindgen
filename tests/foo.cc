@@ -221,3 +221,15 @@ void matrix_identity_new (float *matrix)
     matrix[4] = 1;
     matrix[5] = 0;
 }
+
+SimpleStructList get_simple_list ()
+{
+    SimpleStructList retval;
+    for (int i = 0; i < 10; i++)
+    {
+        simple_struct_t val = {i};
+        retval.push_back(val);
+    }
+    return retval;
+}
+

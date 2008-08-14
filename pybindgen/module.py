@@ -50,6 +50,7 @@ from typehandlers.base import CodeBlock, DeclarationsScope
 from typehandlers.codesink import MemoryCodeSink, CodeSink, FileCodeSink, NullCodeSink
 from cppclass import CppClass
 from enum import Enum
+from container import Container
 import utils
 import warnings
 import traceback
@@ -240,6 +241,7 @@ class ModuleBase(dict):
         self.declarations = DeclarationsScope()
         self.functions = {} # name => OverloadedFunction
         self.classes = []
+        self.containers = []
         self.before_init = CodeBlock(error_return, self.declarations)
         self.after_init = CodeBlock(error_return, self.declarations,
                                     predecessor=self.before_init)
@@ -532,6 +534,32 @@ class ModuleBase(dict):
         self._add_enum_obj(enum)
         return enum
 
+
+    def _add_container_obj(self, container):
+        """
+        Add a container to the module.
+
+        @param container_: a Container object
+        """
+        assert isinstance(container, Container)
+        container.module = self
+        container.section = self.current_section
+        self.containers.append(container)
+        self.register_type(container.name, container.full_name, container)
+
+    def add_container(self, *args, **kwargs):
+        """
+        Add a container to the module. See the documentation for
+        L{Container.__init__} for information on accepted parameters.
+        """
+        try:
+            container = Container(*args, **kwargs)
+        except utils.SkipWrapper:
+            return None
+        container.stack_where_defined = traceback.extract_stack()
+        self._add_container_obj(container)
+        return container
+
     def declare_one_time_definition(self, definition_name):
         """
         Internal helper method for code geneneration to coordinate
@@ -560,11 +588,13 @@ class ModuleBase(dict):
     def generate_forward_declarations(self, code_sink):
         """(internal) generate forward declarations for types"""
         assert not self._forward_declarations_declared
-        if self.classes:
+        if self.classes or self.containers:
             code_sink.writeln('/* --- forward declarations --- */')
             code_sink.writeln()
-            for class_ in self.classes:
-                class_.generate_forward_declarations(code_sink, self)
+        for class_ in self.classes:
+            class_.generate_forward_declarations(code_sink, self)
+        for container in self.containers:
+            container.generate_forward_declarations(code_sink, self)
         ## recurse to submodules
         for submodule in self.submodules:
             submodule.generate_forward_declarations(code_sink)
@@ -674,6 +704,16 @@ class ModuleBase(dict):
                 sink, header_sink = out.get_code_sink_for_wrapper(class_)
                 sink.writeln()
                 class_.generate(sink, self)
+                sink.writeln()
+
+        ## generate the containers
+        if self.containers:
+            main_sink.writeln('/* --- containers --- */')
+            main_sink.writeln()
+            for container in self.containers:
+                sink, header_sink = out.get_code_sink_for_wrapper(container)
+                sink.writeln()
+                container.generate(sink, self)
                 sink.writeln()
 
         # typedefs

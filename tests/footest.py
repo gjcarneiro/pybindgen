@@ -779,7 +779,16 @@ class TestFoo(unittest.TestCase):
         l, s = obj("hello")
         self.assertEqual(s, "xpto_hello")
         self.assertEqual(l, len("xpto_hello"))
-        
+
+    def test_container_value_return(self):
+        container = foo.get_simple_list()
+        count = 0
+        for i, simple in enumerate(container):
+            self.assertEqual(simple.xpto, i)
+            count += 1
+        self.assertEqual(count, 10)
+        #self.assertEqual(len(container), 10)
+
 
 if __name__ == '__main__':
     unittest.main()
