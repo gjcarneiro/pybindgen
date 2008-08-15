@@ -385,6 +385,7 @@ int %s::custom_method_added_by_a_hook(int x)
     # containers...
     SimpleStructList = mod.add_container('SimpleStructList', ReturnValue.new('simple_struct_t'))
     mod.add_function('get_simple_list', ReturnValue.new('SimpleStructList'), [])
+    mod.add_function('set_simple_list', 'int', [Parameter.new('SimpleStructList', 'list')])
 
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):

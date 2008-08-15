@@ -222,6 +222,8 @@ void matrix_identity_new (float *matrix)
     matrix[5] = 0;
 }
 
+static SimpleStructList g_simpleList;
+
 SimpleStructList get_simple_list ()
 {
     SimpleStructList retval;
@@ -231,5 +233,11 @@ SimpleStructList get_simple_list ()
         retval.push_back(val);
     }
     return retval;
+}
+
+int set_simple_list (SimpleStructList list)
+{
+    g_simpleList = list;
+    return g_simpleList.size ();
 }
 

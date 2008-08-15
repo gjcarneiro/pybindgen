@@ -727,5 +727,6 @@ struct simple_struct_t
 typedef std::vector<simple_struct_t> SimpleStructList;
 
 SimpleStructList get_simple_list ();
+int set_simple_list (SimpleStructList list);
 
 #endif 	    /* !FOO_H_ */
