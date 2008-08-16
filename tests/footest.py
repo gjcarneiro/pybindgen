@@ -793,5 +793,24 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(rv, 10)
 
 
+    def test_container_creation(self):
+        container = foo.SimpleStructList()
+        values = list(container)
+        self.assertEqual(values, [])
+
+        l = []
+        for i in range(10):
+            simple = foo.simple_struct_t()
+            simple.xpto = i
+            l.append(simple)
+
+        container = foo.SimpleStructList(l)
+        values = list(container)
+        self.assertEqual(len(values), 10)
+        for i, value in enumerate(values):
+            self.assertEqual(value.xpto, i)
+        
+
+
 if __name__ == '__main__':
     unittest.main()

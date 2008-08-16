@@ -265,6 +265,7 @@ typedef struct {
         self._generate_gc_methods(code_sink)
         self._generate_destructor(code_sink)
         self._generate_iter_methods(code_sink)
+        self._generate_container_constructor(code_sink)
         self._generate_type_structure(code_sink, docstring)
         
     def _generate_type_structure(self, code_sink, docstring):
@@ -401,6 +402,56 @@ static PyObject*
         iternext.generate(code_sink)
         self.iter_pytype.slots.setdefault("tp_iternext", iternext.c_function_name)
         
+
+
+    def _generate_container_constructor(self, code_sink):
+        container_tp_init_function_name = "_wrap_%s__tp_init" % (self.pystruct,)
+        python_to_c_converter = self.module.get_root().get_python_to_c_type_converter(self.value_type, code_sink)
+        subst_vars = {
+            'FUNC': container_tp_init_function_name,
+            'PYSTRUCT': self.pystruct,
+            'PYTYPESTRUCT': self.pytypestruct,
+            'CTYPE': self.full_name,
+            'ITEM_CONVERTER': python_to_c_converter,
+            'PYTHON_NAME': self.python_name,
+            'ITEM_CTYPE': self.value_type.ctype,
+            }
+        code_sink.writeln(r'''
+static int
+%(FUNC)s(%(PYSTRUCT)s *self, PyObject *args, PyObject *kwargs)
+{
+    const char *keywords[] = {"arg", NULL};
+    PyObject *arg = NULL;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "|O", (char **) keywords, &arg)) {
+        return -1;
+    }
+
+    if (arg == NULL || arg == Py_None) {
+        self->obj = new %(CTYPE)s;
+    } else if (PyObject_IsInstance(arg, (PyObject*) &%(PYTYPESTRUCT)s)) {
+        self->obj = new %(CTYPE)s(*((%(PYSTRUCT)s*)arg)->obj);
+    } else if (PyList_Check(arg)) {
+        Py_ssize_t size = PyList_Size(arg);
+        self->obj = new %(CTYPE)s;
+        for (Py_ssize_t i = 0; i < size; i++) {
+            %(ITEM_CTYPE)s item;
+            if (!%(ITEM_CONVERTER)s(PyList_GET_ITEM(arg, i), &item)) {
+                delete self->obj;
+                self->obj = NULL;
+                return -1;
+            }
+            self->obj->push_back(item);
+        }
+    } else {
+        PyErr_SetString(PyExc_TypeError, "parameter must be None, a %(PYTHON_NAME)s instance, or a list of %(ITEM_CTYPE)s");
+        return -1;
+    }
+    return 0;
+}
+''' % subst_vars)
+
+        self.pytype.slots.setdefault("tp_init", container_tp_init_function_name)
 
 
 
