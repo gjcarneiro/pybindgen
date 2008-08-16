@@ -46,11 +46,12 @@ to create sub-modules for wrapping nested namespaces.  For instance::
 """
 
 from function import Function, OverloadedFunction, CustomFunctionWrapper
-from typehandlers.base import CodeBlock, DeclarationsScope
+from typehandlers.base import CodeBlock, DeclarationsScope, ReturnValue
 from typehandlers.codesink import MemoryCodeSink, CodeSink, FileCodeSink, NullCodeSink
 from cppclass import CppClass
 from enum import Enum
 from container import Container
+from converter_functions import PythonToCConverter
 import utils
 import warnings
 import traceback
@@ -823,6 +824,36 @@ class Module(ModuleBase):
             raise TypeError
         self.do_generate(sink_manager, module_file_base_name)
         sink_manager.close()
+
+    def get_python_to_c_type_converter(self, value_type, code_sink):
+        """
+        Generates a python-to-c converter function for a given type
+        and returns the name of the generated function.  If called
+        multiple times with the same name only the first time is the
+        converter function generated.
+        
+        Use: this method is to be considered pybindgen internal, used
+        by code generation modules.
+
+        @type value_type: L{ReturnValue}
+        @type code_sink: L{CodeSink}
+        @returns: name of the converter function
+        """
+        assert isinstance(value_type, ReturnValue)
+        ctype = value_type.ctype
+        mangled_ctype = utils.mangle_name(ctype)
+        converter_function_name = "_wrap_convert_py2c__%s" % mangled_ctype
+        try:
+            self.declare_one_time_definition(converter_function_name)
+        except KeyError:
+            return converter_function_name
+        else:
+            converter = PythonToCConverter(value_type, converter_function_name)
+            self.header.writeln("\n%s;\n" % converter.get_prototype())
+            code_sink.writeln()
+            converter.generate(code_sink, converter_function_name)
+            code_sink.writeln()
+            return converter_function_name
 
 
 class SubModule(ModuleBase):

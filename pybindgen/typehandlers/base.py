@@ -529,6 +529,8 @@ class ReverseWrapperBase(object):
 
     """
 
+    NO_GIL_LOCKING = False
+
     def __init__(self, return_value, parameters, error_return=None):
         '''
         Base constructor
@@ -570,6 +572,8 @@ class ReverseWrapperBase(object):
         self._generate_gil_code()
 
     def _generate_gil_code(self):
+        if self.NO_GIL_LOCKING:
+            return
         ## reverse wrappers are called from C/C++ code, when the Python GIL may not be held...
         gil_state_var = self.declarations.declare_variable('PyGILState_STATE', '__py_gil_state')
         self.before_call.write_code('%s = (PyEval_ThreadsInitialized() ? PyGILState_Ensure() : (PyGILState_STATE) 0);'
