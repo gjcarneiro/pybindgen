@@ -70,6 +70,7 @@ class Container(object):
 
         value_type = utils.eval_retval(value_type, self)
         self.value_type = value_type
+        self.python_to_c_converter = None
 
         if name != 'dummy':
             ## register type handlers
@@ -215,6 +216,15 @@ typedef struct {
         code_sink.writeln('extern PyTypeObject %s;' % (self.pytypestruct,))
         code_sink.writeln('extern PyTypeObject %s;' % (self.iter_pytypestruct,))
         code_sink.writeln()
+
+        this_type_converter = self.module.get_root().get_python_to_c_type_converter_function_name(
+            self.ThisContainerReturn(self.full_name))
+        self.module.get_root().declare_one_time_definition(this_type_converter)
+        code_sink.writeln('int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container);'
+                          % {'CTYPE': self.full_name,
+                             'CONTAINER_CONVERTER_FUNC_NAME': this_type_converter,
+                             })
+        self.python_to_c_converter = this_type_converter
 
     def _get_python_name(self):
         if self.custom_name is None:
@@ -406,17 +416,43 @@ static PyObject*
 
     def _generate_container_constructor(self, code_sink):
         container_tp_init_function_name = "_wrap_%s__tp_init" % (self.pystruct,)
-        python_to_c_converter = self.module.get_root().get_python_to_c_type_converter(self.value_type, code_sink)
+        item_python_to_c_converter = self.module.get_root().generate_python_to_c_type_converter(self.value_type, code_sink)
+        this_type_converter = self.module.get_root().get_python_to_c_type_converter_function_name(
+            self.ThisContainerReturn(self.full_name))
         subst_vars = {
             'FUNC': container_tp_init_function_name,
             'PYSTRUCT': self.pystruct,
             'PYTYPESTRUCT': self.pytypestruct,
             'CTYPE': self.full_name,
-            'ITEM_CONVERTER': python_to_c_converter,
+            'ITEM_CONVERTER': item_python_to_c_converter,
             'PYTHON_NAME': self.python_name,
             'ITEM_CTYPE': self.value_type.ctype,
+            'CONTAINER_CONVERTER_FUNC_NAME': this_type_converter,
             }
         code_sink.writeln(r'''
+int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
+{
+    if (arg == NULL || arg == Py_None) {
+        // pass (empty container)
+    } else if (PyObject_IsInstance(arg, (PyObject*) &%(PYTYPESTRUCT)s)) {
+        *container = *((%(PYSTRUCT)s*)arg)->obj;
+    } else if (PyList_Check(arg)) {
+        Py_ssize_t size = PyList_Size(arg);
+        for (Py_ssize_t i = 0; i < size; i++) {
+            %(ITEM_CTYPE)s item;
+            if (!%(ITEM_CONVERTER)s(PyList_GET_ITEM(arg, i), &item)) {
+                return 0;
+            }
+            container->push_back(item);
+        }
+    } else {
+        PyErr_SetString(PyExc_TypeError, "parameter must be None, a %(PYTHON_NAME)s instance, or a list of %(ITEM_CTYPE)s");
+        return 0;
+    }
+    return 1;
+}
+
+
 static int
 %(FUNC)s(%(PYSTRUCT)s *self, PyObject *args, PyObject *kwargs)
 {
@@ -427,24 +463,10 @@ static int
         return -1;
     }
 
-    if (arg == NULL || arg == Py_None) {
-        self->obj = new %(CTYPE)s;
-    } else if (PyObject_IsInstance(arg, (PyObject*) &%(PYTYPESTRUCT)s)) {
-        self->obj = new %(CTYPE)s(*((%(PYSTRUCT)s*)arg)->obj);
-    } else if (PyList_Check(arg)) {
-        Py_ssize_t size = PyList_Size(arg);
-        self->obj = new %(CTYPE)s;
-        for (Py_ssize_t i = 0; i < size; i++) {
-            %(ITEM_CTYPE)s item;
-            if (!%(ITEM_CONVERTER)s(PyList_GET_ITEM(arg, i), &item)) {
-                delete self->obj;
-                self->obj = NULL;
-                return -1;
-            }
-            self->obj->push_back(item);
-        }
-    } else {
-        PyErr_SetString(PyExc_TypeError, "parameter must be None, a %(PYTHON_NAME)s instance, or a list of %(ITEM_CTYPE)s");
+    self->obj = new %(CTYPE)s;
+    if (!%(CONTAINER_CONVERTER_FUNC_NAME)s(arg, self->obj)) {
+        delete self->obj;
+        self->obj = NULL;
         return -1;
     }
     return 0;
@@ -478,11 +500,6 @@ class ContainerParameterBase(Parameter):
 
         ## name of the PyFoo * variable used in parameter parsing
         self.py_name = None
-
-        ## it True, this parameter is 'fake', and instead of being
-        ## passed a parameter from python it is assumed to be the
-        ## 'self' parameter of a method wrapper
-        self.take_value_from_python_self = False
 
 
 class ContainerReturnValueBase(ReturnValue):

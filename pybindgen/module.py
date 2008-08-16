@@ -825,7 +825,17 @@ class Module(ModuleBase):
         self.do_generate(sink_manager, module_file_base_name)
         sink_manager.close()
 
-    def get_python_to_c_type_converter(self, value_type, code_sink):
+    def get_python_to_c_type_converter_function_name(self, value_type):
+        """
+        Internal API, do not use.
+        """
+        assert isinstance(value_type, ReturnValue)
+        ctype = value_type.ctype
+        mangled_ctype = utils.mangle_name(ctype)
+        converter_function_name = "_wrap_convert_py2c__%s" % mangled_ctype
+        return converter_function_name
+
+    def generate_python_to_c_type_converter(self, value_type, code_sink):
         """
         Generates a python-to-c converter function for a given type
         and returns the name of the generated function.  If called
@@ -840,9 +850,7 @@ class Module(ModuleBase):
         @returns: name of the converter function
         """
         assert isinstance(value_type, ReturnValue)
-        ctype = value_type.ctype
-        mangled_ctype = utils.mangle_name(ctype)
-        converter_function_name = "_wrap_convert_py2c__%s" % mangled_ctype
+        converter_function_name = self.get_python_to_c_type_converter_function_name(value_type)
         try:
             self.declare_one_time_definition(converter_function_name)
         except KeyError:
