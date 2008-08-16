@@ -172,6 +172,10 @@ class Container(object):
         ## re-register the class type handlers, now with class full name
         self.register_alias(self.full_name)
 
+        self.python_to_c_converter = self.module.get_root().get_python_to_c_type_converter_function_name(
+            self.ThisContainerReturn(self.full_name))
+
+
     def register_alias(self, alias):
         """Re-register the class with another base name, in addition to any
         registrations that might have already been done."""
@@ -585,15 +589,7 @@ class ContainerReturnValue(ContainerReturnValueBase):
 
     def convert_python_to_c(self, wrapper):
         """see ReturnValue.convert_python_to_c"""
-        name = wrapper.declarations.declare_variable(
-            self.container_type.pystruct+'*', "tmp_%s" % self.container_type.name)
-        wrapper.parse_params.add_parameter(
-            'O!', ['&'+self.container_type.pytypestruct, '&'+name])
-        if self.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
-            wrapper.after_call.write_code('%s %s = *%s->obj;' %
-                                          (self.container_type.full_name, self.value, name))
-        else:
-            wrapper.after_call.write_code('%s = *%s->obj;' % (self.value, name))
+        wrapper.parse_params.add_parameter('O&', [self.container_type.python_to_c_converter, '&'+self.value])
 
 
 ## end

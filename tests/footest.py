@@ -826,8 +826,8 @@ class TestFoo(unittest.TestCase):
                     simple = foo.simple_struct_t()
                     simple.xpto = i
                     l.append(simple)
-                container = foo.SimpleStructList(l)
-                return container
+                #container = foo.SimpleStructList(l)
+                return l
 
             def _set_simple_list(self, container):
                 self.list_that_was_set = container
