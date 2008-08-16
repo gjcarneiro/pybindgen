@@ -729,4 +729,17 @@ typedef std::vector<simple_struct_t> SimpleStructList;
 SimpleStructList get_simple_list ();
 int set_simple_list (SimpleStructList list);
 
+class TestContainer
+{
+public:
+    TestContainer () {}
+
+    virtual SimpleStructList get_simple_list ();
+    virtual int set_simple_list (SimpleStructList list);
+
+private:
+    SimpleStructList m_simpleList;
+};
+
+
 #endif 	    /* !FOO_H_ */

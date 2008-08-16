@@ -244,3 +244,26 @@ int set_simple_list (SimpleStructList list)
     return count;
 }
 
+
+SimpleStructList
+TestContainer::get_simple_list ()
+{
+    SimpleStructList retval;
+    for (int i = 0; i < 10; i++)
+    {
+        simple_struct_t val = {i};
+        retval.push_back(val);
+    }
+    return retval;
+}
+
+int
+TestContainer::set_simple_list (SimpleStructList list)
+{
+    int count = 0;
+    m_simpleList = list;
+    for (SimpleStructList::iterator iter = g_simpleList.begin(); iter != g_simpleList.end(); iter++)
+        count += iter->xpto;
+    return count;
+}
+

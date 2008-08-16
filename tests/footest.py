@@ -814,6 +814,50 @@ class TestFoo(unittest.TestCase):
         rv = foo.set_simple_list(l)
         self.assertEqual(rv, sum(range(10)))
 
+    def test_container_reverse_wrappers(self):
+        class MyTestContainer(foo.TestContainer):
+            def __init__(self):
+                super(MyTestContainer, self).__init__()
+                self.list_that_was_set = None
+
+            def _get_simple_list(self):
+                l = []
+                for i in range(5):
+                    simple = foo.simple_struct_t()
+                    simple.xpto = i
+                    l.append(simple)
+                container = foo.SimpleStructList(l)
+                return container
+
+            def _set_simple_list(self, container):
+                self.list_that_was_set = container
+                return sum([s.xpto for s in container])
+
+        test = MyTestContainer()
+        container = test.get_simple_list()
+        count = 0
+        for i, simple in enumerate(container):
+            self.assertEqual(simple.xpto, i)
+            count += 1
+        self.assertEqual(count, 5)
+
+
+        ## set 
+        l = []
+        for i in range(5):
+            simple = foo.simple_struct_t()
+            simple.xpto = i
+            l.append(simple)
+
+        rv = test.set_simple_list(l)
+        self.assertEqual(rv, sum(range(5)))
+
+        count = 0
+        for i, simple in enumerate(test.list_that_was_set):
+            self.assertEqual(simple.xpto, i)
+            count += 1
+        self.assertEqual(count, 5)
+        
 
 if __name__ == '__main__':
     unittest.main()
