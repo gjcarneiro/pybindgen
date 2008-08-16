@@ -534,13 +534,10 @@ class ContainerParameter(ContainerParameterBase):
 
         assert self.default_value is None, "default value not implemented for containers"
 
-        self.py_name = wrapper.declarations.declare_variable('PyObject*', self.name)
+        #self.py_name = wrapper.declarations.declare_variable('PyObject*', self.name)
         container_tmp_var = wrapper.declarations.declare_variable(
             self.container_type.full_name, self.name + '_value')
-
-        wrapper.parse_params.add_parameter('O', ['&'+self.py_name], self.name)
-        wrapper.before_call.write_error_check(
-            '!%s(%s, &%s)' % (self.container_type.python_to_c_converter, self.py_name, container_tmp_var))
+        wrapper.parse_params.add_parameter('O&', [self.container_type.python_to_c_converter, '&'+container_tmp_var], self.name)
         wrapper.call_params.append(container_tmp_var)
 
     def convert_c_to_python(self, wrapper):
