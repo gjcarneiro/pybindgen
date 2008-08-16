@@ -790,7 +790,8 @@ class TestFoo(unittest.TestCase):
         #self.assertEqual(len(container), 10)
 
         rv = foo.set_simple_list(container)
-        self.assertEqual(rv, 10)
+        self.assertEqual(rv, sum(range(10)))
+
 
 
     def test_container_creation(self):
@@ -810,6 +811,8 @@ class TestFoo(unittest.TestCase):
         for i, value in enumerate(values):
             self.assertEqual(value.xpto, i)
         
+        rv = foo.set_simple_list(l)
+        self.assertEqual(rv, sum(range(10)))
 
 
 if __name__ == '__main__':

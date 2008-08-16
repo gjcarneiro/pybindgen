@@ -237,7 +237,10 @@ SimpleStructList get_simple_list ()
 
 int set_simple_list (SimpleStructList list)
 {
+    int count = 0;
     g_simpleList = list;
-    return g_simpleList.size ();
+    for (SimpleStructList::iterator iter = g_simpleList.begin(); iter != g_simpleList.end(); iter++)
+        count += iter->xpto;
+    return count;
 }
 

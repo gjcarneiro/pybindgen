@@ -432,9 +432,7 @@ static PyObject*
         code_sink.writeln(r'''
 int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
 {
-    if (arg == NULL || arg == Py_None) {
-        // pass (empty container)
-    } else if (PyObject_IsInstance(arg, (PyObject*) &%(PYTYPESTRUCT)s)) {
+    if (PyObject_IsInstance(arg, (PyObject*) &%(PYTYPESTRUCT)s)) {
         *container = *((%(PYSTRUCT)s*)arg)->obj;
     } else if (PyList_Check(arg)) {
         Py_ssize_t size = PyList_Size(arg);
@@ -464,6 +462,10 @@ static int
     }
 
     self->obj = new %(CTYPE)s;
+
+    if (arg == NULL)
+        return 0;
+
     if (!%(CONTAINER_CONVERTER_FUNC_NAME)s(arg, self->obj)) {
         delete self->obj;
         self->obj = NULL;
@@ -526,20 +528,16 @@ class ContainerParameter(ContainerParameterBase):
         assert isinstance(wrapper, ForwardWrapperBase)
         assert isinstance(self.container_type, Container)
 
-        if self.default_value is not None:
-            self.py_name = wrapper.declarations.declare_variable(
-                self.container_type.pystruct+'*', self.name, 'NULL')
-            wrapper.parse_params.add_parameter(
-                'O!', ['&'+self.container_type.pytypestruct, '&'+self.py_name], self.name, optional=True)
-            wrapper.call_params.append(
-                '(%s ? (*((%s *) %s)->obj) : %s)' % (self.py_name, self.container_type.pystruct, self.py_name, self.default_value))
-        else:
-            self.py_name = wrapper.declarations.declare_variable(
-                self.container_type.pystruct+'*', self.name)
-            wrapper.parse_params.add_parameter(
-                'O!', ['&'+self.container_type.pytypestruct, '&'+self.py_name], self.name)
-            wrapper.call_params.append(
-                '*((%s *) %s)->obj' % (self.container_type.pystruct, self.py_name))
+        assert self.default_value is None, "default value not implemented for containers"
+
+        self.py_name = wrapper.declarations.declare_variable('PyObject*', self.name)
+        container_tmp_var = wrapper.declarations.declare_variable(
+            self.container_type.full_name, self.name + '_value')
+
+        wrapper.parse_params.add_parameter('O', ['&'+self.py_name], self.name)
+        wrapper.before_call.write_error_check(
+            '!%s(%s, &%s)' % (self.container_type.python_to_c_converter, self.py_name, container_tmp_var))
+        wrapper.call_params.append(container_tmp_var)
 
     def convert_c_to_python(self, wrapper):
         '''Write some code before calling the Python method.'''
