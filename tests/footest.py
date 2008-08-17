@@ -877,5 +877,18 @@ class TestFoo(unittest.TestCase):
             self.assertEqual(v1.xpto, 2*v.xpto)
 
 
+    def test_unnamed_container(self):
+        test = foo.TestContainer()
+        container = test.get_simple_vec()
+        count = 0
+        for i, simple in enumerate(container):
+            self.assertEqual(simple.xpto, i)
+            count += 1
+        self.assertEqual(count, 10)
+
+        rv = test.set_simple_vec(container)
+        self.assertEqual(rv, sum(range(10)))
+
+
 if __name__ == '__main__':
     unittest.main()

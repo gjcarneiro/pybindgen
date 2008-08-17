@@ -280,3 +280,27 @@ TestContainer::set_simple_list_by_ref (SimpleStructList &inout_list)
     return count;
 }
 
+
+
+std::vector<simple_struct_t>
+TestContainer::get_simple_vec ()
+{
+    std::vector<simple_struct_t> retval;
+    for (int i = 0; i < 10; i++)
+    {
+        simple_struct_t val = {i};
+        retval.push_back(val);
+    }
+    return retval;
+}
+
+int
+TestContainer::set_simple_vec (std::vector<simple_struct_t> list)
+{
+    int count = 0;
+    m_simpleList = list;
+    for (std::vector<simple_struct_t>::iterator iter = m_simpleList.begin(); iter != m_simpleList.end(); iter++)
+        count += iter->xpto;
+    return count;
+}
+

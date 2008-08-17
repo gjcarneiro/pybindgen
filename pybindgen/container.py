@@ -51,10 +51,15 @@ class IterNextWrapper(ForwardWrapperBase):
 
 
 class Container(object):
-    def __init__(self, name, value_type, outer_class=None, template_parameters=(), custom_name=None):
-        self.name = utils.ascii(name)
-        self.full_name = None
-        self.template_parameters = template_parameters
+    def __init__(self, name, value_type, outer_class=None, custom_name=None):
+        if '<' in name or '::' in name:
+            self.name = utils.mangle_name(name)
+            self.full_name = name
+            self._full_name_is_definitive = True
+        else:
+            self._full_name_is_definitive = False
+            self.full_name = None
+            self.name = name
         self._module = None
         self.outer_class = outer_class
         self.mangled_name = None
@@ -137,16 +142,17 @@ class Container(object):
         
         prefix = settings.name_prefix.capitalize()
 
-        if self.outer_class is None:
-            if self._module.cpp_namespace_prefix:
-                if self._module.cpp_namespace_prefix == '::':
-                    self.full_name = '::' + self.name
+        if not self._full_name_is_definitive:
+            if self.outer_class is None:
+                if self._module.cpp_namespace_prefix:
+                    if self._module.cpp_namespace_prefix == '::':
+                        self.full_name = '::' + self.name
+                    else:
+                        self.full_name = self._module.cpp_namespace_prefix + '::' + self.name
                 else:
-                    self.full_name = self._module.cpp_namespace_prefix + '::' + self.name
+                    self.full_name = self.name
             else:
-                self.full_name = self.name
-        else:
-            self.full_name = '::'.join([self.outer_class.full_name, self.name])
+                self.full_name = '::'.join([self.outer_class.full_name, self.name])
 
         def make_upper(s):
             if s and s[0].islower():
@@ -154,24 +160,12 @@ class Container(object):
             else:
                 return s
 
-        def mangle(s):
-            "make a name Like<This,and,That> look Like__lt__This_and_That__gt__"
-            s = s.replace('<', '__lt__').replace('>', '__gt__').replace(',', '_')
-            s = s.replace(' ', '_').replace('&', '__amp__').replace('*', '__star__')
-            return s
-        
         def flatten(name):
             "make a name like::This look LikeThis"
-            return ''.join([make_upper(mangle(s)) for s in name.split('::')])
+            return ''.join([make_upper(utils.mangle_name(s)) for s in name.split('::')])
 
         self.mangled_name = flatten(self.name)
-        self.mangled_full_name = flatten(self.full_name)
-
-        if self.template_parameters:
-            self.full_name += "< %s >" % (', '.join(self.template_parameters))
-            mangled_template_params = '__' + '_'.join([flatten(s) for s in self.template_parameters])
-            self.mangled_name += mangled_template_params
-            self.mangled_full_name += mangled_template_params
+        self.mangled_full_name = utils.mangle_name(self.full_name)
 
         self._pystruct = "Py%s%s" % (prefix, self.mangled_full_name)
         self.pytypestruct = "Py%s%s_Type" % (prefix,  self.mangled_full_name)

@@ -740,6 +740,9 @@ public:
     // -#- @inout_list(direction=inout) -#-
     virtual int set_simple_list_by_ref (SimpleStructList &inout_list);
 
+    virtual std::vector<simple_struct_t> get_simple_vec ();
+    virtual int set_simple_vec (std::vector<simple_struct_t> vec);
+
 private:
     SimpleStructList m_simpleList;
 };

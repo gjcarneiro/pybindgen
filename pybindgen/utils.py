@@ -91,8 +91,11 @@ typedef intobjargproc ssizeobjargproc;
     
 
 def mangle_name(name):
-    """for internal pybindgen use"""
-    return name.replace(' ', '_').replace(':', '_').replace('<', '_lt_').replace('>', '_gt_').replace(',', '_')
+    """make a name Like<This,and,That> look Like__lt__This_and_That__gt__"""
+    s = name.replace('<', '__lt__').replace('>', '__gt__').replace(',', '_')
+    s = s.replace(' ', '_').replace('&', '__amp__').replace('*', '__star__')
+    s = s.replace(':', '_')
+    return s
 
 
 def get_mangled_name(base_name, template_args):
