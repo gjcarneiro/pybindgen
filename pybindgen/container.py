@@ -85,6 +85,16 @@ class Container(object):
             except ValueError:
                 pass
 
+            class ThisContainerRefParameter(ContainerRefParameter):
+                """Register this C++ container as pass-by-value parameter"""
+                CTYPES = []
+                container_type = self
+            self.ThisContainerRefParameter = ThisContainerRefParameter
+            try:
+                param_type_matcher.register(name+'&', self.ThisContainerRefParameter)
+            except ValueError:
+                pass
+
             class ThisContainerReturn(ContainerReturnValue):
                 """Register this C++ container as value return"""
                 CTYPES = []
@@ -185,6 +195,11 @@ class Container(object):
         self.ThisContainerParameter.CTYPES.append(alias)
         try:
             param_type_matcher.register(alias, self.ThisContainerParameter)
+        except ValueError: pass
+
+        self.ThisContainerRefParameter.CTYPES.append(alias+'&')
+        try:
+            param_type_matcher.register(alias+'&', self.ThisContainerRefParameter)
         except ValueError: pass
         
         self.ThisContainerReturn.CTYPES.append(alias)
@@ -555,6 +570,59 @@ class ContainerParameter(ContainerParameterBase):
         wrapper.build_params.add_parameter("N", [self.py_name])
 
 
+class ContainerRefParameter(ContainerParameterBase):
+    "Container handlers"
+    CTYPES = []
+    container_type = Container('dummy', ReturnValue.new('void')) # CppContainer instance
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT, Parameter.DIRECTION_INOUT]
+    
+    def convert_python_to_c(self, wrapper):
+        "parses python args to get C++ value"
+        assert isinstance(wrapper, ForwardWrapperBase)
+        assert isinstance(self.container_type, Container)
+
+        assert self.default_value is None, "default value not implemented for containers"
+
+        #self.py_name = wrapper.declarations.declare_variable('PyObject*', self.name)
+        container_tmp_var = wrapper.declarations.declare_variable(
+            self.container_type.full_name, self.name + '_value')
+
+        if self.direction & Parameter.DIRECTION_IN:
+            wrapper.parse_params.add_parameter('O&', [self.container_type.python_to_c_converter, '&'+container_tmp_var], self.name)
+
+        wrapper.call_params.append(container_tmp_var)
+
+        if self.direction & Parameter.DIRECTION_OUT:
+            py_name = wrapper.declarations.declare_variable(
+                self.container_type.pystruct+'*', 'py_'+self.container_type.name)
+            wrapper.after_call.write_code(
+                "%s = PyObject_New(%s, %s);" %
+                (py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
+            wrapper.after_call.write_code("%s->obj = new %s(%s);" % (py_name, self.container_type.full_name, container_tmp_var))
+            wrapper.build_params.add_parameter("N", [py_name])
+
+    def convert_c_to_python(self, wrapper):
+        '''Write some code before calling the Python method.'''
+        assert isinstance(wrapper, ReverseWrapperBase)
+
+        self.py_name = wrapper.declarations.declare_variable(
+            self.container_type.pystruct+'*', 'py_'+self.container_type.name)
+        wrapper.before_call.write_code(
+            "%s = PyObject_New(%s, %s);" %
+            (self.py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
+
+        if self.direction & Parameter.DIRECTION_IN:
+            wrapper.before_call.write_code("%s->obj = new %s(%s);" % (self.py_name, self.container_type.full_name, self.name))
+        else:
+            wrapper.before_call.write_code("%s->obj = new %s;" % (self.py_name, self.container_type.full_name))
+
+        wrapper.build_params.add_parameter("N", [self.py_name])
+
+        if self.direction & Parameter.DIRECTION_OUT:
+            wrapper.parse_params.add_parameter('O&', [self.container_type.python_to_c_converter, '&'+self.name], self.name)
+
+
+
 class ContainerReturnValue(ContainerReturnValueBase):
     "Container type return handlers"
     CTYPES = []
@@ -579,9 +647,7 @@ class ContainerReturnValue(ContainerReturnValueBase):
         wrapper.after_call.write_code(
             "%s = PyObject_New(%s, %s);" %
             (py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
-
         wrapper.after_call.write_code("%s->obj = new %s(%s);" % (self.py_name, self.container_type.full_name, self.value))
-
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
     def convert_python_to_c(self, wrapper):

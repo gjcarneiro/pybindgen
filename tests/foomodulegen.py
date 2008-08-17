@@ -391,6 +391,9 @@ int %s::custom_method_added_by_a_hook(int x)
     TestContainer.add_constructor([])
     TestContainer.add_method('get_simple_list', ReturnValue.new('SimpleStructList'), [], is_virtual=True)
     TestContainer.add_method('set_simple_list', 'int', [Parameter.new('SimpleStructList', 'list')], is_virtual=True)
+    TestContainer.add_method('set_simple_list_by_ref', 'int', [Parameter.new('SimpleStructList&', 'inout_list',
+                                                                             direction=Parameter.DIRECTION_INOUT)],
+                             is_virtual=True)
 
 
     #### --- error handler ---

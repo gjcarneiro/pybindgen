@@ -262,8 +262,21 @@ TestContainer::set_simple_list (SimpleStructList list)
 {
     int count = 0;
     m_simpleList = list;
-    for (SimpleStructList::iterator iter = g_simpleList.begin(); iter != g_simpleList.end(); iter++)
+    for (SimpleStructList::iterator iter = m_simpleList.begin(); iter != m_simpleList.end(); iter++)
         count += iter->xpto;
+    return count;
+}
+
+int
+TestContainer::set_simple_list_by_ref (SimpleStructList &inout_list)
+{
+    int count = 0;
+    m_simpleList = inout_list;
+    for (SimpleStructList::iterator iter = inout_list.begin(); iter != inout_list.end(); iter++)
+    {
+        iter->xpto *= 2;
+        count += iter->xpto;
+    }
     return count;
 }
 

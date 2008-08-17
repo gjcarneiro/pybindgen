@@ -737,6 +737,9 @@ public:
     virtual SimpleStructList get_simple_list ();
     virtual int set_simple_list (SimpleStructList list);
 
+    // -#- @inout_list(direction=inout) -#-
+    virtual int set_simple_list_by_ref (SimpleStructList &inout_list);
+
 private:
     SimpleStructList m_simpleList;
 };

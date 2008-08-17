@@ -859,5 +859,23 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(count, 5)
         
 
+    def test_container_param_by_ref(self):
+        l = []
+        expected_sum = 0
+        for i in range(10):
+            simple = foo.simple_struct_t()
+            simple.xpto = i
+            l.append(simple)
+            expected_sum += i*2
+
+        test = foo.TestContainer()
+        rv, container = test.set_simple_list_by_ref(l)
+        l1 = list(container)
+        self.assertEqual(rv, expected_sum)
+        self.assertEqual(len(l1), len(l))
+        for v, v1 in zip(l, l1):
+            self.assertEqual(v1.xpto, 2*v.xpto)
+
+
 if __name__ == '__main__':
     unittest.main()
