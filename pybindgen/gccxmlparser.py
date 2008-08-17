@@ -518,6 +518,7 @@ class ModuleParser(object):
         self._pygen_sink = None
         self._pygen_factory = None
         self._anonymous_structs = [] # list of (pygccxml_anonymous_class, outer_pybindgen_class)
+        self._containers_registered = {}
 
     def add_pre_scan_hook(self, hook):
         """
@@ -1158,34 +1159,9 @@ pybindgen.settings.error_handler = ErrorHandler()
             traits = container_traits.find_container_traits(typedef.type)
             if traits is None:
                 continue
-            element_type = traits.element_type(typedef.type)
-            print >> sys.stderr, "traits >>>>>", traits, repr(element_type)
-            kwargs = {}
-            if outer_class is not None:
-                kwargs['outer_class'] = outer_class
-            print >> sys.stderr, "container >>>>>", repr(typedef.name)
-
-
-            return_type_spec = self.type_registry.lookup_return(element_type)
-
             ## pygen...
             pygen_sink = self._get_pygen_sink_for_definition(typedef)
-            if pygen_sink:
-                pygen_sink.writeln("module.add_container(%s)" %
-                                   ", ".join([repr(typedef.name), _pygen_retval(*return_type_spec)] + _pygen_kwargs(kwargs)))
-
-            ## convert the return value
-            try:
-                return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
-            except (TypeLookupError, TypeConfigurationError), ex:
-                warnings.warn_explicit("Return value '%s' error (used in %s): %r"
-                                       % (typedef.decl_string, typedef, ex),
-                                       WrapperWarning, typedef.location.file_name, typedef.location.line)
-                continue
-
-            module.add_container(typedef.name, return_type, **kwargs)
-        
-
+            self._register_container(module, traits, pygen_sink, typedef, outer_class)
 
 
         pygen_function_closed = False
@@ -1299,6 +1275,43 @@ pybindgen.settings.error_handler = ErrorHandler()
                 pygen_sink.unindent()
                 pygen_sink.writeln()
 
+    def _register_container(self, module, traits, pygen_sink, definition, outer_class):
+        element_type = traits.element_type(definition.type)
+        print >> sys.stderr, "traits >>>>>", traits, repr(element_type)
+        kwargs = {}
+
+        if outer_class is not None:
+            kwargs['outer_class'] = outer_class
+            outer_class_key = outer_class.decl_string
+        else:
+            outer_class_key = None
+
+        container_register_key = (outer_class_key, definition.name)
+        if container_register_key in self._containers_registered:
+            return
+        self._containers_registered[container_register_key] = None
+
+        print >> sys.stderr, "container >>>>>", repr(definition.name)
+
+        return_type_spec = self.type_registry.lookup_return(element_type)
+
+        ## pygen...
+        pygen_sink = self._get_pygen_sink_for_definition(definition)
+        if pygen_sink:
+            pygen_sink.writeln("module.add_container(%s)" %
+                               ", ".join([repr(definition.name), _pygen_retval(*return_type_spec)] + _pygen_kwargs(kwargs)))
+
+        ## convert the return value
+        try:
+            return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
+        except (TypeLookupError, TypeConfigurationError), ex:
+            warnings.warn_explicit("Return value '%s' error (used in %s): %r"
+                                   % (definition.decl_string, definition, ex),
+                                   WrapperWarning, definition.location.file_name, definition.location.line)
+            return
+
+        module.add_container(definition.name, return_type, **kwargs)
+        
 
     def _class_has_virtual_methods(self, cls):
         """return True if cls has at least one virtual method, else False"""
