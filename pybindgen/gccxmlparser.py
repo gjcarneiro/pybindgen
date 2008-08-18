@@ -17,6 +17,7 @@ from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
 from pygccxml.declarations import templates
 from pygccxml.declarations import container_traits
+from pygccxml.declarations.declaration import declaration_t
 from pygccxml.declarations.class_declaration import class_declaration_t, class_t
 import settings
 import utils
@@ -760,12 +761,15 @@ pybindgen.settings.error_handler = ErrorHandler()
         if self._pygen_classifier is None:
             return self._pygen
         else:
-            section = self._pygen_classifier.classify(pygccxml_definition)
-            for sect in self._pygen:
-                if sect is section or sect.name == section:
-                    return sect.code_sink
+            if isinstance(pygccxml_definition, declaration_t):
+                section = self._pygen_classifier.classify(pygccxml_definition)
+                for sect in self._pygen:
+                    if sect is section or sect.name == section:
+                        return sect.code_sink
+                else:
+                    raise ValueError("CodeSink for section %r not available" % section)
             else:
-                raise ValueError("CodeSink for section %r not available" % section)
+                return self._get_main_pygen_sink()
 
     def scan_types(self):
         self._stage = 'scan types'
