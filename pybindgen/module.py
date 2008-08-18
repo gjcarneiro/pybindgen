@@ -134,6 +134,7 @@ class _MultiSectionSinkManager(_SinkManager):
         self.multi_section_factory.get_main_code_sink().writeln(
             "#include %s" % self.multi_section_factory.get_common_header_include())
         self._already_initialized_sections = {}
+        self._already_initialized_sections['__main__'] = True
 
     def get_code_sink_for_wrapper(self, wrapper):
         header_sink = self.multi_section_factory.get_common_header_code_sink()
