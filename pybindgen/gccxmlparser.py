@@ -518,6 +518,7 @@ class ModuleParser(object):
         self._pygen_sink = None
         self._pygen_factory = None
         self._anonymous_structs = [] # list of (pygccxml_anonymous_class, outer_pybindgen_class)
+        self._containers_to_register = []
         self._containers_registered = {}
 
     def add_pre_scan_hook(self, hook):
@@ -920,6 +921,20 @@ pybindgen.settings.error_handler = ErrorHandler()
                                                    % (section.local_customizations_module, section.local_customizations_module))
                             pygen_sink.writeln("root_module.end_section(%r)" % section.name)
 
+        ## detect use of unregistered container types: need to look at
+        ## all parameters and return values of all functions in this namespace...
+        for fun in module_namespace.free_functions(function=self.location_filter,
+                                                   allow_empty=True, recursive=False):
+            if fun.name.startswith('__'):
+                continue
+            for dependency in fun.i_depend_on_them(recursive=False):
+                type_info = dependency.depend_on_it
+                traits = container_traits.find_container_traits(type_info)
+                if traits is None:
+                    continue
+                name = normalize_name(type_info.decl_string)
+                self._containers_to_register.append((traits, type_info, None, name))
+
         ## scan enumerations
         if outer_class is None:
             enums = module_namespace.enums(function=self.location_filter,
@@ -1123,6 +1138,23 @@ pybindgen.settings.error_handler = ErrorHandler()
                 pygen_sink.writeln("module.add_class(%s)" %
                                    ", ".join([repr(cls_name)] + _pygen_kwargs(kwargs)))
 
+            ## detect use of unregistered container types: need to look at
+            ## all parameters and return values of all functions in this namespace...
+            for meth in cls.get_members():
+                if meth.name.startswith('__') or not isinstance(meth, calldef.calldef_t):
+                    continue
+                for dependency in meth.i_depend_on_them(recursive=False):
+                    type_info = dependency.depend_on_it
+                    traits = container_traits.find_container_traits(type_info)
+                    if traits is None:
+                        continue
+                    name = normalize_name(type_info.decl_string)
+                    # now postpone container registration until after
+                    # all classes are registered, because we may
+                    # depend on one of those classes for the element
+                    # type.
+                    self._containers_to_register.append((traits, type_info, outer_class, name))
+
             class_wrapper = module.add_class(cls_name, **kwargs)
             class_wrapper.gccxml_definition = cls
             self._registered_classes[cls] = class_wrapper
@@ -1151,22 +1183,19 @@ pybindgen.settings.error_handler = ErrorHandler()
                     pygen_sink.writeln("root_module[%r].implicitly_converts_to(root_module[%r])"
                                        % (class_wrapper.full_name, other_class.full_name))
 
-
-
-        # -- check for std container typedefs --
-        for typedef in typedefs:
-            print >> sys.stderr, "typedef >>>>>", typedef
-            traits = container_traits.find_container_traits(typedef.type)
-            if traits is None:
-                continue
-            ## pygen...
-            pygen_sink = self._get_pygen_sink_for_definition(typedef)
-            self._register_container(module, traits, pygen_sink, typedef, outer_class)
-
-
-        pygen_function_closed = False
+        # -- register containers
         if outer_class is None:
+            for (traits, type_info, _outer_class, name) in self._containers_to_register:
+                self._register_container(module, traits, type_info, _outer_class, name)
+            self._containers_to_register = []
 
+        if pygen_register_function_name:
+            pygen_function_closed = False
+        else:
+            pygen_function_closed = True
+
+        if outer_class is None:
+            
             ## --- look for typedefs ----
             for alias in module_namespace.typedefs(function=self.location_filter,
                                                    recursive=False, allow_empty=True):
@@ -1234,7 +1263,6 @@ pybindgen.settings.error_handler = ErrorHandler()
                                                (cls_wrapper.full_name, utils.ascii(alias.name)))
 
 
-
             ## scan nested namespaces (mapped as python submodules)
             nested_modules = []
             for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
@@ -1252,10 +1280,11 @@ pybindgen.settings.error_handler = ErrorHandler()
                         nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
                         pygen_sink.writeln("%s(nested_module)" % nested_module_type_init_func)
                         pygen_sink.writeln()
-            for pygen_sink in self._get_all_pygen_sinks():
-                pygen_sink.unindent()
-                pygen_sink.writeln()
-            pygen_function_closed = True
+            if not pygen_function_closed:
+                for pygen_sink in self._get_all_pygen_sinks():
+                    pygen_sink.unindent()
+                    pygen_sink.writeln()
+                pygen_function_closed = True
 
             ## scan nested namespaces (mapped as python submodules)
             for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
@@ -1268,16 +1297,15 @@ pybindgen.settings.error_handler = ErrorHandler()
                     self._scan_namespace_types(nested_module, nested_namespace,
                                                pygen_register_function_name=nested_module_type_init_func)
             assert not nested_modules # make sure all have been consumed by the second for loop
-
+        # ^^ CLOSE: if outer_class is None: ^^
 
         if pygen_register_function_name and not pygen_function_closed:
             for pygen_sink in self._get_all_pygen_sinks():
                 pygen_sink.unindent()
                 pygen_sink.writeln()
 
-    def _register_container(self, module, traits, pygen_sink, definition, outer_class):
-        element_type = traits.element_type(definition.type)
-        print >> sys.stderr, "traits >>>>>", traits, repr(element_type)
+    def _register_container(self, module, traits, definition, outer_class, name):
+        element_type = traits.element_type(definition)
         kwargs = {}
 
         if outer_class is not None:
@@ -1286,31 +1314,31 @@ pybindgen.settings.error_handler = ErrorHandler()
         else:
             outer_class_key = None
 
-        container_register_key = (outer_class_key, definition.name)
+        container_register_key = (outer_class_key, name)
         if container_register_key in self._containers_registered:
             return
         self._containers_registered[container_register_key] = None
 
-        print >> sys.stderr, "container >>>>>", repr(definition.name)
-
         return_type_spec = self.type_registry.lookup_return(element_type)
 
+        element_decl = type_traits.remove_declarated(element_type)
+        pygen_sink = self._get_pygen_sink_for_definition(element_decl)
+
         ## pygen...
-        pygen_sink = self._get_pygen_sink_for_definition(definition)
         if pygen_sink:
             pygen_sink.writeln("module.add_container(%s)" %
-                               ", ".join([repr(definition.name), _pygen_retval(*return_type_spec)] + _pygen_kwargs(kwargs)))
+                               ", ".join([repr(name), _pygen_retval(*return_type_spec)] + _pygen_kwargs(kwargs)))
 
         ## convert the return value
         try:
             return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
         except (TypeLookupError, TypeConfigurationError), ex:
-            warnings.warn_explicit("Return value '%s' error (used in %s): %r"
-                                   % (definition.decl_string, definition, ex),
-                                   WrapperWarning, definition.location.file_name, definition.location.line)
+            warnings.warn("Return value '%s' error (used in %s): %r"
+                          % (definition.decl_string, definition, ex),
+                          WrapperWarning)
             return
 
-        module.add_container(definition.name, return_type, **kwargs)
+        module.add_container(name, return_type, **kwargs)
         
 
     def _class_has_virtual_methods(self, cls):
