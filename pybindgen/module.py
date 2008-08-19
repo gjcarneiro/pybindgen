@@ -474,6 +474,10 @@ class ModuleBase(dict):
             have a constructor by default (if omitted, it will be
             considered to have a trivial constructor).
 
+          - no_copy (bool): if True, the structure will not
+            have a copy constructor by default (if omitted, it will be
+            considered to have a simple copy constructor).
+
         """
 
         try:
@@ -482,12 +486,21 @@ class ModuleBase(dict):
             no_constructor = False
         else:
             del kwargs['no_constructor']
+
+        try:
+            no_copy = kwargs['no_copy']
+        except KeyError:
+            no_copy = False
+        else:
+            del kwargs['no_copy']
         
         struct = CppClass(*args, **kwargs)
         struct.stack_where_defined = traceback.extract_stack()
         self._add_class_obj(struct)
         if not no_constructor:
             struct.add_constructor([])
+        if not no_copy:
+            struct.add_copy_constructor()
         return struct
 
 

@@ -889,6 +889,18 @@ class TestFoo(unittest.TestCase):
         rv = test.set_simple_vec(container)
         self.assertEqual(rv, sum(range(10)))
 
+    def test_copy(self):
+        s1 = foo.simple_struct_t()
+        s1.xpto = 123
+
+        # copy via constructor
+        s2 = foo.simple_struct_t(s1)
+        self.assertEqual(s2.xpto, 123)
+        s2.xpto = 321
+        self.assertEqual(s2.xpto, 321)
+        self.assertEqual(s1.xpto, 123)
+
+        # copy via __copy__ TODO
 
 if __name__ == '__main__':
     unittest.main()

@@ -1185,6 +1185,19 @@ public:
         self._add_constructor_obj(constructor)
         return constructor
 
+    def add_copy_constructor(self):
+        """
+        Utility method to add a 'copy constructor' method to this class.
+        """
+        try:
+            constructor = CppConstructor([self.ThisClassRefParameter("%s &" % self.full_name,
+                                                                     'ctor_arg', is_const=True)])
+        except utils.SkipWrapper:
+            return None
+        constructor.stack_where_defined = traceback.extract_stack()
+        self._add_constructor_obj(constructor)
+        return constructor
+
     def add_function_as_constructor(self, *args, **kwargs):
         """
         Wrap a function that behaves as a constructor to the class. See the documentation for

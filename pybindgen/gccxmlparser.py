@@ -1692,9 +1692,9 @@ pybindgen.settings.error_handler = ErrorHandler()
             except AttributeError: # pygccxml <= 0.9
                 has_copy_constructor = type_traits.has_trivial_copy(cls)
             if has_copy_constructor:
-                class_wrapper.add_constructor([
-                            class_wrapper.ThisClassRefParameter("%s &" % class_wrapper.full_name,
-                                                                'ctor_arg', is_const=True)])
+                class_wrapper.add_copy_constructor()
+                pygen_sink.writeln("cls.add_copy_constructor()")
+                
         if has_output_stream_operator:
             class_wrapper.add_output_stream_operator()
             pygen_sink.writeln("cls.add_output_stream_operator()")
