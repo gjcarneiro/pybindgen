@@ -93,7 +93,7 @@ class PyTypeObject(object):
         slots.setdefault('tp_getset', 'NULL')
         slots.setdefault('tp_descr_get', 'NULL')
         slots.setdefault('tp_descr_set', 'NULL')
-        slots.setdefault('tp_dictoffset', 'NULL')
+        slots.setdefault('tp_dictoffset', '0')
         slots.setdefault('tp_init', 'NULL')
         slots.setdefault('tp_alloc', 'PyType_GenericAlloc')
         slots.setdefault('tp_new', 'PyType_GenericNew')
