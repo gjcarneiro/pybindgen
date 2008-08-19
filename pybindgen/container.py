@@ -340,7 +340,7 @@ static void
 static int
 %s(%s *self, visitproc visit, void *arg)
 {
-    Py_VISIT(self->container);
+    Py_VISIT((PyObject *) self->container);
     return 0;
 }
 ''' % (tp_traverse_function_name, self.iter_pystruct))
