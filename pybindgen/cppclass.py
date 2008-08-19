@@ -441,6 +441,7 @@ class CppClass(object):
         self.helper_class_disabled = False
         self.cannot_be_constructed = '' # reason
         self.has_trivial_constructor = False
+        self.has_copy_constructor = False
         self.has_output_stream_operator = False
         self._have_pure_virtual_methods = None
         ## list of CppClasses from which a value of this class can be
@@ -1143,6 +1144,9 @@ public:
         self.constructors.append(wrapper)
         if not wrapper.parameters:
             self.has_trivial_constructor = True # FIXME: I don't remember what is this used for anymore, maybe remove
+        if len(wrapper.parameters) == 1 and isinstance(wrapper.parameters[0], CppClassParameterBase) \
+                and wrapper.parameters[0].cpp_class is self:
+            self.has_copy_constructor = True
 
     def add_output_stream_operator(self):
         """
@@ -1499,6 +1503,34 @@ typedef struct {
                                           or constructor))
         return have_constructor
 
+    def _generate_copy_method(self, code_sink):
+        construct_name = self.get_construct_name()
+        copy_wrapper_name = '_wrap_%s__copy__' % self.pystruct
+        code_sink.writeln('''
+static PyObject*\n%s(%s *self)
+{
+''' % (copy_wrapper_name, self.pystruct))
+        code_sink.indent()
+
+        if self.allow_subclassing:
+            new_func = 'PyObject_GC_New'
+        else:
+            new_func = 'PyObject_New'
+
+        code_sink.writeln("%s *py_copy = %s(%s, %s);" %
+                          (self.pystruct, new_func, self.pystruct, '&'+self.pytypestruct))
+
+        if self.allow_subclassing:
+            code_sink.writeln("py_copy->inst_dict = NULL;")
+
+        code_sink.writeln("py_copy->obj = new %s(*self->obj);" % construct_name)
+
+        code_sink.writeln("return (PyObject*) py_copy;")
+        code_sink.unindent()
+        code_sink.writeln("}")
+        code_sink.writeln()
+        return copy_wrapper_name
+
     def _generate_methods(self, code_sink, parent_caller_methods):
         """generate the method wrappers"""
         method_defs = []
@@ -1513,6 +1545,15 @@ typedef struct {
                 method_defs.append(overload.get_py_method_def(meth_name))
             code_sink.writeln()
         method_defs.extend(parent_caller_methods)
+
+        if self.has_copy_constructor:
+            try:
+                copy_wrapper_name = utils.call_with_error_handling(self._generate_copy_method, (code_sink,), {}, None)
+            except utils.SkipWrapper:
+                pass
+            else:
+                method_defs.append('{"__copy__", (PyCFunction) %s, METH_NOARGS, NULL},' % copy_wrapper_name)
+
         ## generate the method table
         code_sink.writeln("static PyMethodDef %s_methods[] = {" % (self.pystruct,))
         code_sink.indent()

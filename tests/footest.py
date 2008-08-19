@@ -2,6 +2,7 @@ import sys
 import weakref
 import gc
 import os.path
+import copy
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '..', 'build', 'default', 'tests'))
 which = int(sys.argv[1])
@@ -900,7 +901,13 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(s2.xpto, 321)
         self.assertEqual(s1.xpto, 123)
 
-        # copy via __copy__ TODO
+        # copy via __copy__
+        s3 = copy.copy(s1)
+        self.assertEqual(s3.xpto, 123)
+        s3.xpto = 456
+        self.assertEqual(s3.xpto, 456)
+        self.assertEqual(s1.xpto, 123)
+        
 
 if __name__ == '__main__':
     unittest.main()
