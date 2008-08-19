@@ -1144,8 +1144,8 @@ public:
         self.constructors.append(wrapper)
         if not wrapper.parameters:
             self.has_trivial_constructor = True # FIXME: I don't remember what is this used for anymore, maybe remove
-        if len(wrapper.parameters) == 1 and isinstance(wrapper.parameters[0], CppClassParameterBase) \
-                and wrapper.parameters[0].cpp_class is self:
+        if len(wrapper.parameters) == 1 and isinstance(wrapper.parameters[0], (CppClassRefParameter, CppClassParameter)) \
+                and wrapper.parameters[0].cpp_class is self and wrapper.visibility == 'public':
             self.has_copy_constructor = True
 
     def add_output_stream_operator(self):
