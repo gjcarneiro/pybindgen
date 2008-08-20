@@ -909,5 +909,64 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(s1.xpto, 123)
         
 
+    def test_refcounting_v2(self):
+        zbr_count_before = foo.Zbr.instance_count
+
+        obj = foo.SomeObject("")
+        z1 = obj.get_internal_zbr()
+        z2 = obj.get_internal_zbr()
+        del obj, z1, z2
+
+        while gc.collect():
+            pass
+
+        zbr_count_after = foo.Zbr.instance_count
+
+        self.assertEqual(zbr_count_after, zbr_count_before)
+
+    def test_refcounting_v3(self):
+        zbr_count_before = foo.Zbr.instance_count
+        
+        class MyZbr(foo.Zbr):
+            pass
+        z_in = MyZbr()
+        obj = foo.SomeObject("")
+        obj.set_zbr_transfer(z_in)
+        del z_in
+        
+        z1 = obj.get_zbr()
+        z2 = obj.get_zbr()
+        self.assert_(z1 is z2)
+        del obj, z1, z2
+
+        while gc.collect():
+            pass
+
+        zbr_count_after = foo.Zbr.instance_count
+
+        self.assertEqual(zbr_count_after, zbr_count_before)
+
+    def test_refcounting_v4(self): # same as v3 but using peek_zbr instead of get_zbr
+        zbr_count_before = foo.Zbr.instance_count
+        
+        class MyZbr(foo.Zbr):
+            pass
+        z_in = MyZbr()
+        obj = foo.SomeObject("")
+        obj.set_zbr_transfer(z_in)
+        del z_in
+        
+        z1 = obj.peek_zbr()
+        z2 = obj.peek_zbr()
+        self.assert_(z1 is z2)
+        del obj, z1, z2
+
+        while gc.collect():
+            pass
+
+        zbr_count_after = foo.Zbr.instance_count
+
+        self.assertEqual(zbr_count_after, zbr_count_before)
+
 if __name__ == '__main__':
     unittest.main()

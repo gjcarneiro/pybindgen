@@ -225,6 +225,7 @@ private:
     Foo *m_foo_ptr;
     Foo *m_foo_shared_ptr;
     Zbr *m_zbr;
+    Zbr *m_internal_zbr;
 
 public:
 
@@ -235,18 +236,24 @@ public:
         delete m_foo_ptr;
         if (m_zbr)
             m_zbr->Unref ();
+        if (m_internal_zbr) {
+            m_internal_zbr->Unref ();
+            m_internal_zbr = NULL;
+        }
     }
 
     SomeObject (std::string const prefix)
         : m_prefix (prefix), m_foo_ptr (0),
-          m_foo_shared_ptr (0), m_zbr (0)
+          m_foo_shared_ptr (0), m_zbr (0),
+          m_internal_zbr (new Zbr)
         {
             SomeObject::instance_count++;
         }
 
     SomeObject (int prefix_len)
         : m_prefix (prefix_len, 'X'), m_foo_ptr (0),
-          m_foo_shared_ptr (0), m_zbr (0)
+          m_foo_shared_ptr (0), m_zbr (0),
+          m_internal_zbr (new Zbr)
         {
             SomeObject::instance_count++;
         }
@@ -349,6 +356,12 @@ public:
             return m_zbr;
         } else
             return NULL;
+    }
+
+    // -#- @return(caller_owns_return=true) -#-
+    Zbr* get_internal_zbr () {
+        m_internal_zbr->Ref ();
+        return m_internal_zbr;
     }
 
     // return reference counted object, caller does not own return

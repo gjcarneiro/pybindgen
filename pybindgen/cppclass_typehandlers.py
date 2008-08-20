@@ -780,6 +780,13 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                    self.cpp_class.helper_class.name, const_cast_value))
 
             wrapper.after_call.write_code("%s->obj = %s;" % (py_name, const_cast_value))
+        
+            # We are already referencing the existing python wrapper,
+            # so we do not need a reference to the C++ object as well.
+            if self.caller_owns_return and \
+                    isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
+                self.cpp_class.memory_policy.write_decref(wrapper.after_call, value)
+
             wrapper.after_call.write_code("Py_INCREF(%s);" % py_name)
             wrapper.after_call.unindent()
             wrapper.after_call.write_code("} else {")

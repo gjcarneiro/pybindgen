@@ -74,6 +74,7 @@ int %s::custom_method_added_by_a_hook(int x)
         helper_class.add_post_generation_code("// this comment was written by a helper class hook function")
     Zbr.add_helper_class_hook(helper_class_hook)
 
+    Zbr.add_constructor([])
     Zbr.add_constructor([Parameter.new('std::string', 'datum')])
     Zbr.add_method('get_datum', ReturnValue.new('std::string'), [])
     Zbr.add_method('get_int', ReturnValue.new('int'), [Parameter.new('int', 'x')],
@@ -219,6 +220,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
     ## get/set recfcounted object Zbr
     SomeObject.add_method('get_zbr', ReturnValue.new('Zbr*', caller_owns_return=True), [])
+    SomeObject.add_method('get_internal_zbr', ReturnValue.new('Zbr*', caller_owns_return=True), [])
     SomeObject.add_method('peek_zbr', ReturnValue.new('Zbr*', caller_owns_return=False), [])
     SomeObject.add_method('set_zbr_transfer', ReturnValue.new('void'),
                           [Parameter.new('Zbr*', 'zbr', transfer_ownership=True)])
