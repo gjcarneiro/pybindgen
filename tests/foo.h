@@ -2,6 +2,7 @@
 #ifndef   	FOO_H_
 # define   	FOO_H_
 
+#include <Python.h>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -227,6 +228,8 @@ private:
     Zbr *m_zbr;
     Zbr *m_internal_zbr;
 
+    PyObject *m_pyobject;
+
 public:
 
     static std::string staticData;
@@ -245,7 +248,8 @@ public:
     SomeObject (std::string const prefix)
         : m_prefix (prefix), m_foo_ptr (0),
           m_foo_shared_ptr (0), m_zbr (0),
-          m_internal_zbr (new Zbr)
+          m_internal_zbr (new Zbr),
+          m_pyobject (NULL)
         {
             SomeObject::instance_count++;
         }
@@ -253,7 +257,8 @@ public:
     SomeObject (int prefix_len)
         : m_prefix (prefix_len, 'X'), m_foo_ptr (0),
           m_foo_shared_ptr (0), m_zbr (0),
-          m_internal_zbr (new Zbr)
+          m_internal_zbr (new Zbr),
+          m_pyobject (NULL)
         {
             SomeObject::instance_count++;
         }
@@ -301,6 +306,25 @@ public:
         std::stringstream out;
         out << x;
         return out.str ();
+    }
+
+    // -#- @pyobject(transfer_ownership=false) -#-
+    virtual void set_pyobject (PyObject *pyobject) {
+        if (m_pyobject) {
+            Py_DECREF(m_pyobject);
+        }
+        Py_INCREF(pyobject);
+        m_pyobject = pyobject;
+    }
+
+    // -#- @return(caller_owns_return=true) -#-
+    virtual PyObject* get_pyobject (void) {
+        if (m_pyobject) {
+            Py_INCREF(m_pyobject);
+            return m_pyobject;
+        } else {
+            return NULL;
+        }
     }
 
     // pass by value, direction=in
@@ -759,6 +783,5 @@ public:
 private:
     SimpleStructList m_simpleList;
 };
-
 
 #endif 	    /* !FOO_H_ */

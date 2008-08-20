@@ -582,7 +582,7 @@ class ModuleParser(object):
         return False
 
     def parse(self, header_files, include_paths=None, whitelist_paths=None, includes=(),
-              pygen_sink=None, pygen_classifier=None):
+              pygen_sink=None, pygen_classifier=None, gccxml_options=None):
         """
         parses a set of header files and returns a pybindgen Module instance.
         It is equivalent to calling the following methods:
@@ -594,7 +594,8 @@ class ModuleParser(object):
 
          The documentation for L{ModuleParser.parse_init} explains the parameters.
         """
-        self.parse_init(header_files, include_paths, whitelist_paths, includes, pygen_sink, pygen_classifier)
+        self.parse_init(header_files, include_paths, whitelist_paths, includes, pygen_sink,
+                        pygen_classifier, gccxml_options)
         self.scan_types()
         self.scan_methods()
         self.scan_functions()

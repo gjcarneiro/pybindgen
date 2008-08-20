@@ -24,14 +24,20 @@ class MyPygenClassifier(PygenClassifier):
 
 def my_module_gen():
     pygen = [
-        PygenSection('__main__', FileCodeSink(open(sys.argv[2], "wt"))),
-        PygenSection('foomodulegen_module1', FileCodeSink(open(sys.argv[3], "wt")),
+        PygenSection('__main__', FileCodeSink(open(sys.argv[3], "wt"))),
+        PygenSection('foomodulegen_module1', FileCodeSink(open(sys.argv[4], "wt")),
                      'foomodulegen_module1_local'),
-        PygenSection('foomodulegen_module2', FileCodeSink(open(sys.argv[4], "wt")),
+        PygenSection('foomodulegen_module2', FileCodeSink(open(sys.argv[5], "wt")),
                      'foomodulegen_module2_local'),
         ]
     module_parser = ModuleParser('foo4', '::')
-    module_parser.parse([sys.argv[1]], includes=['"foo.h"'], pygen_sink=pygen, pygen_classifier=MyPygenClassifier())
+
+    gccxml_options = dict(
+        include_paths=eval(sys.argv[2]),
+        )
+
+    module_parser.parse([sys.argv[1]], includes=['"foo.h"'], pygen_sink=pygen, pygen_classifier=MyPygenClassifier(),
+                        gccxml_options=gccxml_options)
     for sect in pygen:
         sect.code_sink.file.close()
 

@@ -155,6 +155,13 @@ int %s::custom_method_added_by_a_hook(int x)
                           [Parameter.new('int', 'x')],
                           is_virtual=True, is_const=True)
 
+    SomeObject.add_method('set_pyobject', None,
+                          [Parameter.new('PyObject*', 'pyobject', transfer_ownership=False)],
+                          is_virtual=True)
+    SomeObject.add_method('get_pyobject',
+                          ReturnValue.new('PyObject*', caller_owns_return=True),
+                          [],
+                          is_virtual=True)
 
     ## add a function that appears as a method of an object
     SomeObject.add_function_as_method('some_object_get_something_prefixed',
