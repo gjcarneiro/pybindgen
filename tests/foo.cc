@@ -28,6 +28,56 @@ int get_int_from_float(double from_float, int multiplier)
 
 std::string SomeObject::staticData = std::string("Hello Static World!");
 
+SomeObject::~SomeObject ()
+{
+    SomeObject::instance_count--;
+    delete m_foo_ptr;
+    if (m_zbr)
+        m_zbr->Unref ();
+    if (m_internal_zbr) {
+        m_internal_zbr->Unref ();
+        m_internal_zbr = NULL;
+    }
+}
+
+SomeObject::SomeObject (const SomeObject &other)
+    : m_prefix (other.m_prefix)
+{
+    if (other.m_foo_ptr)
+        m_foo_ptr = new Foo (*other.m_foo_ptr);
+    else
+        m_foo_ptr = NULL;
+    m_foo_shared_ptr = NULL;
+
+    if (other.m_zbr) {
+        m_zbr = other.m_zbr;
+        m_zbr->Ref();
+    } else
+        m_zbr = NULL;
+
+    m_internal_zbr = new Zbr;
+    m_pyobject = NULL;
+    SomeObject::instance_count++;
+}
+
+SomeObject::SomeObject (std::string const prefix)
+    : m_prefix (prefix), m_foo_ptr (0),
+      m_foo_shared_ptr (0), m_zbr (0),
+      m_internal_zbr (new Zbr),
+      m_pyobject (NULL)
+{
+    SomeObject::instance_count++;
+}
+
+SomeObject::SomeObject (int prefix_len)
+    : m_prefix (prefix_len, 'X'), m_foo_ptr (0),
+      m_foo_shared_ptr (0), m_zbr (0),
+      m_internal_zbr (new Zbr),
+      m_pyobject (NULL)
+{
+    SomeObject::instance_count++;
+}
+
 int SomeObject::get_int (const char *from_string)
 {
     return atoi(from_string);

@@ -1,7 +1,7 @@
 import warnings
 
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
-    Parameter, ReturnValue, TypeConfigurationError
+    Parameter, ReturnValue, TypeConfigurationError, NotSupportedError
 
 import cppclass
 
@@ -145,6 +145,8 @@ class CppClassParameter(CppClassParameterBase):
         self.cpp_class.write_create_instance(wrapper.before_call,
                                              "%s->obj" % self.py_name,
                                              self.value)
+        self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.before_call, self.py_name,
+                                                                   "%s->obj" % self.py_name)
 
         wrapper.build_params.add_parameter("N", [self.py_name])
 
@@ -260,6 +262,8 @@ class CppClassRefParameter(CppClassParameterBase):
             self.cpp_class.write_create_instance(wrapper.before_call,
                                                  "%s->obj" % self.py_name,
                                                  '')
+            self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.before_call, self.py_name,
+                                                                       "%s->obj" % self.py_name)
             wrapper.call_params.append('*%s->obj' % (self.py_name,))
             wrapper.build_params.add_parameter("N", [self.py_name])
 
@@ -301,6 +305,8 @@ class CppClassRefParameter(CppClassParameterBase):
             self.cpp_class.write_create_instance(wrapper.before_call,
                                                  "%s->obj" % self.py_name,
                                                  self.value)
+            self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.before_call, self.py_name,
+                                                                       "%s->obj" % self.py_name)
             wrapper.build_params.add_parameter("N", [self.py_name])
         else:
             ## out/inout case:
@@ -330,6 +336,8 @@ class CppClassRefParameter(CppClassParameterBase):
             self.cpp_class.write_create_instance(wrapper.after_call,
                                                  "%s->obj" % self.py_name,
                                                  self.value)
+            self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.after_call, self.py_name,
+                                                                       "%s->obj" % self.py_name)
             wrapper.after_call.unindent()
             wrapper.after_call.write_code('}')
 
@@ -370,7 +378,8 @@ class CppClassReturnValue(CppClassReturnValueBase):
         self.cpp_class.write_create_instance(wrapper.after_call,
                                              "%s->obj" % py_name,
                                              self.value)
-
+        self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.after_call, py_name,
+                                                                   "%s->obj" % py_name)
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
     def convert_python_to_c(self, wrapper):
@@ -548,7 +557,6 @@ class CppClassPtrParameter(CppClassParameterBase):
             ## Assign the C++ value to the Python wrapper
             if self.transfer_ownership:
                 wrapper.before_call.write_code("%s->obj = %s;" % (py_name, value))
-                wrapper.build_params.add_parameter("N", [py_name])
             else:
                 if not isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
                     ## The PyObject gets a temporary pointer to the
@@ -560,7 +568,6 @@ class CppClassPtrParameter(CppClassParameterBase):
                         self.cpp_class.write_create_instance(wrapper.before_call,
                                                              "%s->obj" % self.py_name,
                                                              '*'+self.value)
-                        wrapper.build_params.add_parameter("N", [self.py_name])
                     else:
                         ## out/inout case:
                         ## the callee receives a "temporary wrapper", which loses
@@ -599,11 +606,25 @@ class CppClassPtrParameter(CppClassParameterBase):
                                                        (py_name, self.cpp_class.full_name, value))
                     else:
                         wrapper.before_call.write_code("%s->obj = %s;" % (py_name, value))
-                    wrapper.build_params.add_parameter("N", [py_name])
         ## closes def write_create_new_wrapper():
 
         if self.cpp_class.helper_class is None:
-            write_create_new_wrapper()
+            try:
+                self.cpp_class.wrapper_registry.write_lookup_wrapper(
+                    wrapper.before_call, self.cpp_class.pystruct, py_name, value)
+            except NotSupportedError:
+                write_create_new_wrapper()
+                self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.before_call, py_name,
+                                                                           "%s->obj" % py_name)
+            else:
+                wrapper.before_call.write_code("if (%s == NULL)\n{" % py_name)
+                wrapper.before_call.indent()
+                write_create_new_wrapper()
+                self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.before_call, py_name,
+                                                                           "%s->obj" % py_name)
+                wrapper.before_call.unindent()
+                wrapper.before_call.write_code('}')
+            wrapper.build_params.add_parameter("N", [py_name])
         else:
             wrapper.before_call.write_code("if (typeid(*(%s)) == typeid(%s))\n{"
                                           % (value, self.cpp_class.helper_class.name))
@@ -626,11 +647,27 @@ class CppClassPtrParameter(CppClassParameterBase):
             wrapper.before_call.unindent()
             wrapper.before_call.write_code("} else {")
             wrapper.before_call.indent()
-            write_create_new_wrapper()
-            wrapper.before_call.unindent()
-            wrapper.before_call.write_code("}")
-                
 
+            try:
+                self.cpp_class.wrapper_registry.write_lookup_wrapper(
+                    wrapper.before_call, self.cpp_class.pystruct, py_name, value)
+            except NotSupportedError:
+                write_create_new_wrapper()
+                self.cpp_class.wrapper_registry.write_register_new_wrapper(
+                    wrapper.before_call, py_name, "%s->obj" % py_name)
+            else:
+                wrapper.before_call.write_code("if (%s == NULL)\n{" % py_name)
+                wrapper.before_call.indent()
+                write_create_new_wrapper()
+                self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.before_call, py_name,
+                                                                           "%s->obj" % py_name)
+                wrapper.before_call.unindent()
+                wrapper.before_call.write_code('}') # closes if (%s == NULL)
+
+            wrapper.before_call.unindent()
+            wrapper.before_call.write_code("}") # closes if (typeid(*(%s)) == typeid(%s))\n{
+            wrapper.build_params.add_parameter("N", [py_name])
+            
 
 
 def _add_ward(wrapper, custodian, ward):
@@ -764,7 +801,32 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         ## closes def write_create_new_wrapper():
 
         if self.cpp_class.helper_class is None:
-            write_create_new_wrapper()
+            try:
+                self.cpp_class.wrapper_registry.write_lookup_wrapper(
+                    wrapper.after_call, self.cpp_class.pystruct, py_name, value)
+            except NotSupportedError:
+                write_create_new_wrapper()
+                self.cpp_class.wrapper_registry.write_register_new_wrapper(
+                    wrapper.after_call, py_name, "%s->obj" % py_name)
+            else:
+                wrapper.after_call.write_code("if (%s == NULL) {" % py_name)
+                wrapper.after_call.indent()
+                write_create_new_wrapper()
+                self.cpp_class.wrapper_registry.write_register_new_wrapper(
+                    wrapper.after_call, py_name, "%s->obj" % py_name)
+                wrapper.after_call.unindent()
+
+                # If we are already referencing the existing python wrapper,
+                # we do not need a reference to the C++ object as well.
+                if self.caller_owns_return and \
+                        isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
+                    wrapper.after_call.write_code("} else {")
+                    wrapper.after_call.indent()
+                    self.cpp_class.memory_policy.write_decref(wrapper.after_call, value)
+                    wrapper.after_call.unindent()
+                    wrapper.after_call.write_code("}")
+                else:
+                    wrapper.after_call.write_code("}")            
         else:
             wrapper.after_call.write_code("if (typeid(*(%s)) == typeid(%s))\n{"
                                           % (value, self.cpp_class.helper_class.name))
@@ -789,12 +851,41 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
 
             wrapper.after_call.write_code("Py_INCREF(%s);" % py_name)
             wrapper.after_call.unindent()
-            wrapper.after_call.write_code("} else {")
+            wrapper.after_call.write_code("} else {") # if (typeid(*(%s)) == typeid(%s)) { ...
             wrapper.after_call.indent()
-            write_create_new_wrapper()
+
+            # creater new wrapper or reference existing one
+            try:
+                self.cpp_class.wrapper_registry.write_lookup_wrapper(
+                    wrapper.after_call, self.cpp_class.pystruct, py_name, value)
+            except NotSupportedError:
+                write_create_new_wrapper()
+                self.cpp_class.wrapper_registry.write_register_new_wrapper(
+                    wrapper.after_call, py_name, "%s->obj" % py_name)
+            else:
+                wrapper.after_call.write_code("if (%s == NULL) {" % py_name)
+                wrapper.after_call.indent()
+                write_create_new_wrapper()
+                self.cpp_class.wrapper_registry.write_register_new_wrapper(
+                    wrapper.after_call, py_name, "%s->obj" % py_name)
+                wrapper.after_call.unindent()
+
+                if self.caller_owns_return and \
+                        isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
+                    wrapper.after_call.write_code("} else {")
+                    wrapper.after_call.indent()
+                    # If we are already referencing the existing python wrapper,
+                    # we do not need a reference to the C++ object as well.
+                    self.cpp_class.memory_policy.write_decref(wrapper.after_call, value)
+                    wrapper.after_call.unindent()
+                    wrapper.after_call.write_code("}")
+                else:
+                    wrapper.after_call.write_code("}")            
+
+
             wrapper.after_call.unindent()
-            wrapper.after_call.write_code("}")
-                
+            wrapper.after_call.write_code("}") # closes: if (typeid(*(%s)) == typeid(%s)) { ... } else { ...
+            
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
         
         if self.custodian is None:

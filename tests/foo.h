@@ -230,38 +230,16 @@ private:
 
     PyObject *m_pyobject;
 
+    SomeObject ();
+
 public:
 
     static std::string staticData;
 
-    virtual ~SomeObject () {
-        SomeObject::instance_count--;
-        delete m_foo_ptr;
-        if (m_zbr)
-            m_zbr->Unref ();
-        if (m_internal_zbr) {
-            m_internal_zbr->Unref ();
-            m_internal_zbr = NULL;
-        }
-    }
-
-    SomeObject (std::string const prefix)
-        : m_prefix (prefix), m_foo_ptr (0),
-          m_foo_shared_ptr (0), m_zbr (0),
-          m_internal_zbr (new Zbr),
-          m_pyobject (NULL)
-        {
-            SomeObject::instance_count++;
-        }
-
-    SomeObject (int prefix_len)
-        : m_prefix (prefix_len, 'X'), m_foo_ptr (0),
-          m_foo_shared_ptr (0), m_zbr (0),
-          m_internal_zbr (new Zbr),
-          m_pyobject (NULL)
-        {
-            SomeObject::instance_count++;
-        }
+    virtual ~SomeObject ();
+    SomeObject (const SomeObject &other);
+    SomeObject (std::string const prefix);
+    SomeObject (int prefix_len);
 
     // -#- @message(direction=inout) -#-
     int add_prefix (std::string& message) {

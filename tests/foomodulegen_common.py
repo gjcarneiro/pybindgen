@@ -4,6 +4,7 @@ import sys
 import re
 
 import pybindgen
+import pybindgen.settings
 from pybindgen.typehandlers import base as typehandlers
 from pybindgen import ReturnValue, Parameter, Module, Function, FileCodeSink
 from pybindgen import CppMethod, CppConstructor, CppClass, Enum
@@ -51,6 +52,8 @@ del transf
 
 
 def customize_module(module):
+    pybindgen.settings.wrapper_registry = pybindgen.settings.StdMapWrapperRegistry
+
     wrapper_body = '''
 static PyObject *
 _wrap_foofunction_that_takes_foo_from_string(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args,

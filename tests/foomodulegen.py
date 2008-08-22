@@ -420,7 +420,6 @@ int %s::custom_method_added_by_a_hook(int x)
             return True
     pybindgen.settings.error_handler = MyErrorHandler()
 
-
     foomodulegen_common.customize_module(mod)
 
     ## ---- finally, generate the whole thing ----

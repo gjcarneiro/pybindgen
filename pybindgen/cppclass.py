@@ -7,7 +7,8 @@ import traceback
 
 from typehandlers.base import ReturnValue, \
     join_ctype_and_name, CodeGenerationError, \
-    param_type_matcher, return_type_matcher, CodegenErrorBase
+    param_type_matcher, return_type_matcher, CodegenErrorBase, \
+    DeclarationsScope, CodeBlock
 
 from typehandlers.codesink import NullCodeSink, MemoryCodeSink
 
@@ -444,6 +445,8 @@ class CppClass(object):
         self.has_copy_constructor = False
         self.has_output_stream_operator = False
         self._have_pure_virtual_methods = None
+        self._wrapper_registry = None
+
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
         ## operator ThisClass(); in the other class.
@@ -1290,6 +1293,16 @@ public:
                 method = method.clone()
                 self.helper_class.add_virtual_method(method)
 
+    def _get_wrapper_registry(self):
+        # there is one wrapper registry object per root class only,
+        # which is used for all subclasses.
+        if self.parent is None:
+            if self._wrapper_registry is None:
+                self._wrapper_registry = settings.wrapper_registry(self.pystruct)
+            return self._wrapper_registry
+        else:
+            return self.parent._get_wrapper_registry()
+    wrapper_registry = property(_get_wrapper_registry)
 
     def generate_forward_declarations(self, code_sink, module):
         """
@@ -1338,12 +1351,17 @@ typedef struct {
         if self.typeid_map_name is not None:
             self._generate_typeid_map(code_sink, module)
 
+        if self.parent is None:
+            self.wrapper_registry.generate_forward_declarations(code_sink, module)
 
     def generate(self, code_sink, module, docstring=None):
         """Generates the class to a code sink"""
 
         if self.typeid_map_name is not None:
             code_sink.writeln("\npybindgen::TypeMap %s;\n" % self.typeid_map_name)
+
+        if self.parent is None:
+            self.wrapper_registry.generate(code_sink, module)
 
         if self.helper_class is not None:
             parent_caller_methods = self.helper_class.generate(code_sink)
@@ -1512,20 +1530,30 @@ static PyObject*\n%s(%s *self)
 ''' % (copy_wrapper_name, self.pystruct))
         code_sink.indent()
 
+        declarations = DeclarationsScope()
+        code_block = CodeBlock("return NULL;", declarations)
+
         if self.allow_subclassing:
             new_func = 'PyObject_GC_New'
         else:
             new_func = 'PyObject_New'
 
-        code_sink.writeln("%s *py_copy = %s(%s, %s);" %
-                          (self.pystruct, new_func, self.pystruct, '&'+self.pytypestruct))
-
+        py_copy = declarations.declare_variable("%s*" % self.pystruct, "py_copy")
+        code_block.write_code("%s = %s(%s, %s);" %
+                              (py_copy, new_func, self.pystruct, '&'+self.pytypestruct))
+        code_block.write_code("%s->obj = new %s(*self->obj);" % (py_copy, construct_name))
         if self.allow_subclassing:
-            code_sink.writeln("py_copy->inst_dict = NULL;")
+            code_block.write_code("%s->inst_dict = NULL;" % py_copy)
 
-        code_sink.writeln("py_copy->obj = new %s(*self->obj);" % construct_name)
+        self.wrapper_registry.write_register_new_wrapper(code_block, py_copy, "%s->obj" % py_copy)
 
-        code_sink.writeln("return (PyObject*) py_copy;")
+        code_block.write_code("return (PyObject*) %s;" % py_copy)
+
+        declarations.get_code_sink().flush_to(code_sink)
+
+        code_block.write_cleanup()
+        code_block.sink.flush_to(code_sink)
+
         code_sink.unindent()
         code_sink.writeln("}")
         code_sink.writeln()
@@ -1689,39 +1717,29 @@ static int
             return
 
         tp_dealloc_function_name = "_wrap_%s__tp_dealloc" % (self.pystruct,)
+        code_sink.writeln(r'''
+static void
+%s(%s *self)
+{''' % (tp_dealloc_function_name, self.pystruct))
+        code_sink.indent()
+
+        code_block = CodeBlock("PyErr_Print(); return;", DeclarationsScope())
+
+        self.wrapper_registry.write_unregister_wrapper(code_block, 'self', 'self->obj')
 
         if self.allow_subclassing:
-            clear_code = "%s(self);" % self.slots["tp_clear"]
-            delete_code = ""
+            code_block.write_code("%s(self);" % self.slots["tp_clear"])
         else:
-            clear_code = ""
-            delete_code = self._get_delete_code()
+            code_block.write_code(self._get_delete_code())
 
-        if have_constructor:
-            code_sink.writeln(r'''
-static void
-%s(%s *self)
-{
-    %s
-    %s
-    self->ob_type->tp_free((PyObject*)self);
-}
-''' % (tp_dealloc_function_name, self.pystruct,
-       delete_code, clear_code))
+        code_block.write_code('self->ob_type->tp_free((PyObject*)self);')
 
-        else: # don't have constructor
+        code_block.write_cleanup()
+        code_block.sink.flush_to(code_sink)
 
-            code_sink.writeln('''
-static void
-%s(%s *self)
-{
-    %s
-    %s
-    self->ob_type->tp_free((PyObject*)self);
-}
-''' % (tp_dealloc_function_name, self.pystruct,
-       clear_code, delete_code))
-        code_sink.writeln()
+        code_sink.unindent()
+        code_sink.writeln('}\n')
+
         self.slots.setdefault("tp_dealloc", tp_dealloc_function_name )
 
 

@@ -562,16 +562,30 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(f2.get_datum(), "hello")
 
     def test_function_as_method(self):
+        while gc.collect():
+            pass
         obj = foo.SomeObject("xpto")
         self.assertEqual(obj.get_something_prefixed("something"), "xptosomething")
+        del obj
+        while gc.collect():
+            pass
 
     def test_function_as_method_val(self):
+        while gc.collect():
+            pass
         obj = foo.SomeObject("xpto")
         self.assertEqual(obj.val_get_something_prefixed("something"), "xptosomething")
+        del obj
+        while gc.collect():
+            pass
 
     def test_function_as_method_ref(self):
+        while gc.collect():
+            pass
         obj = foo.SomeObject("xpto")
         self.assertEqual(obj.ref_get_something_prefixed("something"), "xptosomething")
+        while gc.collect():
+            pass
 
     def test_enum(self):
         foo.xpto.set_foo_type(foo.xpto.FOO_TYPE_BBB)
@@ -915,6 +929,9 @@ class TestFoo(unittest.TestCase):
         obj = foo.SomeObject("")
         z1 = obj.get_internal_zbr()
         z2 = obj.get_internal_zbr()
+
+        self.assert_(z1 is z2)
+
         del obj, z1, z2
 
         while gc.collect():
