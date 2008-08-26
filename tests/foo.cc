@@ -354,3 +354,19 @@ TestContainer::set_simple_vec (std::vector<simple_struct_t> list)
     return count;
 }
 
+std::map<std::string, int>
+get_map ()
+{
+    std::map<std::string, int> rv;
+    rv["123"] = 123;
+    rv["456"] = 456;
+    return rv;
+}
+
+std::set<std::string>
+get_set ()
+{
+    std::set<std::string> rv;
+    return rv;
+}
+

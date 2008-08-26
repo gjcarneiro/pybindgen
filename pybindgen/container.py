@@ -51,7 +51,7 @@ class IterNextWrapper(ForwardWrapperBase):
 
 
 class Container(object):
-    def __init__(self, name, value_type, outer_class=None, custom_name=None):
+    def __init__(self, name, value_type, add_value_method, outer_class=None, custom_name=None):
         if '<' in name or '::' in name:
             self.name = utils.mangle_name(name)
             self.full_name = name
@@ -64,6 +64,7 @@ class Container(object):
         self.outer_class = outer_class
         self.mangled_name = None
         self.mangled_full_name = None
+        self.add_value_method = add_value_method
         self.custom_name = custom_name
         self._pystruct = None
         self.pytypestruct = "***GIVE ME A NAME***"
@@ -441,6 +442,7 @@ static PyObject*
             'PYTHON_NAME': self.python_name,
             'ITEM_CTYPE': self.value_type.ctype,
             'CONTAINER_CONVERTER_FUNC_NAME': this_type_converter,
+            'ADD_VALUE': self.add_value_method,
             }
         code_sink.writeln(r'''
 int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
@@ -454,7 +456,7 @@ int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
             if (!%(ITEM_CONVERTER)s(PyList_GET_ITEM(arg, i), &item)) {
                 return 0;
             }
-            container->push_back(item);
+            container->%(ADD_VALUE)s(item);
         }
     } else {
         PyErr_SetString(PyExc_TypeError, "parameter must be None, a %(PYTHON_NAME)s instance, or a list of %(ITEM_CTYPE)s");
@@ -496,11 +498,13 @@ static int
 ## Type Handlers
 ## ----------------------------
 
+def _get_dummy_container():
+    return Container('dummy', ReturnValue.new('void'), 'push_back') # Container instance
 
 class ContainerParameterBase(Parameter):
     "Base class for all C++ Class parameter handlers"
     CTYPES = []
-    container_type = Container('dummy', ReturnValue.new('void')) # Container instance
+    container_type = _get_dummy_container()
     DIRECTIONS = [Parameter.DIRECTION_IN]
 
     def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False, default_value=None):
@@ -520,7 +524,7 @@ class ContainerParameterBase(Parameter):
 class ContainerReturnValueBase(ReturnValue):
     "Class return handlers -- base class"
     CTYPES = []
-    container_type = Container('dummy', ReturnValue.new('void')) # CppClass instance
+    container_type = _get_dummy_container()
 
     def __init__(self, ctype):
         super(ContainerReturnValueBase, self).__init__(ctype)
@@ -533,7 +537,7 @@ class ContainerReturnValueBase(ReturnValue):
 class ContainerParameter(ContainerParameterBase):
     "Container handlers"
     CTYPES = []
-    container_type = Container('dummy', ReturnValue.new('void')) # CppContainer instance
+    container_type = _get_dummy_container()
     DIRECTIONS = [Parameter.DIRECTION_IN]
     
     def convert_python_to_c(self, wrapper):
@@ -567,7 +571,7 @@ class ContainerParameter(ContainerParameterBase):
 class ContainerRefParameter(ContainerParameterBase):
     "Container handlers"
     CTYPES = []
-    container_type = Container('dummy', ReturnValue.new('void')) # CppContainer instance
+    container_type = _get_dummy_container()
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT, Parameter.DIRECTION_INOUT]
     
     def convert_python_to_c(self, wrapper):
@@ -620,7 +624,7 @@ class ContainerRefParameter(ContainerParameterBase):
 class ContainerReturnValue(ContainerReturnValueBase):
     "Container type return handlers"
     CTYPES = []
-    container_type = Container('dummy', ReturnValue.new('void')) # CppContainer instance
+    container_type = _get_dummy_container()
 
     def __init__(self, ctype, is_const=False):
         """override to fix the ctype parameter with namespace information"""

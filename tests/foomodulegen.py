@@ -392,7 +392,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
 
     # containers...
-    SimpleStructList = mod.add_container('SimpleStructList', ReturnValue.new('simple_struct_t'))
+    SimpleStructList = mod.add_container('SimpleStructList', ReturnValue.new('simple_struct_t'), 'push_back')
     mod.add_function('get_simple_list', ReturnValue.new('SimpleStructList'), [])
     mod.add_function('set_simple_list', 'int', [Parameter.new('SimpleStructList', 'list')])
 
@@ -404,7 +404,7 @@ int %s::custom_method_added_by_a_hook(int x)
                                                                              direction=Parameter.DIRECTION_INOUT)],
                              is_virtual=True)
 
-    SimpleStructList = mod.add_container('std::vector<simple_struct_t>', ReturnValue.new('simple_struct_t'))
+    SimpleStructList = mod.add_container('std::vector<simple_struct_t>', ReturnValue.new('simple_struct_t'), 'push_back')
     TestContainer.add_method('get_simple_vec', ReturnValue.new('std::vector<simple_struct_t>'), [], is_virtual=True)
     TestContainer.add_method('set_simple_vec', 'int', [Parameter.new('std::vector<simple_struct_t>', 'vec')], is_virtual=True)
 

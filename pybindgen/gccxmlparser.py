@@ -198,10 +198,9 @@ class GccXmlTypeRegistry(object):
     def get_type_traits(self, type_info):
         #assert isinstance(type_info, cpptypes.type_t)
 
-        debug = False #('int64_t' in type_info.decl_string)
-
-        if debug:
-            print >> sys.stderr, "***** type traits for %r" % (type_info.decl_string, )
+        #debug = False #('int64_t' in type_info.decl_string)
+        #if debug:
+        #    print >> sys.stderr, "***** type traits for %r" % (type_info.decl_string, )
 
         is_const = False
         is_reference = False
@@ -225,7 +224,7 @@ class GccXmlTypeRegistry(object):
             if type_info is prev_type_info:
                 break
 
-        type_name = normalize_name(type_info.decl_string)
+        type_name = normalize_name(type_info.partial_decl_string)
         try:
             cpp_type = self.root_module[type_name]
         except KeyError:
@@ -937,7 +936,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 traits = container_traits.find_container_traits(type_info)
                 if traits is None:
                     continue
-                name = normalize_name(type_info.decl_string)
+                name = normalize_name(type_info.partial_decl_string)
                 self._containers_to_register.append((traits, type_info, None, name))
 
         ## scan enumerations
@@ -1043,7 +1042,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             if not cls.name:
                 if outer_class is None:
                     warnings.warn_explicit(("Class %s ignored: anonymous structure not inside a named structure/union."
-                                            % cls.decl_string),
+                                            % cls.partial_decl_string),
                                            NotSupportedWarning, cls.location.file_name, cls.location.line)
                     continue
 
@@ -1064,7 +1063,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             if len(cls.bases) > 1:
                 warnings.warn_explicit(("Class %s ignored because it uses multiple "
                                         "inheritance (not yet supported by pybindgen)"
-                                        % cls.decl_string),
+                                        % cls.partial_decl_string),
                                        NotSupportedWarning, cls.location.file_name, cls.location.line)
                 continue
             if cls.bases:
@@ -1076,7 +1075,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     if base_cls not in unregistered_classes:
                         warnings.warn_explicit("Class %s ignored because it uses a base class (%s) "
                                                "which is not declared."
-                                               % (cls.decl_string, base_cls.decl_string),
+                                               % (cls.partial_decl_string, base_cls.partial_decl_string),
                                                ModuleParserWarning, cls.location.file_name, cls.location.line)
                         continue
                     postpone_class(cls, "waiting for base class %s to be registered first" % base_cls)
@@ -1091,7 +1090,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if not isinstance(target_type, class_t):
                     continue
                 try:
-                    dummy = root_module[normalize_class_name(operator.return_type.decl_string, '::')]
+                    dummy = root_module[normalize_class_name(operator.return_type.partial_decl_string, '::')]
                 except KeyError:
                     ok = False
                     break
@@ -1099,7 +1098,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 ok = True
             if not ok:
                 postpone_class(cls, ("waiting for implicit conversion target class %s to be registered first"
-                                     % (operator.return_type.decl_string,)))
+                                     % (operator.return_type.partial_decl_string,)))
                 continue
 
             self._apply_class_annotations(cls, global_annotations, kwargs)
@@ -1153,7 +1152,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     traits = container_traits.find_container_traits(type_info)
                     if traits is None:
                         continue
-                    name = normalize_name(type_info.decl_string)
+                    name = normalize_name(type_info.partial_decl_string)
                     # now postpone container registration until after
                     # all classes are registered, because we may
                     # depend on one of those classes for the element
@@ -1180,7 +1179,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if not isinstance(target_type, class_t):
                     continue
                 #other_class = type_registry.find_class(operator.return_type.decl_string, '::')
-                other_class = root_module[normalize_class_name(operator.return_type.decl_string, '::')]
+                other_class = root_module[normalize_class_name(operator.return_type.partial_decl_string, '::')]
                 class_wrapper.implicitly_converts_to(other_class)
                 if pygen_sink:
                     if 'pygen_comment' in global_annotations:
@@ -1310,12 +1309,42 @@ pybindgen.settings.error_handler = ErrorHandler()
                 pygen_sink.writeln()
 
     def _register_container(self, module, traits, definition, outer_class, name):
-        element_type = traits.element_type(definition)
         kwargs = {}
+
+        if traits is container_traits.list_traits:
+            add_value_method = 'push_back'
+        elif traits is container_traits.deque_traits:
+            add_value_method = 'push_back'
+        elif traits is container_traits.queue_traits:
+            add_value_method = 'push'
+        elif traits is container_traits.priority_queue_traits:
+            add_value_method = 'push'
+        elif traits is container_traits.vector_traits:
+            add_value_method = 'push_back'
+        elif traits is container_traits.stack_traits:
+            add_value_method = 'push'
+        elif traits is container_traits.set_traits:
+            add_value_method = 'insert'
+        elif traits is container_traits.multiset_traits:
+            add_value_method = 'insert'
+        elif traits is container_traits.hash_set_traits:
+            add_value_method = 'insert'
+        elif traits is container_traits.hash_multiset_traits:
+            add_value_method = 'insert'
+
+        elif (traits is container_traits.map_traits
+              or traits is container_traits.mulimap_traits
+              or traits is container_traits.hash_map_traits
+              or traits is container_traits.hash_multimap_traits):
+            return # maps not yet implemented
+
+        else:
+            assert False, "container type %s unaccounted for." % name
+        
 
         if outer_class is not None:
             kwargs['outer_class'] = outer_class
-            outer_class_key = outer_class.decl_string
+            outer_class_key = outer_class.partial_decl_string
         else:
             outer_class_key = None
 
@@ -1324,11 +1353,20 @@ pybindgen.settings.error_handler = ErrorHandler()
             return
         self._containers_registered[container_register_key] = None
 
+        #print >> sys.stderr, "************* register_container", name
+
+        element_type = traits.element_type(definition)
+        #if traits.is_mapping(definition):
+        #    key_type = traits.key_type(definition)
+            #print >> sys.stderr, "************* register_container %s; element_type=%s, key_type=%s" % \
+            #    (name, element_type, key_type.partial_decl_string)
+        
         return_type_spec = self.type_registry.lookup_return(element_type)
-
         element_decl = type_traits.remove_declarated(element_type)
-        pygen_sink = self._get_pygen_sink_for_definition(element_decl)
 
+        kwargs['add_value_method'] = add_value_method
+        
+        pygen_sink = self._get_pygen_sink_for_definition(element_decl)
         ## pygen...
         if pygen_sink:
             pygen_sink.writeln("module.add_container(%s)" %
@@ -1339,7 +1377,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
         except (TypeLookupError, TypeConfigurationError), ex:
             warnings.warn("Return value '%s' error (used in %s): %r"
-                          % (definition.decl_string, definition, ex),
+                          % (definition.partial_decl_string, definition, ex),
                           WrapperWarning)
             return
 
@@ -1528,7 +1566,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
-                                           % (member.return_type.decl_string, member, ex),
+                                           % (member.return_type.partial_decl_string, member, ex),
                                            WrapperWarning, member.location.file_name, member.location.line)
                     if pure_virtual:
                         class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
@@ -1617,7 +1655,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                         arguments.append(Parameter.new(*a, **kw))
                     except (TypeLookupError, TypeConfigurationError), ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
-                                               % (arg.type.decl_string, arg.name, member, ex),
+                                               % (arg.type.partial_decl_string, arg.name, member, ex),
                                                WrapperWarning, member.location.file_name, member.location.line)
                         ok = False
                         break
@@ -1666,7 +1704,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
-                                           % (member.type.decl_string, member, ex),
+                                           % (member.type.partial_decl_string, member, ex),
                                            WrapperWarning, member.location.file_name, member.location.line)
                     continue
 
@@ -1780,12 +1818,12 @@ pybindgen.settings.error_handler = ErrorHandler()
                 return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
             except (TypeLookupError, TypeConfigurationError), ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
-                                       % (fun.return_type.decl_string, fun, ex),
+                                       % (fun.return_type.partial_decl_string, fun, ex),
                                        WrapperWarning, fun.location.file_name, fun.location.line)
                 params_ok = False
             except TypeError, ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
-                                       % (fun.return_type.decl_string, fun, ex),
+                                       % (fun.return_type.partial_decl_string, fun, ex),
                                        WrapperWarning, fun.location.file_name, fun.location.line)
                 raise
             argument_specs = []
@@ -1804,13 +1842,13 @@ pybindgen.settings.error_handler = ErrorHandler()
                     arguments.append(Parameter.new(*spec[0], **spec[1]))
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
-                                           % (arg.type.decl_string, arg.name, fun, ex),
+                                           % (arg.type.partial_decl_string, arg.name, fun, ex),
                                            WrapperWarning, fun.location.file_name, fun.location.line)
 
                     params_ok = False
                 except TypeError, ex:
                     warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
-                                           % (arg.type.decl_string, arg.name, fun, ex),
+                                           % (arg.type.partial_decl_string, arg.name, fun, ex),
                                            WrapperWarning, fun.location.file_name, fun.location.line)
                     raise
 

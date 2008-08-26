@@ -7,6 +7,8 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <map>
+#include <set>
 
 // Deprecation warnings look ugly and confusing; better to just
 // disable them and change this macro when we want to specifically
@@ -761,5 +763,9 @@ public:
 private:
     SimpleStructList m_simpleList;
 };
+
+std::map<std::string, int> get_map ();
+
+std::set<std::string> get_set ();
 
 #endif 	    /* !FOO_H_ */
