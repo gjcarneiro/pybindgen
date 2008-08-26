@@ -26,7 +26,7 @@ class IterNextWrapper(ForwardWrapperBase):
         assert isinstance(container, Container)
         self.container = container
         self.c_function_name = "_wrap_%s__tp_iternext" % (self.container.iter_pystruct)
-        container.value_type.value = "*(*self->iterator)++"
+        container.value_type.value = "(*(*self->iterator)++)"
 
     def generate_call(self):
         "virtual method implementation; do not call"
