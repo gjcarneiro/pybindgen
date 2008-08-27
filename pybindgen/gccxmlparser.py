@@ -365,11 +365,20 @@ class AnnotationsScanner(object):
             self.used_annotations[file_name] = l
         l.append(line_number)
 
-    def get_annotations(self, file_name, line_number):
+    def get_annotations(self, decl):
         """
-        file_name -- absolute file name where the definition is
-        line_number -- line number of where the definition is within the file
+        @param decl: pygccxml declaration_t object
         """
+        assert isinstance(decl, declaration_t)
+
+        if isinstance(decl, calldef.calldef_t) \
+                and decl.is_artificial:
+            #print >> sys.stderr, "********** ARTIFICIAL:", decl
+            return {}, {}
+
+        file_name = decl.location.file_name
+        line_number = decl.location.line
+        
         try:
             lines = self.files[file_name]
         except KeyError:
@@ -960,9 +969,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 
         for enum in enums:
 
-            global_annotations, param_annotations = \
-                annotations_scanner.get_annotations(enum.location.file_name,
-                                                    enum.location.line)
+            global_annotations, param_annotations = annotations_scanner.get_annotations(enum)
             for hook in self._pre_scan_hooks:
                 hook(self, enum, global_annotations, param_annotations)
             if 'ignore' in global_annotations:
@@ -1031,9 +1038,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             typedef = None
 
             kwargs = {}
-            global_annotations, param_annotations = \
-                annotations_scanner.get_annotations(cls.location.file_name,
-                                                    cls.location.line)
+            global_annotations, param_annotations = annotations_scanner.get_annotations(cls)
             for hook in self._pre_scan_hooks:
                 hook(self, cls, global_annotations, param_annotations)
             if 'ignore' in global_annotations:
@@ -1226,9 +1231,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                         continue # typedef to template instantiations, must be fully defined
                     if isinstance(cls, class_declaration_t):
 
-                        global_annotations, param_annotations = \
-                            annotations_scanner.get_annotations(cls.location.file_name,
-                                                                cls.location.line)
+                        global_annotations, param_annotations = annotations_scanner.get_annotations(cls)
                         for hook in self._pre_scan_hooks:
                             hook(self, cls, global_annotations, param_annotations)
                         if 'ignore' in global_annotations:
@@ -1456,9 +1459,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             if member.name in methods_to_ignore:
                 continue
 
-            global_annotations, parameter_annotations = \
-                annotations_scanner.get_annotations(member.location.file_name,
-                                                    member.location.line)
+            global_annotations, parameter_annotations = annotations_scanner.get_annotations(member)
             for hook in self._pre_scan_hooks:
                 hook(self, member, global_annotations, parameter_annotations)
 
@@ -1771,9 +1772,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             if fun.name.startswith('__'):
                 continue
 
-            global_annotations, parameter_annotations = \
-                annotations_scanner.get_annotations(fun.location.file_name,
-                                                    fun.location.line)
+            global_annotations, parameter_annotations = annotations_scanner.get_annotations(fun)
             for hook in self._pre_scan_hooks:
                 hook(self, fun, global_annotations, parameter_annotations)
 
