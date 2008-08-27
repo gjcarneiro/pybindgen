@@ -1313,30 +1313,30 @@ pybindgen.settings.error_handler = ErrorHandler()
 
     def _register_container(self, module, traits, definition, outer_class, name):
         kwargs = {}
-
+        
         if traits is container_traits.list_traits:
-            add_value_method = 'push_back'
+            container_type = 'list'
         elif traits is container_traits.deque_traits:
-            add_value_method = 'push_back'
+            container_type = 'dequeue'
         elif traits is container_traits.queue_traits:
-            add_value_method = 'push'
+            container_type = 'queue'
         elif traits is container_traits.priority_queue_traits:
-            add_value_method = 'push'
+            container_type = 'dequeue'
         elif traits is container_traits.vector_traits:
-            add_value_method = 'push_back'
+            container_type = 'vector'
         elif traits is container_traits.stack_traits:
-            add_value_method = 'push'
+            container_type = 'stack'
         elif traits is container_traits.set_traits:
-            add_value_method = 'insert'
+            container_type = 'set'
         elif traits is container_traits.multiset_traits:
-            add_value_method = 'insert'
+            container_type = 'multiset'
         elif traits is container_traits.hash_set_traits:
-            add_value_method = 'insert'
+            container_type = 'hash_set'
         elif traits is container_traits.hash_multiset_traits:
-            add_value_method = 'insert'
+            container_type = 'hash_multiset'
 
         elif (traits is container_traits.map_traits
-              or traits is container_traits.mulimap_traits
+              or traits is container_traits.multimap_traits
               or traits is container_traits.hash_map_traits
               or traits is container_traits.hash_multimap_traits):
             return # maps not yet implemented
@@ -1344,7 +1344,6 @@ pybindgen.settings.error_handler = ErrorHandler()
         else:
             assert False, "container type %s unaccounted for." % name
         
-
         if outer_class is not None:
             kwargs['outer_class'] = outer_class
             outer_class_key = outer_class.partial_decl_string
@@ -1367,7 +1366,7 @@ pybindgen.settings.error_handler = ErrorHandler()
         return_type_spec = self.type_registry.lookup_return(element_type)
         element_decl = type_traits.remove_declarated(element_type)
 
-        kwargs['add_value_method'] = add_value_method
+        kwargs['container_type'] = container_type
         
         pygen_sink = self._get_pygen_sink_for_definition(element_decl)
         ## pygen...

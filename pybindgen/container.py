@@ -50,8 +50,39 @@ class IterNextWrapper(ForwardWrapperBase):
         code_sink.writeln('}')
 
 
+class ContainerTraits(object):
+    def __init__(self, add_value_method):
+        self.add_value_method = add_value_method
+
+container_traits_list = {
+    'list': 		ContainerTraits(add_value_method='push_back'),
+    'deque': 		ContainerTraits(add_value_method='push_back'),
+    'queue': 		ContainerTraits(add_value_method='push'),
+    'priority_queue':	ContainerTraits(add_value_method='push'),
+    'vector': 		ContainerTraits(add_value_method='push_back'),
+    'stack': 		ContainerTraits(add_value_method='push'),
+    'set': 		ContainerTraits(add_value_method='insert'),
+    'multiset': 	ContainerTraits(add_value_method='insert'),
+    'hash_set':		ContainerTraits(add_value_method='insert'),
+    'hash_multiset':	ContainerTraits(add_value_method='insert'),
+}
+
 class Container(object):
-    def __init__(self, name, value_type, add_value_method, outer_class=None, custom_name=None):
+    def __init__(self, name, value_type, container_type, outer_class=None, custom_name=None):
+        """
+        @param name: C++ type name of the container, e.g. std::vector<int> or MyIntList
+        @param value_type: a ReturnValue of the element type
+
+        @param container_type: a string with the type of container,
+        one of 'list', 'deque', 'queue', 'priority_queue', 'vector',
+        'stack', 'set', 'multiset', 'hash_set', 'hash_multiset'.
+
+        @param outer_class: if the type is defined inside a class, must be a reference to the outer class
+        @type outer_class: None or L{CppClass}
+
+        @param custom_name: alternative name to register with in the Python module
+
+        """
         if '<' in name or '::' in name:
             self.name = utils.mangle_name(name)
             self.full_name = name
@@ -64,7 +95,7 @@ class Container(object):
         self.outer_class = outer_class
         self.mangled_name = None
         self.mangled_full_name = None
-        self.add_value_method = add_value_method
+        self.container_traits = container_traits_list[container_type]
         self.custom_name = custom_name
         self._pystruct = None
         self.pytypestruct = "***GIVE ME A NAME***"
@@ -442,7 +473,7 @@ static PyObject*
             'PYTHON_NAME': self.python_name,
             'ITEM_CTYPE': self.value_type.ctype,
             'CONTAINER_CONVERTER_FUNC_NAME': this_type_converter,
-            'ADD_VALUE': self.add_value_method,
+            'ADD_VALUE': self.container_traits.add_value_method,
             }
         code_sink.writeln(r'''
 int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
@@ -499,7 +530,7 @@ static int
 ## ----------------------------
 
 def _get_dummy_container():
-    return Container('dummy', ReturnValue.new('void'), 'push_back') # Container instance
+    return Container('dummy', ReturnValue.new('void'), 'list') # Container instance
 
 class ContainerParameterBase(Parameter):
     "Base class for all C++ Class parameter handlers"
