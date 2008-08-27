@@ -1432,7 +1432,7 @@ typedef struct {
         if self.has_output_stream_operator:
             self._generate_str(code_sink)
         
-        self._generate_tp_hash(code_sink)
+        #self._generate_tp_hash(code_sink)
         #self._generate_tp_compare(code_sink)
 
         if self.slots.get("tp_richcompare", "NULL") == "NULL":
