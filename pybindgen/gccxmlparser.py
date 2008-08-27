@@ -198,9 +198,9 @@ class GccXmlTypeRegistry(object):
     def get_type_traits(self, type_info):
         #assert isinstance(type_info, cpptypes.type_t)
 
-        #debug = False #('int64_t' in type_info.decl_string)
-        #if debug:
-        #    print >> sys.stderr, "***** type traits for %r" % (type_info.decl_string, )
+        debug = False #('int64_t' in type_info.decl_string)
+        if debug:
+            print >> sys.stderr, "***** type traits for %r" % (type_info.decl_string, )
 
         is_const = False
         is_reference = False
