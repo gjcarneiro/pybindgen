@@ -742,6 +742,7 @@ struct simple_struct_t
 // -- Containers:
 
 typedef std::vector<simple_struct_t> SimpleStructList;
+typedef std::vector<simple_struct_t> SimpleStructVec;
 
 SimpleStructList get_simple_list ();
 int set_simple_list (SimpleStructList list);
@@ -757,8 +758,8 @@ public:
     // -#- @inout_list(direction=inout) -#-
     virtual int set_simple_list_by_ref (SimpleStructList &inout_list);
 
-    virtual std::vector<simple_struct_t> get_simple_vec ();
-    virtual int set_simple_vec (std::vector<simple_struct_t> vec);
+    virtual SimpleStructVec get_simple_vec ();
+    virtual int set_simple_vec (SimpleStructVec vec);
 
 private:
     SimpleStructList m_simpleList;
@@ -766,6 +767,6 @@ private:
 
 std::map<std::string, int> get_map ();
 
-std::set<std::string> get_set ();
+std::set<uint32_t> get_set ();
 
 #endif 	    /* !FOO_H_ */

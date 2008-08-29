@@ -363,10 +363,10 @@ get_map ()
     return rv;
 }
 
-std::set<std::string>
+std::set<uint32_t>
 get_set ()
 {
-    std::set<std::string> rv;
+    std::set<uint32_t> rv;
     return rv;
 }
 

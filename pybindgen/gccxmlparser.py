@@ -499,6 +499,15 @@ class PygenClassifier(object):
 
 
 class ModuleParser(object):
+    """
+    @ivar enable_anonymous_containers: if True, pybindgen will attempt
+        to scan for all std containers, even the ones that have no
+        typedef'ed name.  However, due to a
+        U{bug<http://www.gccxml.org/Bug/view.php?id=7572>} in gccxml
+        this is disabled by default.
+
+    """
+
     def __init__(self, module_name, module_namespace_name='::'):
         """
         Creates an object that will be able parse header files and
@@ -529,6 +538,7 @@ class ModuleParser(object):
         self._anonymous_structs = [] # list of (pygccxml_anonymous_class, outer_pybindgen_class)
         self._containers_to_register = []
         self._containers_registered = {}
+        self.enable_anonymous_containers = False
 
     def add_pre_scan_hook(self, hook):
         """
@@ -946,6 +956,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if traits is None:
                     continue
                 name = normalize_name(type_info.partial_decl_string)
+                #print >> sys.stderr, "** type: %s; ---> partial_decl_string: %r; name: %r" %\
+                #    (type_info, type_info.partial_decl_string, name)
                 self._containers_to_register.append((traits, type_info, None, name))
 
         ## scan enumerations
@@ -1312,6 +1324,9 @@ pybindgen.settings.error_handler = ErrorHandler()
                 pygen_sink.writeln()
 
     def _register_container(self, module, traits, definition, outer_class, name):
+        if '<' in name and not self.enable_anonymous_containers:
+            return
+
         kwargs = {}
         
         if traits is container_traits.list_traits:

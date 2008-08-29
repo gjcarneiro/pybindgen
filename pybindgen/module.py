@@ -554,7 +554,7 @@ class ModuleBase(dict):
         """
         Add a container to the module.
 
-        @param container_: a Container object
+        @param container: a L{Container} object
         """
         assert isinstance(container, Container)
         container.module = self
