@@ -19,7 +19,7 @@ class CStringParam(PointerParameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype, self.name)
+        name = wrapper.declarations.declare_variable(self.ctype_no_const, self.name)
         wrapper.parse_params.add_parameter('s', ['&'+name], self.value)
         wrapper.call_params.append(name)
 
@@ -140,7 +140,7 @@ class CStringReturn(PointerReturnValue):
         return "return NULL;"
 
     def convert_python_to_c(self, wrapper):
-        name = wrapper.declarations.declare_variable(self.ctype, "retval_ptr")
+        name = wrapper.declarations.declare_variable(self.ctype_no_const, "retval_ptr")
         wrapper.parse_params.add_parameter("s", ['&'+name], self.value)
 
     def convert_c_to_python(self, wrapper):

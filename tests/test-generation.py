@@ -162,7 +162,9 @@ public:
                     continue # const and output parameter makes no sense
 
                 if is_const:
-                    param_type_with_const = "const " + param_type
+                    if '&' in param_type: # const references not allowed
+                        continue
+                    param_type_with_const = "const %s" % (param_type,)
                 else:
                     param_type_with_const = param_type
 
@@ -171,7 +173,7 @@ public:
                     for transfer_ownership in True, False:
                         name = param_name + (transfer_ownership and '_transfer' or '_notransfer')
                         try:
-                            param = param_handler(param_type, name, transfer_ownership=transfer_ownership, is_const=is_const)
+                            param = param_handler(param_type, name, transfer_ownership=transfer_ownership)
                         except TypeError:
                             print >> sys.stderr, "ERROR -----> param_handler(param_type=%r, "\
                                 "name=%r, transfer_ownership=%r, is_const=%r)"\
@@ -183,7 +185,7 @@ public:
                         print
                         module.add_function(function_name, ReturnValue.new('void'), [param])
                 else:
-                    param = param_handler(param_type, param_name, direction, is_const=is_const)
+                    param = param_handler(param_type, param_name, direction)
                     wrapper_number += 1
                     function_name = 'foo_function_%i' % (wrapper_number,)
                     ## declare a fake prototype

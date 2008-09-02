@@ -9,6 +9,7 @@ from pygccxml import declarations
 from module import Module
 from typehandlers.codesink import FileCodeSink, CodeSink, NullCodeSink
 import typehandlers.base
+from typehandlers.base import ctypeparser
 from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
 from pygccxml.declarations.enumeration import enumeration_t
 from cppclass import CppClass, ReferenceCountingMethodsPolicy, FreeFunctionPolicy, ReferenceCountingFunctionsPolicy
@@ -195,47 +196,54 @@ class GccXmlTypeRegistry(object):
         assert isinstance(cpp_class, CppClass)
         self.ordered_classes.append(cpp_class)
 
-    def get_type_traits(self, type_info):
-        #assert isinstance(type_info, cpptypes.type_t)
+#     def get_type_traits(self, type_info):
+#         #assert isinstance(type_info, cpptypes.type_t)
 
-        debug = False #('int64_t' in type_info.decl_string)
-        if debug:
-            print >> sys.stderr, "***** type traits for %r" % (type_info.decl_string, )
+#         debug = False #('int64_t' in type_info.decl_string)
+#         if debug:
+#             print >> sys.stderr, "***** type traits for %r" % (type_info.decl_string, )
 
-        is_const = False
-        is_reference = False
-        is_pointer = 0
+#         is_const = False
+#         is_reference = False
+#         is_pointer = 0
+#         pointer_or_ref_count = 0
+#         inner_const = False
+#         while 1:
+#             prev_type_info = type_info
+#             if type_traits.is_pointer(type_info):
+#                 is_pointer += 1
+#                 type_info = remove_pointer(type_info)
+#                 pointer_or_ref_count += 1
+#             elif type_traits.is_const(type_info):
+#                 type_info = remove_const(type_info)
+#                 if pointer_or_ref_count == 0:
+#                     is_const = True
+#                 elif pointer_or_ref_count == 1:
+#                     inner_const = True
+#                 else:
+#                     warnings.warn("multiple consts not handled")
+#             elif type_traits.is_reference(type_info):
+#                 warnings.warn("multiple &'s not handled")
+#                 is_reference = True
+#                 type_info = remove_reference(type_info)
+#                 pointer_or_ref_count += 1
+#             else:
+#                 break
+#             if type_info is prev_type_info:
+#                 break
 
-        while 1:
-            prev_type_info = type_info
-            if type_traits.is_pointer(type_info):
-                is_pointer += 1
-                type_info = remove_pointer(type_info)
-            elif type_traits.is_const(type_info):
-                warnings.warn("multiple consts not handled")
-                is_const = True
-                type_info = remove_const(type_info)
-            elif type_traits.is_reference(type_info):
-                warnings.warn("multiple &'s not handled")
-                is_reference = True
-                type_info = remove_reference(type_info)
-            else:
-                break
-            if type_info is prev_type_info:
-                break
+#         type_name = normalize_name(type_info.partial_decl_string)
+#         try:
+#             cpp_type = self.root_module[type_name]
+#         except KeyError:
+#             cpp_type = type_name
 
-        type_name = normalize_name(type_info.partial_decl_string)
-        try:
-            cpp_type = self.root_module[type_name]
-        except KeyError:
-            cpp_type = type_name
+#         if not isinstance(cpp_type, CppClass):
+#             cpp_type = type_name
 
-        if not isinstance(cpp_type, CppClass):
-            cpp_type = type_name
-
-        if debug:
-            print >> sys.stderr, "*** > return ", repr((cpp_type, is_const, is_pointer, is_reference))
-        return (cpp_type, is_const, is_pointer, is_reference)
+#         if debug:
+#             print >> sys.stderr, "*** > return ", repr((cpp_type, is_const, is_pointer, is_reference))
+#         return (cpp_type, is_const, inner_const, is_pointer, is_reference)
 
     def _fixed_std_type_name(self, type_name):
         type_name = utils.ascii(type_name)
@@ -243,10 +251,6 @@ class GccXmlTypeRegistry(object):
         return decl
         
     def lookup_return(self, type_info, annotations={}):
-        #assert isinstance(type_info, cpptypes.type_t)
-        cpp_type, is_const, is_pointer, is_reference = \
-            self.get_type_traits(type_info)
-
         kwargs = {}
         for name, value in annotations.iteritems():
             if name == 'caller_owns_return':
@@ -256,39 +260,11 @@ class GccXmlTypeRegistry(object):
             else:
                 warnings.warn("invalid annotation name %r" % name, AnnotationsWarning)
 
-        if is_const:
-            kwargs['is_const'] = True
+        cpp_type = normalize_name(type_info.partial_decl_string)
+        return (cpp_type,), kwargs
 
-        if isinstance(cpp_type, CppClass):
-            cpp_type = cpp_type.full_name
-        else:
-            if isinstance(type_traits.remove_declarated(type_info), enumeration_t):
-                cpp_type = normalize_name(cpp_type)
-            else:
-                cpp_type = self._fixed_std_type_name(cpp_type)
-
-        cpp_type = utils.ascii(cpp_type)
-
-        if not is_pointer and not is_reference:
-            return (cpp_type,), kwargs
-
-        ## pointer to class
-        if is_pointer and not is_reference:
-            if is_const and 'caller_owns_return' not in kwargs:
-                ## a pointer to const object "usually" means caller_owns_return=False
-                ## some guessing going on here, though..
-                kwargs['caller_owns_return'] = False
-            return (cpp_type + ' *'*is_pointer,), kwargs
-            
-        ## reference of class
-        if not is_pointer and is_reference:
-            return (cpp_type + ' *'*is_pointer + '&',), kwargs
-
-        assert 0, "this line should not be reached"
 
     def lookup_parameter(self, type_info, param_name, annotations={}, default_value=None):
-        assert isinstance(type_info, cpptypes.type_t)
-
         kwargs = {}
         for name, value in annotations.iteritems():
             if name == 'transfer_ownership':
@@ -313,39 +289,11 @@ class GccXmlTypeRegistry(object):
             else:
                 warnings.warn("invalid annotation name %r" % name, AnnotationsWarning)
 
-        cpp_type, is_const, is_pointer, is_reference = \
-            self.get_type_traits(type_info)
-
-        if is_const:
-            kwargs['is_const'] = True
         if default_value:
             kwargs['default_value'] = utils.ascii(default_value)
 
-        if isinstance(cpp_type, CppClass):
-            cpp_type = cpp_type.full_name
-        else:
-            if isinstance(type_traits.remove_declarated(type_info), enumeration_t):
-                cpp_type = normalize_name(cpp_type)
-            else:
-                cpp_type = self._fixed_std_type_name(cpp_type)
-
-        cpp_type = utils.ascii(cpp_type)
-        param_name = utils.ascii(param_name)
-
-        if not is_pointer and not is_reference:
-            return (cpp_type, param_name), kwargs
-
-        ## pointer to class
-        if is_pointer and not is_reference:
-            if is_const:
-                ## a pointer to const object usually means transfer_ownership=False
-                kwargs.setdefault('transfer_ownership', False)
-            return (cpp_type + ' *'*is_pointer, param_name), kwargs
-        
-        ## reference to class
-        if not is_pointer and is_reference:
-            return (cpp_type + ' *'*is_pointer + '&', param_name), kwargs
-        assert 0, "this line should not be reached"
+        cpp_type = normalize_name(type_info.partial_decl_string)
+        return (cpp_type, param_name), kwargs
 
 
 class AnnotationsScanner(object):
@@ -1223,11 +1171,11 @@ pybindgen.settings.error_handler = ErrorHandler()
 
                 ## handle "typedef int Something;"
                 if isinstance(alias.type, cpptypes.int_t):
-                    param_cls, dummy_transf = typehandlers.base.param_type_matcher.lookup('int')
+                    param_cls, dummy_transf, dummy_traits = typehandlers.base.param_type_matcher.lookup('int')
                     for ctype in param_cls.CTYPES:
                         #print >> sys.stderr, "%s -> int" % ctype.replace('int', alias.name)
                         typehandlers.base.param_type_matcher.register(ctype.replace('int', alias.name), param_cls)
-                    return_cls, dummy_transf = typehandlers.base.return_type_matcher.lookup('int')
+                    return_cls, dummy_transf, dummy_traits = typehandlers.base.return_type_matcher.lookup('int')
                     for ctype in return_cls.CTYPES:
                         #print >> sys.stderr, "%s -> int" % ctype.replace('int', alias.name)
                         typehandlers.base.return_type_matcher.register(ctype.replace('int', alias.name), return_cls)
@@ -1456,10 +1404,9 @@ pybindgen.settings.error_handler = ErrorHandler()
                     have_trivial_constructor = True
 
                 elif len(member.arguments) == 1:
-                    (cpp_type, dummy_is_const, dummy_is_pointer,
-                     is_reference) = \
-                        self.type_registry.get_type_traits(member.arguments[0].type)
-                    if cpp_type is class_wrapper and is_reference:
+                    traits = ctypeparser.TypeTraits(normalize_name(member.arguments[0].type.partial_decl_string))
+                    if traits.type_is_reference and \
+                            self.type_registry.root_module.get(str(traits.target), None) is class_wrapper:
                         have_copy_constructor = True
 
         methods_to_ignore = []

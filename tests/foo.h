@@ -58,7 +58,7 @@ public:
 
     Foo (std::string const &datum) : m_datum (datum), m_initialized (false)
         { Foo::instance_count++; }
-    std::string get_datum () const { return m_datum; }
+    const std::string get_datum () const { return m_datum; }
 
     std::string get_datum_deprecated () const DEPRECATED { return m_datum; }
 

@@ -32,7 +32,7 @@ class PointerHolderTransformation(typehandlers.TypeTransformation):
         else:
             raise AssertionError
         handler = type_handler(*args, **kwargs)
-        handler.set_tranformation(self, self.get_untransformed_name(args[0]))
+        handler.set_transformation(self, self.get_untransformed_name(args[0]))
         return handler
 
     def untransform(self, type_handler, declarations, code_block, expression):

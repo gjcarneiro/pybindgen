@@ -1197,8 +1197,8 @@ public:
         Utility method to add a 'copy constructor' method to this class.
         """
         try:
-            constructor = CppConstructor([self.ThisClassRefParameter("%s &" % self.full_name,
-                                                                     'ctor_arg', is_const=True)])
+            constructor = CppConstructor([self.ThisClassRefParameter("const %s &" % self.full_name,
+                                                                     'ctor_arg')])
         except utils.SkipWrapper:
             return None
         constructor.stack_where_defined = traceback.extract_stack()

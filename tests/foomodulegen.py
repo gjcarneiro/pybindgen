@@ -32,7 +32,7 @@ def my_module_gen(out_file):
     Foo.add_static_attribute('instance_count', ReturnValue.new('int'))
     Foo.add_constructor([Parameter.new('std::string', 'datum')])
     Foo.add_constructor([])
-    Foo.add_method('get_datum', ReturnValue.new('std::string'), [])
+    Foo.add_method('get_datum', ReturnValue.new('const std::string'), [])
     Foo.add_method('is_initialized', ReturnValue.new('bool'), [], is_const=True)
     Foo.add_output_stream_operator()
 
@@ -88,14 +88,14 @@ int %s::custom_method_added_by_a_hook(int x)
 
 
     mod.add_function('print_something', ReturnValue.new('int'),
-                     [Parameter.new('char*', 'message', is_const=True)],
+                     [Parameter.new('const char*', 'message')],
                      deprecated=True)
     mod.add_function('print_something_else', ReturnValue.new('int'),
-                     [Parameter.new('char*', 'message2', is_const=True)])
+                     [Parameter.new('const char*', 'message2')])
 
     ## test overloaded functions
     mod.add_function('get_int_from_string', ReturnValue.new('int'),
-                     [Parameter.new('char*', 'from_string', is_const=True),
+                     [Parameter.new('const char*', 'from_string'),
                       Parameter.new('int', 'multiplier', default_value='1')], custom_name="get_int")
     mod.add_function('get_int_from_float', ReturnValue.new('int'),
                      [Parameter.new('double', 'from_float'),
@@ -136,13 +136,13 @@ int %s::custom_method_added_by_a_hook(int x)
 
     SomeObject.add_method('get_prefix_with_foo_ref',
                           ReturnValue.new('std::string'),
-                          [Parameter.new('Foo&', 'foo', is_const=True,
+                          [Parameter.new('const Foo&', 'foo',
                            direction=Parameter.DIRECTION_INOUT)],
                           is_virtual=True, is_const=True)
 
     SomeObject.add_method('get_prefix_with_foo_ptr',
                           ReturnValue.new('std::string'),
-                          [Parameter.new('Foo*', 'foo', transfer_ownership=False, is_const=True)],
+                          [Parameter.new('const Foo*', 'foo', transfer_ownership=False)],
                           is_virtual=True, is_const=True)
 
     ## overloaded virtual methods
@@ -166,7 +166,7 @@ int %s::custom_method_added_by_a_hook(int x)
     ## add a function that appears as a method of an object
     SomeObject.add_function_as_method('some_object_get_something_prefixed',
                                       ReturnValue.new('std::string'),
-                                      [Parameter.new('SomeObject*', 'obj', transfer_ownership=False, is_const=True),
+                                      [Parameter.new('const SomeObject*', 'obj', transfer_ownership=False),
                                        Parameter.new('std::string', 'something')],
                                       custom_name='get_something_prefixed')
 
@@ -180,7 +180,7 @@ int %s::custom_method_added_by_a_hook(int x)
     ## add a function that appears as a method of an object
     SomeObject.add_function_as_method('some_object_ref_get_something_prefixed',
                                       ReturnValue.new('std::string'),
-                                      [Parameter.new('SomeObject&', 'obj', is_const=True),
+                                      [Parameter.new('const SomeObject&', 'obj'),
                                        Parameter.new('std::string', 'something')],
                                       custom_name='ref_get_something_prefixed')
 
@@ -242,7 +242,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
     ## test overloaded methods
     SomeObject.add_method('get_int', ReturnValue.new('int'),
-                          [Parameter.new('char*', 'from_string', is_const=True)],
+                          [Parameter.new('const char*', 'from_string')],
                           custom_name="get_int")
     SomeObject.add_method('get_int', ReturnValue.new('int'),
                           [Parameter.new('double', 'from_float')],
@@ -269,7 +269,7 @@ int %s::custom_method_added_by_a_hook(int x)
     xpto_SomeClass.add_constructor([])
 
     xpto.add_typedef(Foo, 'FooXpto')
-    xpto.add_function('get_foo_datum', 'std::string', [Parameter.new('xpto::FooXpto&', 'foo', is_const=True)])
+    xpto.add_function('get_foo_datum', 'std::string', [Parameter.new('const xpto::FooXpto&', 'foo')])
     
 
     ## ---- some implicity conversion APIs
@@ -392,7 +392,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
 
     # containers...
-    SimpleStructList = mod.add_container('SimpleStructList', ReturnValue.new('simple_struct_t'), 'list')
+    mod.add_container('SimpleStructList', ReturnValue.new('simple_struct_t'), 'list')
     mod.add_function('get_simple_list', ReturnValue.new('SimpleStructList'), [])
     mod.add_function('set_simple_list', 'int', [Parameter.new('SimpleStructList', 'list')])
 
