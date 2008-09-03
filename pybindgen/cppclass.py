@@ -1164,6 +1164,8 @@ public:
         to a string.
         """
         self.has_output_stream_operator = True
+        self.module.add_include("<ostream>")
+        self.module.add_include("<sstream>")
 
     def add_constructor(self, *args, **kwargs):
         """
