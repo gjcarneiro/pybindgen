@@ -1582,7 +1582,7 @@ static PyObject*\n%s(%s *self)
             except utils.SkipWrapper:
                 pass
             else:
-                method_defs.append('{"__copy__", (PyCFunction) %s, METH_NOARGS, NULL},' % copy_wrapper_name)
+                method_defs.append('{(char *) "__copy__", (PyCFunction) %s, METH_NOARGS, NULL},' % copy_wrapper_name)
 
         ## generate the method table
         code_sink.writeln("static PyMethodDef %s_methods[] = {" % (self.pystruct,))
