@@ -989,7 +989,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                                      "the %ith time (last reason: %r, current reason: %r);"
                                      " something is wrong, please file a bug report"
                                      " (https://bugs.launchpad.net/pybindgen/+filebug) with a test case."
-                                     % (cls, cls._pybindgen_postpone_reason, reason))
+                                     % (cls, count, cls._pybindgen_postpone_reason, reason))
             cls._pybindgen_postpone_reason = reason
             unregistered_classes.append(cls)
 
