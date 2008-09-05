@@ -1,5 +1,5 @@
 import tokenizer
-import copy
+
 
 MODIFIERS = ['const', 'volatile'] # XXX: are there others?
 
@@ -20,6 +20,9 @@ class CType(object):
             self.tokens = []
         else:
             self.tokens = tokens
+
+    def clone(self):
+        return CType(list(self.tokens))
 
     def reorder_modifiers(self):
         """
@@ -298,10 +301,10 @@ class TypeTraits(object):
 
     def __init__(self, ctype):
         self.ctype = parse_type(ctype)
-        self.ctype_no_modifiers = copy.deepcopy(self.ctype)
+        self.ctype_no_modifiers = self.ctype.clone()
         self.ctype_no_modifiers.remove_modifiers()
-        self.ctype_no_const = copy.deepcopy(self.ctype)
-        tokens = copy.copy(self.ctype.tokens)
+        self.ctype_no_const = self.ctype.clone()
+        tokens = list(self.ctype.tokens)
         tokens.reverse()
         ptr_ref_level = 0
         self.type_is_const = False
