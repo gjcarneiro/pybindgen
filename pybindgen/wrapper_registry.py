@@ -70,6 +70,7 @@ class StdMapWrapperRegistry(object):
     def generate_forward_declarations(self, code_sink, module):
         #module.add_include("<map>")
         code_sink.writeln("#include <map>")
+        code_sink.writeln("#include <iostream>")
         code_sink.writeln("extern std::map<void*, PyObject*> %s;" % self.map_name)
 
     def generate(self, code_sink, dummy_module):
@@ -77,9 +78,13 @@ class StdMapWrapperRegistry(object):
 
     def write_register_new_wrapper(self, code_block, wrapper_lvalue, object_rvalue):
         code_block.write_code("%s[(void *) %s] = (PyObject *) %s;" % (self.map_name, object_rvalue, wrapper_lvalue))
+        #code_block.write_code('std::cerr << "Register Wrapper: obj=" <<(void *) %s << ", wrapper=" << %s << std::endl;'
+        #                      % (object_rvalue, wrapper_lvalue))
         
     def write_lookup_wrapper(self, code_block, wrapper_type, wrapper_lvalue, object_rvalue):
         iterator = code_block.declare_variable("std::map<void*, PyObject*>::const_iterator", "wrapper_lookup_iter")
+        #code_block.write_code('std::cerr << "Lookup Wrapper: obj=" <<(void *) %s << " map size: " << %s.size() << std::endl;'
+        #                      % (object_rvalue, self.map_name))
         code_block.write_code("%s = %s.find((void *) %s);" % (iterator, self.map_name, object_rvalue))
         code_block.write_code("if (%(ITER)s == %(MAP)s.end()) {\n"
                               "    %(WRAPPER)s = NULL;\n"
@@ -89,6 +94,13 @@ class StdMapWrapperRegistry(object):
                               "}\n"
                               % dict(ITER=iterator, MAP=self.map_name, WRAPPER=wrapper_lvalue, TYPE=wrapper_type))
         
-    def write_unregister_wrapper(self, code_block, dummy_wrapper_lvalue, object_rvalue):
-        code_block.write_code("%s.erase((void *) %s);" % (self.map_name, object_rvalue))
+    def write_unregister_wrapper(self, code_block, wrapper_lvalue, object_rvalue):
+        #code_block.write_code('std::cerr << "Erase Wrapper: obj=" <<(void *) %s << std::endl;'
+        #                      % (object_rvalue))
+        iterator = code_block.declare_variable("std::map<void*, PyObject*>::iterator", "wrapper_lookup_iter")
+        code_block.write_code("%(ITER)s = %(MAP)s.find((void *) %(WRAPPER)s->obj);\n"
+                              "if (%(ITER)s != %(MAP)s.end()) {\n"
+                              "    %(MAP)s.erase(%(ITER)s);\n"
+                              "}\n"
+                              % dict(ITER=iterator, MAP=self.map_name, WRAPPER=wrapper_lvalue))
 

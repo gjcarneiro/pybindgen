@@ -1737,6 +1737,8 @@ static void
         code_block.write_code('self->ob_type->tp_free((PyObject*)self);')
 
         code_block.write_cleanup()
+        
+        code_block.declarations.get_code_sink().flush_to(code_sink)
         code_block.sink.flush_to(code_sink)
 
         code_sink.unindent()
