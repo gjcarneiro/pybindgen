@@ -83,6 +83,9 @@ class FileCodeSink(CodeSink):
         CodeSink.__init__(self)
         self.file = file_
 
+    def __repr__(self):
+        return "<pybindgen.typehandlers.codesink.FileCodeSink %r>" % (self.file.name,)
+
     def writeln(self, line=''):
         """Write one or more lines of code"""
         self.file.write('\n'.join(self._format_code(line)))

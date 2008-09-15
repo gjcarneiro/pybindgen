@@ -985,5 +985,11 @@ class TestFoo(unittest.TestCase):
 
         self.assertEqual(zbr_count_after, zbr_count_before)
 
+    def test_scan_containers_in_attributes(self):
+        t = foo.TestContainer()
+        v = list(t.m_floatSet)
+        self.assertEqual(v, [1,2,3])
+
+        
 if __name__ == '__main__':
     unittest.main()

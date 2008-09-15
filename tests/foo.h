@@ -750,7 +750,10 @@ int set_simple_list (SimpleStructList list);
 class TestContainer
 {
 public:
-    TestContainer () {}
+    
+    std::set<float> m_floatSet;
+
+    TestContainer () { m_floatSet.insert (1.0); m_floatSet.insert (2.0); m_floatSet.insert (3.0); }
 
     virtual SimpleStructList get_simple_list ();
     virtual int set_simple_list (SimpleStructList list);
@@ -768,5 +771,6 @@ private:
 std::map<std::string, int> get_map ();
 
 std::set<uint32_t> get_set ();
+
 
 #endif 	    /* !FOO_H_ */

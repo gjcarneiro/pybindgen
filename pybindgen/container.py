@@ -475,6 +475,7 @@ static PyObject*
             'CONTAINER_CONVERTER_FUNC_NAME': this_type_converter,
             'ADD_VALUE': self.container_traits.add_value_method,
             }
+
         code_sink.writeln(r'''
 int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
 {

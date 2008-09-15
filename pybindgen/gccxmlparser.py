@@ -898,7 +898,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                                                    allow_empty=True, recursive=False):
             if fun.name.startswith('__'):
                 continue
-            for dependency in fun.i_depend_on_them(recursive=False):
+            for dependency in fun.i_depend_on_them(recursive=True):
                 type_info = dependency.depend_on_it
                 traits = container_traits.find_container_traits(type_info)
                 if traits is None:
@@ -1109,10 +1109,10 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             ## detect use of unregistered container types: need to look at
             ## all parameters and return values of all functions in this namespace...
-            for meth in cls.get_members():
-                if meth.name.startswith('__') or not isinstance(meth, calldef.calldef_t):
+            for member in cls.get_members(access='public'):
+                if member.name.startswith('__'):
                     continue
-                for dependency in meth.i_depend_on_them(recursive=False):
+                for dependency in member.i_depend_on_them(recursive=True):
                     type_info = dependency.depend_on_it
                     traits = container_traits.find_container_traits(type_info)
                     if traits is None:
@@ -1122,7 +1122,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     # all classes are registered, because we may
                     # depend on one of those classes for the element
                     # type.
-                    self._containers_to_register.append((traits, type_info, outer_class, name))
+                    self._containers_to_register.append((traits, type_info, None, name))
 
             class_wrapper = module.add_class(cls_name, **kwargs)
             class_wrapper.gccxml_definition = cls
@@ -1332,7 +1332,6 @@ pybindgen.settings.error_handler = ErrorHandler()
         kwargs['container_type'] = container_type
         
         pygen_sink = self._get_pygen_sink_for_definition(element_decl)
-        ## pygen...
         if pygen_sink:
             pygen_sink.writeln("module.add_container(%s)" %
                                ", ".join([repr(name), _pygen_retval(*return_type_spec)] + _pygen_kwargs(kwargs)))

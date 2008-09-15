@@ -31,6 +31,7 @@ def my_module_gen():
                      'foomodulegen_module2_local'),
         ]
     module_parser = ModuleParser('foo4', '::')
+    module_parser.enable_anonymous_containers = True
 
     gccxml_options = dict(
         include_paths=eval(sys.argv[2]),

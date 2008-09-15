@@ -17,6 +17,7 @@ def my_module_gen():
     out = FileCodeSink(sys.stdout)
     pygen_file = open(sys.argv[3], "wt")
     module_parser = ModuleParser('foo2', '::')
+    module_parser.enable_anonymous_containers = True
 
     print >> sys.stderr, "PYTHON_INCLUDES:", repr(sys.argv[2])
     gccxml_options = dict(
