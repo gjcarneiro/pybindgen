@@ -26,13 +26,24 @@ class IterNextWrapper(ForwardWrapperBase):
         assert isinstance(container, Container)
         self.container = container
         self.c_function_name = "_wrap_%s__tp_iternext" % (self.container.iter_pystruct)
-        container.value_type.value = "(*(*self->iterator)++)"
+        self.iter_variable_name = None
+        self.reset_code_generation_state()
+        #self.iter_variable_name = self.declarations.declare_variable(
+        #    "%s::iterator" % container.full_name , 'iter')
+        #self.container.value_type.value = "(*%s)" % self.iter_variable_name
+
+    def reset_code_generation_state(self):
+        super(IterNextWrapper, self).reset_code_generation_state()
+        self.iter_variable_name = self.declarations.declare_variable(
+            "%s::iterator" % self.container.full_name , 'iter')
+        self.container.value_type.value = "(*%s)" % self.iter_variable_name        
 
     def generate_call(self):
-        "virtual method implementation; do not call"
-        self.before_call.write_error_check("*self->iterator == self->container->obj->end()",
-                                           "PyErr_SetNone(PyExc_StopIteration);")
-        
+        self.before_call.write_code("%s = *self->iterator;" % (self.iter_variable_name,))
+        self.before_call.write_error_check(
+            "%s == self->container->obj->end()" % (self.iter_variable_name,),
+            "PyErr_SetNone(PyExc_StopIteration);")
+        self.before_call.write_code("++(*self->iterator);")        
 
     def generate(self, code_sink):
         """
