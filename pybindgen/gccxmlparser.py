@@ -450,9 +450,7 @@ class ModuleParser(object):
     """
     @ivar enable_anonymous_containers: if True, pybindgen will attempt
         to scan for all std containers, even the ones that have no
-        typedef'ed name.  However, due to a
-        U{bug<http://www.gccxml.org/Bug/view.php?id=7572>} in gccxml
-        this is disabled by default.
+        typedef'ed name.  Enabled by default.
 
     """
 
@@ -486,7 +484,7 @@ class ModuleParser(object):
         self._anonymous_structs = [] # list of (pygccxml_anonymous_class, outer_pybindgen_class)
         self._containers_to_register = []
         self._containers_registered = {}
-        self.enable_anonymous_containers = False
+        self.enable_anonymous_containers = True
 
     def add_pre_scan_hook(self, hook):
         """
