@@ -975,6 +975,10 @@ pybindgen.settings.error_handler = ErrorHandler()
                     continue
                 typedefs.append(typedef)
 
+        def cls_cmp(a, b):
+            return cmp(a.decl_string, b.decl_string)
+        unregistered_classes.sort(cls_cmp)
+
         def postpone_class(cls, reason):
             ## detect the case of a class being postponed many times; that
             ## is almost certainly an error and a sign of an infinite
