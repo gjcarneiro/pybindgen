@@ -890,6 +890,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     type_info = type_traits.remove_pointer(type_info)
                 elif type_traits.is_reference(type_info):
                     type_info = type_traits.remove_reference(type_info)
+                if type_traits.is_const(type_info):
+                    type_info = type_traits.remove_const(type_info)
                 traits = container_traits.find_container_traits(type_info)
                 if traits is None:
                     continue
@@ -1112,6 +1114,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                         type_info = type_traits.remove_pointer(type_info)
                     elif type_traits.is_reference(type_info):
                         type_info = type_traits.remove_reference(type_info)
+                    if type_traits.is_const(type_info):
+                        type_info = type_traits.remove_const(type_info)
                     traits = container_traits.find_container_traits(type_info)
                     if traits is None:
                         continue
