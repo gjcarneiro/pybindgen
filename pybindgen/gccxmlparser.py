@@ -130,21 +130,8 @@ class ErrorHandler(settings.ErrorHandler):
         return True
 settings.error_handler = ErrorHandler()
 
-_digits = re.compile(r"\s*\d+\s*")
 def normalize_name(decl_string):
-    decl_string = utils.ascii(decl_string)
-    if templates.is_instantiation(decl_string):
-        cls_name, template_parameters = templates.split(decl_string)
-    else:
-        cls_name = decl_string
-        template_parameters = None
-    if not _digits.match(cls_name):
-        if cls_name.startswith('::'):
-            cls_name = cls_name[2:]
-    if template_parameters is None:
-        return cls_name
-    else:
-        return "%s< %s >" % (cls_name, ', '.join([normalize_name(name) for name in template_parameters]))
+    return ctypeparser.normalize_type_string(decl_string)
 
 def normalize_class_name(class_name, module_namespace):
     class_name = utils.ascii(class_name)
@@ -293,6 +280,7 @@ class GccXmlTypeRegistry(object):
             kwargs['default_value'] = utils.ascii(default_value)
 
         cpp_type = normalize_name(type_info.partial_decl_string)
+
         return (cpp_type, param_name), kwargs
 
 
