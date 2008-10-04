@@ -994,6 +994,33 @@ class TestFoo(unittest.TestCase):
         t = foo.TestContainer()
         v = list(t.get_vec())
         self.assertEqual(v, ["hello", "world"])
+
+    def test_richcompare(self):
+        t1 = foo.Tupl()
+
+        t1.x = 1
+        t1.y = 1
+
+        t2 = foo.Tupl()
+        t2.x = 1
+        t2.y = 1
+
+        t3 = foo.Tupl()
+        t3.x = 1
+        t3.y = 2
+
+        self.assert_(t1 == t2)
+        self.assert_(not (t1 != t2))
+        self.assert_(t1 <= t2)
+        self.assert_(t1 >= t2)
+        self.assert_(t3 >= t2)
+        self.assert_(t3 > t2)
+        self.assert_(t2 <= t3)
+        self.assert_(t2 < t3)
+        self.assert_(t2 != t3)
+        self.assert_(not(t2 == t3))
+        
+        
         
 if __name__ == '__main__':
     unittest.main()

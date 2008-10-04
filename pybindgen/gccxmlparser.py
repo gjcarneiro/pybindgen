@@ -1363,12 +1363,9 @@ pybindgen.settings.error_handler = ErrorHandler()
                 and not isinstance(cpp_type.base, cpptypes.const_t)
                 and str(cpp_type.base) == 'std::ostream')
 
-    def _scan_class_methods(self, cls, class_wrapper, pygen_sink):
-        have_trivial_constructor = False
-        have_copy_constructor = False
+    def _scan_class_operators(self, cls, class_wrapper, pygen_sink):
+
         has_output_stream_operator = False
-
-
         for op in self.module_namespace.free_operators(function=self.location_filter,
                                                        allow_empty=True, 
                                                        recursive=True):
@@ -1388,9 +1385,44 @@ pybindgen.settings.error_handler = ErrorHandler()
                     and self._is_ostream (op.arguments[0].type) \
                     and type_traits.is_convertible (cls, op.arguments[1].type):
                 has_output_stream_operator = True
+        
+        if has_output_stream_operator:
+            class_wrapper.add_output_stream_operator()
+            pygen_sink.writeln("cls.add_output_stream_operator()")
+
+        if type_traits.has_public_binary_operator(cls, '<'):
+            print >> sys.stderr, "<<<<<OP>>>>>  < ", cls
+            class_wrapper.add_binary_operator('<')
+            pygen_sink.writeln("cls.add_binary_operator('<')")
+        if type_traits.has_public_binary_operator(cls, '<='):
+            print >> sys.stderr, "<<<<<OP>>>>>  <= ", cls
+            class_wrapper.add_binary_operator('<=')
+            pygen_sink.writeln("cls.add_binary_operator('<=')")
+        if type_traits.has_public_binary_operator(cls, '>='):
+            print >> sys.stderr, "<<<<<OP>>>>>  >= ", cls
+            class_wrapper.add_binary_operator('>=')
+            pygen_sink.writeln("cls.add_binary_operator('>=')")
+        if type_traits.has_public_binary_operator(cls, '>'):
+            print >> sys.stderr, "<<<<<OP>>>>>  > ", cls
+            class_wrapper.add_binary_operator('>')
+            pygen_sink.writeln("cls.add_binary_operator('>')")
+        if type_traits.has_public_binary_operator(cls, '=='):
+            print >> sys.stderr, "<<<<<OP>>>>>  == ", cls
+            class_wrapper.add_binary_operator('==')
+            pygen_sink.writeln("cls.add_binary_operator('==')")
+        if type_traits.has_public_binary_operator(cls, '!='):
+            print >> sys.stderr, "<<<<<OP>>>>>  != ", cls
+            class_wrapper.add_binary_operator('!=')
+            pygen_sink.writeln("cls.add_binary_operator('!=')")
+
+    def _scan_class_methods(self, cls, class_wrapper, pygen_sink):
+        have_trivial_constructor = False
+        have_copy_constructor = False
 
         if pygen_sink is None:
             pygen_sink = NullCodeSink()
+
+        self._scan_class_operators(cls, class_wrapper, pygen_sink)
 
         for member in cls.get_members():
             if isinstance(member, calldef.member_function_t):
@@ -1697,9 +1729,6 @@ pybindgen.settings.error_handler = ErrorHandler()
                 class_wrapper.add_copy_constructor()
                 pygen_sink.writeln("cls.add_copy_constructor()")
                 
-        if has_output_stream_operator:
-            class_wrapper.add_output_stream_operator()
-            pygen_sink.writeln("cls.add_output_stream_operator()")
 
 
     def scan_functions(self):

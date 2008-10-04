@@ -21,6 +21,9 @@ from pytypeobject import PyTypeObject
 import settings
 import utils
 
+if 'set' not in dir(__builtins__):
+    from sets import Set as set
+
 
 class MemoryPolicy(object):
     """memory management policy for a C++ class or C/C++ struct"""
@@ -446,6 +449,7 @@ class CppClass(object):
         self.has_output_stream_operator = False
         self._have_pure_virtual_methods = None
         self._wrapper_registry = None
+        self.binary_operators = set()
 
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
@@ -571,6 +575,23 @@ class CppClass(object):
     def __repr__(self):
         return "<pybindgen.CppClass %r>" % self.full_name
 
+    def add_binary_operator(self, operator):
+        """
+        Add support for a C++ binary operator, such as == or <.
+
+        The binary operator is assumed to operate with both operands
+        of the type of the class, either by reference or by value.  At
+        the moment only a limited set of operators are supported by
+        PyBindGen.
+        
+        @param operator: string indicating the name of the operator to
+        support, e.g. '=='
+        """
+        if not isinstance(operator, str):
+            raise TypeError("expected operator name as string")
+        if operator not in ['==', '!=', '<', '<=', '>', '>=']:
+            raise NotImplementedError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
+        self.binary_operators.add(operator)
 
     def add_class(self, *args, **kwargs):
         """
@@ -1750,17 +1771,46 @@ static void
     def _generate_tp_richcompare(self, code_sink):
         tp_richcompare_function_name = "_wrap_%s__tp_richcompare" % (self.pystruct,)
 
-        code_sink.writeln("static PyObject*\n%s (%s *self, PyObject *o2, int opid)"
-                          % (tp_richcompare_function_name, self.pystruct))
+        code_sink.writeln("static PyObject*\n%s (%s *self, %s *other, int opid)"
+                          % (tp_richcompare_function_name, self.pystruct, self.pystruct))
         code_sink.writeln("{")
         code_sink.indent()
 
-        ## TODO
-        code_sink.writeln('PyErr_SetString(PyExc_TypeError, "Comparison not defined or not yet implemented.");')
-        code_sink.writeln('return NULL;')
+        code_sink.writeln("""
+if (!PyObject_IsInstance((PyObject*) other, (PyObject*) &%s)) {
+    Py_INCREF(Py_NotImplemented);
+    return Py_NotImplemented;
+}""" % self.pytypestruct)
 
-        #code_sink.writeln("Py_INCREF(Py_NotImplemented);")
-        #code_sink.writeln("return Py_NotImplemented;")
+        code_sink.writeln("switch (opid)\n{")
+
+        def wrap_operator(name, opid_code):
+            code_sink.writeln("case %s:" % opid_code)
+            code_sink.indent()
+            if name in self.binary_operators:
+                code_sink.writeln("if (*self->obj %(OP)s *other->obj) {\n"
+                                  "    Py_INCREF(Py_True);\n"
+                                  "    return Py_True;\n"
+                                  "} else {\n"
+                                  "    Py_INCREF(Py_False);\n"
+                                  "    return Py_False;\n"
+                                  "}" % dict(OP=name))
+            else:
+                code_sink.writeln("Py_INCREF(Py_NotImplemented);\n"
+                                  "return Py_NotImplemented;")
+            code_sink.unindent()
+        
+        wrap_operator('<', 'Py_LT')
+        wrap_operator('<=', 'Py_LE')
+        wrap_operator('==', 'Py_EQ')
+        wrap_operator('!=', 'Py_NE')
+        wrap_operator('>=', 'Py_GE')
+        wrap_operator('>', 'Py_GT')
+
+        code_sink.writeln("} /* closes switch (opid) */")
+
+        code_sink.writeln("Py_INCREF(Py_NotImplemented);\n"
+                          "return Py_NotImplemented;")
 
         code_sink.unindent()
         code_sink.writeln("}\n")

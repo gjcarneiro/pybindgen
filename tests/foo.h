@@ -776,4 +776,43 @@ std::map<std::string, int> get_map ();
 std::set<uint32_t> get_set ();
 
 
+// test comparison operators
+
+struct Tupl
+{
+    int x, y;
+};
+
+inline bool operator == (Tupl const &a, Tupl const &b)
+{
+    return (a.x == b.x && a.y == b.y);
+}
+
+inline bool operator != (Tupl const &a, Tupl const &b)
+{
+    return (a.x != b.x || a.y != b.y);
+}
+
+inline bool operator < (Tupl const &a, Tupl const &b)
+{
+    return (a.x < b.x || a.x == b.x && a.y < b.y);
+}
+
+inline bool operator <= (Tupl const &a, Tupl const &b)
+{
+    return (a.x <= b.x || a.x == b.x && a.y <= b.y);
+}
+
+inline bool operator > (Tupl const &a, Tupl const &b)
+{
+    return (a.x > b.x || a.x == b.x && a.y > b.y);
+}
+
+inline bool operator >= (Tupl const &a, Tupl const &b)
+{
+    return (a.x >= b.x || a.x == b.x && a.y >= b.y);
+}
+
+
+
 #endif 	    /* !FOO_H_ */

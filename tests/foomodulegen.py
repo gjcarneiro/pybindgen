@@ -415,7 +415,18 @@ int %s::custom_method_added_by_a_hook(int x)
     TestContainer.add_method('get_vec', 'void', [Parameter.new('std::vector<std::string> &', 'outVec',
                                                                direction=Parameter.DIRECTION_OUT)])
 
-
+    Tupl = mod.add_class('Tupl')
+    Tupl.add_binary_operator('<')
+    Tupl.add_binary_operator('<=')
+    Tupl.add_binary_operator('>=')
+    Tupl.add_binary_operator('>')
+    Tupl.add_binary_operator('==')
+    Tupl.add_binary_operator('!=')
+    Tupl.add_instance_attribute('x', 'int', is_const=False)
+    Tupl.add_instance_attribute('y', 'int', is_const=False)
+    Tupl.add_constructor([Parameter.new('Tupl const &', 'arg0')])
+    Tupl.add_constructor([])
+    
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):
         def __init__(self):
