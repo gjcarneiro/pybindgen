@@ -433,11 +433,15 @@ int %s::custom_method_added_by_a_hook(int x)
     mod.generate(FileCodeSink(out_file))
 
 if __name__ == '__main__':
-    try:
-        import cProfile as profile
-    except ImportError:
-        my_module_gen(sys.stdout)
+    import os
+    if "PYBINDGEN_ENABLE_PROFILING" in os.environ:
+        try:
+            import cProfile as profile
+        except ImportError:
+            my_module_gen(sys.stdout)
+        else:
+            print >> sys.stderr, "** running under profiler"
+            profile.run('my_module_gen(sys.stdout)', 'foomodulegen.pstat')
     else:
-        print >> sys.stderr, "** running under profiler"
-        profile.run('my_module_gen(sys.stdout)', 'foomodulegen.pstat')
+        my_module_gen(sys.stdout)
 

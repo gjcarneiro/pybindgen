@@ -44,11 +44,15 @@ def my_module_gen():
 
 
 if __name__ == '__main__':
-    try:
-        import cProfile as profile
-    except ImportError:
-        my_module_gen()
+    import os
+    if "PYBINDGEN_ENABLE_PROFILING" in os.environ:
+        try:
+            import cProfile as profile
+        except ImportError:
+            my_module_gen()
+        else:
+            print >> sys.stderr, "** running under profiler"
+            profile.run('my_module_gen()', 'foomodulegen-auto-split.pstat')
     else:
-        print >> sys.stderr, "** running under profiler"
-        profile.run('my_module_gen()', 'foomodulegen-auto-split.pstat')
+        my_module_gen()
 

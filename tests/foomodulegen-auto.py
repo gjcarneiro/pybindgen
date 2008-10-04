@@ -40,13 +40,17 @@ def main():
         pdb.set_trace()
         my_module_gen()
     else:
-        try:
-            import cProfile as profile
-        except ImportError:
-            my_module_gen()
+        import os
+        if "PYBINDGEN_ENABLE_PROFILING" in os.environ:
+            try:
+                import cProfile as profile
+            except ImportError:
+                my_module_gen()
+            else:
+                print >> sys.stderr, "** running under profiler"
+                profile.run('my_module_gen()', 'foomodulegen-auto.pstat')
         else:
-            print >> sys.stderr, "** running under profiler"
-            profile.run('my_module_gen()', 'foomodulegen-auto.pstat')
+            my_module_gen()            
 
 if __name__ == '__main__':
     main()

@@ -9,6 +9,10 @@ import os.path
 import os
 import pproc as subprocess
 
+# uncomment to enable profiling information
+# epydoc uses the profile data to generate call graphs
+#os.environ["PYBINDGEN_ENABLE_PROFILING"] = ""
+
 
 def create_pyext_obj(bld, c_or_cpp_type):
     waf_version = [int (s) for s in Params.g_version.split('.')]
