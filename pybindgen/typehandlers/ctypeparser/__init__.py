@@ -129,6 +129,8 @@ def _parse_type_recursive(tokens):
     ctype = CType()
     while tokens:
         token = tokens.pop(0)
+        if token.name.startswith('::'):
+            token.name = token.name[2:]
         if token.token_type == tokenizer.SYNTAX:
             if token.name in [',', '>', ')']:
                 ctype.reorder_modifiers()
@@ -181,7 +183,7 @@ def normalize_type_string(type_string):
     >>> normalize_type_string('const foo::bar<const char*, zbr&>*')
     'foo::bar< char const *, zbr & > const *'
     >>> normalize_type_string('const ::bar*')
-    '::bar const *'
+    'bar const *'
     >>> normalize_type_string('const char*const')
     'char const * const'
     >>> normalize_type_string('const char*const*const')
