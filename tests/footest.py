@@ -990,6 +990,10 @@ class TestFoo(unittest.TestCase):
         v = list(t.m_floatSet)
         self.assertEqual(v, [1,2,3])
 
+    def test_out_vec(self):
+        t = foo.TestContainer()
+        v = list(t.get_vec())
+        self.assertEqual(v, ["hello", "world"])
         
 if __name__ == '__main__':
     unittest.main()

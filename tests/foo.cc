@@ -354,6 +354,14 @@ TestContainer::set_simple_vec (std::vector<simple_struct_t> list)
     return count;
 }
 
+void
+TestContainer::get_vec (std::vector<std::string> &outVec)
+{
+    outVec.clear ();
+    outVec.push_back ("hello");
+    outVec.push_back ("world");
+}
+
 std::map<std::string, int>
 get_map ()
 {

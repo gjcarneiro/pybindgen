@@ -407,9 +407,13 @@ int %s::custom_method_added_by_a_hook(int x)
                                                                              direction=Parameter.DIRECTION_INOUT)],
                              is_virtual=True)
 
-    SimpleStructList = mod.add_container('std::vector<simple_struct_t>', ReturnValue.new('simple_struct_t'), 'vector')
+    mod.add_container('std::vector<simple_struct_t>', ReturnValue.new('simple_struct_t'), 'vector')
     TestContainer.add_method('get_simple_vec', ReturnValue.new('std::vector<simple_struct_t>'), [], is_virtual=True)
     TestContainer.add_method('set_simple_vec', 'int', [Parameter.new('std::vector<simple_struct_t>', 'vec')], is_virtual=True)
+
+    mod.add_container('std::vector<std::string>', 'std::string', 'vector')
+    TestContainer.add_method('get_vec', 'void', [Parameter.new('std::vector<std::string> &', 'outVec',
+                                                               direction=Parameter.DIRECTION_OUT)])
 
 
     #### --- error handler ---

@@ -764,6 +764,9 @@ public:
     virtual SimpleStructVec get_simple_vec ();
     virtual int set_simple_vec (SimpleStructVec vec);
 
+    // -#- @outVec(direction=out) -#-
+    void get_vec (std::vector<std::string> &outVec);
+
 private:
     SimpleStructList m_simpleList;
 };
