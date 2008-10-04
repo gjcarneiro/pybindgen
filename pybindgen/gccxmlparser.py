@@ -898,6 +898,10 @@ pybindgen.settings.error_handler = ErrorHandler()
                 continue
             for dependency in fun.i_depend_on_them(recursive=True):
                 type_info = dependency.depend_on_it
+                if type_traits.is_pointer(type_info):
+                    type_info = type_traits.remove_pointer(type_info)
+                elif type_traits.is_reference(type_info):
+                    type_info = type_traits.remove_reference(type_info)
                 traits = container_traits.find_container_traits(type_info)
                 if traits is None:
                     continue
@@ -1116,6 +1120,10 @@ pybindgen.settings.error_handler = ErrorHandler()
                     continue
                 for dependency in member.i_depend_on_them(recursive=True):
                     type_info = dependency.depend_on_it
+                    if type_traits.is_pointer(type_info):
+                        type_info = type_traits.remove_pointer(type_info)
+                    elif type_traits.is_reference(type_info):
+                        type_info = type_traits.remove_reference(type_info)
                     traits = container_traits.find_container_traits(type_info)
                     if traits is None:
                         continue
@@ -1849,7 +1857,6 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if params_ok:
                     function_wrapper = cpp_class.add_function_as_constructor(fun.name, return_type, arguments)
                     function_wrapper.gccxml_definition = fun
-
 
                 continue
 
