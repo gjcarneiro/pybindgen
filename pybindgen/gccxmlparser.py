@@ -1359,61 +1359,85 @@ pybindgen.settings.error_handler = ErrorHandler()
         return False
 
     def _is_ostream(self, cpp_type):
-        return (isinstance (cpp_type, cpptypes.reference_t)
+        return (isinstance(cpp_type, cpptypes.reference_t)
                 and not isinstance(cpp_type.base, cpptypes.const_t)
                 and str(cpp_type.base) == 'std::ostream')
 
     def _scan_class_operators(self, cls, class_wrapper, pygen_sink):
+        
+        def _handle_operator(symbol, return_type, argument_types):
+            #print >> sys.stderr, "<<<<<OP>>>>>  %s: %s : %s --> %s" % (op.symbol, cls, [str(x) for x in argument_types], return_type)
 
-        has_output_stream_operator = False
+            if symbol == '<<' \
+                    and self._is_ostream(return_type) \
+                    and len(op.arguments) == 2 \
+                    and self._is_ostream(argument_types[0]) \
+                    and type_traits.is_convertible(cls, argument_types[1]):
+                #print >> sys.stderr, "<<<<<OUTPUT STREAM OP>>>>>  %s: %s " % (op.symbol, cls)
+                class_wrapper.add_output_stream_operator()
+                pygen_sink.writeln("cls.add_output_stream_operator()")
+
+            if op.symbol in ['==', '!=', '<', '<=', '>', '>='] \
+                    and len(argument_types) == 2 \
+                    and type_traits.is_convertible(cls, argument_types[0]) \
+                    and type_traits.is_convertible(cls, argument_types[1]):
+                #print >> sys.stderr, "<<<<<BINARY COMPARISON OP>>>>>  %s: %s " % (op.symbol, cls)
+                class_wrapper.add_binary_comparison_operator(op.symbol)
+                pygen_sink.writeln("cls.add_binary_comparison_operator(%r)" % (op.symbol,))
+            
+            if op.symbol in ['+', '-', '/', '*'] \
+                    and len(argument_types) == 2 \
+                    and (type_traits.is_convertible(cls, argument_types[0]) 
+                         or type_traits.is_convertible(cls, argument_types[1])):
+                #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>>  %s: %s : %s --> %s" \
+                #    % (op.symbol, cls, [str(x) for x in argument_types], return_type)
+
+                def get_class_wrapper(pygccxml_type):
+                    traits = ctypeparser.TypeTraits(normalize_name(pygccxml_type.partial_decl_string))
+                    if traits.type_is_reference:
+                        name = str(traits.target)
+                    else:
+                        name = str(traits.ctype)
+                    class_wrapper = self.type_registry.root_module.get(name, None)
+                    #print >> sys.stderr, "(lookup %r: %r)" % (name, class_wrapper)
+                    return class_wrapper
+
+                ret = get_class_wrapper(return_type)
+                if ret is None:
+                    #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> retval class %s not registered" % (return_type,)
+                    return
+
+                arg0 = get_class_wrapper(argument_types[0])
+                if arg0 is None:
+                    #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 1 class %s not registered" % (argument_types[0],)
+                    return
+
+                arg1 = get_class_wrapper(argument_types[1])
+                if arg1 is None:
+                    #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 2 class %s not registered" % (argument_types[1],)
+                    return
+
+                #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>>  %s: %s: %s (%s, %s) " \
+                #    % (op.symbol, cls, ret.full_name, arg0.full_name, arg1.full_name)
+
+                class_wrapper.add_binary_numeric_operator(op.symbol, ret, arg0, arg1)
+                pygen_sink.writeln("cls.add_binary_numeric_operator(%r, root_module[%r], root_module[%r], root_module[%r])"
+                                   % (op.symbol, ret.full_name,
+                                      arg0.full_name, arg1.full_name))
+
+
         for op in self.module_namespace.free_operators(function=self.location_filter,
-                                                       allow_empty=True, 
+                                                       allow_empty=True,
                                                        recursive=True):
-            if op.symbol == '<<' \
-                    and self._is_ostream (op.return_type) \
-                    and len (op.arguments) >= 2 \
-                    and self._is_ostream (op.arguments[0].type) \
-                    and type_traits.is_convertible (cls, op.arguments[1].type):
-                has_output_stream_operator = True
+            _handle_operator(op.symbol, op.return_type, [arg.type for arg in op.arguments])
 
         for op in cls.member_operators(function=self.location_filter,
                                        allow_empty=True, 
                                        recursive=True):
-            if op.symbol == '<<' \
-                    and self._is_ostream (op.return_type) \
-                    and len (op.arguments) >= 2 \
-                    and self._is_ostream (op.arguments[0].type) \
-                    and type_traits.is_convertible (cls, op.arguments[1].type):
-                has_output_stream_operator = True
-        
-        if has_output_stream_operator:
-            class_wrapper.add_output_stream_operator()
-            pygen_sink.writeln("cls.add_output_stream_operator()")
+            arg_types = [arg.type for arg in op.arguments]
+            arg_types.insert(0, cls)
+            _handle_operator(op.symbol, op.return_type, arg_types)
 
-        if type_traits.has_public_binary_operator(cls, '<'):
-            print >> sys.stderr, "<<<<<OP>>>>>  < ", cls
-            class_wrapper.add_binary_operator('<')
-            pygen_sink.writeln("cls.add_binary_operator('<')")
-        if type_traits.has_public_binary_operator(cls, '<='):
-            print >> sys.stderr, "<<<<<OP>>>>>  <= ", cls
-            class_wrapper.add_binary_operator('<=')
-            pygen_sink.writeln("cls.add_binary_operator('<=')")
-        if type_traits.has_public_binary_operator(cls, '>='):
-            print >> sys.stderr, "<<<<<OP>>>>>  >= ", cls
-            class_wrapper.add_binary_operator('>=')
-            pygen_sink.writeln("cls.add_binary_operator('>=')")
-        if type_traits.has_public_binary_operator(cls, '>'):
-            print >> sys.stderr, "<<<<<OP>>>>>  > ", cls
-            class_wrapper.add_binary_operator('>')
-            pygen_sink.writeln("cls.add_binary_operator('>')")
-        if type_traits.has_public_binary_operator(cls, '=='):
-            print >> sys.stderr, "<<<<<OP>>>>>  == ", cls
-            class_wrapper.add_binary_operator('==')
-            pygen_sink.writeln("cls.add_binary_operator('==')")
-        if type_traits.has_public_binary_operator(cls, '!='):
-            print >> sys.stderr, "<<<<<OP>>>>>  != ", cls
-            class_wrapper.add_binary_operator('!=')
-            pygen_sink.writeln("cls.add_binary_operator('!=')")
 
     def _scan_class_methods(self, cls, class_wrapper, pygen_sink):
         have_trivial_constructor = False

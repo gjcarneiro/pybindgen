@@ -16,7 +16,7 @@ from cppattribute import CppInstanceAttributeGetter, CppInstanceAttributeSetter,
     CppStaticAttributeGetter, CppStaticAttributeSetter, \
     PyGetSetDef, PyMetaclass
 
-from pytypeobject import PyTypeObject
+from pytypeobject import PyTypeObject, PyNumberMethods
 
 import settings
 import utils
@@ -449,7 +449,9 @@ class CppClass(object):
         self.has_output_stream_operator = False
         self._have_pure_virtual_methods = None
         self._wrapper_registry = None
-        self.binary_operators = set()
+        self.binary_comparison_operators = set()
+        self.binary_numeric_operators = dict()
+        self.pynumbermethods = None
 
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
@@ -575,14 +577,12 @@ class CppClass(object):
     def __repr__(self):
         return "<pybindgen.CppClass %r>" % self.full_name
 
-    def add_binary_operator(self, operator):
+    def add_binary_comparison_operator(self, operator):
         """
-        Add support for a C++ binary operator, such as == or <.
+        Add support for a C++ binary comparison operator, such as == or <.
 
         The binary operator is assumed to operate with both operands
-        of the type of the class, either by reference or by value.  At
-        the moment only a limited set of operators are supported by
-        PyBindGen.
+        of the type of the class, either by reference or by value.
         
         @param operator: string indicating the name of the operator to
         support, e.g. '=='
@@ -591,7 +591,36 @@ class CppClass(object):
             raise TypeError("expected operator name as string")
         if operator not in ['==', '!=', '<', '<=', '>', '>=']:
             raise NotImplementedError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
-        self.binary_operators.add(operator)
+        self.binary_comparison_operators.add(operator)
+
+    def add_binary_numeric_operator(self, operator, result_cppclass=None,
+                                    left_cppclass=None, right_cppclass=None):
+        """
+        Add support for a C++ binary numeric operator, such as +, -, *, or /.
+
+        @param operator: string indicating the name of the operator to
+        support, e.g. '=='
+
+        @param result_cppclass: the CppClass object of the result type, assumed to be this class if omitted
+        @param left_cppclass: the CppClass object of the left operand type, assumed to be this class if omitted
+        @param right_cppclass: the CppClass object of the right operand type, assumed to be this class if omitted
+        """
+        if not isinstance(operator, str):
+            raise TypeError("expected operator name as string")
+        if operator not in ['+', '-', '*', '/']:
+            raise NotImplementedError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
+        try:
+            l = self.binary_numeric_operators[operator]
+        except KeyError:
+            l = []
+            self.binary_numeric_operators[operator] = l
+        if result_cppclass is None:
+            result_cppclass = self
+        if left_cppclass is None:
+            left_cppclass = self
+        if right_cppclass is None:
+            right_cppclass = self
+        l.append((result_cppclass, left_cppclass, right_cppclass))
 
     def add_class(self, *args, **kwargs):
         """
@@ -1787,7 +1816,7 @@ if (!PyObject_IsInstance((PyObject*) other, (PyObject*) &%s)) {
         def wrap_operator(name, opid_code):
             code_sink.writeln("case %s:" % opid_code)
             code_sink.indent()
-            if name in self.binary_operators:
+            if name in self.binary_comparison_operators:
                 code_sink.writeln("if (*self->obj %(OP)s *other->obj) {\n"
                                   "    Py_INCREF(Py_True);\n"
                                   "    return Py_True;\n"

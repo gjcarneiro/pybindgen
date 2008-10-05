@@ -101,3 +101,109 @@ class PyTypeObject(object):
         slots.setdefault('tp_is_gc', 'NULL')
         
         code_sink.writeln(self.TEMPLATE % slots)
+
+
+class PyNumberMethods(object):
+    TEMPLATE = (
+        'PyNumberMethods %(variable)s = {\n'
+	'(binaryfunc) %(nb_add)s;\n'
+	'(binaryfunc) %(nb_subtract)s;\n'
+	'(binaryfunc) %(nb_multiply)s;\n'
+	'(binaryfunc) %(nb_divide)s;\n'
+	'(binaryfunc) %(nb_remainder)s;\n'
+	'(binaryfunc) %(nb_divmod)s;\n'
+	'(ternaryfunc) %(nb_power)s;\n'
+	'(unaryfunc) %(nb_negative)s;\n'
+	'(unaryfunc) %(nb_positive)s;\n'
+	'(unaryfunc) %(nb_absolute)s;\n'
+	'(inquiry) %(nb_nonzero)s;\n'
+	'(unaryfunc) %(nb_invert)s;\n'
+	'(binaryfunc) %(nb_lshift)s;\n'
+	'(binaryfunc) %(nb_rshift)s;\n'
+	'(binaryfunc) %(nb_and)s;\n'
+	'(binaryfunc) %(nb_xor)s;\n'
+	'(binaryfunc) %(nb_or)s;\n'
+	'(coercion) %(nb_coerce)s;\n'
+	'(unaryfunc) %(nb_int)s;\n'
+	'(unaryfunc) %(nb_long)s;\n'
+	'(unaryfunc) %(nb_float)s;\n'
+	'(unaryfunc) %(nb_oct)s;\n'
+	'(unaryfunc) %(nb_hex)s;\n'
+	'/* Added in release 2.0 */\n'
+	'(binaryfunc) %(nb_inplace_add)s;\n'
+	'(binaryfunc) %(nb_inplace_subtract)s;\n'
+	'(binaryfunc) %(nb_inplace_multiply)s;\n'
+	'(binaryfunc) %(nb_inplace_divide)s;\n'
+	'(binaryfunc) %(nb_inplace_remainder)s;\n'
+	'(ternaryfunc) %(nb_inplace_power)s;\n'
+	'(binaryfunc) %(nb_inplace_lshift)s;\n'
+	'(binaryfunc) %(nb_inplace_rshift)s;\n'
+	'(binaryfunc) %(nb_inplace_and)s;\n'
+	'(binaryfunc) %(nb_inplace_xor)s;\n'
+	'(binaryfunc) %(nb_inplace_or)s;\n'
+        '\n'
+	'/* Added in release 2.2 */\n'
+	'/* The following require the Py_TPFLAGS_HAVE_CLASS flag */\n'
+	'(binaryfunc) %(nb_floor_divide)s;\n'
+	'(binaryfunc) %(nb_true_divide)s;\n'
+	'(binaryfunc) %(nb_inplace_floor_divide);\n'
+	'(binaryfunc) %(nb_inplace_true_divide);\n'
+        '\n'
+	'/* Added in release 2.5 */\n'
+	'(unaryfunc) %(nb_index)s;\n'
+        '\n'
+        '};\n'
+        )
+
+    def __init__(self):
+        self.slots = {}
+
+    def generate(self, code_sink):
+        """
+        Generates the structure.  All slots are optional except 'variable'.
+        """
+
+        slots = dict(self.slots)
+
+	slots.setdefault('nb_add', 'NULL')
+	slots.setdefault('nb_subtract', 'NULL')
+	slots.setdefault('nb_multiply', 'NULL')
+	slots.setdefault('nb_divide', 'NULL')
+	slots.setdefault('nb_remainder', 'NULL')
+	slots.setdefault('nb_divmod', 'NULL')
+	slots.setdefault('nb_power', 'NULL')
+	slots.setdefault('nb_negative', 'NULL')
+	slots.setdefault('nb_positive', 'NULL')
+	slots.setdefault('nb_absolute', 'NULL')
+	slots.setdefault('nb_nonzero', 'NULL')
+	slots.setdefault('nb_invert', 'NULL')
+	slots.setdefault('nb_lshift', 'NULL')
+	slots.setdefault('nb_rshift', 'NULL')
+	slots.setdefault('nb_and', 'NULL')
+	slots.setdefault('nb_xor', 'NULL')
+        slots.setdefault('nb_or', 'NULL')
+	slots.setdefault('nb_coerce', 'NULL')
+	slots.setdefault('nb_int', 'NULL')
+	slots.setdefault('nb_long', 'NULL')
+	slots.setdefault('nb_float', 'NULL')
+	slots.setdefault('nb_oct', 'NULL')
+	slots.setdefault('nb_hex', 'NULL')
+	slots.setdefault('nb_inplace_add', 'NULL')
+	slots.setdefault('nb_inplace_subtract', 'NULL')
+	slots.setdefault('nb_inplace_multiply', 'NULL')
+	slots.setdefault('nb_inplace_divide', 'NULL')
+	slots.setdefault('nb_inplace_remainder', 'NULL')
+	slots.setdefault('nb_inplace_power', 'NULL')
+	slots.setdefault('nb_inplace_lshift', 'NULL')
+	slots.setdefault('nb_inplace_rshift', 'NULL')
+	slots.setdefault('nb_inplace_and', 'NULL')
+	slots.setdefault('nb_inplace_xor', 'NULL')
+	slots.setdefault('nb_inplace_or', 'NULL')
+	slots.setdefault('nb_floor_divide', 'NULL')
+	slots.setdefault('nb_true_divide', 'NULL')
+	slots.setdefault('nb_inplace_floor_divide', 'NULL')
+	slots.setdefault('nb_inplace_true_divide', 'NULL')
+	slots.setdefault('nb_index', 'NULL')
+
+        code_sink.writeln(self.TEMPLATE % slots)
+
