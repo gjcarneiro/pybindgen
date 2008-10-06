@@ -1020,7 +1020,32 @@ class TestFoo(unittest.TestCase):
         self.assert_(t2 != t3)
         self.assert_(not(t2 == t3))
         
-        
-        
+    def test_numeric_operators(self):
+        t1 = foo.Tupl()
+
+        t1.x = 4
+        t1.y = 6
+
+        t2 = foo.Tupl()
+        t2.x = 2
+        t2.y = 3
+
+        r = t1 + t2
+        self.assertEqual(r.x, t1.x + t2.x)
+        self.assertEqual(r.y, t1.y + t2.y)
+
+        r = t1 - t2
+        self.assertEqual(r.x, t1.x - t2.x)
+        self.assertEqual(r.y, t1.y - t2.y)
+
+        r = t1 * t2
+        self.assertEqual(r.x, t1.x * t2.x)
+        self.assertEqual(r.y, t1.y * t2.y)
+
+        r = t1 / t2
+        self.assertEqual(r.x, t1.x / t2.x)
+        self.assertEqual(r.y, t1.y / t2.y)
+
+
 if __name__ == '__main__':
     unittest.main()

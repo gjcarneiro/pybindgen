@@ -51,7 +51,7 @@ from typehandlers.codesink import MemoryCodeSink, CodeSink, FileCodeSink, NullCo
 from cppclass import CppClass
 from enum import Enum
 from container import Container
-from converter_functions import PythonToCConverter
+from converter_functions import PythonToCConverter, CToPythonConverter
 import utils
 import warnings
 import traceback
@@ -874,6 +874,45 @@ class Module(ModuleBase):
             self.header.writeln("\n%s;\n" % converter.get_prototype())
             code_sink.writeln()
             converter.generate(code_sink, converter_function_name)
+            code_sink.writeln()
+            return converter_function_name
+
+
+    def get_c_to_python_type_converter_function_name(self, value_type):
+        """
+        Internal API, do not use.
+        """
+        assert isinstance(value_type, ReturnValue)
+        ctype = value_type.ctype
+        mangled_ctype = utils.mangle_name(ctype)
+        converter_function_name = "_wrap_convert_c2py__%s" % mangled_ctype
+        return converter_function_name
+
+    def generate_c_to_python_type_converter(self, value_type, code_sink):
+        """
+        Generates a c-to-python converter function for a given type
+        and returns the name of the generated function.  If called
+        multiple times with the same name only the first time is the
+        converter function generated.
+        
+        Use: this method is to be considered pybindgen internal, used
+        by code generation modules.
+
+        @type value_type: L{ReturnValue}
+        @type code_sink: L{CodeSink}
+        @returns: name of the converter function
+        """
+        assert isinstance(value_type, ReturnValue)
+        converter_function_name = self.get_c_to_python_type_converter_function_name(value_type)
+        try:
+            self.declare_one_time_definition(converter_function_name)
+        except KeyError:
+            return converter_function_name
+        else:
+            converter = CToPythonConverter(value_type, converter_function_name)
+            self.header.writeln("\n%s;\n" % converter.get_prototype())
+            code_sink.writeln()
+            converter.generate(code_sink)
             code_sink.writeln()
             return converter_function_name
 

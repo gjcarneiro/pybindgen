@@ -451,7 +451,6 @@ class CppClass(object):
         self._wrapper_registry = None
         self.binary_comparison_operators = set()
         self.binary_numeric_operators = dict()
-        self.pynumbermethods = None
 
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
@@ -590,7 +589,7 @@ class CppClass(object):
         if not isinstance(operator, str):
             raise TypeError("expected operator name as string")
         if operator not in ['==', '!=', '<', '<=', '>', '>=']:
-            raise NotImplementedError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
+            raise ValueError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
         self.binary_comparison_operators.add(operator)
 
     def add_binary_numeric_operator(self, operator, result_cppclass=None,
@@ -608,7 +607,7 @@ class CppClass(object):
         if not isinstance(operator, str):
             raise TypeError("expected operator name as string")
         if operator not in ['+', '-', '*', '/']:
-            raise NotImplementedError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
+            raise ValueError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
         try:
             l = self.binary_numeric_operators[operator]
         except KeyError:
@@ -620,7 +619,9 @@ class CppClass(object):
             left_cppclass = self
         if right_cppclass is None:
             right_cppclass = self
-        l.append((result_cppclass, left_cppclass, right_cppclass))
+        op = (result_cppclass, left_cppclass, right_cppclass)
+        if op not in l:
+            l.append(op)
 
     def add_class(self, *args, **kwargs):
         """
@@ -1489,8 +1490,73 @@ typedef struct {
 
         if self.slots.get("tp_richcompare", "NULL") == "NULL":
             self.slots["tp_richcompare"] = self._generate_tp_richcompare(code_sink)
+
+        if self.binary_numeric_operators:
+            self.slots["tp_as_number"] = self._generate_number_methods(code_sink)
         
         self._generate_type_structure(code_sink, docstring)
+
+    def _generate_number_methods(self, code_sink):
+        number_methods_var_name = "%s__py_number_methods" % (self.mangled_full_name,)
+
+        pynumbermethods = PyNumberMethods()
+        pynumbermethods.slots['variable'] = number_methods_var_name
+
+        # iterate over all types and request generation of the
+        # convertion functions for that type (so that those functions
+        # are not generated in the middle of one of the wrappers we
+        # are about to generate)
+        root_module = self.module.get_root()
+        for dummy_op_symbol, op_types in self.binary_numeric_operators.iteritems():
+            for (retval, left, right) in op_types:
+                root_module.generate_c_to_python_type_converter(retval.ThisClassReturn(retval.full_name), code_sink)
+                root_module.generate_python_to_c_type_converter(left.ThisClassReturn(left.full_name), code_sink)
+                root_module.generate_python_to_c_type_converter(right.ThisClassReturn(right.full_name), code_sink)
+
+        def try_wrap_operator(op_symbol, slot_name):
+            try:
+                op_types = self.binary_numeric_operators[op_symbol]
+            except KeyError:
+                return
+            wrapper_name = "%s__%s" % (self.mangled_full_name, slot_name)
+            pynumbermethods.slots[slot_name] = wrapper_name
+            code_sink.writeln(("static PyObject*\n"
+                               "%s (PyObject *py_left, PyObject *py_right)\n"
+                               "{") % wrapper_name)
+            code_sink.indent()
+            for (retval, left, right) in op_types:
+                retval_converter = root_module.generate_c_to_python_type_converter(retval.ThisClassReturn(retval.full_name), code_sink)
+                left_converter = root_module.generate_python_to_c_type_converter(left.ThisClassReturn(left.full_name), code_sink)
+                right_converter = root_module.generate_python_to_c_type_converter(right.ThisClassReturn(right.full_name), code_sink)
+
+                code_sink.writeln("{")
+                code_sink.indent()
+                
+                code_sink.writeln("%s left;" % left.full_name)
+                code_sink.writeln("%s right;" % right.full_name)
+                
+                code_sink.writeln("if (%s(py_left, &left) && %s(py_right, &right)) {" % (left_converter, right_converter))
+                code_sink.indent()
+                code_sink.writeln("%s result = (left %s right);" % (retval.full_name, op_symbol))
+                code_sink.writeln("return %s(&result);" % retval_converter)
+                code_sink.unindent()
+                code_sink.writeln("}")
+
+                code_sink.unindent()
+                code_sink.writeln("}")
+                
+            code_sink.writeln("Py_INCREF(Py_NotImplemented);")
+            code_sink.writeln("return Py_NotImplemented;")
+            code_sink.unindent()
+            code_sink.writeln("}")
+
+        try_wrap_operator('+', 'nb_add')
+        try_wrap_operator('-', 'nb_subtract')
+        try_wrap_operator('*', 'nb_multiply')
+        try_wrap_operator('/', 'nb_divide')
+        
+        pynumbermethods.generate(code_sink)
+        return '&' + number_methods_var_name
         
     def _generate_type_structure(self, code_sink, docstring):
         """generate the type structure"""

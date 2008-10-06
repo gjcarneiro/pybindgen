@@ -4,7 +4,7 @@ python to C or C to python.  These can be useful in certain
 specialized contexts, such as converting list elements.
 """
 
-from typehandlers.base import ReverseWrapperBase
+from typehandlers.base import ReverseWrapperBase, ForwardWrapperBase
 
 
 class PythonToCConverter(ReverseWrapperBase):
@@ -77,3 +77,61 @@ class PythonToCConverter(ReverseWrapperBase):
 
     def get_prototype(self):
         return "int %s(PyObject *value, %s *address)" % (self.c_function_name, self.return_value.ctype)
+
+
+
+class CToPythonConverter(ForwardWrapperBase):
+    '''
+    Utility function that converts a C value to a PyObject*.
+    '''
+
+    def __init__(self, value_type, c_function_name):
+        """
+        value_type -- a ReturnValue object handling the value type;
+        class_ -- the class (CppClass object)
+        attribute_name -- name of attribute
+        getter -- None, or name of a method of the class used to get the value
+        """
+        super(CToPythonConverter, self).__init__(value_type, [], parse_error_return="return 0;", error_return="return 0;")
+        self.c_function_name = c_function_name
+        self.unblock_threads = False
+
+    def generate(self, code_sink):
+
+        save_return_value_value = self.return_value.value
+        self.return_value.value = "*cvalue"
+        try:
+            self.return_value.convert_c_to_python(self)
+        finally:
+            self.return_value.value = save_return_value_value
+
+        code_sink.writeln(self.get_prototype())
+        code_sink.writeln("{")
+        code_sink.indent()
+
+
+        params = self.build_params.get_parameters()
+        if params:
+            if params == ['""']:
+                self.after_call.write_code('Py_INCREF(Py_None);')
+                self.after_call.write_code('py_retval = Py_None;')
+            else:
+                assert params[0][0] == '"'
+                params[0] = "(char *) " + params[0]
+                self.after_call.write_code('py_retval = Py_BuildValue(%s);' %
+                                           (', '.join(params),))
+
+        ## cleanup and return
+        self.after_call.write_cleanup()
+        self.after_call.write_code('return py_retval;')
+
+        self.declarations.get_code_sink().flush_to(code_sink)
+        code_sink.writeln()
+        self.before_parse.sink.flush_to(code_sink)
+        self.before_call.sink.flush_to(code_sink)
+        self.after_call.sink.flush_to(code_sink)
+        code_sink.unindent()
+        code_sink.writeln("}")
+
+    def get_prototype(self):
+        return "PyObject* %s(%s *cvalue)" % (self.c_function_name, self.return_value.ctype)
