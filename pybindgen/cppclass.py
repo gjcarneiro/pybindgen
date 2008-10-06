@@ -1563,16 +1563,17 @@ typedef struct {
         """generate the type structure"""
         self.slots.setdefault("tp_basicsize",
                               "sizeof(%s)" % (self.pystruct,))
-
+        tp_flags = set(['Py_TPFLAGS_DEFAULT'])
         if self.allow_subclassing:
-            self.slots.setdefault("tp_flags", ("Py_TPFLAGS_DEFAULT|"
-                                               "Py_TPFLAGS_HAVE_GC|"
-                                               "Py_TPFLAGS_BASETYPE"))
+            tp_flags.add("Py_TPFLAGS_HAVE_GC")
+            tp_flags.add("Py_TPFLAGS_BASETYPE")
             self.slots.setdefault("tp_dictoffset",
                                   "offsetof(%s, inst_dict)" % self.pystruct)
         else:
-            self.slots.setdefault("tp_flags", "Py_TPFLAGS_DEFAULT")
             self.slots.setdefault("tp_dictoffset", "0")
+        if self.binary_numeric_operators:
+            tp_flags.add("Py_TPFLAGS_CHECKTYPES")            
+        self.slots.setdefault("tp_flags", '|'.join(tp_flags))
         self.slots.setdefault("tp_doc", (docstring is None and 'NULL'
                                          or "\"%s\"" % (docstring,)))
         dict_ = self.slots
