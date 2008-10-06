@@ -1541,6 +1541,7 @@ typedef struct {
                 code_sink.writeln("return %s(&result);" % retval_converter)
                 code_sink.unindent()
                 code_sink.writeln("}")
+                code_sink.writeln("PyErr_Clear();")
 
                 code_sink.unindent()
                 code_sink.writeln("}")
