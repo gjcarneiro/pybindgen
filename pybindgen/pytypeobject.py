@@ -148,9 +148,9 @@ class PyNumberMethods(object):
 	'    (binaryfunc) %(nb_true_divide)s,\n'
 	'    (binaryfunc) %(nb_inplace_floor_divide)s,\n'
 	'    (binaryfunc) %(nb_inplace_true_divide)s,\n'
-        '\n'
-	'    /* Added in release 2.5 */\n'
-	'    (unaryfunc) %(nb_index)s,\n'
+        #'\n'
+	#'    /* Added in release 2.5 */\n'
+	#'    (unaryfunc) %(nb_index)s,\n'
         '\n'
         '};\n'
         )
@@ -203,7 +203,7 @@ class PyNumberMethods(object):
 	slots.setdefault('nb_true_divide', 'NULL')
 	slots.setdefault('nb_inplace_floor_divide', 'NULL')
 	slots.setdefault('nb_inplace_true_divide', 'NULL')
-	slots.setdefault('nb_index', 'NULL')
+	#slots.setdefault('nb_index', 'NULL')
 
         code_sink.writeln(self.TEMPLATE % slots)
 
