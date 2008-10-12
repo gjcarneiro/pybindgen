@@ -552,6 +552,7 @@ class CppFunctionAsConstructor(CppConstructor):
         @type parameters: list of L{Parameter}
 
         """
+        self.stack_where_defined = traceback.extract_stack()
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
 

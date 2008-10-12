@@ -1696,7 +1696,7 @@ static PyObject*\n%s(%s *self)
 
         if self.has_copy_constructor:
             try:
-                copy_wrapper_name = utils.call_with_error_handling(self._generate_copy_method, (code_sink,), {}, None)
+                copy_wrapper_name = utils.call_with_error_handling(self._generate_copy_method, (code_sink,), {}, self)
             except utils.SkipWrapper:
                 pass
             else:
