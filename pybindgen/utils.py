@@ -115,16 +115,16 @@ class SkipWrapper(Exception):
     must simply be skipped.
     for internal pybindgen use"""
 
-def call_with_error_handling(callable, args, kwargs, wrapper,
+def call_with_error_handling(callback, args, kwargs, wrapper,
                              exceptions_to_handle=(TypeConfigurationError,
                                                    CodeGenerationError,
                                                    NotSupportedError)):
     """for internal pybindgen use"""
     if settings.error_handler is None:
-        return callable(*args, **kwargs)
+        return callback(*args, **kwargs)
     else:
         try:
-            return callable(*args, **kwargs)
+            return callback(*args, **kwargs)
         except Exception, ex:
             if isinstance(ex, exceptions_to_handle):
                 dummy1, dummy2, traceback = sys.exc_info()
