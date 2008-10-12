@@ -5,7 +5,9 @@ from typehandlers.base import TypeConfigurationError, CodeGenerationError, NotSu
 from typehandlers.base import ForwardWrapperBase
 from typehandlers.codesink import NullCodeSink
 import utils
-
+import settings
+import traceback
+import sys
 
 try: 
     set 
@@ -69,33 +71,48 @@ class OverloadedWrapper(object):
         wrapper -- a Wrapper object
         """
         assert isinstance(wrapper, ForwardWrapperBase)
-
-        flags = None
-        for existing_wrapper in self.wrappers:
-            existing_flags = set(existing_wrapper.get_py_method_def_flags())
-            if flags is None:
-                flags = existing_flags
-            else:
-                assert flags == existing_flags
-
-        if flags is not None and (flags != set(wrapper.get_py_method_def_flags())):
-            ## Try to coerce all wrappers into
-            ## METH_KEYWORDS|METH_VARARGS mode, then try again
-            modified = False
-            if wrapper.force_parse != ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS:
-                wrapper.force_parse = ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS
-                modified = True
-            for existing_wrapper in self.wrappers:
-                if existing_wrapper.force_parse != ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS:
-                    existing_wrapper.force_parse = ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS
-                    modified = True
-            if modified:
-                return self.add(wrapper)
-            raise NotSupportedError("attempting to overload methods of different kinds"
-                                    " (adding %r vs existing %r)" %
-                                    (set(wrapper.get_py_method_def_flags()), flags))
-
         self.wrappers.append(wrapper)
+        return wrapper
+
+    def _normalize_py_method_flags(self):
+        """
+        Checks that if all overloaded wrappers have similar method
+        flags, forcing similar flags if needed (via method.force_parse
+        = ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS)
+        """
+
+        if len(self.wrappers) == 1:
+            return
+
+        for wrapper in self.wrappers:
+            wrapper.force_parse = ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS
+        
+        # loop that keeps removing wrappers until all remaining wrappers have the same flags
+        modified = True
+        while modified:
+            existing_flags = None
+            modified = False
+            for wrapper in self.wrappers:
+                try:
+                    wrapper_flags = utils.call_with_error_handling(
+                        wrapper.get_py_method_def_flags, args=(), kwargs={}, wrapper=wrapper)
+                except utils.SkipWrapper, ex:
+                    modified = True
+                    self.wrappers.remove(wrapper)
+                    dummy1, dummy2, tb = sys.exc_info()
+                    settings.error_handler.handle_error(wrapper, ex, tb)
+                    break
+
+                wrapper_flags = set(wrapper_flags)
+                if existing_flags is None:
+                    existing_flags = wrapper_flags
+                else:
+                    if wrapper_flags != existing_flags:
+                        modified = True
+                        self.wrappers.remove(wrapper)
+                        tb = traceback.extract_stack()
+                        settings.error_handler.handle_error(wrapper, ex, tb)
+                        break
 
     def _compute_all_wrappers(self):
         """
@@ -153,6 +170,7 @@ class OverloadedWrapper(object):
         Generate all the wrappers plus the 'aggregator' wrapper to a code sink.
         """
 
+        self._normalize_py_method_flags()
         self._compute_all_wrappers()
 
         if len(self.all_wrappers) == 1 \
@@ -271,6 +289,7 @@ class OverloadedWrapper(object):
                 and not getattr(self.all_wrappers[0], 'NEEDS_OVERLOADING_INTERFACE', False):
             return self.all_wrappers[0].get_py_method_def(name)
         else:
+            self._normalize_py_method_flags()
             flags = self.all_wrappers[0].get_py_method_def_flags()
             ## detect inconsistencies in flags; they must all be the same
             if __debug__:
