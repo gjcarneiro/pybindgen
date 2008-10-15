@@ -183,6 +183,11 @@ class SomeObject
 {
 public:
     std::string m_prefix;
+    
+    enum {
+        TYPE_FOO,
+        TYPE_BAR,
+    } type;
 
     static int instance_count;
 

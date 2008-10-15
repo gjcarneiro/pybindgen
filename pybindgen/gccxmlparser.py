@@ -1704,6 +1704,15 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if member.access_type == 'private':
                     continue
 
+                real_type = type_traits.remove_declarated(member.type)
+                if hasattr(real_type, 'name') and not real_type.name:
+                    warnings.warn_explicit("Member variable %s of class %s will not be wrapped, "
+                                           "because wrapping member variables of anonymous types "
+                                           "is not yet supported by pybindgen"
+                                           % (member.name, cls.partial_decl_string),
+                                           NotSupportedWarning, member.location.file_name, member.location.line)
+                    continue
+
                 return_type_spec = self.type_registry.lookup_return(member.type)
 
                 ## pygen...
