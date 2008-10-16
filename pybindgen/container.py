@@ -493,6 +493,7 @@ int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
     if (PyObject_IsInstance(arg, (PyObject*) &%(PYTYPESTRUCT)s)) {
         *container = *((%(PYSTRUCT)s*)arg)->obj;
     } else if (PyList_Check(arg)) {
+        container->clear();
         Py_ssize_t size = PyList_Size(arg);
         for (Py_ssize_t i = 0; i < size; i++) {
             %(ITEM_CTYPE)s item;
