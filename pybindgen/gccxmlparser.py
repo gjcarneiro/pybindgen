@@ -1234,10 +1234,17 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             ## scan nested namespaces (mapped as python submodules)
             nested_modules = []
+            nested_namespaces = []
             for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
                 if nested_namespace.name.startswith('__'):
                     continue
+                nested_namespaces.append(nested_namespace)
 
+            def decl_cmp(a, b):
+                return cmp(a.decl_string, b.decl_string)
+            nested_namespaces.sort(decl_cmp)
+
+            for nested_namespace in nested_namespaces:
                 if pygen_register_function_name:
                     nested_module = module.add_cpp_namespace(utils.ascii(nested_namespace.name))
                     nested_modules.append(nested_module)
@@ -1256,10 +1263,17 @@ pybindgen.settings.error_handler = ErrorHandler()
                 pygen_function_closed = True
 
             ## scan nested namespaces (mapped as python submodules)
+            nested_namespaces = []
             for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
                 if nested_namespace.name.startswith('__'):
                     continue
+                nested_namespaces.append(nested_namespace)
 
+            def decl_cmp(a, b):
+                return cmp(a.decl_string, b.decl_string)
+            nested_namespaces.sort(decl_cmp)
+
+            for nested_namespace in nested_namespaces:
                 if pygen_register_function_name:
                     nested_module = nested_modules.pop(0)
                     nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
@@ -1791,11 +1805,18 @@ pybindgen.settings.error_handler = ErrorHandler()
     def _scan_namespace_functions(self, module, module_namespace):
         root_module = module.get_root()
 
+        functions_to_scan = []
         for fun in module_namespace.free_functions(function=self.location_filter,
                                                    allow_empty=True, recursive=False):
             if fun.name.startswith('__'):
                 continue
+            functions_to_scan.append(fun)
 
+        def fun_cmp(a, b):
+            return cmp(a.decl_string, b.decl_string)
+        functions_to_scan.sort(fun_cmp)
+
+        for fun in functions_to_scan:
             global_annotations, parameter_annotations = annotations_scanner.get_annotations(fun)
             for hook in self._pre_scan_hooks:
                 hook(self, fun, global_annotations, parameter_annotations)
@@ -1954,11 +1975,18 @@ pybindgen.settings.error_handler = ErrorHandler()
 
 
         ## scan nested namespaces (mapped as python submodules)
+        nested_namespaces = []
         for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
             if nested_namespace.name.startswith('__'):
                 continue
+            nested_namespaces.append(nested_namespace)
+
+        def decl_cmp(a, b):
+            return cmp(a.decl_string, b.decl_string)
+        nested_namespaces.sort(decl_cmp)
+        
+        for nested_namespace in nested_namespaces:
             nested_module = module.get_submodule(nested_namespace.name)
-            
             nested_module_pygen_func = "register_functions_" + "_".join(nested_module.get_namespace_path())
             for pygen_sink in self._get_all_pygen_sinks():
                 pygen_sink.writeln("%s(module.get_submodule(%r), root_module)" %
@@ -1969,11 +1997,18 @@ pybindgen.settings.error_handler = ErrorHandler()
             pygen_sink.unindent()
             pygen_sink.writeln()
     
+        nested_namespaces = []
         for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
             if nested_namespace.name.startswith('__'):
                 continue
-            nested_module = module.get_submodule(nested_namespace.name)
+            nested_namespaces.append(nested_namespace)
 
+        def decl_cmp(a, b):
+            return cmp(a.decl_string, b.decl_string)
+        nested_namespaces.sort(decl_cmp)
+
+        for nested_namespace in nested_namespaces:
+            nested_module = module.get_submodule(nested_namespace.name)
             nested_module_pygen_func = "register_functions_" + "_".join(nested_module.get_namespace_path())
             for pygen_sink in self._get_all_pygen_sinks():
                 pygen_sink.writeln("def %s(module, root_module):" % nested_module_pygen_func)
