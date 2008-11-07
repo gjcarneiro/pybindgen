@@ -1813,7 +1813,12 @@ pybindgen.settings.error_handler = ErrorHandler()
             functions_to_scan.append(fun)
 
         def fun_cmp(a, b):
-            return cmp(a.decl_string, b.decl_string)
+            name_cmp = cmp(a.name, b.name)
+            # if function names differ, compare by name, else compare by the full declaration
+            if name_cmp != 0:
+                return name_cmp
+            else:
+                return cmp(a.decl_string, b.decl_string)
         functions_to_scan.sort(fun_cmp)
 
         for fun in functions_to_scan:
