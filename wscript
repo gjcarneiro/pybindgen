@@ -2,7 +2,8 @@
 ## (C) 2007,2008 Gustavo J. A. M. Carneiro
 
 import Options
-#Params.g_autoconfig = True
+import Build
+Options.autoconfig = True
 import Logs
 #from Params import fatal
 
@@ -178,9 +179,9 @@ def shutdown():
     if Options.commands['check']:
 
         print "Running pure python unit tests..."
-        retval1 = subprocess.Popen([Build.bld.env()['PYTHON'], 'tests/test.py']).wait()
+        retval1 = subprocess.Popen([Build.bld.env['PYTHON'], 'tests/test.py']).wait()
 
-        env = Build.bld.env()
+        env = Build.bld.env
         print "Running manual module generation unit tests (module foo)..."
         retval2 = subprocess.Popen([env['PYTHON'], 'tests/footest.py', '1']).wait()
 

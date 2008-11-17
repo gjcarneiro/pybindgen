@@ -19,7 +19,7 @@ def build(bld):
                     bindgen.input_file('hello.h')]
     bindgen.command = bindgen.env['PYTHON']
     bindgen.command_is_external = True
-    bindgen.prio = 55 # must run after the 'py' objects in ../../pybindgen
+    #bindgen.prio = 55 # must run after the 'py' objects in ../../pybindgen
 
     obj = create_pyext_obj(bld, 'cc')
     obj.source = [
