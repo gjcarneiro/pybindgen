@@ -3,6 +3,12 @@ Objects that receive generated C/C++ code lines, reindents them, and
 writes them to a file, memory, or another code sink object.
 """
 
+DEBUG = 0
+
+if DEBUG:
+    import traceback
+    import sys
+
 class CodeSink(object):
     """Abstract base class for code sinks"""
     def __init__(self):
@@ -30,6 +36,8 @@ class CodeSink(object):
         '''
         self.indent_level = 0 # current indent level
         self.indent_stack = [] # previous indent levels
+        if DEBUG:
+            self._last_unindent_stack = None # for debugging
 
     def _format_code(self, code):
         """Utility method for subclasses to use for formatting code
@@ -52,7 +60,17 @@ class CodeSink(object):
 
     def unindent(self):
         '''Revert indentation level to the value before last indent() call'''
-        self.indent_level = self.indent_stack.pop()
+        if DEBUG:
+            try:
+                self.indent_level = self.indent_stack.pop()
+            except IndexError:
+                if self._last_unindent_stack is not None:
+                    for line in traceback.format_list(self._last_unindent_stack):
+                        sys.stderr.write(line)
+                raise
+            self._last_unindent_stack = traceback.extract_stack()
+        else:
+            self.indent_level = self.indent_stack.pop()
 
 
 class FileCodeSink(CodeSink):
@@ -64,6 +82,9 @@ class FileCodeSink(CodeSink):
         """
         CodeSink.__init__(self)
         self.file = file_
+
+    def __repr__(self):
+        return "<pybindgen.typehandlers.codesink.FileCodeSink %r>" % (self.file.name,)
 
     def writeln(self, line=''):
         """Write one or more lines of code"""

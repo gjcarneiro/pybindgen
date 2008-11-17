@@ -138,6 +138,11 @@ def set_options(opt):
                       action="store_true", default=False,
                       dest='examples')
 
+    optgrp.add_option('--disable-pygccxml',
+                      help=('Disable pygccxml for unit tests / examples.'),
+                      action="store_true", default=False,
+                      dest='disable_pygccxml')
+
 def configure(conf):
     ## Write a pybindgen/version.py file containing the project version
     generate_version_py()
@@ -153,16 +158,17 @@ def configure(conf):
     conf.check_python_version((2,3))
     conf.check_python_headers()
 
-    gccxml = conf.find_program('gccxml')
-    if not gccxml:
-        conf.env['ENABLE_PYGCCXML'] = False
-    else:
-	try:
-            conf.check_python_module('pygccxml')
-	except Configure.ConfigurationError:
+    if not Options.options.disable_pygccxml:
+        gccxml = conf.find_program('gccxml')
+        if not gccxml:
             conf.env['ENABLE_PYGCCXML'] = False
         else:
-            conf.env['ENABLE_PYGCCXML'] = True
+            try:
+                conf.check_python_module('pygccxml')
+            except Configure.ConfigurationError:
+                conf.env['ENABLE_PYGCCXML'] = False
+            else:
+                conf.env['ENABLE_PYGCCXML'] = True
 
 
 def build(bld):

@@ -2,9 +2,13 @@
 #ifndef   	FOO_H_
 # define   	FOO_H_
 
+#include <Python.h>
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <vector>
+#include <map>
+#include <set>
 
 // Deprecation warnings look ugly and confusing; better to just
 // disable them and change this macro when we want to specifically
@@ -54,7 +58,7 @@ public:
 
     Foo (std::string const &datum) : m_datum (datum), m_initialized (false)
         { Foo::instance_count++; }
-    std::string get_datum () const { return m_datum; }
+    const std::string get_datum () const { return m_datum; }
 
     std::string get_datum_deprecated () const DEPRECATED { return m_datum; }
 
@@ -179,6 +183,11 @@ class SomeObject
 {
 public:
     std::string m_prefix;
+    
+    enum {
+        TYPE_FOO,
+        TYPE_BAR,
+    } type;
 
     static int instance_count;
 
@@ -224,34 +233,29 @@ private:
     Foo *m_foo_ptr;
     Foo *m_foo_shared_ptr;
     Zbr *m_zbr;
+    Zbr *m_internal_zbr;
+
+    PyObject *m_pyobject;
+
+    SomeObject ();
 
 public:
 
     static std::string staticData;
 
-    virtual ~SomeObject () {
-        SomeObject::instance_count--;
-        delete m_foo_ptr;
-        if (m_zbr)
-            m_zbr->Unref ();
-    }
-
-    SomeObject (std::string const prefix)
-        : m_prefix (prefix), m_foo_ptr (0),
-          m_foo_shared_ptr (0), m_zbr (0)
-        {
-            SomeObject::instance_count++;
-        }
-
-    SomeObject (int prefix_len)
-        : m_prefix (prefix_len, 'X'), m_foo_ptr (0),
-          m_foo_shared_ptr (0), m_zbr (0)
-        {
-            SomeObject::instance_count++;
-        }
+    virtual ~SomeObject ();
+    SomeObject (const SomeObject &other);
+    SomeObject (std::string const prefix);
+    SomeObject (int prefix_len);
 
     // -#- @message(direction=inout) -#-
     int add_prefix (std::string& message) {
+        message = m_prefix + message;
+        return message.size ();
+    }
+
+    // -#- @message(direction=inout) -#-
+    int operator() (std::string& message) {
         message = m_prefix + message;
         return message.size ();
     }
@@ -287,6 +291,25 @@ public:
         std::stringstream out;
         out << x;
         return out.str ();
+    }
+
+    // -#- @pyobject(transfer_ownership=false) -#-
+    virtual void set_pyobject (PyObject *pyobject) {
+        if (m_pyobject) {
+            Py_DECREF(m_pyobject);
+        }
+        Py_INCREF(pyobject);
+        m_pyobject = pyobject;
+    }
+
+    // -#- @return(caller_owns_return=true) -#-
+    virtual PyObject* get_pyobject (void) {
+        if (m_pyobject) {
+            Py_INCREF(m_pyobject);
+            return m_pyobject;
+        } else {
+            return NULL;
+        }
     }
 
     // pass by value, direction=in
@@ -342,6 +365,12 @@ public:
             return m_zbr;
         } else
             return NULL;
+    }
+
+    // -#- @return(caller_owns_return=true) -#-
+    Zbr* get_internal_zbr () {
+        m_internal_zbr->Ref ();
+        return m_internal_zbr;
     }
 
     // return reference counted object, caller does not own return
@@ -494,13 +523,24 @@ private:
 
 InterfaceId make_interface_id ();
 
-template <typename T>
-std::string TypeNameGet (void)
+template <typename T> std::string TypeNameGet (void)
 {
   return "unknown";
 }
 
+
+// -#- template_instance_names=int=>IntegerTypeNameGet -#-
 template <> std::string TypeNameGet<int> (void);
+
+
+// just to force a template instantiation
+struct __foo__
+{
+     std::string get ()
+        {
+            return TypeNameGet<int> ();
+        }
+};
 
 
 // Test code generation errors and error handling
@@ -703,6 +743,114 @@ struct simple_struct_t
 {
     int xpto;
 };
+
+// -- Containers:
+
+typedef std::vector<simple_struct_t> SimpleStructList;
+typedef std::vector<simple_struct_t> SimpleStructVec;
+
+SimpleStructList get_simple_list ();
+int set_simple_list (SimpleStructList list);
+
+class TestContainer
+{
+public:
+    
+    std::set<float> m_floatSet;
+
+    TestContainer () { m_floatSet.insert (1.0); m_floatSet.insert (2.0); m_floatSet.insert (3.0); }
+
+    virtual SimpleStructList get_simple_list ();
+    virtual int set_simple_list (SimpleStructList list);
+
+    // -#- @inout_list(direction=inout) -#-
+    virtual int set_simple_list_by_ref (SimpleStructList &inout_list);
+
+    virtual SimpleStructVec get_simple_vec ();
+    virtual int set_simple_vec (SimpleStructVec vec);
+
+    // -#- @outVec(direction=out) -#-
+    void get_vec (std::vector<std::string> &outVec);
+
+private:
+    SimpleStructList m_simpleList;
+};
+
+std::map<std::string, int> get_map ();
+
+std::set<uint32_t> get_set ();
+
+
+// test binary operators
+
+struct Tupl
+{
+    int x, y;
+
+    inline Tupl operator * (Tupl const &b)
+        {
+            Tupl retval;
+            retval.x = x * b.x;
+            retval.y = y * b.y;
+            return retval;
+        }
+
+    inline Tupl operator / (Tupl const &b)
+        {
+            Tupl retval;
+            retval.x = x / b.x;
+            retval.y = y / b.y;
+            return retval;
+        }
+
+    inline bool operator == (Tupl const &b)
+        {
+            return (x == b.x && y == b.y);
+        }
+
+    inline bool operator != (Tupl const &b)
+        {
+            return (x != b.x || y != b.y);
+        }
+
+};
+
+inline bool operator < (Tupl const &a, Tupl const &b)
+{
+    return (a.x < b.x || a.x == b.x && a.y < b.y);
+}
+
+inline bool operator <= (Tupl const &a, Tupl const &b)
+{
+    return (a.x <= b.x || a.x == b.x && a.y <= b.y);
+}
+
+inline bool operator > (Tupl const &a, Tupl const &b)
+{
+    return (a.x > b.x || a.x == b.x && a.y > b.y);
+}
+
+inline bool operator >= (Tupl const &a, Tupl const &b)
+{
+    return (a.x >= b.x || a.x == b.x && a.y >= b.y);
+}
+
+inline Tupl operator + (Tupl const &a, Tupl const &b)
+{
+    Tupl retval;
+    retval.x = a.x + b.x;
+    retval.y = a.y + b.y;
+    return retval;
+}
+
+inline Tupl operator - (Tupl const &a, Tupl const &b)
+{
+    Tupl retval;
+    retval.x = a.x - b.x;
+    retval.y = a.y - b.y;
+    return retval;
+}
+
 
 
 #endif 	    /* !FOO_H_ */

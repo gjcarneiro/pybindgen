@@ -55,8 +55,9 @@ class CppMethod(ForwardWrapperBase):
         virtual", i.e. virtual method with no default implementation
         in the class being wrapped.
 
-        @param custom_name: alternate name to give to
-        the method, in python side.
+        @param custom_name: alternate name to give to the method, in python side.
+
+        @param custom_template_method_name: (deprecated) same as parameter 'custom_name'.
 
         @param visibility: visibility of the method within the C++ class
         @type visibility: a string (allowed values are 'public', 'protected', 'private')
@@ -498,10 +499,12 @@ class CppConstructor(ForwardWrapperBase):
         Returns the wrapper function name.
         """
         if self.visibility == 'private':
-            raise CodeGenerationError("private constructor")
+            raise CodeGenerationError("Class %r has a private constructor ->"
+                                      " cannot generate a constructor for it" % self._class.full_name)
         elif self.visibility == 'protected':
             if self._class.helper_class is None:
-                raise CodeGenerationError("protected constructor and no helper class")
+                raise CodeGenerationError("Class %r has a protected constructor and no helper class"
+                                          " -> cannot generate a constructor for it" % self._class.full_name)
 
         #assert isinstance(class_, CppClass)
         tmp_sink = codesink.MemoryCodeSink()
@@ -549,6 +552,7 @@ class CppFunctionAsConstructor(CppConstructor):
         @type parameters: list of L{Parameter}
 
         """
+        self.stack_where_defined = traceback.extract_stack()
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
 
@@ -775,7 +779,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         params.extend(build_params)
         self.before_call.write_code('py_retval = PyObject_CallMethod(%s);'
                                     % (', '.join(params),))
-        self.before_call.write_error_check('py_retval == NULL')
+        self.before_call.write_error_check('py_retval == NULL', failure_cleanup='PyErr_Print();')
         self.before_call.add_cleanup_code('Py_DECREF(py_retval);')
 
     def generate_declaration(self, code_sink):
@@ -807,6 +811,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
             if not (self.method.is_pure_virtual or self.method.visibility == 'private'):
                 self.before_call.write_code(r'    %s::%s(%s);'
                                             % (self.class_.full_name, self.method_name, call_params))
+            self.before_call.write_cleanup()
             self.before_call.write_code(r'    return;')
         else:
             if self.method.is_pure_virtual or self.method.visibility == 'private':
@@ -819,9 +824,10 @@ PyErr_Print();
 Py_FatalError("Error detected, but parent virtual is pure virtual or private virtual, "
               "and return is a class without trival constructor");''')
             else:
-                self.set_error_return("PyErr_Print();\nreturn %s::%s(%s);"
+                self.set_error_return("return %s::%s(%s);"
                                       % (self.class_.full_name, self.method_name, call_params))
             self.before_call.indent()
+            self.before_call.write_cleanup()
             self.before_call.write_code(self.error_return)
             self.before_call.unindent()
         self.before_call.write_code('}')

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 import sys
-import re
+import os
 
 import pybindgen
 from pybindgen.typehandlers import base as typehandlers
@@ -15,9 +15,17 @@ import foomodulegen_common
 
 def my_module_gen():
     out = FileCodeSink(sys.stdout)
-    pygen_file = open(sys.argv[2], "wt")
+    pygen_file = open(sys.argv[3], "wt")
     module_parser = ModuleParser('foo2', '::')
-    module = module_parser.parse([sys.argv[1]], includes=['"foo.h"'], pygen_sink=FileCodeSink(pygen_file))
+    module_parser.enable_anonymous_containers = True
+
+    print >> sys.stderr, "PYTHON_INCLUDES:", repr(sys.argv[2])
+    gccxml_options = dict(
+        include_paths=eval(sys.argv[2]),
+        )
+
+    module = module_parser.parse([sys.argv[1]], includes=['"foo.h"'], pygen_sink=FileCodeSink(pygen_file),
+                                 gccxml_options=gccxml_options)
     pygen_file.close()
 
     foomodulegen_common.customize_module(module)
@@ -32,13 +40,17 @@ def main():
         pdb.set_trace()
         my_module_gen()
     else:
-        try:
-            import cProfile as profile
-        except ImportError:
-            my_module_gen()
+        import os
+        if "PYBINDGEN_ENABLE_PROFILING" in os.environ:
+            try:
+                import cProfile as profile
+            except ImportError:
+                my_module_gen()
+            else:
+                print >> sys.stderr, "** running under profiler"
+                profile.run('my_module_gen()', 'foomodulegen-auto.pstat')
         else:
-            print >> sys.stderr, "** running under profiler"
-            profile.run('my_module_gen()', 'foomodulegen-auto.pstat')
+            my_module_gen()            
 
 if __name__ == '__main__':
     main()

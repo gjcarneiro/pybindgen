@@ -22,12 +22,17 @@ def my_module_gen(out_file):
 
     mod.add_include ('"foo.h"')
 
+    mod.add_function('TypeNameGet', 
+                     'std::string', 
+                     [], 
+                     custom_name='IntegerTypeNameGet', template_parameters=['int'])
+
     Foo = mod.add_class('Foo', automatic_type_narrowing=True)
 
     Foo.add_static_attribute('instance_count', ReturnValue.new('int'))
     Foo.add_constructor([Parameter.new('std::string', 'datum')])
     Foo.add_constructor([])
-    Foo.add_method('get_datum', ReturnValue.new('std::string'), [])
+    Foo.add_method('get_datum', ReturnValue.new('const std::string'), [])
     Foo.add_method('is_initialized', ReturnValue.new('bool'), [], is_const=True)
     Foo.add_output_stream_operator()
 
@@ -69,6 +74,7 @@ int %s::custom_method_added_by_a_hook(int x)
         helper_class.add_post_generation_code("// this comment was written by a helper class hook function")
     Zbr.add_helper_class_hook(helper_class_hook)
 
+    Zbr.add_constructor([])
     Zbr.add_constructor([Parameter.new('std::string', 'datum')])
     Zbr.add_method('get_datum', ReturnValue.new('std::string'), [])
     Zbr.add_method('get_int', ReturnValue.new('int'), [Parameter.new('int', 'x')],
@@ -82,14 +88,14 @@ int %s::custom_method_added_by_a_hook(int x)
 
 
     mod.add_function('print_something', ReturnValue.new('int'),
-                     [Parameter.new('char*', 'message', is_const=True)],
+                     [Parameter.new('const char*', 'message')],
                      deprecated=True)
     mod.add_function('print_something_else', ReturnValue.new('int'),
-                     [Parameter.new('char*', 'message2', is_const=True)])
+                     [Parameter.new('const char*', 'message2')])
 
     ## test overloaded functions
     mod.add_function('get_int_from_string', ReturnValue.new('int'),
-                     [Parameter.new('char*', 'from_string', is_const=True),
+                     [Parameter.new('const char*', 'from_string'),
                       Parameter.new('int', 'multiplier', default_value='1')], custom_name="get_int")
     mod.add_function('get_int_from_float', ReturnValue.new('int'),
                      [Parameter.new('double', 'from_float'),
@@ -114,6 +120,12 @@ int %s::custom_method_added_by_a_hook(int x)
     SomeObject.add_constructor([Parameter.new('std::string', 'prefix')])
     SomeObject.add_constructor([Parameter.new('int', 'prefix_len')])
 
+    SomeObject.add_method('operator()', ReturnValue.new('int'),
+                          [Parameter.new('std::string&', 'message',
+                                         direction=Parameter.DIRECTION_INOUT)],
+                          custom_name='__call__')
+
+
     # --- some virtual methods ---
     SomeObject.add_method('get_prefix', ReturnValue.new('std::string'), [],
                           is_virtual=True, is_const=True)
@@ -124,13 +136,13 @@ int %s::custom_method_added_by_a_hook(int x)
 
     SomeObject.add_method('get_prefix_with_foo_ref',
                           ReturnValue.new('std::string'),
-                          [Parameter.new('Foo&', 'foo', is_const=True,
+                          [Parameter.new('const Foo&', 'foo',
                            direction=Parameter.DIRECTION_INOUT)],
                           is_virtual=True, is_const=True)
 
     SomeObject.add_method('get_prefix_with_foo_ptr',
                           ReturnValue.new('std::string'),
-                          [Parameter.new('Foo*', 'foo', transfer_ownership=False, is_const=True)],
+                          [Parameter.new('const Foo*', 'foo', transfer_ownership=False)],
                           is_virtual=True, is_const=True)
 
     ## overloaded virtual methods
@@ -143,11 +155,18 @@ int %s::custom_method_added_by_a_hook(int x)
                           [Parameter.new('int', 'x')],
                           is_virtual=True, is_const=True)
 
+    SomeObject.add_method('set_pyobject', None,
+                          [Parameter.new('PyObject*', 'pyobject', transfer_ownership=False)],
+                          is_virtual=True)
+    SomeObject.add_method('get_pyobject',
+                          ReturnValue.new('PyObject*', caller_owns_return=True),
+                          [],
+                          is_virtual=True)
 
     ## add a function that appears as a method of an object
     SomeObject.add_function_as_method('some_object_get_something_prefixed',
                                       ReturnValue.new('std::string'),
-                                      [Parameter.new('SomeObject*', 'obj', transfer_ownership=False, is_const=True),
+                                      [Parameter.new('const SomeObject*', 'obj', transfer_ownership=False),
                                        Parameter.new('std::string', 'something')],
                                       custom_name='get_something_prefixed')
 
@@ -161,7 +180,7 @@ int %s::custom_method_added_by_a_hook(int x)
     ## add a function that appears as a method of an object
     SomeObject.add_function_as_method('some_object_ref_get_something_prefixed',
                                       ReturnValue.new('std::string'),
-                                      [Parameter.new('SomeObject&', 'obj', is_const=True),
+                                      [Parameter.new('const SomeObject&', 'obj'),
                                        Parameter.new('std::string', 'something')],
                                       custom_name='ref_get_something_prefixed')
 
@@ -208,6 +227,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
     ## get/set recfcounted object Zbr
     SomeObject.add_method('get_zbr', ReturnValue.new('Zbr*', caller_owns_return=True), [])
+    SomeObject.add_method('get_internal_zbr', ReturnValue.new('Zbr*', caller_owns_return=True), [])
     SomeObject.add_method('peek_zbr', ReturnValue.new('Zbr*', caller_owns_return=False), [])
     SomeObject.add_method('set_zbr_transfer', ReturnValue.new('void'),
                           [Parameter.new('Zbr*', 'zbr', transfer_ownership=True)])
@@ -222,7 +242,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
     ## test overloaded methods
     SomeObject.add_method('get_int', ReturnValue.new('int'),
-                          [Parameter.new('char*', 'from_string', is_const=True)],
+                          [Parameter.new('const char*', 'from_string')],
                           custom_name="get_int")
     SomeObject.add_method('get_int', ReturnValue.new('int'),
                           [Parameter.new('double', 'from_float')],
@@ -249,7 +269,7 @@ int %s::custom_method_added_by_a_hook(int x)
     xpto_SomeClass.add_constructor([])
 
     xpto.add_typedef(Foo, 'FooXpto')
-    xpto.add_function('get_foo_datum', 'std::string', [Parameter.new('xpto::FooXpto&', 'foo', is_const=True)])
+    xpto.add_function('get_foo_datum', 'std::string', [Parameter.new('const xpto::FooXpto&', 'foo')])
     
 
     ## ---- some implicity conversion APIs
@@ -371,7 +391,46 @@ int %s::custom_method_added_by_a_hook(int x)
     simple_struct_t.add_instance_attribute('xpto', 'int')
 
 
+    # containers...
+    mod.add_container('SimpleStructList', ReturnValue.new('simple_struct_t'), 'list')
+    mod.add_function('get_simple_list', ReturnValue.new('SimpleStructList'), [])
+    mod.add_function('set_simple_list', 'int', [Parameter.new('SimpleStructList', 'list')])
 
+    mod.add_container('std::set<float>', 'float', 'set')
+    
+    TestContainer = mod.add_class('TestContainer', allow_subclassing=True)
+    TestContainer.add_constructor([])
+    TestContainer.add_instance_attribute('m_floatSet', 'std::set<float>')
+    TestContainer.add_method('get_simple_list', ReturnValue.new('SimpleStructList'), [], is_virtual=True)
+    TestContainer.add_method('set_simple_list', 'int', [Parameter.new('SimpleStructList', 'list')], is_virtual=True)
+    TestContainer.add_method('set_simple_list_by_ref', 'int', [Parameter.new('SimpleStructList&', 'inout_list',
+                                                                             direction=Parameter.DIRECTION_INOUT)],
+                             is_virtual=True)
+
+    mod.add_container('std::vector<simple_struct_t>', ReturnValue.new('simple_struct_t'), 'vector')
+    TestContainer.add_method('get_simple_vec', ReturnValue.new('std::vector<simple_struct_t>'), [], is_virtual=True)
+    TestContainer.add_method('set_simple_vec', 'int', [Parameter.new('std::vector<simple_struct_t>', 'vec')], is_virtual=True)
+
+    mod.add_container('std::vector<std::string>', 'std::string', 'vector')
+    TestContainer.add_method('get_vec', 'void', [Parameter.new('std::vector<std::string> &', 'outVec',
+                                                               direction=Parameter.DIRECTION_OUT)])
+
+    Tupl = mod.add_class('Tupl')
+    Tupl.add_binary_comparison_operator('<')
+    Tupl.add_binary_comparison_operator('<=')
+    Tupl.add_binary_comparison_operator('>=')
+    Tupl.add_binary_comparison_operator('>')
+    Tupl.add_binary_comparison_operator('==')
+    Tupl.add_binary_comparison_operator('!=')
+    Tupl.add_binary_numeric_operator('+')
+    Tupl.add_binary_numeric_operator('-')
+    Tupl.add_binary_numeric_operator('*')
+    Tupl.add_binary_numeric_operator('/')
+    Tupl.add_instance_attribute('x', 'int', is_const=False)
+    Tupl.add_instance_attribute('y', 'int', is_const=False)
+    Tupl.add_constructor([Parameter.new('Tupl const &', 'arg0')])
+    Tupl.add_constructor([])
+    
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):
         def __init__(self):
@@ -383,18 +442,21 @@ int %s::custom_method_added_by_a_hook(int x)
             return True
     pybindgen.settings.error_handler = MyErrorHandler()
 
-
     foomodulegen_common.customize_module(mod)
 
     ## ---- finally, generate the whole thing ----
     mod.generate(FileCodeSink(out_file))
 
 if __name__ == '__main__':
-    try:
-        import cProfile as profile
-    except ImportError:
-        my_module_gen(sys.stdout)
+    import os
+    if "PYBINDGEN_ENABLE_PROFILING" in os.environ:
+        try:
+            import cProfile as profile
+        except ImportError:
+            my_module_gen(sys.stdout)
+        else:
+            print >> sys.stderr, "** running under profiler"
+            profile.run('my_module_gen(sys.stdout)', 'foomodulegen.pstat')
     else:
-        print >> sys.stderr, "** running under profiler"
-        profile.run('my_module_gen(sys.stdout)', 'foomodulegen.pstat')
+        my_module_gen(sys.stdout)
 

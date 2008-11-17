@@ -17,9 +17,8 @@ def my_module_gen(out_file):
     D.add_function_as_constructor("DCreate", ReturnValue.new("D*", caller_owns_return=True), [])
     mod.add_function('DDoA', None, [Parameter.new('D*', 'd', transfer_ownership=False)])
     mod.add_function('DDoB', None, [Parameter.new('D&', 'd', direction=Parameter.DIRECTION_IN)])
-    mod.add_function('DDoC', None, [Parameter.new('D&', 'd',
-                                                  direction=Parameter.DIRECTION_IN,
-                                                  is_const=True)])
+    mod.add_function('DDoC', None, [Parameter.new('const D&', 'd',
+                                                  direction=Parameter.DIRECTION_IN)])
 
 
     mod.generate(FileCodeSink(out_file) )

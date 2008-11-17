@@ -38,7 +38,9 @@ def write_preamble(code_sink, min_python_version=None):
 
     if min_python_version < (2, 4):
         code_sink.writeln(r'''
-#if PY_VERSION_HEX < 0x02040000
+#if PY_VERSION_HEX < 0x020400F0
+
+#define PyEval_ThreadsInitialized() 1
 
 #define Py_CLEAR(op)				\
         do {                            	\
@@ -65,7 +67,7 @@ def write_preamble(code_sink, min_python_version=None):
 
     if min_python_version < (2, 5):
         code_sink.writeln(r'''
-#if PY_VERSION_HEX < 0x02050000
+#if PY_VERSION_HEX < 0x020500F0
 
 typedef int Py_ssize_t;
 # define PY_SSIZE_T_MAX INT_MAX
@@ -88,6 +90,13 @@ typedef intobjargproc ssizeobjargproc;
 ''')
     
 
+def mangle_name(name):
+    """make a name Like<This,and,That> look Like__lt__This_and_That__gt__"""
+    s = name.replace('<', '__lt__').replace('>', '__gt__').replace(',', '_')
+    s = s.replace(' ', '_').replace('&', '__amp__').replace('*', '__star__')
+    s = s.replace(':', '_')
+    return s
+
 
 def get_mangled_name(base_name, template_args):
     """for internal pybindgen use"""
@@ -106,16 +115,16 @@ class SkipWrapper(Exception):
     must simply be skipped.
     for internal pybindgen use"""
 
-def call_with_error_handling(callable, args, kwargs, wrapper,
+def call_with_error_handling(callback, args, kwargs, wrapper,
                              exceptions_to_handle=(TypeConfigurationError,
                                                    CodeGenerationError,
                                                    NotSupportedError)):
     """for internal pybindgen use"""
     if settings.error_handler is None:
-        return callable(*args, **kwargs)
+        return callback(*args, **kwargs)
     else:
         try:
-            return callable(*args, **kwargs)
+            return callback(*args, **kwargs)
         except Exception, ex:
             if isinstance(ex, exceptions_to_handle):
                 dummy1, dummy2, traceback = sys.exc_info()

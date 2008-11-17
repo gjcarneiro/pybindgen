@@ -8,8 +8,9 @@ and base interfaces for wrapper generators.
 
 import codesink
 import warnings
-from ctypeparser import normalize_type_string
-
+import ctypeparser
+import logging
+logger = logging.getLogger("pybindgen.typehandlers")
 
 
 try:
@@ -190,15 +191,14 @@ class CodeBlock(object):
         '''return a new list with all cleanup actions, including the
         ones from predecessor code blocks; Note: cleanup actions are
         executed in reverse order than when they were added.'''
-        if self.predecessor is None:
-            cleanup = []
-        else:
-            cleanup = self.predecessor.get_cleanup_code()
+        cleanup = []
         items = self._cleanup_actions.items()
         items.sort()
         for dummy, code in items:
             cleanup.append(code)
         cleanup.reverse()
+        if self.predecessor is not None:
+            cleanup.extend(self.predecessor.get_cleanup_code())
         return cleanup
 
     def write_error_check(self, failure_expression, failure_cleanup=None):
@@ -530,6 +530,8 @@ class ReverseWrapperBase(object):
 
     """
 
+    NO_GIL_LOCKING = False
+
     def __init__(self, return_value, parameters, error_return=None):
         '''
         Base constructor
@@ -547,7 +549,7 @@ class ReverseWrapperBase(object):
         self.parameters = parameters
 
         if error_return is None:
-            error_return = "PyErr_Print();\n" + return_value.get_c_error_return()
+            error_return = return_value.get_c_error_return()
         self.error_return = error_return
         self.declarations = DeclarationsScope()
         self.before_call = CodeBlock(error_return, self.declarations)
@@ -555,6 +557,7 @@ class ReverseWrapperBase(object):
                                     predecessor=self.before_call)
         self.build_params = BuildValueParameters()
         self.parse_params = ParseTupleParameters()
+        self._generate_gil_code()
 
     def set_error_return(self, error_return):
         self.error_return = error_return
@@ -566,7 +569,19 @@ class ReverseWrapperBase(object):
         self.before_call.clear()
         self.after_call.clear()
         self.build_params.clear()
-        self.parse_params.clear()        
+        self.parse_params.clear()
+        self._generate_gil_code()
+
+    def _generate_gil_code(self):
+        if self.NO_GIL_LOCKING:
+            return
+        ## reverse wrappers are called from C/C++ code, when the Python GIL may not be held...
+        gil_state_var = self.declarations.declare_variable('PyGILState_STATE', '__py_gil_state')
+        self.before_call.write_code('%s = (PyEval_ThreadsInitialized() ? PyGILState_Ensure() : (PyGILState_STATE) 0);'
+                                    % gil_state_var)
+        self.before_call.add_cleanup_code('if (PyEval_ThreadsInitialized())\n'
+                                          '    PyGILState_Release(%s);' % gil_state_var)
+
 
     def generate_python_call(self):
         """Generates the code (into self.before_call) to call into
@@ -615,7 +630,8 @@ class ReverseWrapperBase(object):
             parse_params[0] = '(char *) ' + parse_params[0]
             parse_tuple_params.extend(parse_params)
             self.before_call.write_error_check('!PyArg_ParseTuple(%s)' %
-                                               (', '.join(parse_tuple_params),))
+                                               (', '.join(parse_tuple_params),),
+                                               failure_cleanup='PyErr_Print();')
 
         ## cleanup and return
         self.after_call.write_cleanup()
@@ -748,7 +764,7 @@ class ForwardWrapperBase(object):
         if (not no_c_retval and return_value is not None
             and return_value.ctype != 'void'
             and not return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR):
-            self.declarations.declare_variable(return_value.ctype, 'retval')
+            self.declarations.declare_variable(return_value.ctype_no_const, 'retval')
         for param in self.parameters:
             self.declarations.reserve_variable(param.name)
 
@@ -769,7 +785,7 @@ class ForwardWrapperBase(object):
         if (not self.no_c_retval and self.return_value is not None
             and self.return_value.ctype != 'void'
             and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR):
-            self.declarations.declare_variable(self.return_value.ctype, 'retval')
+            self.declarations.declare_variable(self.return_value.ctype_no_const, 'retval')
 
     def set_parse_error_return(self, parse_error_return):
         self.before_parse.error_return = parse_error_return
@@ -1007,9 +1023,56 @@ class NullTypeTransformation(object):
         "identity transformation"
         return value
 
+class TypeHandler(object):
+    SUPPORTS_TRANSFORMATIONS = False
+
+    def __init__(self, ctype, is_const=False):
+        if ctype is None:
+            self.ctype = None
+            self.untransformed_ctype = None
+            self.type_traits = None
+        else:
+            if isinstance(ctype, ctypeparser.TypeTraits):
+                self.type_traits = ctype
+                if is_const:
+                    warnings.warn("is_const is deprecated, put a 'const' in the C type instead.", DeprecationWarning)
+                    if self.type_traits.type_is_pointer or self.type_traits.type_is_reference:
+                        self.type_traits.make_target_const()
+                    else:
+                        self.type_traits.make_const()
+            elif isinstance(ctype, basestring):
+                if is_const:
+                    warnings.warn("is_const is deprecated, put a 'const' in the C type instead.", DeprecationWarning)
+                    self.type_traits = ctypeparser.TypeTraits('const %s' % ctype)
+                else:
+                    self.type_traits = ctypeparser.TypeTraits(ctype)
+            else:
+                raise TypeError
+            self.ctype = str(self.type_traits.ctype)
+        self.untransformed_ctype = self.ctype
+        self.transformation = NullTypeTransformation()
+
+    def _get_ctype_no_const(self):
+        return str(self.type_traits.ctype_no_const)
+    ctype_no_const = property(_get_ctype_no_const)
+
+    def set_tranformation(self, transformation, untransformed_ctype):
+        warnings.warn("Typo: set_tranformation -> set_transformation", DeprecationWarning, stacklevel=2)
+        return self.set_transformation(transformation, untransformed_ctype)
+
+    def set_transformation(self, transformation, untransformed_ctype):
+        "Set the type transformation to use in this type handler"
+
+        assert isinstance(transformation, TypeTransformation)
+        assert untransformed_ctype != self.ctype
+        assert isinstance(self.transformation, NullTypeTransformation)
+        assert self.SUPPORTS_TRANSFORMATIONS
+
+        self.transformation = transformation
+        self.untransformed_ctype = untransformed_ctype
 
 
-class ReturnValue(object):
+class ReturnValue(TypeHandler):
     '''Abstract base class for all classes dedicated to handle
     specific return value types'''
 
@@ -1043,10 +1106,13 @@ class ReturnValue(object):
         """
         if cls is ReturnValue:
             ctype = args[0]
-            type_handler_class, transformation = \
+            type_handler_class, transformation, type_traits = \
                 return_type_matcher.lookup(ctype)
             assert type_handler_class is not None
             if transformation is None:
+                args = list(args)
+                args[0] = type_traits
+                args = tuple(args)
                 try:
                     return type_handler_class(*args, **kwargs)
                 except TypeError, ex:
@@ -1069,26 +1135,8 @@ class ReturnValue(object):
         '''
         if type(self) is ReturnValue:
             raise TypeError('ReturnValue is an abstract class; use ReturnValue.new(...)')
-        #assert 'const' not in ctype, "FIXME: remove this assert"
-        if is_const:
-            ctype = 'const ' + ctype
-        self.ctype = ctype
-        self.untransformed_ctype = ctype
-        self.transformation = NullTypeTransformation()
+        super(ReturnValue, self).__init__(ctype, is_const)
         self.value = 'retval'
-        self.is_const = is_const
-
-    def set_tranformation(self, transformation, untransformed_ctype):
-        "Set the type transformation to use in this type handler"
-
-        assert isinstance(transformation, TypeTransformation)
-        assert untransformed_ctype != self.ctype
-        assert isinstance(self.transformation, NullTypeTransformation)
-        assert self.SUPPORTS_TRANSFORMATIONS
-
-        self.transformation = transformation
-        self.untransformed_ctype = untransformed_ctype
-        
 
     def get_c_error_return(self):
         '''Return a "return <value>" code string, for use in case of error'''
@@ -1120,7 +1168,7 @@ class PointerReturnValue(ReturnValue):
 PointerReturnValue.CTYPES = NotImplemented
 
 
-class Parameter(object):
+class Parameter(TypeHandler):
     '''Abstract base class for all classes dedicated to handle specific parameter types'''
 
     ## bit mask values
@@ -1169,10 +1217,13 @@ class Parameter(object):
         if cls is Parameter:
             # support calling Parameter("typename", ...)
             ctype = args[0]
-            type_handler_class, transformation = \
+            type_handler_class, transformation, type_traits = \
                 param_type_matcher.lookup(ctype)
             assert type_handler_class is not None
             if transformation is None:
+                args = list(args)
+                args[0] = type_traits
+                args = tuple(args)
                 try:
                     return type_handler_class(*args, **kwargs)
                 except TypeError, ex:
@@ -1199,33 +1250,15 @@ class Parameter(object):
         '''
         if type(self) is Parameter:
             raise TypeError('Parameter is an abstract class; use Parameter.new(...)')
-        #assert 'const' not in ctype, "FIXME: remove this assert"
-        self.ctype_no_const = ctype
-        if is_const:
-            ctype = 'const ' + ctype
-        self.ctype = ctype
-        self.untransformed_ctype = ctype
+        super(Parameter, self).__init__(ctype, is_const)
         self.name = name
         assert direction in self.DIRECTIONS, \
             "Error: requested direction %s for type handler %r (ctype=%r), but it only supports directions %r"\
             % (self._direction_value_to_name(direction), type(self), self.ctype,
                [self._direction_value_to_name(d) for d in self.DIRECTIONS])
         self.direction = direction
-        self.is_const = is_const
-        self.transformation = NullTypeTransformation()
         self.value = name
         self.default_value = default_value
-
-    def set_tranformation(self, transformation, untransformed_ctype):
-        "Set the type transformation to use in this type handler"
-
-        assert isinstance(transformation, TypeTransformation)
-        assert untransformed_ctype != self.ctype
-        assert isinstance(self.transformation, NullTypeTransformation)
-        assert self.SUPPORTS_TRANSFORMATIONS
-
-        self.transformation = transformation
-        self.untransformed_ctype = untransformed_ctype
 
     def convert_c_to_python(self, wrapper):
         '''Write some code before calling the Python method.'''
@@ -1274,7 +1307,7 @@ class TypeMatcher(object):
         @param name: C type name
         @param type_handler: class to handle this C type
         """
-        name = normalize_type_string(name)
+        name = ctypeparser.normalize_type_string(name)
         if name in self._types:
             raise ValueError("return type %s already registered" % (name,))
         self._types[name] = type_handler
@@ -1282,30 +1315,43 @@ class TypeMatcher(object):
         
     def lookup(self, name):
         """
-        lookup(name) -> type_handler, type_transformation
+        lookup(name) -> type_handler, type_transformation, type_traits
 
         Returns a handler with the given ctype name, or raises KeyError.
         Supports type transformations.
 
         @param name: C type name, possibly transformed (e.g. MySmartPointer<Foo> looks up Foo*)
         """
-        name = normalize_type_string(name)
+        logger.debug("TypeMatcher.lookup(%r)", name)
+        given_type_traits = ctypeparser.TypeTraits(name)
+        noconst_name = str(given_type_traits.ctype_no_modifiers)
+        tried_names = [noconst_name]
         try:
-            return self._types[name], None
+            rv = self._types[noconst_name], None, given_type_traits
         except KeyError:
+            logger.debug("try to lookup type handler for %r => failure", name)
             ## Now try all the type transformations
             for transf in self._transformations:
                 untransformed_name = transf.get_untransformed_name(name)
                 if untransformed_name is None:
                     continue
+                untransformed_type_traits = ctypeparser.TypeTraits(untransformed_name)
+                untransformed_name = str(untransformed_type_traits.ctype_no_modifiers)
                 try:
-                    return self._types[untransformed_name], transf
+                    rv = self._types[untransformed_name], transf, untransformed_type_traits
                 except KeyError:
+                    logger.debug("try to lookup type handler for %r => failure (%r)", untransformed_name)
+                    tried_names.append(untransformed_name)
                     continue
+                else:
+                    logger.debug("try to lookup type handler for %r => success (%r)", untransformed_name, rv)
+                    return rv
             else:
-                raise TypeLookupError(name)
+                raise TypeLookupError(tried_names)
+        else:
+            logger.debug("try to lookup type handler for %r => success (%r)", name, rv)
+            return rv
     
-
     def items(self):
         "Returns an iterator over all registered items"
         return self._types.iteritems()

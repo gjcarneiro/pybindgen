@@ -64,7 +64,7 @@ class UnsignedIntPtrParam(PointerParameter):
     def convert_python_to_c(self, wrapper):
         #assert self.ctype == 'unsigned int*'
         if self.array_length is None:
-            name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
+            name = wrapper.declarations.declare_variable(str(self.type_traits.target), self.name)
             wrapper.call_params.append('&'+name)
             if self.direction & self.DIRECTION_IN:
                 wrapper.parse_params.add_parameter('I', ['&'+name], self.name)
@@ -73,7 +73,7 @@ class UnsignedIntPtrParam(PointerParameter):
 
         else: # complicated code path to deal with arrays...
 
-            name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name, array="[%i]" % self.array_length)
+            name = wrapper.declarations.declare_variable(str(self.type_traits.target), self.name, array="[%i]" % self.array_length)
             py_list = wrapper.declarations.declare_variable("PyObject*", "py_list")
             idx = wrapper.declarations.declare_variable("int", "idx")
             wrapper.call_params.append(name)
@@ -163,7 +163,6 @@ class IntPtrParam(PointerParameter):
             wrapper.parse_params.add_parameter("i", [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
-        assert self.ctype.endswith('*')
         name = wrapper.declarations.declare_variable('int', self.name)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
@@ -311,12 +310,12 @@ class UnsignedLongLongParam(Parameter):
     DIRECTIONS = [Parameter.DIRECTION_IN]
     CTYPES = ['unsigned long long', 'uint64_t']
 
+    def get_ctype_without_ref(self):
+        return str(self.type_traits.ctype_no_const)
+
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
         wrapper.build_params.add_parameter('K', [self.value])
-
-    def get_ctype_without_ref(self):
-        return self.ctype_no_const
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
@@ -329,8 +328,8 @@ class UnsignedLongLongRefParam(UnsignedLongLongParam):
     CTYPES = ['unsigned long long&', 'uint64_t&']
 
     def get_ctype_without_ref(self):
-        assert self.ctype_no_const[-1] == '&'
-        return self.ctype_no_const[:-1]
+        assert self.type_traits.target is not None
+        return str(self.type_traits.target)
 
 class UnsignedLongLongReturn(ReturnValue):
 
@@ -352,12 +351,12 @@ class LongLongParam(Parameter):
     DIRECTIONS = [Parameter.DIRECTION_IN]
     CTYPES = ['long long', 'int64_t']
 
+    def get_ctype_without_ref(self):
+        return str(self.type_traits.ctype_no_const)
+
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
         wrapper.build_params.add_parameter('L', [self.value])
-
-    def get_ctype_without_ref(self):
-        return self.ctype_no_const
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
@@ -371,8 +370,8 @@ class LongLongRefParam(LongLongParam):
     CTYPES = ['long long&', 'int64_t&']
 
     def get_ctype_without_ref(self):
-        assert self.ctype_no_const[-1] == '&'
-        return self.ctype_no_const[:-1]
+        assert self.type_traits.target is not None
+        return str(self.type_traits.target)
 
 
 class LongLongReturn(ReturnValue):
@@ -411,7 +410,6 @@ class Int8PtrParam(PointerParameter):
             wrapper.parse_params.add_parameter("b", [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
-        assert self.ctype.endswith('*')
         name = wrapper.declarations.declare_variable('int8_t', self.name)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
@@ -441,7 +439,6 @@ class UInt8PtrParam(PointerParameter):
             wrapper.parse_params.add_parameter("B", [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
-        assert self.ctype.endswith('*')
         name = wrapper.declarations.declare_variable('uint8_t', self.name)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:

@@ -53,3 +53,12 @@ min_python_version=(2, 3)
 """
 Minimum python version the generated code must support.
 """
+
+from wrapper_registry import NullWrapperRegistry, StdMapWrapperRegistry
+
+wrapper_registry = NullWrapperRegistry
+"""
+A L{WrapperRegistry} subclass to use for creating
+wrapper registries.  A wrapper registry ensures that at most one
+python wrapper exists for each C/C++ object.
+"""

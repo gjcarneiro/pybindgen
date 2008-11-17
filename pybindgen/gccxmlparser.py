@@ -9,6 +9,7 @@ from pygccxml import declarations
 from module import Module
 from typehandlers.codesink import FileCodeSink, CodeSink, NullCodeSink
 import typehandlers.base
+from typehandlers.base import ctypeparser
 from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
 from pygccxml.declarations.enumeration import enumeration_t
 from cppclass import CppClass, ReferenceCountingMethodsPolicy, FreeFunctionPolicy, ReferenceCountingFunctionsPolicy
@@ -16,6 +17,8 @@ from pygccxml.declarations import type_traits
 from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
 from pygccxml.declarations import templates
+from pygccxml.declarations import container_traits
+from pygccxml.declarations.declaration import declaration_t
 from pygccxml.declarations.class_declaration import class_declaration_t, class_t
 import settings
 import utils
@@ -127,21 +130,8 @@ class ErrorHandler(settings.ErrorHandler):
         return True
 settings.error_handler = ErrorHandler()
 
-_digits = re.compile(r"\s*\d+\s*")
 def normalize_name(decl_string):
-    decl_string = utils.ascii(decl_string)
-    if templates.is_instantiation(decl_string):
-        cls_name, template_parameters = templates.split(decl_string)
-    else:
-        cls_name = decl_string
-        template_parameters = None
-    if not _digits.match(cls_name):
-        if cls_name.startswith('::'):
-            cls_name = cls_name[2:]
-    if template_parameters is None:
-        return cls_name
-    else:
-        return "%s< %s >" % (cls_name, ', '.join([normalize_name(name) for name in template_parameters]))
+    return ctypeparser.normalize_type_string(decl_string)
 
 def normalize_class_name(class_name, module_namespace):
     class_name = utils.ascii(class_name)
@@ -193,48 +183,54 @@ class GccXmlTypeRegistry(object):
         assert isinstance(cpp_class, CppClass)
         self.ordered_classes.append(cpp_class)
 
-    def get_type_traits(self, type_info):
-        assert isinstance(type_info, cpptypes.type_t)
+#     def get_type_traits(self, type_info):
+#         #assert isinstance(type_info, cpptypes.type_t)
 
-        debug = False #('int64_t' in type_info.decl_string)
+#         debug = False #('int64_t' in type_info.decl_string)
+#         if debug:
+#             print >> sys.stderr, "***** type traits for %r" % (type_info.decl_string, )
 
-        if debug:
-            print >> sys.stderr, "***** type traits for %r" % (type_info.decl_string, )
+#         is_const = False
+#         is_reference = False
+#         is_pointer = 0
+#         pointer_or_ref_count = 0
+#         inner_const = False
+#         while 1:
+#             prev_type_info = type_info
+#             if type_traits.is_pointer(type_info):
+#                 is_pointer += 1
+#                 type_info = remove_pointer(type_info)
+#                 pointer_or_ref_count += 1
+#             elif type_traits.is_const(type_info):
+#                 type_info = remove_const(type_info)
+#                 if pointer_or_ref_count == 0:
+#                     is_const = True
+#                 elif pointer_or_ref_count == 1:
+#                     inner_const = True
+#                 else:
+#                     warnings.warn("multiple consts not handled")
+#             elif type_traits.is_reference(type_info):
+#                 warnings.warn("multiple &'s not handled")
+#                 is_reference = True
+#                 type_info = remove_reference(type_info)
+#                 pointer_or_ref_count += 1
+#             else:
+#                 break
+#             if type_info is prev_type_info:
+#                 break
 
-        is_const = False
-        is_reference = False
-        is_pointer = 0
+#         type_name = normalize_name(type_info.partial_decl_string)
+#         try:
+#             cpp_type = self.root_module[type_name]
+#         except KeyError:
+#             cpp_type = type_name
 
-        while 1:
-            prev_type_info = type_info
-            if type_traits.is_pointer(type_info):
-                is_pointer += 1
-                type_info = remove_pointer(type_info)
-            elif type_traits.is_const(type_info):
-                warnings.warn("multiple consts not handled")
-                is_const = True
-                type_info = remove_const(type_info)
-            elif type_traits.is_reference(type_info):
-                warnings.warn("multiple &'s not handled")
-                is_reference = True
-                type_info = remove_reference(type_info)
-            else:
-                break
-            if type_info is prev_type_info:
-                break
+#         if not isinstance(cpp_type, CppClass):
+#             cpp_type = type_name
 
-        type_name = normalize_name(type_info.decl_string)
-        try:
-            cpp_type = self.root_module[type_name]
-        except KeyError:
-            cpp_type = type_name
-
-        if not isinstance(cpp_type, CppClass):
-            cpp_type = type_name
-
-        if debug:
-            print >> sys.stderr, "*** > return ", repr((cpp_type, is_const, is_pointer, is_reference))
-        return (cpp_type, is_const, is_pointer, is_reference)
+#         if debug:
+#             print >> sys.stderr, "*** > return ", repr((cpp_type, is_const, is_pointer, is_reference))
+#         return (cpp_type, is_const, inner_const, is_pointer, is_reference)
 
     def _fixed_std_type_name(self, type_name):
         type_name = utils.ascii(type_name)
@@ -242,10 +238,6 @@ class GccXmlTypeRegistry(object):
         return decl
         
     def lookup_return(self, type_info, annotations={}):
-        assert isinstance(type_info, cpptypes.type_t)
-        cpp_type, is_const, is_pointer, is_reference = \
-            self.get_type_traits(type_info)
-
         kwargs = {}
         for name, value in annotations.iteritems():
             if name == 'caller_owns_return':
@@ -255,39 +247,11 @@ class GccXmlTypeRegistry(object):
             else:
                 warnings.warn("invalid annotation name %r" % name, AnnotationsWarning)
 
-        if is_const:
-            kwargs['is_const'] = True
+        cpp_type = normalize_name(type_info.partial_decl_string)
+        return (cpp_type,), kwargs
 
-        if isinstance(cpp_type, CppClass):
-            cpp_type = cpp_type.full_name
-        else:
-            if isinstance(type_traits.remove_declarated(type_info), enumeration_t):
-                cpp_type = normalize_name(cpp_type)
-            else:
-                cpp_type = self._fixed_std_type_name(cpp_type)
-
-        cpp_type = utils.ascii(cpp_type)
-
-        if not is_pointer and not is_reference:
-            return (cpp_type,), kwargs
-
-        ## pointer to class
-        if is_pointer and not is_reference:
-            if is_const and 'caller_owns_return' not in kwargs:
-                ## a pointer to const object "usually" means caller_owns_return=False
-                ## some guessing going on here, though..
-                kwargs['caller_owns_return'] = False
-            return (cpp_type + ' *'*is_pointer,), kwargs
-            
-        ## reference of class
-        if not is_pointer and is_reference:
-            return (cpp_type + ' *'*is_pointer + '&',), kwargs
-
-        assert 0, "this line should not be reached"
 
     def lookup_parameter(self, type_info, param_name, annotations={}, default_value=None):
-        assert isinstance(type_info, cpptypes.type_t)
-
         kwargs = {}
         for name, value in annotations.iteritems():
             if name == 'transfer_ownership':
@@ -312,39 +276,12 @@ class GccXmlTypeRegistry(object):
             else:
                 warnings.warn("invalid annotation name %r" % name, AnnotationsWarning)
 
-        cpp_type, is_const, is_pointer, is_reference = \
-            self.get_type_traits(type_info)
-
-        if is_const:
-            kwargs['is_const'] = True
         if default_value:
             kwargs['default_value'] = utils.ascii(default_value)
 
-        if isinstance(cpp_type, CppClass):
-            cpp_type = cpp_type.full_name
-        else:
-            if isinstance(type_traits.remove_declarated(type_info), enumeration_t):
-                cpp_type = normalize_name(cpp_type)
-            else:
-                cpp_type = self._fixed_std_type_name(cpp_type)
+        cpp_type = normalize_name(type_info.partial_decl_string)
 
-        cpp_type = utils.ascii(cpp_type)
-        param_name = utils.ascii(param_name)
-
-        if not is_pointer and not is_reference:
-            return (cpp_type, param_name), kwargs
-
-        ## pointer to class
-        if is_pointer and not is_reference:
-            if is_const:
-                ## a pointer to const object usually means transfer_ownership=False
-                kwargs.setdefault('transfer_ownership', False)
-            return (cpp_type + ' *'*is_pointer, param_name), kwargs
-        
-        ## reference to class
-        if not is_pointer and is_reference:
-            return (cpp_type + ' *'*is_pointer + '&', param_name), kwargs
-        assert 0, "this line should not be reached"
+        return (cpp_type, param_name), kwargs
 
 
 class AnnotationsScanner(object):
@@ -364,11 +301,20 @@ class AnnotationsScanner(object):
             self.used_annotations[file_name] = l
         l.append(line_number)
 
-    def get_annotations(self, file_name, line_number):
+    def get_annotations(self, decl):
         """
-        file_name -- absolute file name where the definition is
-        line_number -- line number of where the definition is within the file
+        @param decl: pygccxml declaration_t object
         """
+        assert isinstance(decl, declaration_t)
+
+        if isinstance(decl, calldef.calldef_t) \
+                and decl.is_artificial:
+            #print >> sys.stderr, "********** ARTIFICIAL:", decl
+            return {}, {}
+
+        file_name = decl.location.file_name
+        line_number = decl.location.line
+        
         try:
             lines = self.files[file_name]
         except KeyError:
@@ -414,6 +360,8 @@ class AnnotationsScanner(object):
         return global_annotations, parameter_annotations
 
     def parse_boolean(self, value):
+        if isinstance(value, (int, long)):
+            return bool(value)
         if value.lower() in ['false', 'off']:
             return False
         elif value.lower() in ['true', 'on']:
@@ -487,6 +435,13 @@ class PygenClassifier(object):
 
 
 class ModuleParser(object):
+    """
+    @ivar enable_anonymous_containers: if True, pybindgen will attempt
+        to scan for all std containers, even the ones that have no
+        typedef'ed name.  Enabled by default.
+
+    """
+
     def __init__(self, module_name, module_namespace_name='::'):
         """
         Creates an object that will be able parse header files and
@@ -515,6 +470,9 @@ class ModuleParser(object):
         self._pygen_sink = None
         self._pygen_factory = None
         self._anonymous_structs = [] # list of (pygccxml_anonymous_class, outer_pybindgen_class)
+        self._containers_to_register = []
+        self._containers_registered = {}
+        self.enable_anonymous_containers = True
 
     def add_pre_scan_hook(self, hook):
         """
@@ -576,7 +534,7 @@ class ModuleParser(object):
         return False
 
     def parse(self, header_files, include_paths=None, whitelist_paths=None, includes=(),
-              pygen_sink=None, pygen_classifier=None):
+              pygen_sink=None, pygen_classifier=None, gccxml_options=None):
         """
         parses a set of header files and returns a pybindgen Module instance.
         It is equivalent to calling the following methods:
@@ -588,7 +546,8 @@ class ModuleParser(object):
 
          The documentation for L{ModuleParser.parse_init} explains the parameters.
         """
-        self.parse_init(header_files, include_paths, whitelist_paths, includes, pygen_sink, pygen_classifier)
+        self.parse_init(header_files, include_paths, whitelist_paths, includes, pygen_sink,
+                        pygen_classifier, gccxml_options)
         self.scan_types()
         self.scan_methods()
         self.scan_functions()
@@ -755,12 +714,15 @@ pybindgen.settings.error_handler = ErrorHandler()
         if self._pygen_classifier is None:
             return self._pygen
         else:
-            section = self._pygen_classifier.classify(pygccxml_definition)
-            for sect in self._pygen:
-                if sect is section or sect.name == section:
-                    return sect.code_sink
+            if isinstance(pygccxml_definition, declaration_t):
+                section = self._pygen_classifier.classify(pygccxml_definition)
+                for sect in self._pygen:
+                    if sect is section or sect.name == section:
+                        return sect.code_sink
+                else:
+                    raise ValueError("CodeSink for section %r not available" % section)
             else:
-                raise ValueError("CodeSink for section %r not available" % section)
+                return self._get_main_pygen_sink()
 
     def scan_types(self):
         self._stage = 'scan types'
@@ -916,6 +878,28 @@ pybindgen.settings.error_handler = ErrorHandler()
                                                    % (section.local_customizations_module, section.local_customizations_module))
                             pygen_sink.writeln("root_module.end_section(%r)" % section.name)
 
+        ## detect use of unregistered container types: need to look at
+        ## all parameters and return values of all functions in this namespace...
+        for fun in module_namespace.free_functions(function=self.location_filter,
+                                                   allow_empty=True, recursive=False):
+            if fun.name.startswith('__'):
+                continue
+            for dependency in fun.i_depend_on_them(recursive=True):
+                type_info = dependency.depend_on_it
+                if type_traits.is_pointer(type_info):
+                    type_info = type_traits.remove_pointer(type_info)
+                elif type_traits.is_reference(type_info):
+                    type_info = type_traits.remove_reference(type_info)
+                if type_traits.is_const(type_info):
+                    type_info = type_traits.remove_const(type_info)
+                traits = container_traits.find_container_traits(type_info)
+                if traits is None:
+                    continue
+                name = normalize_name(type_info.partial_decl_string)
+                #print >> sys.stderr, "** type: %s; ---> partial_decl_string: %r; name: %r" %\
+                #    (type_info, type_info.partial_decl_string, name)
+                self._containers_to_register.append((traits, type_info, None, name))
+
         ## scan enumerations
         if outer_class is None:
             enums = module_namespace.enums(function=self.location_filter,
@@ -937,9 +921,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 
         for enum in enums:
 
-            global_annotations, param_annotations = \
-                annotations_scanner.get_annotations(enum.location.file_name,
-                                                    enum.location.line)
+            global_annotations, param_annotations = annotations_scanner.get_annotations(enum)
             for hook in self._pre_scan_hooks:
                 hook(self, enum, global_annotations, param_annotations)
             if 'ignore' in global_annotations:
@@ -964,8 +946,13 @@ pybindgen.settings.error_handler = ErrorHandler()
                                     module_namespace.classes(function=self.location_filter,
                                                              recursive=False, allow_empty=True)
                                     if not cls.name.startswith('__')]
+            typedefs = [typedef for typedef in
+                        module_namespace.typedefs(function=self.location_filter,
+                                                  recursive=False, allow_empty=True)
+                        if not typedef.name.startswith('__')]
         else:
             unregistered_classes = []
+            typedefs = []
             for cls in outer_class.gccxml_definition.classes(function=self.location_filter,
                                                              recursive=False, allow_empty=True):
                 if outer_class.gccxml_definition.find_out_member_access_type(cls) != 'public':
@@ -973,6 +960,18 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if cls.name.startswith('__'):
                     continue
                 unregistered_classes.append(cls)
+
+            for typedef in outer_class.gccxml_definition.typedefs(function=self.location_filter,
+                                                                  recursive=False, allow_empty=True):
+                if outer_class.gccxml_definition.find_out_member_access_type(typedef) != 'public':
+                    continue
+                if typedef.name.startswith('__'):
+                    continue
+                typedefs.append(typedef)
+
+        def cls_cmp(a, b):
+            return cmp(a.decl_string, b.decl_string)
+        unregistered_classes.sort(cls_cmp)
 
         def postpone_class(cls, reason):
             ## detect the case of a class being postponed many times; that
@@ -986,7 +985,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                                      "the %ith time (last reason: %r, current reason: %r);"
                                      " something is wrong, please file a bug report"
                                      " (https://bugs.launchpad.net/pybindgen/+filebug) with a test case."
-                                     % (cls, cls._pybindgen_postpone_reason, reason))
+                                     % (cls, count, cls._pybindgen_postpone_reason, reason))
             cls._pybindgen_postpone_reason = reason
             unregistered_classes.append(cls)
 
@@ -995,9 +994,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             typedef = None
 
             kwargs = {}
-            global_annotations, param_annotations = \
-                annotations_scanner.get_annotations(cls.location.file_name,
-                                                    cls.location.line)
+            global_annotations, param_annotations = annotations_scanner.get_annotations(cls)
             for hook in self._pre_scan_hooks:
                 hook(self, cls, global_annotations, param_annotations)
             if 'ignore' in global_annotations:
@@ -1006,7 +1003,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             if not cls.name:
                 if outer_class is None:
                     warnings.warn_explicit(("Class %s ignored: anonymous structure not inside a named structure/union."
-                                            % cls.decl_string),
+                                            % cls.partial_decl_string),
                                            NotSupportedWarning, cls.location.file_name, cls.location.line)
                     continue
 
@@ -1027,7 +1024,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             if len(cls.bases) > 1:
                 warnings.warn_explicit(("Class %s ignored because it uses multiple "
                                         "inheritance (not yet supported by pybindgen)"
-                                        % cls.decl_string),
+                                        % cls.partial_decl_string),
                                        NotSupportedWarning, cls.location.file_name, cls.location.line)
                 continue
             if cls.bases:
@@ -1039,7 +1036,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     if base_cls not in unregistered_classes:
                         warnings.warn_explicit("Class %s ignored because it uses a base class (%s) "
                                                "which is not declared."
-                                               % (cls.decl_string, base_cls.decl_string),
+                                               % (cls.partial_decl_string, base_cls.partial_decl_string),
                                                ModuleParserWarning, cls.location.file_name, cls.location.line)
                         continue
                     postpone_class(cls, "waiting for base class %s to be registered first" % base_cls)
@@ -1054,7 +1051,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if not isinstance(target_type, class_t):
                     continue
                 try:
-                    dummy = root_module[normalize_class_name(operator.return_type.decl_string, '::')]
+                    dummy = root_module[normalize_class_name(operator.return_type.partial_decl_string, '::')]
                 except KeyError:
                     ok = False
                     break
@@ -1062,7 +1059,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 ok = True
             if not ok:
                 postpone_class(cls, ("waiting for implicit conversion target class %s to be registered first"
-                                     % (operator.return_type.decl_string,)))
+                                     % (operator.return_type.partial_decl_string,)))
                 continue
 
             self._apply_class_annotations(cls, global_annotations, kwargs)
@@ -1106,6 +1103,29 @@ pybindgen.settings.error_handler = ErrorHandler()
                 pygen_sink.writeln("module.add_class(%s)" %
                                    ", ".join([repr(cls_name)] + _pygen_kwargs(kwargs)))
 
+            ## detect use of unregistered container types: need to look at
+            ## all parameters and return values of all functions in this namespace...
+            for member in cls.get_members(access='public'):
+                if member.name.startswith('__'):
+                    continue
+                for dependency in member.i_depend_on_them(recursive=True):
+                    type_info = dependency.depend_on_it
+                    if type_traits.is_pointer(type_info):
+                        type_info = type_traits.remove_pointer(type_info)
+                    elif type_traits.is_reference(type_info):
+                        type_info = type_traits.remove_reference(type_info)
+                    if type_traits.is_const(type_info):
+                        type_info = type_traits.remove_const(type_info)
+                    traits = container_traits.find_container_traits(type_info)
+                    if traits is None:
+                        continue
+                    name = normalize_name(type_info.partial_decl_string)
+                    # now postpone container registration until after
+                    # all classes are registered, because we may
+                    # depend on one of those classes for the element
+                    # type.
+                    self._containers_to_register.append((traits, type_info, None, name))
+
             class_wrapper = module.add_class(cls_name, **kwargs)
             class_wrapper.gccxml_definition = cls
             self._registered_classes[cls] = class_wrapper
@@ -1126,7 +1146,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if not isinstance(target_type, class_t):
                     continue
                 #other_class = type_registry.find_class(operator.return_type.decl_string, '::')
-                other_class = root_module[normalize_class_name(operator.return_type.decl_string, '::')]
+                other_class = root_module[normalize_class_name(operator.return_type.partial_decl_string, '::')]
                 class_wrapper.implicitly_converts_to(other_class)
                 if pygen_sink:
                     if 'pygen_comment' in global_annotations:
@@ -1134,20 +1154,30 @@ pybindgen.settings.error_handler = ErrorHandler()
                     pygen_sink.writeln("root_module[%r].implicitly_converts_to(root_module[%r])"
                                        % (class_wrapper.full_name, other_class.full_name))
 
-        pygen_function_closed = False
+        # -- register containers
         if outer_class is None:
+            for (traits, type_info, _outer_class, name) in self._containers_to_register:
+                self._register_container(module, traits, type_info, _outer_class, name)
+            self._containers_to_register = []
 
+        if pygen_register_function_name:
+            pygen_function_closed = False
+        else:
+            pygen_function_closed = True
+
+        if outer_class is None:
+            
             ## --- look for typedefs ----
             for alias in module_namespace.typedefs(function=self.location_filter,
                                                    recursive=False, allow_empty=True):
 
                 ## handle "typedef int Something;"
                 if isinstance(alias.type, cpptypes.int_t):
-                    param_cls, dummy_transf = typehandlers.base.param_type_matcher.lookup('int')
+                    param_cls, dummy_transf, dummy_traits = typehandlers.base.param_type_matcher.lookup('int')
                     for ctype in param_cls.CTYPES:
                         #print >> sys.stderr, "%s -> int" % ctype.replace('int', alias.name)
                         typehandlers.base.param_type_matcher.register(ctype.replace('int', alias.name), param_cls)
-                    return_cls, dummy_transf = typehandlers.base.return_type_matcher.lookup('int')
+                    return_cls, dummy_transf, dummy_traits = typehandlers.base.return_type_matcher.lookup('int')
                     for ctype in return_cls.CTYPES:
                         #print >> sys.stderr, "%s -> int" % ctype.replace('int', alias.name)
                         typehandlers.base.return_type_matcher.register(ctype.replace('int', alias.name), return_cls)
@@ -1163,9 +1193,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                         continue # typedef to template instantiations, must be fully defined
                     if isinstance(cls, class_declaration_t):
 
-                        global_annotations, param_annotations = \
-                            annotations_scanner.get_annotations(cls.location.file_name,
-                                                                cls.location.line)
+                        global_annotations, param_annotations = annotations_scanner.get_annotations(cls)
                         for hook in self._pre_scan_hooks:
                             hook(self, cls, global_annotations, param_annotations)
                         if 'ignore' in global_annotations:
@@ -1206,10 +1234,17 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             ## scan nested namespaces (mapped as python submodules)
             nested_modules = []
+            nested_namespaces = []
             for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
                 if nested_namespace.name.startswith('__'):
                     continue
+                nested_namespaces.append(nested_namespace)
 
+            def decl_cmp(a, b):
+                return cmp(a.decl_string, b.decl_string)
+            nested_namespaces.sort(decl_cmp)
+
+            for nested_namespace in nested_namespaces:
                 if pygen_register_function_name:
                     nested_module = module.add_cpp_namespace(utils.ascii(nested_namespace.name))
                     nested_modules.append(nested_module)
@@ -1221,29 +1256,113 @@ pybindgen.settings.error_handler = ErrorHandler()
                         nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
                         pygen_sink.writeln("%s(nested_module)" % nested_module_type_init_func)
                         pygen_sink.writeln()
-            for pygen_sink in self._get_all_pygen_sinks():
-                pygen_sink.unindent()
-                pygen_sink.writeln()
-            pygen_function_closed = True
+            if not pygen_function_closed:
+                for pygen_sink in self._get_all_pygen_sinks():
+                    pygen_sink.unindent()
+                    pygen_sink.writeln()
+                pygen_function_closed = True
 
             ## scan nested namespaces (mapped as python submodules)
+            nested_namespaces = []
             for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
                 if nested_namespace.name.startswith('__'):
                     continue
+                nested_namespaces.append(nested_namespace)
 
+            def decl_cmp(a, b):
+                return cmp(a.decl_string, b.decl_string)
+            nested_namespaces.sort(decl_cmp)
+
+            for nested_namespace in nested_namespaces:
                 if pygen_register_function_name:
                     nested_module = nested_modules.pop(0)
                     nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
                     self._scan_namespace_types(nested_module, nested_namespace,
                                                pygen_register_function_name=nested_module_type_init_func)
             assert not nested_modules # make sure all have been consumed by the second for loop
-
+        # ^^ CLOSE: if outer_class is None: ^^
 
         if pygen_register_function_name and not pygen_function_closed:
             for pygen_sink in self._get_all_pygen_sinks():
                 pygen_sink.unindent()
                 pygen_sink.writeln()
 
+    def _register_container(self, module, traits, definition, outer_class, name):
+        if '<' in name and not self.enable_anonymous_containers:
+            return
+
+        kwargs = {}
+        
+        if traits is container_traits.list_traits:
+            container_type = 'list'
+        elif traits is container_traits.deque_traits:
+            container_type = 'dequeue'
+        elif traits is container_traits.queue_traits:
+            container_type = 'queue'
+        elif traits is container_traits.priority_queue_traits:
+            container_type = 'dequeue'
+        elif traits is container_traits.vector_traits:
+            container_type = 'vector'
+        elif traits is container_traits.stack_traits:
+            container_type = 'stack'
+        elif traits is container_traits.set_traits:
+            container_type = 'set'
+        elif traits is container_traits.multiset_traits:
+            container_type = 'multiset'
+        elif traits is container_traits.hash_set_traits:
+            container_type = 'hash_set'
+        elif traits is container_traits.hash_multiset_traits:
+            container_type = 'hash_multiset'
+
+        elif (traits is container_traits.map_traits
+              or traits is container_traits.multimap_traits
+              or traits is container_traits.hash_map_traits
+              or traits is container_traits.hash_multimap_traits):
+            return # maps not yet implemented
+
+        else:
+            assert False, "container type %s unaccounted for." % name
+        
+        if outer_class is not None:
+            kwargs['outer_class'] = outer_class
+            outer_class_key = outer_class.partial_decl_string
+        else:
+            outer_class_key = None
+
+        container_register_key = (outer_class_key, name)
+        if container_register_key in self._containers_registered:
+            return
+        self._containers_registered[container_register_key] = None
+
+        #print >> sys.stderr, "************* register_container", name
+
+        element_type = traits.element_type(definition)
+        #if traits.is_mapping(definition):
+        #    key_type = traits.key_type(definition)
+            #print >> sys.stderr, "************* register_container %s; element_type=%s, key_type=%s" % \
+            #    (name, element_type, key_type.partial_decl_string)
+        
+        return_type_spec = self.type_registry.lookup_return(element_type)
+        element_decl = type_traits.remove_declarated(element_type)
+
+        kwargs['container_type'] = container_type
+        
+        pygen_sink = self._get_pygen_sink_for_definition(element_decl)
+        if pygen_sink:
+            pygen_sink.writeln("module.add_container(%s)" %
+                               ", ".join([repr(name), _pygen_retval(*return_type_spec)] + _pygen_kwargs(kwargs)))
+
+        ## convert the return value
+        try:
+            return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
+        except (TypeLookupError, TypeConfigurationError), ex:
+            warnings.warn("Return value '%s' error (used in %s): %r"
+                          % (definition.partial_decl_string, definition, ex),
+                          WrapperWarning)
+            return
+
+        module.add_container(name, return_type, **kwargs)
+        
 
     def _class_has_virtual_methods(self, cls):
         """return True if cls has at least one virtual method, else False"""
@@ -1254,36 +1373,94 @@ pybindgen.settings.error_handler = ErrorHandler()
         return False
 
     def _is_ostream(self, cpp_type):
-        return (isinstance (cpp_type, cpptypes.reference_t)
+        return (isinstance(cpp_type, cpptypes.reference_t)
                 and not isinstance(cpp_type.base, cpptypes.const_t)
                 and str(cpp_type.base) == 'std::ostream')
 
-    def _scan_class_methods(self, cls, class_wrapper, pygen_sink):
-        have_trivial_constructor = False
-        have_copy_constructor = False
-        has_output_stream_operator = False
+    def _scan_class_operators(self, cls, class_wrapper, pygen_sink):
+        
+        def _handle_operator(symbol, return_type, argument_types):
+            #print >> sys.stderr, "<<<<<OP>>>>>  %s: %s : %s --> %s" % (op.symbol, cls, [str(x) for x in argument_types], return_type)
+
+            if symbol == '<<' \
+                    and self._is_ostream(return_type) \
+                    and len(op.arguments) == 2 \
+                    and self._is_ostream(argument_types[0]) \
+                    and type_traits.is_convertible(cls, argument_types[1]):
+                #print >> sys.stderr, "<<<<<OUTPUT STREAM OP>>>>>  %s: %s " % (op.symbol, cls)
+                class_wrapper.add_output_stream_operator()
+                pygen_sink.writeln("cls.add_output_stream_operator()")
+
+            if op.symbol in ['==', '!=', '<', '<=', '>', '>='] \
+                    and len(argument_types) == 2 \
+                    and type_traits.is_convertible(cls, argument_types[0]) \
+                    and type_traits.is_convertible(cls, argument_types[1]):
+                #print >> sys.stderr, "<<<<<BINARY COMPARISON OP>>>>>  %s: %s " % (op.symbol, cls)
+                class_wrapper.add_binary_comparison_operator(op.symbol)
+                pygen_sink.writeln("cls.add_binary_comparison_operator(%r)" % (op.symbol,))
+            
+            if op.symbol in ['+', '-', '/', '*'] \
+                    and len(argument_types) == 2 \
+                    and (type_traits.is_convertible(cls, argument_types[0]) 
+                         or type_traits.is_convertible(cls, argument_types[1])):
+                #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>>  %s: %s : %s --> %s" \
+                #    % (op.symbol, cls, [str(x) for x in argument_types], return_type)
+
+                def get_class_wrapper(pygccxml_type):
+                    traits = ctypeparser.TypeTraits(normalize_name(pygccxml_type.partial_decl_string))
+                    if traits.type_is_reference:
+                        name = str(traits.target)
+                    else:
+                        name = str(traits.ctype)
+                    class_wrapper = self.type_registry.root_module.get(name, None)
+                    #print >> sys.stderr, "(lookup %r: %r)" % (name, class_wrapper)
+                    return class_wrapper
+
+                ret = get_class_wrapper(return_type)
+                if ret is None:
+                    #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> retval class %s not registered" % (return_type,)
+                    return
+
+                arg0 = get_class_wrapper(argument_types[0])
+                if arg0 is None:
+                    #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 1 class %s not registered" % (argument_types[0],)
+                    return
+
+                arg1 = get_class_wrapper(argument_types[1])
+                if arg1 is None:
+                    #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 2 class %s not registered" % (argument_types[1],)
+                    return
+
+                #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>>  %s: %s: %s (%s, %s) " \
+                #    % (op.symbol, cls, ret.full_name, arg0.full_name, arg1.full_name)
+
+                class_wrapper.add_binary_numeric_operator(op.symbol, ret, arg0, arg1)
+                pygen_sink.writeln("cls.add_binary_numeric_operator(%r, root_module[%r], root_module[%r], root_module[%r])"
+                                   % (op.symbol, ret.full_name,
+                                      arg0.full_name, arg1.full_name))
 
 
         for op in self.module_namespace.free_operators(function=self.location_filter,
-                                                       allow_empty=True, 
+                                                       allow_empty=True,
                                                        recursive=True):
-            if self._is_ostream (op.return_type) \
-                    and len (op.arguments) >= 2 \
-                    and self._is_ostream (op.arguments[0].type) \
-                    and type_traits.is_convertible (cls, op.arguments[1].type):
-                has_output_stream_operator = True
+            _handle_operator(op.symbol, op.return_type, [arg.type for arg in op.arguments])
 
         for op in cls.member_operators(function=self.location_filter,
                                        allow_empty=True, 
                                        recursive=True):
-            if self._is_ostream (op.return_type) \
-                    and len (op.arguments) >= 2 \
-                    and self._is_ostream (op.arguments[0].type) \
-                    and type_traits.is_convertible (cls, op.arguments[1].type):
-                has_output_stream_operator = True
+            arg_types = [arg.type for arg in op.arguments]
+            arg_types.insert(0, cls)
+            _handle_operator(op.symbol, op.return_type, arg_types)
+
+
+    def _scan_class_methods(self, cls, class_wrapper, pygen_sink):
+        have_trivial_constructor = False
+        have_copy_constructor = False
 
         if pygen_sink is None:
             pygen_sink = NullCodeSink()
+
+        self._scan_class_operators(cls, class_wrapper, pygen_sink)
 
         for member in cls.get_members():
             if isinstance(member, calldef.member_function_t):
@@ -1298,10 +1475,9 @@ pybindgen.settings.error_handler = ErrorHandler()
                     have_trivial_constructor = True
 
                 elif len(member.arguments) == 1:
-                    (cpp_type, dummy_is_const, dummy_is_pointer,
-                     is_reference) = \
-                        self.type_registry.get_type_traits(member.arguments[0].type)
-                    if cpp_type is class_wrapper and is_reference:
+                    traits = ctypeparser.TypeTraits(normalize_name(member.arguments[0].type.partial_decl_string))
+                    if traits.type_is_reference and \
+                            self.type_registry.root_module.get(str(traits.target), None) is class_wrapper:
                         have_copy_constructor = True
 
         methods_to_ignore = []
@@ -1315,9 +1491,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             if member.name in methods_to_ignore:
                 continue
 
-            global_annotations, parameter_annotations = \
-                annotations_scanner.get_annotations(member.location.file_name,
-                                                    member.location.line)
+            global_annotations, parameter_annotations = annotations_scanner.get_annotations(member)
             for hook in self._pre_scan_hooks:
                 hook(self, member, global_annotations, parameter_annotations)
 
@@ -1325,9 +1499,11 @@ pybindgen.settings.error_handler = ErrorHandler()
                 continue
 
             ## ------------ method --------------------
-            if isinstance(member, calldef.member_function_t):
+            if isinstance(member, (calldef.member_function_t, calldef.member_operator_t)):
                 is_virtual = (member.virtuality != calldef.VIRTUALITY_TYPES.NOT_VIRTUAL)
                 pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
+
+                kwargs = {} # kwargs passed into the add_method call
 
                 for key, val in global_annotations.iteritems():
                     if key == 'template_instance_names' \
@@ -1335,10 +1511,18 @@ pybindgen.settings.error_handler = ErrorHandler()
                         pass
                     elif key == 'pygen_comment':
                         pass
+                    elif key == 'unblock_threads':
+                        kwargs['unblock_threads'] = annotations_scanner.parse_boolean(val)
                     else:
                         warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
                                                % (key, val, member),
                                                AnnotationsWarning, member.location.file_name, member.location.line)
+
+                if isinstance(member, calldef.member_operator_t):
+                    if member.symbol == '()':
+                        kwargs['custom_name'] = '__call__'
+                    else:
+                        continue
 
                 ## --- pygen ---
                 return_type_spec = self.type_registry.lookup_return(member.return_type,
@@ -1369,7 +1553,6 @@ pybindgen.settings.error_handler = ErrorHandler()
                 else:
                     template_parameters = ()
 
-                kwargs = {}
                 if member.has_const:
                     kwargs['is_const'] = True
                 if member.has_static:
@@ -1416,7 +1599,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
-                                           % (member.return_type.decl_string, member, ex),
+                                           % (member.return_type.partial_decl_string, member, ex),
                                            WrapperWarning, member.location.file_name, member.location.line)
                     if pure_virtual:
                         class_wrapper.set_cannot_be_constructed("pure virtual method not wrapped")
@@ -1505,7 +1688,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                         arguments.append(Parameter.new(*a, **kw))
                     except (TypeLookupError, TypeConfigurationError), ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
-                                               % (arg.type.decl_string, arg.name, member, ex),
+                                               % (arg.type.partial_decl_string, arg.name, member, ex),
                                                WrapperWarning, member.location.file_name, member.location.line)
                         ok = False
                         break
@@ -1535,6 +1718,15 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if member.access_type == 'private':
                     continue
 
+                real_type = type_traits.remove_declarated(member.type)
+                if hasattr(real_type, 'name') and not real_type.name:
+                    warnings.warn_explicit("Member variable %s of class %s will not be wrapped, "
+                                           "because wrapping member variables of anonymous types "
+                                           "is not yet supported by pybindgen"
+                                           % (member.name, cls.partial_decl_string),
+                                           NotSupportedWarning, member.location.file_name, member.location.line)
+                    continue
+
                 return_type_spec = self.type_registry.lookup_return(member.type)
 
                 ## pygen...
@@ -1554,7 +1746,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
-                                           % (member.type.decl_string, member, ex),
+                                           % (member.type.partial_decl_string, member, ex),
                                            WrapperWarning, member.location.file_name, member.location.line)
                     continue
 
@@ -1581,12 +1773,9 @@ pybindgen.settings.error_handler = ErrorHandler()
             except AttributeError: # pygccxml <= 0.9
                 has_copy_constructor = type_traits.has_trivial_copy(cls)
             if has_copy_constructor:
-                class_wrapper.add_constructor([
-                            class_wrapper.ThisClassRefParameter("%s &" % class_wrapper.full_name,
-                                                                'ctor_arg', is_const=True)])
-        if has_output_stream_operator:
-            class_wrapper.add_output_stream_operator()
-            pygen_sink.writeln("cls.add_output_stream_operator()")
+                class_wrapper.add_copy_constructor()
+                pygen_sink.writeln("cls.add_copy_constructor()")
+                
 
 
     def scan_functions(self):
@@ -1616,14 +1805,24 @@ pybindgen.settings.error_handler = ErrorHandler()
     def _scan_namespace_functions(self, module, module_namespace):
         root_module = module.get_root()
 
+        functions_to_scan = []
         for fun in module_namespace.free_functions(function=self.location_filter,
                                                    allow_empty=True, recursive=False):
             if fun.name.startswith('__'):
                 continue
+            functions_to_scan.append(fun)
 
-            global_annotations, parameter_annotations = \
-                annotations_scanner.get_annotations(fun.location.file_name,
-                                                    fun.location.line)
+        def fun_cmp(a, b):
+            name_cmp = cmp(a.name, b.name)
+            # if function names differ, compare by name, else compare by the full declaration
+            if name_cmp != 0:
+                return name_cmp
+            else:
+                return cmp(a.decl_string, b.decl_string)
+        functions_to_scan.sort(fun_cmp)
+
+        for fun in functions_to_scan:
+            global_annotations, parameter_annotations = annotations_scanner.get_annotations(fun)
             for hook in self._pre_scan_hooks:
                 hook(self, fun, global_annotations, parameter_annotations)
 
@@ -1631,6 +1830,8 @@ pybindgen.settings.error_handler = ErrorHandler()
             of_class = None
             alt_name = None
             ignore = False
+            kwargs = {}
+
             for name, value in global_annotations.iteritems():
                 if name == 'as_method':
                     as_method = value
@@ -1644,6 +1845,10 @@ pybindgen.settings.error_handler = ErrorHandler()
                     pass
                 elif name == 'pygen_comment':
                     pass
+                elif name == 'template_instance_names':
+                    pass
+                elif name == 'unblock_threads':
+                    kwargs['unblock_threads'] = annotations_scanner.parse_boolean(value)
                 else:
                     warnings.warn_explicit("Incorrect annotation %s=%s" % (name, value),
                                            AnnotationsWarning, fun.location.file_name, fun.location.line)
@@ -1662,12 +1867,12 @@ pybindgen.settings.error_handler = ErrorHandler()
                 return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
             except (TypeLookupError, TypeConfigurationError), ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
-                                       % (fun.return_type.decl_string, fun, ex),
+                                       % (fun.return_type.partial_decl_string, fun, ex),
                                        WrapperWarning, fun.location.file_name, fun.location.line)
                 params_ok = False
             except TypeError, ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
-                                       % (fun.return_type.decl_string, fun, ex),
+                                       % (fun.return_type.partial_decl_string, fun, ex),
                                        WrapperWarning, fun.location.file_name, fun.location.line)
                 raise
             argument_specs = []
@@ -1686,13 +1891,13 @@ pybindgen.settings.error_handler = ErrorHandler()
                     arguments.append(Parameter.new(*spec[0], **spec[1]))
                 except (TypeLookupError, TypeConfigurationError), ex:
                     warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
-                                           % (arg.type.decl_string, arg.name, fun, ex),
+                                           % (arg.type.partial_decl_string, arg.name, fun, ex),
                                            WrapperWarning, fun.location.file_name, fun.location.line)
 
                     params_ok = False
                 except TypeError, ex:
                     warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
-                                           % (arg.type.decl_string, arg.name, fun, ex),
+                                           % (arg.type.partial_decl_string, arg.name, fun, ex),
                                            WrapperWarning, fun.location.file_name, fun.location.line)
                     raise
 
@@ -1733,13 +1938,19 @@ pybindgen.settings.error_handler = ErrorHandler()
                     function_wrapper = cpp_class.add_function_as_constructor(fun.name, return_type, arguments)
                     function_wrapper.gccxml_definition = fun
 
-
                 continue
 
-            kwargs = {}
-
             if templates.is_instantiation(fun.demangled_name):
-                kwargs['template_parameters'] = templates.args(fun.demangled_name)
+                template_parameters = templates.args(fun.demangled_name)
+                kwargs['template_parameters'] = template_parameters
+                template_instance_names = global_annotations.get('template_instance_names', '')
+                if template_instance_names:
+                    for mapping in template_instance_names.split('|'):
+                        type_names, name = mapping.split('=>')
+                        instance_types = type_names.split(',')
+                        if instance_types == template_parameters:
+                            kwargs['custom_name'] = name
+                            break
                 
             if alt_name:
                 kwargs['custom_name'] = alt_name
@@ -1769,11 +1980,18 @@ pybindgen.settings.error_handler = ErrorHandler()
 
 
         ## scan nested namespaces (mapped as python submodules)
+        nested_namespaces = []
         for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
             if nested_namespace.name.startswith('__'):
                 continue
+            nested_namespaces.append(nested_namespace)
+
+        def decl_cmp(a, b):
+            return cmp(a.decl_string, b.decl_string)
+        nested_namespaces.sort(decl_cmp)
+        
+        for nested_namespace in nested_namespaces:
             nested_module = module.get_submodule(nested_namespace.name)
-            
             nested_module_pygen_func = "register_functions_" + "_".join(nested_module.get_namespace_path())
             for pygen_sink in self._get_all_pygen_sinks():
                 pygen_sink.writeln("%s(module.get_submodule(%r), root_module)" %
@@ -1784,11 +2002,18 @@ pybindgen.settings.error_handler = ErrorHandler()
             pygen_sink.unindent()
             pygen_sink.writeln()
     
+        nested_namespaces = []
         for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
             if nested_namespace.name.startswith('__'):
                 continue
-            nested_module = module.get_submodule(nested_namespace.name)
+            nested_namespaces.append(nested_namespace)
 
+        def decl_cmp(a, b):
+            return cmp(a.decl_string, b.decl_string)
+        nested_namespaces.sort(decl_cmp)
+
+        for nested_namespace in nested_namespaces:
+            nested_module = module.get_submodule(nested_namespace.name)
             nested_module_pygen_func = "register_functions_" + "_".join(nested_module.get_namespace_path())
             for pygen_sink in self._get_all_pygen_sinks():
                 pygen_sink.writeln("def %s(module, root_module):" % nested_module_pygen_func)

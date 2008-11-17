@@ -1,5 +1,6 @@
 import tokenizer
 
+
 MODIFIERS = ['const', 'volatile'] # XXX: are there others?
 
 if 'set' not in dir(__builtins__):
@@ -14,8 +15,14 @@ class CType(object):
     L{CType}s (arguments of templated types, function pointer name and parameters).
     """
     __slots__ = 'tokens'
-    def __init__(self):
-        self.tokens = []
+    def __init__(self, tokens=None):
+        if tokens is None:
+            self.tokens = []
+        else:
+            self.tokens = tokens
+
+    def clone(self):
+        return CType(list(self.tokens))
 
     def reorder_modifiers(self):
         """
@@ -81,6 +88,21 @@ class CType(object):
                     break
         return removed
 
+    def remove_outer_modifier(self, modifier):
+        """
+        Remove the given modifier from the type, but only from the
+        outer part and only until a first * or & is found, from right
+        to left.
+        """
+        for token_i in range(len(self.tokens)-1, -1, -1):
+            token = self.tokens[token_i]
+            if isinstance(token, CType):
+                continue
+            if token.name == modifier:
+                del self.tokens[token_i]
+                return True
+        return False
+
     def __str__(self):
         l = []
         first = True
@@ -107,6 +129,8 @@ def _parse_type_recursive(tokens):
     ctype = CType()
     while tokens:
         token = tokens.pop(0)
+        if token.name.startswith('::'):
+            token.name = token.name[2:]
         if token.token_type == tokenizer.SYNTAX:
             if token.name in [',', '>', ')']:
                 ctype.reorder_modifiers()
@@ -159,7 +183,7 @@ def normalize_type_string(type_string):
     >>> normalize_type_string('const foo::bar<const char*, zbr&>*')
     'foo::bar< char const *, zbr & > const *'
     >>> normalize_type_string('const ::bar*')
-    '::bar const *'
+    'bar const *'
     >>> normalize_type_string('const char*const')
     'char const * const'
     >>> normalize_type_string('const char*const*const')
@@ -170,3 +194,175 @@ def normalize_type_string(type_string):
     ctype = parse_type(type_string)
     return str(ctype)
 
+
+class TypeTraits(object):
+    """
+    Parse a C type and gather some interesting properties.
+
+    @ivar ctype: the original unmodified type (a L{CType} object, apply str() to obtain a type string).
+
+    @ivar ctype_no_modifiers: the type with all modifiers (const, volatile, ...) removed (except from template arguments)
+
+    @ivar type_is_const: True if the outermost type is const
+
+    @ivar type_is_reference: True if the outermost type is a reference
+
+    @ivar type_is_pointer:  True if the outermost type is a pointer
+
+    @ivar target_is_const: True if the type is pointer or reference and the target is const
+
+    @ivar target: if this is a pointer or reference type, a L{CType}
+    representing the target, without modifiers.  If not pointer or
+    reference, it is None.
+
+    >>> t = TypeTraits("int")
+    >>> print repr(str(t.ctype))
+    'int'
+    >>> print repr(str(t.ctype_no_modifiers))
+    'int'
+    >>> t.type_is_const
+    False
+    >>> t.type_is_pointer
+    False
+    >>> t.type_is_reference
+    False
+    >>> t.target is None
+    True
+
+    >>> t = TypeTraits("const int * const")
+    >>> print repr(str(t.ctype))
+    'int const * const'
+    >>> print repr(str(t.ctype_no_modifiers))
+    'int *'
+    >>> print repr(str(t.ctype_no_const))
+    'int const *'
+    >>> t.type_is_const
+    True
+    >>> t.type_is_pointer
+    True
+    >>> t.type_is_reference
+    False
+    >>> t.target is None
+    False
+    >>> print repr(str(t.target))
+    'int'
+    >>> t.target_is_const
+    True
+
+    >>> t = TypeTraits("int * const")
+    >>> print repr(str(t.ctype))
+    'int * const'
+    >>> print repr(str(t.ctype_no_modifiers))
+    'int *'
+    >>> print repr(str(t.ctype_no_const))
+    'int *'
+    >>> t.type_is_const
+    True
+    >>> t.type_is_pointer
+    True
+    >>> t.type_is_reference
+    False
+    >>> t.target is None
+    False
+    >>> print repr(str(t.target))
+    'int'
+    >>> t.target_is_const
+    False
+
+    >>> t = TypeTraits("const char *")
+    >>> print repr(str(t.ctype))
+    'char const *'
+    >>> print repr(str(t.ctype_no_modifiers))
+    'char *'
+    >>> print repr(str(t.ctype_no_const))
+    'char const *'
+    >>> t.type_is_const
+    False
+    >>> t.type_is_pointer
+    True
+    >>> t.type_is_reference
+    False
+    >>> t.target is None
+    False
+    >>> print repr(str(t.target))
+    'char'
+    >>> t.target_is_const
+    True
+
+    >>> t = TypeTraits("char *")
+    >>> print repr(str(t.ctype))
+    'char *'
+    >>> t.make_const()
+    >>> print repr(str(t.ctype))
+    'char * const'
+    >>> t.make_target_const()
+    >>> print repr(str(t.ctype))
+    'char const * const'
+
+    """
+
+    def __init__(self, ctype):
+        self.ctype = parse_type(ctype)
+        self.ctype_no_modifiers = self.ctype.clone()
+        self.ctype_no_modifiers.remove_modifiers()
+        self.ctype_no_const = self.ctype.clone()
+        tokens = list(self.ctype.tokens)
+        tokens.reverse()
+        ptr_ref_level = 0
+        self.type_is_const = False
+        self.type_is_reference = False
+        self.type_is_pointer = False
+        self.target_is_const = False
+        self.target = None
+        target_pos = None
+        for pos, token in enumerate(tokens):
+            if isinstance(token, CType):
+                continue
+            if token.name == 'const':
+                if ptr_ref_level == 0:
+                    self.type_is_const = True
+                    const_removed = self.ctype_no_const.remove_outer_modifier('const')
+                    assert const_removed
+                elif ptr_ref_level == 1:
+                    self.target_is_const = True
+            elif token.name == '*':
+                if ptr_ref_level == 0:
+                    self.type_is_pointer = True
+                    target_pos = pos + 1
+                ptr_ref_level += 1
+            elif token.name == '&':
+                if ptr_ref_level == 0:
+                    self.type_is_reference = True
+                    target_pos = pos + 1
+                ptr_ref_level += 1
+        if target_pos is not None:
+            target_tokens = tokens[target_pos:]
+            target_tokens.reverse()
+            self.target = CType(target_tokens)
+            self.target.remove_modifiers()
+
+    def make_const(self):
+        """
+        Add a const modifier to the type.  Has no effect if the type is already const.
+        """
+        if self.type_is_const:
+            return
+        self.type_is_const = True
+        self.ctype.tokens.append(tokenizer.Token(tokenizer.NAME, "const", None, None))
+
+    def make_target_const(self):
+        """
+        Add a const modifier to the type target.  Has no effect if the type target is already const.
+        """
+        assert self.type_is_pointer or self.type_is_reference
+        if self.target_is_const:
+            return
+        self.target_is_const = True
+        for tokens in self.ctype.tokens, self.ctype_no_const.tokens:
+            for token_i in range(len(tokens)-1, -1, -1):
+                token = tokens[token_i]
+                if isinstance(token, CType):
+                    continue
+                elif token.name in ['*', '&']:
+                    tokens.insert(token_i, tokenizer.Token(tokenizer.NAME, "const", None, None))
+                    break

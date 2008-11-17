@@ -46,10 +46,12 @@ to create sub-modules for wrapping nested namespaces.  For instance::
 """
 
 from function import Function, OverloadedFunction, CustomFunctionWrapper
-from typehandlers.base import CodeBlock, DeclarationsScope
+from typehandlers.base import CodeBlock, DeclarationsScope, ReturnValue
 from typehandlers.codesink import MemoryCodeSink, CodeSink, FileCodeSink, NullCodeSink
 from cppclass import CppClass
 from enum import Enum
+from container import Container
+from converter_functions import PythonToCConverter, CToPythonConverter
 import utils
 import warnings
 import traceback
@@ -132,6 +134,7 @@ class _MultiSectionSinkManager(_SinkManager):
         self.multi_section_factory.get_main_code_sink().writeln(
             "#include %s" % self.multi_section_factory.get_common_header_include())
         self._already_initialized_sections = {}
+        self._already_initialized_sections['__main__'] = True
 
     def get_code_sink_for_wrapper(self, wrapper):
         header_sink = self.multi_section_factory.get_common_header_code_sink()
@@ -240,6 +243,7 @@ class ModuleBase(dict):
         self.declarations = DeclarationsScope()
         self.functions = {} # name => OverloadedFunction
         self.classes = []
+        self.containers = []
         self.before_init = CodeBlock(error_return, self.declarations)
         self.after_init = CodeBlock(error_return, self.declarations,
                                     predecessor=self.before_init)
@@ -364,12 +368,12 @@ class ModuleBase(dict):
         name = utils.ascii(wrapper.custom_name)
         if name is None:
             name = self.c_function_name_transformer(wrapper.function_name)
-        mangled_name = utils.get_mangled_name(name, wrapper.template_parameters)
+            name = utils.get_mangled_name(name, wrapper.template_parameters)
         try:
-            overload = self.functions[mangled_name]
+            overload = self.functions[name]
         except KeyError:
-            overload = OverloadedFunction(mangled_name)
-            self.functions[mangled_name] = overload
+            overload = OverloadedFunction(name)
+            self.functions[name] = overload
         wrapper.module = self
         wrapper.section = self.current_section
         overload.add(wrapper)
@@ -470,6 +474,10 @@ class ModuleBase(dict):
             have a constructor by default (if omitted, it will be
             considered to have a trivial constructor).
 
+          - no_copy (bool): if True, the structure will not
+            have a copy constructor by default (if omitted, it will be
+            considered to have a simple copy constructor).
+
         """
 
         try:
@@ -478,12 +486,21 @@ class ModuleBase(dict):
             no_constructor = False
         else:
             del kwargs['no_constructor']
+
+        try:
+            no_copy = kwargs['no_copy']
+        except KeyError:
+            no_copy = False
+        else:
+            del kwargs['no_copy']
         
         struct = CppClass(*args, **kwargs)
         struct.stack_where_defined = traceback.extract_stack()
         self._add_class_obj(struct)
         if not no_constructor:
             struct.add_constructor([])
+        if not no_copy:
+            struct.add_copy_constructor()
         return struct
 
 
@@ -532,6 +549,32 @@ class ModuleBase(dict):
         self._add_enum_obj(enum)
         return enum
 
+
+    def _add_container_obj(self, container):
+        """
+        Add a container to the module.
+
+        @param container: a L{Container} object
+        """
+        assert isinstance(container, Container)
+        container.module = self
+        container.section = self.current_section
+        self.containers.append(container)
+        self.register_type(container.name, container.full_name, container)
+
+    def add_container(self, *args, **kwargs):
+        """
+        Add a container to the module. See the documentation for
+        L{Container.__init__} for information on accepted parameters.
+        """
+        try:
+            container = Container(*args, **kwargs)
+        except utils.SkipWrapper:
+            return None
+        container.stack_where_defined = traceback.extract_stack()
+        self._add_container_obj(container)
+        return container
+
     def declare_one_time_definition(self, definition_name):
         """
         Internal helper method for code geneneration to coordinate
@@ -560,11 +603,13 @@ class ModuleBase(dict):
     def generate_forward_declarations(self, code_sink):
         """(internal) generate forward declarations for types"""
         assert not self._forward_declarations_declared
-        if self.classes:
+        if self.classes or self.containers:
             code_sink.writeln('/* --- forward declarations --- */')
             code_sink.writeln()
-            for class_ in self.classes:
-                class_.generate_forward_declarations(code_sink, self)
+        for class_ in self.classes:
+            class_.generate_forward_declarations(code_sink, self)
+        for container in self.containers:
+            container.generate_forward_declarations(code_sink, self)
         ## recurse to submodules
         for submodule in self.submodules:
             submodule.generate_forward_declarations(code_sink)
@@ -676,6 +721,16 @@ class ModuleBase(dict):
                 class_.generate(sink, self)
                 sink.writeln()
 
+        ## generate the containers
+        if self.containers:
+            main_sink.writeln('/* --- containers --- */')
+            main_sink.writeln()
+            for container in self.containers:
+                sink, header_sink = out.get_code_sink_for_wrapper(container)
+                sink.writeln()
+                container.generate(sink, self)
+                sink.writeln()
+
         # typedefs
         for (wrapper, alias) in self.typedefs:
             if isinstance(wrapper, CppClass):
@@ -783,6 +838,83 @@ class Module(ModuleBase):
             raise TypeError
         self.do_generate(sink_manager, module_file_base_name)
         sink_manager.close()
+
+    def get_python_to_c_type_converter_function_name(self, value_type):
+        """
+        Internal API, do not use.
+        """
+        assert isinstance(value_type, ReturnValue)
+        ctype = value_type.ctype
+        mangled_ctype = utils.mangle_name(ctype)
+        converter_function_name = "_wrap_convert_py2c__%s" % mangled_ctype
+        return converter_function_name
+
+    def generate_python_to_c_type_converter(self, value_type, code_sink):
+        """
+        Generates a python-to-c converter function for a given type
+        and returns the name of the generated function.  If called
+        multiple times with the same name only the first time is the
+        converter function generated.
+        
+        Use: this method is to be considered pybindgen internal, used
+        by code generation modules.
+
+        @type value_type: L{ReturnValue}
+        @type code_sink: L{CodeSink}
+        @returns: name of the converter function
+        """
+        assert isinstance(value_type, ReturnValue)
+        converter_function_name = self.get_python_to_c_type_converter_function_name(value_type)
+        try:
+            self.declare_one_time_definition(converter_function_name)
+        except KeyError:
+            return converter_function_name
+        else:
+            converter = PythonToCConverter(value_type, converter_function_name)
+            self.header.writeln("\n%s;\n" % converter.get_prototype())
+            code_sink.writeln()
+            converter.generate(code_sink, converter_function_name)
+            code_sink.writeln()
+            return converter_function_name
+
+
+    def get_c_to_python_type_converter_function_name(self, value_type):
+        """
+        Internal API, do not use.
+        """
+        assert isinstance(value_type, ReturnValue)
+        ctype = value_type.ctype
+        mangled_ctype = utils.mangle_name(ctype)
+        converter_function_name = "_wrap_convert_c2py__%s" % mangled_ctype
+        return converter_function_name
+
+    def generate_c_to_python_type_converter(self, value_type, code_sink):
+        """
+        Generates a c-to-python converter function for a given type
+        and returns the name of the generated function.  If called
+        multiple times with the same name only the first time is the
+        converter function generated.
+        
+        Use: this method is to be considered pybindgen internal, used
+        by code generation modules.
+
+        @type value_type: L{ReturnValue}
+        @type code_sink: L{CodeSink}
+        @returns: name of the converter function
+        """
+        assert isinstance(value_type, ReturnValue)
+        converter_function_name = self.get_c_to_python_type_converter_function_name(value_type)
+        try:
+            self.declare_one_time_definition(converter_function_name)
+        except KeyError:
+            return converter_function_name
+        else:
+            converter = CToPythonConverter(value_type, converter_function_name)
+            self.header.writeln("\n%s;\n" % converter.get_prototype())
+            code_sink.writeln()
+            converter.generate(code_sink)
+            code_sink.writeln()
+            return converter_function_name
 
 
 class SubModule(ModuleBase):

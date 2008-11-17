@@ -657,3 +657,6 @@ from enum import Enum
 from utils import write_preamble, param, retval
 import version
 
+import logging
+#logging.basicConfig(level=logging.DEBUG)
+del logging

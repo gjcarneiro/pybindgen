@@ -22,6 +22,8 @@ class MyMultiSectionFactory(MultiSectionFactory):
         self.section_sinks = {}
 
     def get_section_code_sink(self, section_name):
+        if section_name == '__main__':
+            return self.main_sink
         try:
             return self.section_sinks[section_name]
         except KeyError:

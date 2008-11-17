@@ -9,6 +9,10 @@ import os.path
 import os
 import pproc as subprocess
 
+# uncomment to enable profiling information
+# epydoc uses the profile data to generate call graphs
+#os.environ["PYBINDGEN_ENABLE_PROFILING"] = ""
+
 
 def create_pyext_obj(bld, c_or_cpp_type):
     return bld.new_task_gen(c_or_cpp_type, 'shlib', 'pyext')
@@ -64,6 +68,7 @@ def build(bld):
             DEPRECATION_ERRORS,
             bindgen.input_file('foomodulegen-auto.py'),
             bindgen.input_file('foo.h'),
+            repr(bindgen.env['CPPPATH_PYEXT']),
             bindgen.output_file('foomodulegen_generated.py'),
             ]
         bindgen.command = bindgen.env['PYTHON']
@@ -103,6 +108,7 @@ def build(bld):
             DEPRECATION_ERRORS,
             bindgen.input_file('foomodulegen-auto-split.py'),
             bindgen.input_file('foo.h'),
+            repr(bindgen.env['CPPPATH_PYEXT']),
             bindgen.output_file('foomodulegen_split.py'),
             bindgen.output_file('foomodulegen_module1.py'),
             bindgen.output_file('foomodulegen_module2.py'),

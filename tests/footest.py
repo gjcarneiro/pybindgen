@@ -2,6 +2,7 @@ import sys
 import weakref
 import gc
 import os.path
+import copy
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '..', 'build', 'default', 'tests'))
 which = int(sys.argv[1])
@@ -561,16 +562,30 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(f2.get_datum(), "hello")
 
     def test_function_as_method(self):
+        while gc.collect():
+            pass
         obj = foo.SomeObject("xpto")
         self.assertEqual(obj.get_something_prefixed("something"), "xptosomething")
+        del obj
+        while gc.collect():
+            pass
 
     def test_function_as_method_val(self):
+        while gc.collect():
+            pass
         obj = foo.SomeObject("xpto")
         self.assertEqual(obj.val_get_something_prefixed("something"), "xptosomething")
+        del obj
+        while gc.collect():
+            pass
 
     def test_function_as_method_ref(self):
+        while gc.collect():
+            pass
         obj = foo.SomeObject("xpto")
         self.assertEqual(obj.ref_get_something_prefixed("something"), "xptosomething")
+        while gc.collect():
+            pass
 
     def test_enum(self):
         foo.xpto.set_foo_type(foo.xpto.FOO_TYPE_BBB)
@@ -767,6 +782,270 @@ class TestFoo(unittest.TestCase):
             self.assertEqual(foo.SomeObject.CONSTANT_A, 0)
         except AttributeError:
             self.fail()
+
+    def test_template_function(self):
+        if not hasattr(foo, 'IntegerTypeNameGet'):
+            self.fail()
+        else:
+            self.assertEqual(foo.IntegerTypeNameGet(), 'int')
+
+    def test_operator_call(self):
+        obj = foo.SomeObject("xpto_")
+        l, s = obj("hello")
+        self.assertEqual(s, "xpto_hello")
+        self.assertEqual(l, len("xpto_hello"))
+
+    def test_container_value_return_param(self):
+        container = foo.get_simple_list()
+        count = 0
+        for i, simple in enumerate(container):
+            self.assertEqual(simple.xpto, i)
+            count += 1
+        self.assertEqual(count, 10)
+        #self.assertEqual(len(container), 10)
+
+        rv = foo.set_simple_list(container)
+        self.assertEqual(rv, sum(range(10)))
+
+
+
+    def test_container_creation(self):
+        container = foo.SimpleStructList()
+        values = list(container)
+        self.assertEqual(values, [])
+
+        l = []
+        for i in range(10):
+            simple = foo.simple_struct_t()
+            simple.xpto = i
+            l.append(simple)
+
+        container = foo.SimpleStructList(l)
+        values = list(container)
+        self.assertEqual(len(values), 10)
+        for i, value in enumerate(values):
+            self.assertEqual(value.xpto, i)
+        
+        rv = foo.set_simple_list(l)
+        self.assertEqual(rv, sum(range(10)))
+
+    def test_container_reverse_wrappers(self):
+        class MyTestContainer(foo.TestContainer):
+            def __init__(self):
+                super(MyTestContainer, self).__init__()
+                self.list_that_was_set = None
+
+            def _get_simple_list(self):
+                l = []
+                for i in range(5):
+                    simple = foo.simple_struct_t()
+                    simple.xpto = i
+                    l.append(simple)
+                #container = foo.SimpleStructList(l)
+                return l
+
+            def _set_simple_list(self, container):
+                self.list_that_was_set = container
+                return sum([s.xpto for s in container])
+
+        test = MyTestContainer()
+        container = test.get_simple_list()
+        count = 0
+        for i, simple in enumerate(container):
+            self.assertEqual(simple.xpto, i)
+            count += 1
+        self.assertEqual(count, 5)
+
+
+        ## set 
+        l = []
+        for i in range(5):
+            simple = foo.simple_struct_t()
+            simple.xpto = i
+            l.append(simple)
+
+        rv = test.set_simple_list(l)
+        self.assertEqual(rv, sum(range(5)))
+
+        count = 0
+        for i, simple in enumerate(test.list_that_was_set):
+            self.assertEqual(simple.xpto, i)
+            count += 1
+        self.assertEqual(count, 5)
+        
+
+    def test_container_param_by_ref(self):
+        l = []
+        expected_sum = 0
+        for i in range(10):
+            simple = foo.simple_struct_t()
+            simple.xpto = i
+            l.append(simple)
+            expected_sum += i*2
+
+        test = foo.TestContainer()
+        rv, container = test.set_simple_list_by_ref(l)
+        l1 = list(container)
+        self.assertEqual(rv, expected_sum)
+        self.assertEqual(len(l1), len(l))
+        for v, v1 in zip(l, l1):
+            self.assertEqual(v1.xpto, 2*v.xpto)
+
+
+    def test_unnamed_container(self):
+        test = foo.TestContainer()
+        container = test.get_simple_vec()
+        count = 0
+        for i, simple in enumerate(container):
+            self.assertEqual(simple.xpto, i)
+            count += 1
+        self.assertEqual(count, 10)
+
+        rv = test.set_simple_vec(container)
+        self.assertEqual(rv, sum(range(10)))
+
+    def test_copy(self):
+        s1 = foo.simple_struct_t()
+        s1.xpto = 123
+
+        # copy via constructor
+        s2 = foo.simple_struct_t(s1)
+        self.assertEqual(s2.xpto, 123)
+        s2.xpto = 321
+        self.assertEqual(s2.xpto, 321)
+        self.assertEqual(s1.xpto, 123)
+
+        # copy via __copy__
+        s3 = copy.copy(s1)
+        self.assertEqual(s3.xpto, 123)
+        s3.xpto = 456
+        self.assertEqual(s3.xpto, 456)
+        self.assertEqual(s1.xpto, 123)
+        
+
+    def test_refcounting_v2(self):
+        zbr_count_before = foo.Zbr.instance_count
+
+        obj = foo.SomeObject("")
+        z1 = obj.get_internal_zbr()
+        z2 = obj.get_internal_zbr()
+
+        self.assert_(z1 is z2)
+
+        del obj, z1, z2
+
+        while gc.collect():
+            pass
+
+        zbr_count_after = foo.Zbr.instance_count
+
+        self.assertEqual(zbr_count_after, zbr_count_before)
+
+    def test_refcounting_v3(self):
+        zbr_count_before = foo.Zbr.instance_count
+        
+        class MyZbr(foo.Zbr):
+            pass
+        z_in = MyZbr()
+        obj = foo.SomeObject("")
+        obj.set_zbr_transfer(z_in)
+        del z_in
+        
+        z1 = obj.get_zbr()
+        z2 = obj.get_zbr()
+        self.assert_(z1 is z2)
+        del obj, z1, z2
+
+        while gc.collect():
+            pass
+
+        zbr_count_after = foo.Zbr.instance_count
+
+        self.assertEqual(zbr_count_after, zbr_count_before)
+
+    def test_refcounting_v4(self): # same as v3 but using peek_zbr instead of get_zbr
+        zbr_count_before = foo.Zbr.instance_count
+        
+        class MyZbr(foo.Zbr):
+            pass
+        z_in = MyZbr()
+        obj = foo.SomeObject("")
+        obj.set_zbr_transfer(z_in)
+        del z_in
+        
+        z1 = obj.peek_zbr()
+        z2 = obj.peek_zbr()
+        self.assert_(z1 is z2)
+        del obj, z1, z2
+
+        while gc.collect():
+            pass
+
+        zbr_count_after = foo.Zbr.instance_count
+
+        self.assertEqual(zbr_count_after, zbr_count_before)
+
+    def test_scan_containers_in_attributes(self):
+        t = foo.TestContainer()
+        v = list(t.m_floatSet)
+        self.assertEqual(v, [1,2,3])
+
+    def test_out_vec(self):
+        t = foo.TestContainer()
+        v = list(t.get_vec())
+        self.assertEqual(v, ["hello", "world"])
+
+    def test_richcompare(self):
+        t1 = foo.Tupl()
+
+        t1.x = 1
+        t1.y = 1
+
+        t2 = foo.Tupl()
+        t2.x = 1
+        t2.y = 1
+
+        t3 = foo.Tupl()
+        t3.x = 1
+        t3.y = 2
+
+        self.assert_(t1 == t2)
+        self.assert_(not (t1 != t2))
+        self.assert_(t1 <= t2)
+        self.assert_(t1 >= t2)
+        self.assert_(t3 >= t2)
+        self.assert_(t3 > t2)
+        self.assert_(t2 <= t3)
+        self.assert_(t2 < t3)
+        self.assert_(t2 != t3)
+        self.assert_(not(t2 == t3))
+        
+    def test_numeric_operators(self):
+        t1 = foo.Tupl()
+
+        t1.x = 4
+        t1.y = 6
+
+        t2 = foo.Tupl()
+        t2.x = 2
+        t2.y = 3
+
+        r = t1 + t2
+        self.assertEqual(r.x, t1.x + t2.x)
+        self.assertEqual(r.y, t1.y + t2.y)
+
+        r = t1 - t2
+        self.assertEqual(r.x, t1.x - t2.x)
+        self.assertEqual(r.y, t1.y - t2.y)
+
+        r = t1 * t2
+        self.assertEqual(r.x, t1.x * t2.x)
+        self.assertEqual(r.y, t1.y * t2.y)
+
+        r = t1 / t2
+        self.assertEqual(r.x, t1.x / t2.x)
+        self.assertEqual(r.y, t1.y / t2.y)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -7,7 +7,8 @@ import traceback
 
 from typehandlers.base import ReturnValue, \
     join_ctype_and_name, CodeGenerationError, \
-    param_type_matcher, return_type_matcher, CodegenErrorBase
+    param_type_matcher, return_type_matcher, CodegenErrorBase, \
+    DeclarationsScope, CodeBlock
 
 from typehandlers.codesink import NullCodeSink, MemoryCodeSink
 
@@ -15,8 +16,13 @@ from cppattribute import CppInstanceAttributeGetter, CppInstanceAttributeSetter,
     CppStaticAttributeGetter, CppStaticAttributeSetter, \
     PyGetSetDef, PyMetaclass
 
+from pytypeobject import PyTypeObject, PyNumberMethods
+
 import settings
 import utils
+
+if 'set' not in dir(__builtins__):
+    from sets import Set as set
 
 
 class MemoryPolicy(object):
@@ -373,59 +379,6 @@ class CppClass(object):
     A CppClass object takes care of generating the code for wrapping a C++ class
     """
 
-    TYPE_TMPL = (
-        'PyTypeObject %(typestruct)s = {\n'
-        '    PyObject_HEAD_INIT(NULL)\n'
-        '    0,                                 /* ob_size */\n'
-        '    (char *) "%(tp_name)s",            /* tp_name */\n'
-        '    %(tp_basicsize)s,                  /* tp_basicsize */\n'
-        '    0,                                 /* tp_itemsize */\n'
-        '    /* methods */\n'
-        '    (destructor)%(tp_dealloc)s,        /* tp_dealloc */\n'
-        '    (printfunc)0,                      /* tp_print */\n'
-        '    (getattrfunc)%(tp_getattr)s,       /* tp_getattr */\n'
-        '    (setattrfunc)%(tp_setattr)s,       /* tp_setattr */\n'
-        '    (cmpfunc)%(tp_compare)s,           /* tp_compare */\n'
-        '    (reprfunc)%(tp_repr)s,             /* tp_repr */\n'
-        '    (PyNumberMethods*)%(tp_as_number)s,     /* tp_as_number */\n'
-        '    (PySequenceMethods*)%(tp_as_sequence)s, /* tp_as_sequence */\n'
-        '    (PyMappingMethods*)%(tp_as_mapping)s,   /* tp_as_mapping */\n'
-        '    (hashfunc)%(tp_hash)s,             /* tp_hash */\n'
-        '    (ternaryfunc)%(tp_call)s,          /* tp_call */\n'
-        '    (reprfunc)%(tp_str)s,              /* tp_str */\n'
-        '    (getattrofunc)%(tp_getattro)s,     /* tp_getattro */\n'
-        '    (setattrofunc)%(tp_setattro)s,     /* tp_setattro */\n'
-        '    (PyBufferProcs*)%(tp_as_buffer)s,  /* tp_as_buffer */\n'
-        '    %(tp_flags)s,                      /* tp_flags */\n'
-        '    %(tp_doc)s,                        /* Documentation string */\n'
-        '    (traverseproc)%(tp_traverse)s,     /* tp_traverse */\n'
-        '    (inquiry)%(tp_clear)s,             /* tp_clear */\n'
-        '    (richcmpfunc)%(tp_richcompare)s,   /* tp_richcompare */\n'
-        '    %(tp_weaklistoffset)s,             /* tp_weaklistoffset */\n'
-        '    (getiterfunc)%(tp_iter)s,          /* tp_iter */\n'
-        '    (iternextfunc)%(tp_iternext)s,     /* tp_iternext */\n'
-        '    (struct PyMethodDef*)%(tp_methods)s, /* tp_methods */\n'
-        '    (struct PyMemberDef*)0,              /* tp_members */\n'
-        '    %(tp_getset)s,                     /* tp_getset */\n'
-        '    NULL,                              /* tp_base */\n'
-        '    NULL,                              /* tp_dict */\n'
-        '    (descrgetfunc)%(tp_descr_get)s,    /* tp_descr_get */\n'
-        '    (descrsetfunc)%(tp_descr_set)s,    /* tp_descr_set */\n'
-        '    %(tp_dictoffset)s,                 /* tp_dictoffset */\n'
-        '    (initproc)%(tp_init)s,             /* tp_init */\n'
-        '    (allocfunc)%(tp_alloc)s,           /* tp_alloc */\n'
-        '    (newfunc)%(tp_new)s,               /* tp_new */\n'
-        '    (freefunc)%(tp_free)s,             /* tp_free */\n'
-        '    (inquiry)%(tp_is_gc)s,             /* tp_is_gc */\n'
-        '    NULL,                              /* tp_bases */\n'
-        '    NULL,                              /* tp_mro */\n'
-        '    NULL,                              /* tp_cache */\n'
-        '    NULL,                              /* tp_subclasses */\n'
-        '    NULL,                              /* tp_weaklist */\n'
-        '    (destructor) NULL                  /* tp_del */\n'
-        '};\n'
-        )
-
     def __init__(self, name, parent=None, incref_method=None, decref_method=None,
                  automatic_type_narrowing=None, allow_subclassing=None,
                  is_singleton=False, outer_class=None,
@@ -483,7 +436,8 @@ class CppClass(object):
         self._dummy_methods = [] # methods that have parameter/retval binding problems
         self.nonpublic_methods = []
         self.constructors = [] # (name, wrapper) pairs
-        self.slots = dict()
+        self.pytype = PyTypeObject()
+        self.slots = self.pytype.slots
         self.helper_class = None
         self.instance_creation_function = None
         ## set to True when we become aware generating the helper
@@ -491,8 +445,13 @@ class CppClass(object):
         self.helper_class_disabled = False
         self.cannot_be_constructed = '' # reason
         self.has_trivial_constructor = False
+        self.has_copy_constructor = False
         self.has_output_stream_operator = False
         self._have_pure_virtual_methods = None
+        self._wrapper_registry = None
+        self.binary_comparison_operators = set()
+        self.binary_numeric_operators = dict()
+
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
         ## operator ThisClass(); in the other class.
@@ -617,6 +576,52 @@ class CppClass(object):
     def __repr__(self):
         return "<pybindgen.CppClass %r>" % self.full_name
 
+    def add_binary_comparison_operator(self, operator):
+        """
+        Add support for a C++ binary comparison operator, such as == or <.
+
+        The binary operator is assumed to operate with both operands
+        of the type of the class, either by reference or by value.
+        
+        @param operator: string indicating the name of the operator to
+        support, e.g. '=='
+        """
+        if not isinstance(operator, str):
+            raise TypeError("expected operator name as string")
+        if operator not in ['==', '!=', '<', '<=', '>', '>=']:
+            raise ValueError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
+        self.binary_comparison_operators.add(operator)
+
+    def add_binary_numeric_operator(self, operator, result_cppclass=None,
+                                    left_cppclass=None, right_cppclass=None):
+        """
+        Add support for a C++ binary numeric operator, such as +, -, *, or /.
+
+        @param operator: string indicating the name of the operator to
+        support, e.g. '=='
+
+        @param result_cppclass: the CppClass object of the result type, assumed to be this class if omitted
+        @param left_cppclass: the CppClass object of the left operand type, assumed to be this class if omitted
+        @param right_cppclass: the CppClass object of the right operand type, assumed to be this class if omitted
+        """
+        if not isinstance(operator, str):
+            raise TypeError("expected operator name as string")
+        if operator not in ['+', '-', '*', '/']:
+            raise ValueError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
+        try:
+            l = self.binary_numeric_operators[operator]
+        except KeyError:
+            l = []
+            self.binary_numeric_operators[operator] = l
+        if result_cppclass is None:
+            result_cppclass = self
+        if left_cppclass is None:
+            left_cppclass = self
+        if right_cppclass is None:
+            right_cppclass = self
+        op = (result_cppclass, left_cppclass, right_cppclass)
+        if op not in l:
+            l.append(op)
 
     def add_class(self, *args, **kwargs):
         """
@@ -1035,6 +1040,9 @@ public:
         method.class_ = self
 
         if method.visibility == 'public':
+            if name == '__call__': # needs special handling
+                method.force_parse = method.PARSE_TUPLE_AND_KEYWORDS
+
             try:
                 overload = self.methods[name]
             except KeyError:
@@ -1190,6 +1198,9 @@ public:
         self.constructors.append(wrapper)
         if not wrapper.parameters:
             self.has_trivial_constructor = True # FIXME: I don't remember what is this used for anymore, maybe remove
+        if len(wrapper.parameters) == 1 and isinstance(wrapper.parameters[0], (CppClassRefParameter, CppClassParameter)) \
+                and wrapper.parameters[0].cpp_class is self and wrapper.visibility == 'public':
+            self.has_copy_constructor = True
 
     def add_output_stream_operator(self):
         """
@@ -1204,6 +1215,8 @@ public:
         to a string.
         """
         self.has_output_stream_operator = True
+        self.module.add_include("<ostream>")
+        self.module.add_include("<sstream>")
 
     def add_constructor(self, *args, **kwargs):
         """
@@ -1228,6 +1241,19 @@ public:
                 constructor = CppConstructor(*args, **kwargs)
             except utils.SkipWrapper:
                 return None
+        constructor.stack_where_defined = traceback.extract_stack()
+        self._add_constructor_obj(constructor)
+        return constructor
+
+    def add_copy_constructor(self):
+        """
+        Utility method to add a 'copy constructor' method to this class.
+        """
+        try:
+            constructor = CppConstructor([self.ThisClassRefParameter("const %s &" % self.full_name,
+                                                                     'ctor_arg')])
+        except utils.SkipWrapper:
+            return None
         constructor.stack_where_defined = traceback.extract_stack()
         self._add_constructor_obj(constructor)
         return constructor
@@ -1320,6 +1346,16 @@ public:
                 method = method.clone()
                 self.helper_class.add_virtual_method(method)
 
+    def _get_wrapper_registry(self):
+        # there is one wrapper registry object per root class only,
+        # which is used for all subclasses.
+        if self.parent is None:
+            if self._wrapper_registry is None:
+                self._wrapper_registry = settings.wrapper_registry(self.pystruct)
+            return self._wrapper_registry
+        else:
+            return self.parent._get_wrapper_registry()
+    wrapper_registry = property(_get_wrapper_registry)
 
     def generate_forward_declarations(self, code_sink, module):
         """
@@ -1368,12 +1404,17 @@ typedef struct {
         if self.typeid_map_name is not None:
             self._generate_typeid_map(code_sink, module)
 
+        if self.parent is None:
+            self.wrapper_registry.generate_forward_declarations(code_sink, module)
 
     def generate(self, code_sink, module, docstring=None):
         """Generates the class to a code sink"""
 
         if self.typeid_map_name is not None:
             code_sink.writeln("\npybindgen::TypeMap %s;\n" % self.typeid_map_name)
+
+        if self.parent is None:
+            self.wrapper_registry.generate(code_sink, module)
 
         if self.helper_class is not None:
             parent_caller_methods = self.helper_class.generate(code_sink)
@@ -1443,38 +1484,96 @@ typedef struct {
         self._generate_destructor(code_sink, have_constructor)
         if self.has_output_stream_operator:
             self._generate_str(code_sink)
+        
+        #self._generate_tp_hash(code_sink)
+        #self._generate_tp_compare(code_sink)
 
         if self.slots.get("tp_richcompare", "NULL") == "NULL":
             self.slots["tp_richcompare"] = self._generate_tp_richcompare(code_sink)
+
+        if self.binary_numeric_operators:
+            self.slots["tp_as_number"] = self._generate_number_methods(code_sink)
         
         self._generate_type_structure(code_sink, docstring)
+
+    def _generate_number_methods(self, code_sink):
+        number_methods_var_name = "%s__py_number_methods" % (self.mangled_full_name,)
+
+        pynumbermethods = PyNumberMethods()
+        pynumbermethods.slots['variable'] = number_methods_var_name
+
+        # iterate over all types and request generation of the
+        # convertion functions for that type (so that those functions
+        # are not generated in the middle of one of the wrappers we
+        # are about to generate)
+        root_module = self.module.get_root()
+        for dummy_op_symbol, op_types in self.binary_numeric_operators.iteritems():
+            for (retval, left, right) in op_types:
+                root_module.generate_c_to_python_type_converter(retval.ThisClassReturn(retval.full_name), code_sink)
+                root_module.generate_python_to_c_type_converter(left.ThisClassReturn(left.full_name), code_sink)
+                root_module.generate_python_to_c_type_converter(right.ThisClassReturn(right.full_name), code_sink)
+
+        def try_wrap_operator(op_symbol, slot_name):
+            try:
+                op_types = self.binary_numeric_operators[op_symbol]
+            except KeyError:
+                return
+            wrapper_name = "%s__%s" % (self.mangled_full_name, slot_name)
+            pynumbermethods.slots[slot_name] = wrapper_name
+            code_sink.writeln(("static PyObject*\n"
+                               "%s (PyObject *py_left, PyObject *py_right)\n"
+                               "{") % wrapper_name)
+            code_sink.indent()
+            for (retval, left, right) in op_types:
+                retval_converter = root_module.generate_c_to_python_type_converter(retval.ThisClassReturn(retval.full_name), code_sink)
+                left_converter = root_module.generate_python_to_c_type_converter(left.ThisClassReturn(left.full_name), code_sink)
+                right_converter = root_module.generate_python_to_c_type_converter(right.ThisClassReturn(right.full_name), code_sink)
+
+                code_sink.writeln("{")
+                code_sink.indent()
+                
+                code_sink.writeln("%s left;" % left.full_name)
+                code_sink.writeln("%s right;" % right.full_name)
+                
+                code_sink.writeln("if (%s(py_left, &left) && %s(py_right, &right)) {" % (left_converter, right_converter))
+                code_sink.indent()
+                code_sink.writeln("%s result = (left %s right);" % (retval.full_name, op_symbol))
+                code_sink.writeln("return %s(&result);" % retval_converter)
+                code_sink.unindent()
+                code_sink.writeln("}")
+                code_sink.writeln("PyErr_Clear();")
+
+                code_sink.unindent()
+                code_sink.writeln("}")
+                
+            code_sink.writeln("Py_INCREF(Py_NotImplemented);")
+            code_sink.writeln("return Py_NotImplemented;")
+            code_sink.unindent()
+            code_sink.writeln("}")
+
+        try_wrap_operator('+', 'nb_add')
+        try_wrap_operator('-', 'nb_subtract')
+        try_wrap_operator('*', 'nb_multiply')
+        try_wrap_operator('/', 'nb_divide')
+        
+        pynumbermethods.generate(code_sink)
+        return '&' + number_methods_var_name
         
     def _generate_type_structure(self, code_sink, docstring):
         """generate the type structure"""
         self.slots.setdefault("tp_basicsize",
                               "sizeof(%s)" % (self.pystruct,))
-        for slot in ["tp_getattr", "tp_setattr", "tp_compare", "tp_repr",
-                     "tp_as_number", "tp_as_sequence", "tp_as_mapping",
-                     "tp_hash", "tp_call", "tp_str", "tp_getattro", "tp_setattro",
-                     "tp_as_buffer", "tp_traverse", "tp_clear", "tp_richcompare",
-                     "tp_iter", "tp_iternext", "tp_descr_get",
-                     "tp_descr_set", "tp_is_gc"]:
-            self.slots.setdefault(slot, "NULL")
-
-        self.slots.setdefault("tp_alloc", "PyType_GenericAlloc")
-        self.slots.setdefault("tp_new", "PyType_GenericNew")
-        #self.slots.setdefault("tp_free", "_PyObject_Del")
-        self.slots.setdefault("tp_free", "0")
-        self.slots.setdefault("tp_weaklistoffset", "0")
+        tp_flags = set(['Py_TPFLAGS_DEFAULT'])
         if self.allow_subclassing:
-            self.slots.setdefault("tp_flags", ("Py_TPFLAGS_DEFAULT|"
-                                               "Py_TPFLAGS_HAVE_GC|"
-                                               "Py_TPFLAGS_BASETYPE"))
+            tp_flags.add("Py_TPFLAGS_HAVE_GC")
+            tp_flags.add("Py_TPFLAGS_BASETYPE")
             self.slots.setdefault("tp_dictoffset",
                                   "offsetof(%s, inst_dict)" % self.pystruct)
         else:
-            self.slots.setdefault("tp_flags", "Py_TPFLAGS_DEFAULT")
             self.slots.setdefault("tp_dictoffset", "0")
+        if self.binary_numeric_operators:
+            tp_flags.add("Py_TPFLAGS_CHECKTYPES")            
+        self.slots.setdefault("tp_flags", '|'.join(tp_flags))
         self.slots.setdefault("tp_doc", (docstring is None and 'NULL'
                                          or "\"%s\"" % (docstring,)))
         dict_ = self.slots
@@ -1486,8 +1585,16 @@ typedef struct {
             dict_.setdefault("tp_name", '.'.join(mod_path))
         else:
             dict_.setdefault("tp_name", '%s.%s' % (self.outer_class.slots['tp_name'], self.name))
-            
-        code_sink.writeln(self.TYPE_TMPL % dict_)
+
+        ## tp_call support
+        try:
+            call_method = self.methods['__call__']
+        except KeyError:
+            pass
+        else:
+            dict_.setdefault("tp_call", call_method.wrapper_actual_name)
+
+        self.pytype.generate(code_sink)
 
 
     def _generate_constructor(self, code_sink):
@@ -1534,6 +1641,44 @@ typedef struct {
                                           or constructor))
         return have_constructor
 
+    def _generate_copy_method(self, code_sink):
+        construct_name = self.get_construct_name()
+        copy_wrapper_name = '_wrap_%s__copy__' % self.pystruct
+        code_sink.writeln('''
+static PyObject*\n%s(%s *self)
+{
+''' % (copy_wrapper_name, self.pystruct))
+        code_sink.indent()
+
+        declarations = DeclarationsScope()
+        code_block = CodeBlock("return NULL;", declarations)
+
+        if self.allow_subclassing:
+            new_func = 'PyObject_GC_New'
+        else:
+            new_func = 'PyObject_New'
+
+        py_copy = declarations.declare_variable("%s*" % self.pystruct, "py_copy")
+        code_block.write_code("%s = %s(%s, %s);" %
+                              (py_copy, new_func, self.pystruct, '&'+self.pytypestruct))
+        code_block.write_code("%s->obj = new %s(*self->obj);" % (py_copy, construct_name))
+        if self.allow_subclassing:
+            code_block.write_code("%s->inst_dict = NULL;" % py_copy)
+
+        self.wrapper_registry.write_register_new_wrapper(code_block, py_copy, "%s->obj" % py_copy)
+
+        code_block.write_code("return (PyObject*) %s;" % py_copy)
+
+        declarations.get_code_sink().flush_to(code_sink)
+
+        code_block.write_cleanup()
+        code_block.sink.flush_to(code_sink)
+
+        code_sink.unindent()
+        code_sink.writeln("}")
+        code_sink.writeln()
+        return copy_wrapper_name
+
     def _generate_methods(self, code_sink, parent_caller_methods):
         """generate the method wrappers"""
         method_defs = []
@@ -1544,9 +1689,19 @@ typedef struct {
                 utils.call_with_error_handling(overload.generate, (code_sink,), {}, overload)
             except utils.SkipWrapper:
                 continue
-            method_defs.append(overload.get_py_method_def(meth_name))
+            if meth_name not in ['__call__']: # need to be converted to slots
+                method_defs.append(overload.get_py_method_def(meth_name))
             code_sink.writeln()
         method_defs.extend(parent_caller_methods)
+
+        if self.has_copy_constructor:
+            try:
+                copy_wrapper_name = utils.call_with_error_handling(self._generate_copy_method, (code_sink,), {}, self)
+            except utils.SkipWrapper:
+                pass
+            else:
+                method_defs.append('{(char *) "__copy__", (PyCFunction) %s, METH_NOARGS, NULL},' % copy_wrapper_name)
+
         ## generate the method table
         code_sink.writeln("static PyMethodDef %s_methods[] = {" % (self.pystruct,))
         code_sink.indent()
@@ -1628,6 +1783,7 @@ static int
         self.slots.setdefault("tp_str", tp_str_function_name )
 
         code_sink.writeln('''
+
 static PyObject *
 %s(%s *self)
 {
@@ -1635,9 +1791,43 @@ static PyObject *
     oss << *self->obj;
     return PyString_FromString(oss.str ().c_str ());
 }
-''' % (tp_str_function_name, self.pystruct))
-        code_sink.writeln()
 
+''' % (tp_str_function_name, self.pystruct))
+
+    def _generate_tp_hash(self, code_sink):
+        """generates a tp_hash function, which returns a hash of the self->obj pointer"""
+
+        tp_hash_function_name = "_wrap_%s__tp_hash" % (self.pystruct,)
+        self.slots.setdefault("tp_hash", tp_hash_function_name )
+
+        code_sink.writeln('''
+
+static long
+%s(%s *self)
+{
+    return (long) self->obj;
+}
+
+''' % (tp_hash_function_name, self.pystruct))
+
+    def _generate_tp_compare(self, code_sink):
+        """generates a tp_compare function, which compares the ->obj pointers"""
+
+        tp_compare_function_name = "_wrap_%s__tp_compare" % (self.pystruct,)
+        self.slots.setdefault("tp_compare", tp_compare_function_name )
+
+        code_sink.writeln('''
+
+static int
+%s(%s *self, %s *other)
+{
+    if (self->obj == other->obj) return 0;
+    if (self->obj > other->obj)  return -1;
+    return 1;
+}
+
+''' % (tp_compare_function_name, self.pystruct, self.pystruct))
+        
 
     def _generate_destructor(self, code_sink, have_constructor):
         """Generate a tp_dealloc function and register it in the type"""
@@ -1647,56 +1837,77 @@ static PyObject *
             return
 
         tp_dealloc_function_name = "_wrap_%s__tp_dealloc" % (self.pystruct,)
+        code_sink.writeln(r'''
+static void
+%s(%s *self)
+{''' % (tp_dealloc_function_name, self.pystruct))
+        code_sink.indent()
+
+        code_block = CodeBlock("PyErr_Print(); return;", DeclarationsScope())
+
+        self.wrapper_registry.write_unregister_wrapper(code_block, 'self', 'self->obj')
 
         if self.allow_subclassing:
-            clear_code = "%s(self);" % self.slots["tp_clear"]
-            delete_code = ""
+            code_block.write_code("%s(self);" % self.slots["tp_clear"])
         else:
-            clear_code = ""
-            delete_code = self._get_delete_code()
+            code_block.write_code(self._get_delete_code())
 
-        if have_constructor:
-            code_sink.writeln(r'''
-static void
-%s(%s *self)
-{
-    %s
-    %s
-    self->ob_type->tp_free((PyObject*)self);
-}
-''' % (tp_dealloc_function_name, self.pystruct,
-       delete_code, clear_code))
+        code_block.write_code('self->ob_type->tp_free((PyObject*)self);')
 
-        else: # don't have constructor
+        code_block.write_cleanup()
+        
+        code_block.declarations.get_code_sink().flush_to(code_sink)
+        code_block.sink.flush_to(code_sink)
 
-            code_sink.writeln('''
-static void
-%s(%s *self)
-{
-    %s
-    %s
-    self->ob_type->tp_free((PyObject*)self);
-}
-''' % (tp_dealloc_function_name, self.pystruct,
-       clear_code, delete_code))
-        code_sink.writeln()
+        code_sink.unindent()
+        code_sink.writeln('}\n')
+
         self.slots.setdefault("tp_dealloc", tp_dealloc_function_name )
 
 
     def _generate_tp_richcompare(self, code_sink):
         tp_richcompare_function_name = "_wrap_%s__tp_richcompare" % (self.pystruct,)
 
-        code_sink.writeln("static PyObject*\n%s (%s *self, PyObject *o2, int opid)"
-                          % (tp_richcompare_function_name, self.pystruct))
+        code_sink.writeln("static PyObject*\n%s (%s *self, %s *other, int opid)"
+                          % (tp_richcompare_function_name, self.pystruct, self.pystruct))
         code_sink.writeln("{")
         code_sink.indent()
 
-        ## TODO
-        code_sink.writeln('PyErr_SetString(PyExc_TypeError, "Comparison not defined or not yet implemented.");')
-        code_sink.writeln('return NULL;')
+        code_sink.writeln("""
+if (!PyObject_IsInstance((PyObject*) other, (PyObject*) &%s)) {
+    Py_INCREF(Py_NotImplemented);
+    return Py_NotImplemented;
+}""" % self.pytypestruct)
 
-        #code_sink.writeln("Py_INCREF(Py_NotImplemented);")
-        #code_sink.writeln("return Py_NotImplemented;")
+        code_sink.writeln("switch (opid)\n{")
+
+        def wrap_operator(name, opid_code):
+            code_sink.writeln("case %s:" % opid_code)
+            code_sink.indent()
+            if name in self.binary_comparison_operators:
+                code_sink.writeln("if (*self->obj %(OP)s *other->obj) {\n"
+                                  "    Py_INCREF(Py_True);\n"
+                                  "    return Py_True;\n"
+                                  "} else {\n"
+                                  "    Py_INCREF(Py_False);\n"
+                                  "    return Py_False;\n"
+                                  "}" % dict(OP=name))
+            else:
+                code_sink.writeln("Py_INCREF(Py_NotImplemented);\n"
+                                  "return Py_NotImplemented;")
+            code_sink.unindent()
+        
+        wrap_operator('<', 'Py_LT')
+        wrap_operator('<=', 'Py_LE')
+        wrap_operator('==', 'Py_EQ')
+        wrap_operator('!=', 'Py_NE')
+        wrap_operator('>=', 'Py_GE')
+        wrap_operator('>', 'Py_GT')
+
+        code_sink.writeln("} /* closes switch (opid) */")
+
+        code_sink.writeln("Py_INCREF(Py_NotImplemented);\n"
+                          "return Py_NotImplemented;")
 
         code_sink.unindent()
         code_sink.writeln("}\n")

@@ -35,7 +35,7 @@ class PyObjectParam(Parameter):
         wrapper.parse_params.add_parameter('O', ['&'+name])
         wrapper.call_params.append(name)
         if self.transfer_ownership:
-            wrapper.before_call.write_code("Py_INCREF(%s);" % name)
+            wrapper.before_call.write_code("Py_INCREF((PyObject*) %s);" % name)
 
 
 class PyObjectReturnValue(ReturnValue):
@@ -57,7 +57,7 @@ class PyObjectReturnValue(ReturnValue):
     def convert_python_to_c(self, wrapper):
         wrapper.parse_params.add_parameter("O", ["&"+self.value], prepend=True)
         if self.caller_owns_return:
-            wrapper.after_call.write_code("Py_INCREF(%s);" % self.value)
+            wrapper.after_call.write_code("Py_INCREF((PyObject*) %s);" % self.value)
 
     def convert_c_to_python(self, wrapper):
         wrapper.build_params.add_parameter(

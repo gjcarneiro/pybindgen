@@ -4,6 +4,7 @@ import sys
 import re
 
 import pybindgen
+import pybindgen.settings
 from pybindgen.typehandlers import base as typehandlers
 from pybindgen import ReturnValue, Parameter, Module, Function, FileCodeSink
 from pybindgen import CppMethod, CppConstructor, CppClass, Enum
@@ -31,7 +32,7 @@ class PointerHolderTransformation(typehandlers.TypeTransformation):
         else:
             raise AssertionError
         handler = type_handler(*args, **kwargs)
-        handler.set_tranformation(self, self.get_untransformed_name(args[0]))
+        handler.set_transformation(self, self.get_untransformed_name(args[0]))
         return handler
 
     def untransform(self, type_handler, declarations, code_block, expression):
@@ -51,6 +52,8 @@ del transf
 
 
 def customize_module(module):
+    pybindgen.settings.wrapper_registry = pybindgen.settings.StdMapWrapperRegistry
+
     wrapper_body = '''
 static PyObject *
 _wrap_foofunction_that_takes_foo_from_string(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args,
