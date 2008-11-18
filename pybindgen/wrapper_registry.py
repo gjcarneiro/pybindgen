@@ -30,7 +30,7 @@ class WrapperRegistry(object):
         raise NotImplementedError
 
     
-class NullWrapperRegistry(object):
+class NullWrapperRegistry(WrapperRegistry):
     """
     A 'null' wrapper registry class.  It produces no code, and does
     not guarantee that more than one wrapper cannot be created for
@@ -56,7 +56,7 @@ class NullWrapperRegistry(object):
         pass
 
 
-class StdMapWrapperRegistry(object):
+class StdMapWrapperRegistry(WrapperRegistry):
     """
     A wrapper registry that uses std::map as implementation.  Do not
     use this if generating pure C wrapping code, else the code will

@@ -21,7 +21,9 @@ from pytypeobject import PyTypeObject, PyNumberMethods
 import settings
 import utils
 
-if 'set' not in dir(__builtins__):
+try:
+    set
+except AttributeError:
     from sets import Set as set
 
 
