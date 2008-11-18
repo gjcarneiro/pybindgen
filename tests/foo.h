@@ -817,22 +817,22 @@ struct Tupl
 
 inline bool operator < (Tupl const &a, Tupl const &b)
 {
-    return (a.x < b.x || a.x == b.x && a.y < b.y);
+    return (a.x < b.x || (a.x == b.x && a.y < b.y));
 }
 
 inline bool operator <= (Tupl const &a, Tupl const &b)
 {
-    return (a.x <= b.x || a.x == b.x && a.y <= b.y);
+    return (a.x <= b.x || (a.x == b.x && a.y <= b.y));
 }
 
 inline bool operator > (Tupl const &a, Tupl const &b)
 {
-    return (a.x > b.x || a.x == b.x && a.y > b.y);
+    return (a.x > b.x || (a.x == b.x && a.y > b.y));
 }
 
 inline bool operator >= (Tupl const &a, Tupl const &b)
 {
-    return (a.x >= b.x || a.x == b.x && a.y >= b.y);
+    return (a.x >= b.x || (a.x == b.x && a.y >= b.y));
 }
 
 inline Tupl operator + (Tupl const &a, Tupl const &b)
