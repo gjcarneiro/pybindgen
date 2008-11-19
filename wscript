@@ -32,7 +32,14 @@ def get_version_from_bzr(path=None):
     import bzrlib.tag, bzrlib.branch
     if path is None:
         path = os.getcwd()
-    branch = bzrlib.branch.Branch.open('file://' + os.path.abspath(path))
+    
+    fullpath = os.path.abspath(path)
+    if sys.platform == 'win32':
+        fullpath = fullpath.replace('\\', '/')
+        fullpath = '/' + fullpath
+
+    branch = bzrlib.branch.Branch.open('file://' + fullpath)
+        
     tags = bzrlib.tag.BasicTags(branch)
     #print "Getting version information from bzr branch..."
     history = branch.revision_history()
