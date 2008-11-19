@@ -29,6 +29,8 @@ else:
 
 
 def build(bld):
+    env = bld.env()
+
     top_srcdir = bld.m_srcnode.abspath()
 
     gen = bld.create_obj('command-output')
@@ -39,10 +41,11 @@ def build(bld):
     gen.command_is_external = True
     gen.prio = 55
     
-    obj = bld.create_obj('cpp', 'objects', 'pyext')
-    obj.source = 'test.cc'
-    if os.path.basename(obj.env['CXX']).startswith("g++"):
-        obj.env.append_value('CXXFLAGS', ['-Werror', '-Wno-unused'])
+    if env['CXX']:
+        obj = bld.create_obj('cpp', 'objects', 'pyext')
+        obj.source = 'test.cc'
+        if os.path.basename(obj.env['CXX']).startswith("g++"):
+            obj.env.append_value('CXXFLAGS', ['-Werror', '-Wno-unused'])
     
     ## manual code generation using simple pybindgen API calls
     bindgen = bld.create_obj('command-output')
@@ -55,17 +58,18 @@ def build(bld):
     bindgen.command_is_external = True
     bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
-    obj = create_pyext_obj(bld, 'cpp')
-    obj.source = [
-        'foo.cc',
-        'foomodule.cc'
-        ]
-    obj.target = 'foo'
-    obj.inst_var = 0 # do not install
-    obj.includes = '.'
+    if env['CXX']:
+        obj = create_pyext_obj(bld, 'cpp')
+        obj.source = [
+            'foo.cc',
+            'foomodule.cc'
+            ]
+        obj.target = 'foo'
+        obj.inst_var = 0 # do not install
+        obj.includes = '.'
 
     ## automatic code scanning using gccxml
-    if bld.env()['ENABLE_PYGCCXML']:
+    if env['ENABLE_PYGCCXML']:
         ### Same thing, but using gccxml autoscanning
         bindgen = bld.create_obj('command-output')
         bindgen.stdout = 'foomodule2.cc'
