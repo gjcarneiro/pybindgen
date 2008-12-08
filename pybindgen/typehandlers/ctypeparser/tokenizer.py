@@ -31,7 +31,7 @@ DEBUG = False
 
 try:
     set
-except AttributeError:
+except NameError:
     from sets import Set as set
 
 
