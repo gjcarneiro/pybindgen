@@ -161,9 +161,9 @@ def configure(conf):
 
     conf.check_tool('misc')
     conf.check_tool('python')
+    conf.check_python_version((2,3))
 
     try:
-        conf.check_python_module('pygccxml')
         conf.check_tool('compiler_cc')
         conf.check_tool('compiler_cxx')
     except Configure.ConfigurationError:
@@ -174,7 +174,6 @@ def configure(conf):
             conf.env.append_value('CXXFLAGS', ['-Wall', '-fno-strict-aliasing'])
             if Params.g_options.debug_level == 'ultradebug':
                 conf.env.append_value('CXXFLAGS', ['-Wextra'])
-        conf.check_python_version((2,3))
         conf.check_python_headers()
 
         if not Params.g_options.disable_pygccxml:
