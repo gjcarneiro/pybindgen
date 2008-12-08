@@ -31,6 +31,8 @@
 
     - Allow installation of pybindgen even if no C/C++ compiler is detected;
 
+    - Fix compatibility with older Python versions (tested with 2.3, 2.4, and 2.5)
+
 
 === pybindgen 0.9 ===
     - Fix GCC 4.2 compilation warnings;
