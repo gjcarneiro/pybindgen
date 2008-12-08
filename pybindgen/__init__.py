@@ -492,22 +492,31 @@ Memory management for pointer types
       void DoSomething (MyClass *cls);
 
     To wrap this class, we first need to declare our class::
-
-      mod.add_class('MyClass', 
-                    incref_method='Ref', 
-                    decref_method='Unref', 
-                    peekref_method='PeekRef')
+      from pybindgen import cppclass
+      [...]
+      mod.add_class('MyClass', memory_policy=cppclass.ReferenceCountingMethodsPolicy( 
+                        incref_method='Ref', 
+                        decref_method='Unref', 
+                        peekref_method='PeekRef'))
 
     The above allows pybindgen to maintain and track the reference count
     of the MyClass object while the code below shows how we can declare
     a function taking a pointer as input::
 
-      mod.add_function('DoSomething', None, [param('MyClass *', 'cls')]
+      mod.add_function('DoSomething', None, [param('MyClass *', 'cls', transfer_ownership=False)]
 
-    Here, we obviously don't need to care much about the transfer_ownership
-    attribute of the input argument to our function since ownership of the pointer
-    will be implicitely shared between the DoSomething function and the calling
-    python runtime through the object's reference count.
+    Here, the meaning of transfer_ownership changes slightly.
+    Whithout reference counting, transfer_ownership refers to the
+    transfer of the object as a whole, i.e. either the caller or
+    callee will own the object in the end, but not both.  With
+    reference counting, transfer_ownership refers to the transfer of a
+    _reference_.  In this example, transfer_ownership=False means that
+    the caller will not "steal" our reference, i.e. it will either not
+    keep a reference to our object for itself, or if it does it
+    creates its own reference to the object by calling the incref
+    method.  If transfer_ownership=True it would mean that the caller
+    would keep the passed in reference to itself, and if the caller
+    wants to keep the reference it must call the incref method first.
 
     A more interesting case is that of returning such a reference counted 
     object from a function::
@@ -525,6 +534,21 @@ Memory management for pointer types
 
     Which instructs pybindgen that DoSomething is not to be trusted and that it should
     acquire ownership of the returned pointer if it needs to keep track of it.
+
+
+  A STL container
+  ---------------
+
+    If you have a function that takes a STL container, you have to
+    tell pybindgen to wrap the container first::
+    
+      void DoSomething (std::list<std::string> const &listOfStrings);
+
+    Is wrapped by::
+
+      module.add_container('std::list<std::string>', 'std::string', 'list') # declare a container only once
+      [...]
+      mod.add_function('DoSomething', None, [param('std::list<std::string> const &', 'listOfStrings')])
 
 
 Subclassing a C++ class from python
