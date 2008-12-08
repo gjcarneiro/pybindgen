@@ -124,6 +124,9 @@ def dist_hook():
         tar.close()
         shutil.rmtree('apidocs', True)
 
+    ## This is a directory I usually keep in my tree -- gjc
+    shutil.rmtree('pybindgen-google-code', True)
+
 
 def set_options(opt):
     opt.tool_options('python')
