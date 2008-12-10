@@ -21,11 +21,12 @@ def build(bld):
     bindgen.command_is_external = True
     bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
-    obj = create_pyext_obj(bld, 'cpp')
-    obj.source = [
-        'd.cc',
-        'dmodule.cc'
-        ]
-    obj.target = 'd'
-    obj.inst_var = 0 # do not install
-    obj.includes = '.'
+    if bld.env()['CXX']:
+        obj = create_pyext_obj(bld, 'cpp')
+        obj.source = [
+            'd.cc',
+            'dmodule.cc'
+            ]
+        obj.target = 'd'
+        obj.inst_var = 0 # do not install
+        obj.includes = '.'

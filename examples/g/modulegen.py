@@ -3,7 +3,7 @@
 import sys
 
 import pybindgen
-from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
+from pybindgen import ReturnValue, Parameter, Module, Function, FileCodeSink
 
 def my_module_gen(out_file):
     mod = Module('g')

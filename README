@@ -47,6 +47,25 @@ To install PyBindGen, issue the following commands:
 4. ./waf --examples  # optional step, compiles the examples
 5. ./waf install     # may require sudo
 
+If by any chance you have trouble with WAF and are just looking to
+install PyBindGen, you should know that PyBindGen is entirely
+self-contained in the 'pybindgen' directory.  You can simply
+recursively copy the entire pybindgen folder into Python's
+site-packages directory, and that's it!  PyBindGen is a pure Python
+package and does not actually require a C/C++ compiler; it is only
+used for code generation unit tests and compiling the example modules.
+
+=== Win32 specific notes ===
+
+Note that if you are compiling on win32, WAF will look for MSVC
+(MicroSoft Visual C) by default and give up on finding a C/C++
+compiler if not found.  If you do not have MSVC installed but instead
+have MinGW or CygWin GCC, you have to tell WAF to look for GCC in the
+configure stage:
+
+1. ./waf configure --check-c-compiler=gcc --check-cxx-compiler=g++
+
+
 
 == Documentation ==
 

@@ -1,3 +1,39 @@
+=== pybindgen 0.10 ===
+
+    - New null_ok, default_value options for pointer-to-class parameters;
+
+    - Thread safety fixes;
+
+    - Map C++ operator() into Python's tp_call (__call__);
+
+    - Initial support for std containers (except mapping containers);
+
+    - Generate __copy__ methods for classes with copy contructor;
+
+    - Add 'wrapper registry' optional feature (off by default): allows
+      C++ instances returned by pointer to be consistently wrapped
+      always by the same Python wrapper, so that the 'is' operator can
+      be used for identity testing;
+
+    - New C type expression parser, is_const not longer needed for
+      parameter types, just put const in the type string as
+      appropriate;
+
+    - Sort the declarations returned by (py)gccxml.  If generating
+      python script files from gccxml scanning, now the output file
+      becomes more stable and less prone to move declarations up and
+      down with different people scanning and the output file is under
+      version control;
+
+    - Map binary comparison operators (< <= == >= >) from C++ to Python;
+
+    - Map some binary numeric operators (+ - * /) from C++ to Python;
+
+    - Allow installation of pybindgen even if no C/C++ compiler is detected;
+
+    - Fix compatibility with older Python versions (tested with 2.3, 2.4, and 2.5)
+
+
 === pybindgen 0.9 ===
     - Fix GCC 4.2 compilation warnings;
     - Works with some GCCXML 0.9/cvs snapshots (tested with 2008-04-20),

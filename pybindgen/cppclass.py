@@ -21,7 +21,9 @@ from pytypeobject import PyTypeObject, PyNumberMethods
 import settings
 import utils
 
-if 'set' not in dir(__builtins__):
+try:
+    set
+except NameError:
     from sets import Set as set
 
 
@@ -586,6 +588,7 @@ class CppClass(object):
         @param operator: string indicating the name of the operator to
         support, e.g. '=='
         """
+        operator = utils.ascii(operator)
         if not isinstance(operator, str):
             raise TypeError("expected operator name as string")
         if operator not in ['==', '!=', '<', '<=', '>', '>=']:
@@ -604,6 +607,7 @@ class CppClass(object):
         @param left_cppclass: the CppClass object of the left operand type, assumed to be this class if omitted
         @param right_cppclass: the CppClass object of the right operand type, assumed to be this class if omitted
         """
+        operator = utils.ascii(operator)
         if not isinstance(operator, str):
             raise TypeError("expected operator name as string")
         if operator not in ['+', '-', '*', '/']:

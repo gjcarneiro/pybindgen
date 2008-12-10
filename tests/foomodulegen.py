@@ -415,6 +415,11 @@ int %s::custom_method_added_by_a_hook(int x)
     TestContainer.add_method('get_vec', 'void', [Parameter.new('std::vector<std::string> &', 'outVec',
                                                                direction=Parameter.DIRECTION_OUT)])
 
+    TestContainer.add_method('set_vec_ptr', 'void', [Parameter.new('std::vector<std::string>*', 'inVec',
+                                                                   direction=Parameter.DIRECTION_IN, transfer_ownership=True)])
+    TestContainer.add_method('get_vec_ptr', 'void', [Parameter.new('std::vector<std::string>*', 'outVec',
+                                                                   direction=Parameter.DIRECTION_OUT)])
+
     Tupl = mod.add_class('Tupl')
     Tupl.add_binary_comparison_operator('<')
     Tupl.add_binary_comparison_operator('<=')

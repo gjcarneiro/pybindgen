@@ -3,7 +3,7 @@
 import sys
 
 import pybindgen
-from pybindgen import (ReturnValue, Parameter, Module, CppClass, CppMethod, CppConstructor, FileCodeSink)
+from pybindgen import ReturnValue, Parameter, Module, CppClass, CppMethod, CppConstructor, FileCodeSink
 
 def my_module_gen(out_file):
 

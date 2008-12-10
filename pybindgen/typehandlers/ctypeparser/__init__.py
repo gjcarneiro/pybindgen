@@ -3,8 +3,9 @@ import tokenizer
 
 MODIFIERS = ['const', 'volatile'] # XXX: are there others?
 
-if 'set' not in dir(__builtins__):
-    # Nominal support for Python 2.3.
+try:
+    set
+except NameError:
     from sets import Set as set
 
 

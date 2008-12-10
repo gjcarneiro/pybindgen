@@ -1431,7 +1431,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 2 class %s not registered" % (argument_types[1],)
                     return
 
-                #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>>  %s: %s: %s (%s, %s) " \
+                #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>>  %r: %s: %s (%s, %s) " \
                 #    % (op.symbol, cls, ret.full_name, arg0.full_name, arg1.full_name)
 
                 class_wrapper.add_binary_numeric_operator(op.symbol, ret, arg0, arg1)
