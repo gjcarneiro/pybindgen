@@ -5,7 +5,9 @@ Wrap C++ STL containers
 #import warnings
 
 from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
-    Parameter, ReturnValue, param_type_matcher, return_type_matcher
+    Parameter, ReturnValue, param_type_matcher, return_type_matcher, \
+    TypeConfigurationError, NotSupportedError
+
 from typehandlers import codesink
 from pytypeobject import PyTypeObject
 import settings
@@ -140,6 +142,16 @@ class Container(object):
             self.ThisContainerRefParameter = ThisContainerRefParameter
             try:
                 param_type_matcher.register(name+'&', self.ThisContainerRefParameter)
+            except ValueError:
+                pass
+
+            class ThisContainerPtrParameter(ContainerPtrParameter):
+                """Register this C++ container as pass-by-ptr parameter"""
+                CTYPES = []
+                container_type = self
+            self.ThisContainerPtrParameter = ThisContainerPtrParameter
+            try:
+                param_type_matcher.register(name+'*', self.ThisContainerPtrParameter)
             except ValueError:
                 pass
 
@@ -663,6 +675,67 @@ class ContainerRefParameter(ContainerParameterBase):
         if self.direction & Parameter.DIRECTION_OUT:
             wrapper.parse_params.add_parameter('O&', [self.container_type.python_to_c_converter, '&'+self.name], self.name)
 
+
+class ContainerPtrParameter(ContainerParameterBase):
+    "Container handlers"
+    CTYPES = []
+    container_type = _get_dummy_container()
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT, Parameter.DIRECTION_INOUT]
+
+    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False, default_value=None, transfer_ownership=None):
+        super(ContainerPtrParameter, self).__init__(ctype, name, direction, is_const, default_value)
+
+        if self.direction == Parameter.DIRECTION_OUT:
+            if transfer_ownership is not None and not transfer_ownership:
+                raise TypeConfigurationError("with direction=out, transfer_ownership must be True or omitted (got %r)"
+                                             % transfer_ownership)
+            self.transfer_ownership = True
+        else:
+            if transfer_ownership is None:
+                raise TypeConfigurationError("transfer_ownership parameter was not given")
+            self.transfer_ownership = transfer_ownership
+    
+    def convert_python_to_c(self, wrapper):
+        "parses python args to get C++ value"
+        assert isinstance(wrapper, ForwardWrapperBase)
+        assert isinstance(self.container_type, Container)
+
+        assert self.default_value is None, "default value not implemented for containers"
+
+
+        if self.direction == Parameter.DIRECTION_IN:
+            container_tmp_var = wrapper.declarations.declare_variable(
+                self.container_type.full_name, self.name + '_value')
+            wrapper.parse_params.add_parameter('O&', [self.container_type.python_to_c_converter, '&'+container_tmp_var], self.name)
+            if self.transfer_ownership:
+                wrapper.call_params.append("new %s(%s)" % (self.container_type.full_name, container_tmp_var))
+            else:
+                wrapper.call_params.append("&%s" % container_tmp_var)
+
+        elif self.direction == Parameter.DIRECTION_OUT:
+            container_tmp_var = wrapper.declarations.declare_variable(
+                self.container_type.full_name + '*', self.name + '_value', initializer="new %s" % self.container_type.full_name)
+
+            wrapper.call_params.append(container_tmp_var)
+
+            py_name = wrapper.declarations.declare_variable(
+                self.container_type.pystruct+'*', 'py_'+self.container_type.name)
+
+            wrapper.after_call.write_code(
+                "%s = PyObject_New(%s, %s);" %
+                (py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
+
+            wrapper.after_call.write_code("%s->obj = %s;" % (py_name, container_tmp_var))
+
+            wrapper.build_params.add_parameter("N", [py_name])
+
+        else:
+            raise NotSupportedError("inout not supported for container*")
+
+
+    def convert_c_to_python(self, wrapper):
+        '''Write some code before calling the Python method.'''
+        raise NotSupportedError("container* reverse type handler not yet implemeneted")
 
 
 class ContainerReturnValue(ContainerReturnValueBase):

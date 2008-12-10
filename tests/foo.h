@@ -772,8 +772,17 @@ public:
     // -#- @outVec(direction=out) -#-
     void get_vec (std::vector<std::string> &outVec);
 
+    // -#- @inVec(direction=in, transfer_ownership=true) -#-
+    void set_vec_ptr (std::vector<std::string> *inVec);
+
+    // -#- @outVec(direction=out) -#-
+    void get_vec_ptr (std::vector<std::string> *outVec);
+
 private:
     SimpleStructList m_simpleList;
+
+    std::vector<std::string> *m_vec;
+    
 };
 
 std::map<std::string, int> get_map ();

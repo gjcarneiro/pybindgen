@@ -362,6 +362,20 @@ TestContainer::get_vec (std::vector<std::string> &outVec)
     outVec.push_back ("world");
 }
 
+void
+TestContainer::set_vec_ptr (std::vector<std::string> *inVec)
+{
+    m_vec = inVec;
+}
+
+
+void
+TestContainer::get_vec_ptr (std::vector<std::string> *outVec)
+{
+    *outVec = *m_vec;
+}
+
+
 std::map<std::string, int>
 get_map ()
 {

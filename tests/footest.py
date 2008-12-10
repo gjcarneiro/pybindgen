@@ -995,6 +995,12 @@ class TestFoo(unittest.TestCase):
         v = list(t.get_vec())
         self.assertEqual(v, ["hello", "world"])
 
+    def test_ptr_vec(self):
+        t = foo.TestContainer()
+        t.set_vec_ptr(["hello", "world"])
+        r = t.get_vec_ptr()
+        self.assertEqual(list(r), ["hello", "world"])
+
     def test_richcompare(self):
         t1 = foo.Tupl()
 
