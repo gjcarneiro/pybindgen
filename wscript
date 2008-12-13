@@ -170,8 +170,7 @@ def configure(conf):
     else:
         if os.path.basename(conf.env['CXX']).startswith("g++"):
             conf.env.append_value('CXXFLAGS', ['-Wall', '-fno-strict-aliasing'])
-            if Options.options.debug_level == 'ultradebug':
-                conf.env.append_value('CXXFLAGS', ['-Wextra'])
+            conf.env.append_value('CXXFLAGS', ['-Wextra'])
         conf.check_python_headers()
 
         if not Options.options.disable_pygccxml:
