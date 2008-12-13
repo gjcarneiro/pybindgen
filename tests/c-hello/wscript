@@ -4,30 +4,29 @@
 #import Params
 #import Task
 
-def create_pyext_obj(bld, c_or_cpp_type):
-    return bld.new_task_gen(c_or_cpp_type, 'shlib', 'pyext')
-
+if 1:
+    DEPRECATION_ERRORS = '-Werror::DeprecationWarning' # deprecations become errors
+else:
+    DEPRECATION_ERRORS = '-Wdefault::DeprecationWarning' # normal python behaviour
 
 def build(bld):
     if not bld.env['ENABLE_PYGCCXML']:
         print "gccxml not available; skipping the C hello demo"
         return
 
-    bindgen = bld.new_task_gen('command-output')
-    bindgen.stdout = 'hellomodule.c'
-    bindgen.argv = [bindgen.input_file('hellomodulegen.py'),
-                    bindgen.input_file('hello.h')]
-    bindgen.command = bindgen.env['PYTHON']
-    bindgen.command_is_external = True
-    #bindgen.prio = 55 # must run after the 'py' objects in ../../pybindgen
+    bindgen = bld.new_task_gen(
+        features='command',
+        source='hellomodulegen.py hello.h',
+        target='hellomodule.c',
+        command='${PYTHON} %s ${SRC[0]} ${SRC[1]} > ${TGT[0]}' % (DEPRECATION_ERRORS,))
 
-    if bld.env()['CXX']:
-        obj = create_pyext_obj(bld, 'cc')
+    if bld.env['CXX']:
+        obj = bld.new_task_gen('cc', 'shlib', 'pyext')
         obj.source = [
             'hello.c',
             'hellomodule.c'
             ]
         obj.target = 'hello'
-        obj.inst_var = 0 # do not install
+        obj.install_path = None # do not install
         obj.includes = '.'
 

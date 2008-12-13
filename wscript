@@ -157,7 +157,7 @@ def configure(conf):
     ## Write a pybindgen/version.py file containing the project version
     generate_version_py()
 
-    conf.check_tool('misc')
+    conf.check_tool('command')
     conf.check_tool('python')
     conf.check_python_version((2,3))
 

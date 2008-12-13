@@ -1,10 +1,16 @@
 == Needed tools ==
 
 bzr branches do not come with WAF.
-You have to get WAF; see http://code.google.com/p/waf/
 
-PyBindGen has been tested to work with WAF version 1.4.2.  Other
-versions may or not work.
+This particular PyBindGen branch has been tested to work with a fork
+of WAF trunk that can be obtained via bazaar from launchpad:
+
+  $ bzr clone lp:~gjc/waf/cmd waf-cmd
+
+You should then either install this waf version (it is compatible with
+waf 1.5) or just run waf-light from the checkout dir.  For example:
+ [~/projects/pybindgen/new-waf]$ ../../waf-cmd/waf-light configure
+   etc..
 
 You also need to install python, with development headers, and a C++ compiler.
 

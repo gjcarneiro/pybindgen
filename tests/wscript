@@ -14,9 +14,6 @@ import pproc as subprocess
 #os.environ["PYBINDGEN_ENABLE_PROFILING"] = ""
 
 
-def create_pyext_obj(bld, c_or_cpp_type):
-    return bld.new_task_gen(c_or_cpp_type, 'shlib', 'pyext')
-
 if 1:
     DEPRECATION_ERRORS = '-Werror::DeprecationWarning' # deprecations become errors
 else:
@@ -26,16 +23,14 @@ else:
 def build(bld):
     env = bld.env
 
-    top_srcdir = bld.srcnode.abspath()
+    env['TOP_SRCDIR'] = bld.srcnode.abspath()
 
-    gen = bld.new_task_gen('command-output')
-    gen.command = 'test-generation.py'
-    gen.stdout = 'test.cc'
-    gen.argv = [gen.input_file('test-generation.py'), top_srcdir]
-    gen.command = bld.env['PYTHON']
-    gen.command_is_external = True
-    gen.prio = 55
-    
+    gen = bld.new_task_gen(
+        features='command',
+        source='test-generation.py',
+        target='test.cc',
+        command='${PYTHON} ${SRC[0]} ${TOP_SRCDIR} > ${TGT[0]}')
+
     if env['CXX']:
         obj = bld.new_task_gen('cxx', 'objects', 'pyext')
         obj.source = 'test.cc'
@@ -43,115 +38,90 @@ def build(bld):
             obj.env.append_value('CXXFLAGS', ['-Werror', '-Wno-unused'])
     
     ## manual code generation using simple pybindgen API calls
-    bindgen = bld.new_task_gen('command-output')
-    bindgen.stdout = 'foomodule.cc'
-    bindgen.argv = [
-        DEPRECATION_ERRORS,
-        bindgen.input_file('foomodulegen.py'),
-        ]
-    bindgen.command = bindgen.env['PYTHON']
-    bindgen.command_is_external = True
-    bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
+    bindgen = bld.new_task_gen(
+        features='command',
+        source='foomodulegen.py',
+        target='foomodule.cc',
+        command='${PYTHON} %s ${SRC[0]} ${TOP_SRCDIR} > ${TGT[0]}' % (DEPRECATION_ERRORS,))
 
     if env['CXX']:
-        obj = create_pyext_obj(bld, 'cxx')
+        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
         obj.source = [
             'foo.cc',
             'foomodule.cc'
             ]
         obj.target = 'foo'
-        obj.inst_var = 0 # do not install
+        obj.install_path = None
         obj.includes = '.'
 
     ## automatic code scanning using gccxml
     if env['ENABLE_PYGCCXML']:
         ### Same thing, but using gccxml autoscanning
-        bindgen = bld.new_task_gen('command-output')
-        bindgen.stdout = 'foomodule2.cc'
-        bindgen.argv = [
-            DEPRECATION_ERRORS,
-            bindgen.input_file('foomodulegen-auto.py'),
-            bindgen.input_file('foo.h'),
-            repr(bindgen.env['CPPPATH_PYEXT']),
-            bindgen.output_file('foomodulegen_generated.py'),
-            ]
-        bindgen.command = bindgen.env['PYTHON']
-        bindgen.command_is_external = True
-        bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
 
-        ### Now using the generated python script
-        bindgen = bld.new_task_gen('command-output')
-        bindgen.stdout = 'foomodule3.cc'
-        bindgen.argv = [
-            DEPRECATION_ERRORS,
-            bindgen.input_file('foomodulegen3.py'),
-            bindgen.output_file('foomodule3.cc'),
-            ]
-        bindgen.command = bindgen.env['PYTHON']
-        bindgen.command_is_external = True
-        bindgen.prio = 56 # run after the previous bindgen
+        bld.new_task_gen(
+            features='command',
+            source='foomodulegen-auto.py foo.h',
+            target='foomodule2.cc foomodulegen_generated.py',
+            command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[1]} > ${TGT[0]}' % (DEPRECATION_ERRORS,),
+            variables=dict(cpp_path_repr=repr(bindgen.env['CPPPATH_PYEXT'])))
 
-        ## yes, this global manipulation of PYTHONPATH is kind of evil :-/
-        ## TODO: add WAF command-output support for customising command OS environment
-        os.environ["PYTHONPATH"] = os.pathsep.join([os.environ.get("PYTHONPATH", ''), bindgen.path.abspath(bindgen.env)])
-
-        obj = create_pyext_obj(bld, 'cxx')
-        obj.source = [
-            'foo.cc',
-            'foomodule3.cc'
-            ]
-        obj.target = 'foo3'
-        obj.inst_var = 0 # do not install
-        obj.includes = '.'
-
-        ## ---
-
-        ### using gccxml autoscanning, but split the generated python script into modules
-        bindgen = bld.new_task_gen('command-output')
-        bindgen.argv = [
-            DEPRECATION_ERRORS,
-            bindgen.input_file('foomodulegen-auto-split.py'),
-            bindgen.input_file('foo.h'),
-            repr(bindgen.env['CPPPATH_PYEXT']),
-            bindgen.output_file('foomodulegen_split.py'),
-            bindgen.output_file('foomodulegen_module1.py'),
-            bindgen.output_file('foomodulegen_module2.py'),
-            ]
-        bindgen.command = bindgen.env['PYTHON']
-        bindgen.command_is_external = True
-        bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
-
-        obj = create_pyext_obj(bld, 'cxx')
+        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
         obj.source = [
             'foo.cc',
             'foomodule2.cc'
             ]
         obj.target = 'foo2'
-        obj.inst_var = 0 # do not install
+        obj.install_path = None
         obj.includes = '.'
 
-        ### Run the generated python script with split modules
-        bindgen = bld.new_task_gen('command-output')
-        bindgen.argv = [
-            DEPRECATION_ERRORS,
-            bindgen.input_file('foomodulegen4.py'),
-            bindgen.output_file('foomodule4.cc'),
-            ]
-        bindgen.command = bindgen.env['PYTHON']
-        bindgen.command_is_external = True
-        bindgen.prio = 56 # run after the previous bindgen
-        bindgen.hidden_inputs = [
-            'foomodulegen_split.py',
-            'foomodulegen_module1.py',
-            'foomodulegen_module2.py',
-            ]
-        bindgen.hidden_outputs = [
-            'foomodule4.h',
-            'foomodulegen_module1.cc',
-            'foomodulegen_module2.cc',
-            ]
+        ### Now using the generated python script
 
-        obj = create_pyext_obj(bld, 'cxx')
+        bld.new_task_gen(
+            features='command',
+            source='foomodulegen3.py foomodulegen_generated.py',
+            target='foomodule3.cc',
+            command='${PYTHON} %s ${SRC[0]} ${TGT[0]} > ${TGT[0]}' % (DEPRECATION_ERRORS,))
+
+        ## yes, this global manipulation of PYTHONPATH is kind of evil :-/
+        ## TODO: add WAF command-output support for customising command OS environment
+        os.environ["PYTHONPATH"] = os.pathsep.join([os.environ.get("PYTHONPATH", ''), bindgen.path.abspath(bindgen.env)])
+
+        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
+        obj.source = [
+            'foo.cc',
+            'foomodule3.cc'
+            ]
+        obj.target = 'foo3'
+        obj.install_path = None # do not install
+        obj.includes = '.'
+
+        ## ---
+
+        bld.new_task_gen(
+            features='command',
+            source='foomodulegen-auto-split.py foo.h',
+            target='foomodulegen_split.py foomodulegen_module1.py foomodulegen_module2.py',
+            command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[0]} ${TGT[1]} ${TGT[2]}' % (DEPRECATION_ERRORS,),
+            variables=dict(cpp_path_repr=repr(bindgen.env['CPPPATH_PYEXT'])))
+
+        bld.new_task_gen(
+            features='command',
+            source=[
+                'foomodulegen4.py',
+                'foomodulegen_split.py',
+                'foomodulegen_module1.py',
+                'foomodulegen_module2.py',
+                ],
+            target=[
+                'foomodule4.cc',
+                'foomodule4.h',
+                'foomodulegen_module1.cc',
+                'foomodulegen_module2.cc',
+                ],
+            command='${PYTHON} %s ${SRC[0]} ${TGT[0]}' % (DEPRECATION_ERRORS,))
+
+
+        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
         obj.source = [
             'foo.cc',
             'foomodule4.cc',
@@ -159,7 +129,7 @@ def build(bld):
             'foomodulegen_module2.cc',
             ]
         obj.target = 'foo4'
-        obj.inst_var = 0 # do not install
+        obj.install_path = None # do not install
         obj.includes = '.'
 
     ## pure C tests
