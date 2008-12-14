@@ -19,26 +19,27 @@ import Configure
 import tarfile
 
 
+APPNAME='pybindgen'
+srcdir = '.'
+blddir = 'build'
+
+
+
 ## Add the pybindgen dir to PYTHONPATH, so that the examples and tests are properly built before pybindgen is installed.
 os.environ['PYTHONPATH'] = os.getcwd()
 
 
 _version = None
-def get_version_from_bzr(path=None):
+def get_version_from_bzr(path):
     global _version
     if _version is not None:
         return _version
     import bzrlib.tag, bzrlib.branch
-    if path is None:
-        path = os.getcwd()
-    
     fullpath = os.path.abspath(path)
     if sys.platform == 'win32':
         fullpath = fullpath.replace('\\', '/')
         fullpath = '/' + fullpath
-
     branch = bzrlib.branch.Branch.open('file://' + fullpath)
-        
     tags = bzrlib.tag.BasicTags(branch)
     #print "Getting version information from bzr branch..."
     history = branch.revision_history()
@@ -64,15 +65,13 @@ def get_version_from_bzr(path=None):
     return _version
 
 
-def get_version():
+def get_version(path=None):
+    if path is None:
+        path = srcdir
     try:
-        return '.'.join([str(x) for x in get_version_from_bzr()])
+        return '.'.join([str(x) for x in get_version_from_bzr(path)])
     except ImportError:
         return 'unknown'
-
-APPNAME='pybindgen'
-srcdir = '.'
-blddir = 'build'
 
 def generate_version_py(force=False):
     """generates pybindgen/version.py, unless it already exists"""
@@ -93,9 +92,9 @@ def generate_version_py(force=False):
     
 
 def dist_hook():
-    version = get_version()
     blddir = '../build'
     srcdir = '..'
+    version = get_version(srcdir)
     subprocess.Popen([os.path.join(srcdir, "generate-ChangeLog")],  shell=True).wait()
     try:
         os.chmod(os.path.join(srcdir, "ChangeLog"), 0644)
@@ -110,13 +109,13 @@ def dist_hook():
     shutil.copy(os.path.join('pybindgen', 'version.py'), os.path.join(srcdir, "pybindgen"))
 
     ## Copy WAF to the distdir
-    assert os.path.basename(sys.argv[0]) == 'waf'
-    shutil.copy(sys.argv[0], '.')
+    #assert os.path.basename(sys.argv[0]) == 'waf'
+    shutil.copy(os.path.join(srcdir, sys.argv[0]), '.')
 
     ## Package the api docs in a separate tarball
     apidocs = 'apidocs'
     if not os.path.isdir('apidocs'):
-        Logs.warning("Not creating apidocs archive: the `apidocs' directory does not exist")
+        Logs.warn("Not creating apidocs archive: the `apidocs' directory does not exist")
     else:
         tar = tarfile.open(os.path.join("..", "pybindgen-%s-apidocs.tar.bz2" % version), 'w:bz2')
         tar.add('apidocs', "pybindgen-%s-apidocs" % version)
