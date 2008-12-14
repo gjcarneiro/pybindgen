@@ -1,87 +1,60 @@
 ## -*- python -*-
-import Params
-
-def create_pyext_obj(bld, c_or_cpp_type):
-    waf_version = [int (s) for s in Params.g_version.split('.')]
-    if waf_version >= [1,4]:
-        return bld.create_obj(c_or_cpp_type, 'shlib', 'pyext')
-    else:
-        return bld.create_obj(c_or_cpp_type, 'plugin', 'pyext')
-
 
 def build(bld):
     ## manual code generation using simple pybindgen API calls
-    bindgen = bld.create_obj('command-output')
-    bindgen.stdout = 'amodule.cc'
-    bindgen.argv = [
-        '-Werror::DeprecationWarning',
-        bindgen.input_file('modulegen.py'),
-        ]
-    bindgen.command = bindgen.env['PYTHON']
-    bindgen.command_is_external = True
-    bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
+    gen = bld.new_task_gen(
+        features='command',
+        source='modulegen.py',
+        target='amodule.cc',
+        command='${PYTHON} -Werror::DeprecationWarning ${SRC[0]} > ${TGT[0]}')
 
-    if bld.env()['CXX']:
-        obj = create_pyext_obj(bld, 'cpp')
+    if bld.env['CXX']:
+        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
         obj.source = [
             'a.cc',
             'amodule.cc'
             ]
         obj.target = 'a'
-        obj.inst_var = 0 # do not install
+        obj.install_path = None # do not install
         obj.includes = '.'
 
 
-    if bld.env()['ENABLE_PYGCCXML']:
+    if bld.env['ENABLE_PYGCCXML']:
         ## gccxml direct generation method
-        bindgen = bld.create_obj('command-output')
-        bindgen.stdout = 'a1module.cc'
-        bindgen.argv = [
-            '-Werror::DeprecationWarning',
-            bindgen.input_file('module-autogen.py'),
-            bindgen.input_file('a.h'),
-            ]
-        bindgen.command = bindgen.env['PYTHON']
-        bindgen.command_is_external = True
-        bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
+        bld.new_task_gen(
+            features='command',
+            source='module-autogen.py a.h',
+            target='a1module.cc',
+            command='${PYTHON} -Werror::DeprecationWarning ${SRC[0]} ${SRC[1]} > ${TGT[0]}')
 
-        obj = create_pyext_obj(bld, 'cpp')
+        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
         obj.source = [
             'a.cc',
             'a1module.cc'
             ]
         obj.target = 'a1'
-        obj.inst_var = 0 # do not install
+        obj.install_path = None # do not install
         obj.includes = '.'
 
 
         ## gccxml indirect generation method
-        bindgen = bld.create_obj('command-output')
-        bindgen.stdout = 'a2modulegen.py'
-        bindgen.argv = [
-            '-Werror::DeprecationWarning',
-            bindgen.input_file('module-autoscan.py'),
-            bindgen.input_file('a.h'),
-            ]
-        bindgen.command = bindgen.env['PYTHON']
-        bindgen.command_is_external = True
-        bindgen.prio = 55 # must run after the 'py' objects in ../pybindgen
+        bld.new_task_gen(
+            features='command',
+            source='module-autoscan.py a.h',
+            target='a2modulegen.py',
+            command='${PYTHON} -Werror::DeprecationWarning ${SRC[0]} ${SRC[1]} > ${TGT[0]}')
 
-        bindgen = bld.create_obj('command-output')
-        bindgen.stdout = 'a2module.cc'
-        bindgen.argv = [
-            '-Werror::DeprecationWarning',
-            bindgen.input_file('a2modulegen.py'),
-            ]
-        bindgen.command = bindgen.env['PYTHON']
-        bindgen.command_is_external = True
-        bindgen.prio = 56 # must run after the 'py' objects in ../pybindgen
+        bld.new_task_gen(
+            features='command',
+            source='a2modulegen.py',
+            target='a2module.cc',
+            command='${PYTHON} -Werror::DeprecationWarning ${SRC[0]} > ${TGT[0]}')
 
-        obj = create_pyext_obj(bld, 'cpp')
+        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
         obj.source = [
             'a.cc',
             'a2module.cc'
             ]
         obj.target = 'a2'
-        obj.inst_var = 0 # do not install
+        obj.install_path = None # do not install
         obj.includes = '.'
