@@ -5,6 +5,10 @@ import Options
 import Build
 Options.autoconfig = True
 import Logs
+
+import Task
+Task.FILE_DEPS = True
+
 #from Params import fatal
 
 import os
