@@ -168,7 +168,7 @@ def configure(conf):
         conf.check_tool('compiler_cc')
         conf.check_tool('compiler_cxx')
     except Configure.ConfigurationError:
-        Logs.warning("C/C++ compiler not detected.  Unit tests and examples will not be compiled.")
+        Logs.warn("C/C++ compiler not detected.  Unit tests and examples will not be compiled.")
         conf.env['CXX'] = ''
     else:
         if os.path.basename(conf.env['CXX']).startswith("g++"):
