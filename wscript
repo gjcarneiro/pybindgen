@@ -1,10 +1,13 @@
 ## -*- python -*-
 ## (C) 2007,2008 Gustavo J. A. M. Carneiro
 
-import Params
-Params.g_autoconfig = True
+import Options
+import Build
+Options.autoconfig = True
+import Logs
 
-from Params import fatal
+#from Params import fatal
+
 import os
 import pproc as subprocess
 import shutil
@@ -13,33 +16,27 @@ import Configure
 import tarfile
 
 
+APPNAME='pybindgen'
+srcdir = '.'
+blddir = 'build'
+
+
+
 ## Add the pybindgen dir to PYTHONPATH, so that the examples and tests are properly built before pybindgen is installed.
-waf_version = [int (s) for s in Params.g_version.split('.')]
-if waf_version >= [1,4,1]:
-    ## Since WAF 1.4.1, WAF does not byte-compile python files during
-    ## build, so we add the source dir instead of the build dir.
-    os.environ['PYTHONPATH'] = os.getcwd()
-else:
-    os.environ['PYTHONPATH'] = os.path.join(os.getcwd(), 'build', 'default')
-del waf_version
+os.environ['PYTHONPATH'] = os.getcwd()
 
 
 _version = None
-def get_version_from_bzr(path=None):
+def get_version_from_bzr(path):
     global _version
     if _version is not None:
         return _version
     import bzrlib.tag, bzrlib.branch
-    if path is None:
-        path = os.getcwd()
-    
     fullpath = os.path.abspath(path)
     if sys.platform == 'win32':
         fullpath = fullpath.replace('\\', '/')
         fullpath = '/' + fullpath
-
     branch = bzrlib.branch.Branch.open('file://' + fullpath)
-        
     tags = bzrlib.tag.BasicTags(branch)
     #print "Getting version information from bzr branch..."
     history = branch.revision_history()
@@ -65,15 +62,13 @@ def get_version_from_bzr(path=None):
     return _version
 
 
-def get_version():
+def get_version(path=None):
+    if path is None:
+        path = srcdir
     try:
-        return '.'.join([str(x) for x in get_version_from_bzr()])
+        return '.'.join([str(x) for x in get_version_from_bzr(path)])
     except ImportError:
         return 'unknown'
-
-APPNAME='pybindgen'
-srcdir = '.'
-blddir = 'build'
 
 def generate_version_py(force=False):
     """generates pybindgen/version.py, unless it already exists"""
@@ -94,9 +89,9 @@ def generate_version_py(force=False):
     
 
 def dist_hook():
-    version = get_version()
     blddir = '../build'
     srcdir = '..'
+    version = get_version(srcdir)
     subprocess.Popen([os.path.join(srcdir, "generate-ChangeLog")],  shell=True).wait()
     try:
         os.chmod(os.path.join(srcdir, "ChangeLog"), 0644)
@@ -111,13 +106,13 @@ def dist_hook():
     shutil.copy(os.path.join('pybindgen', 'version.py'), os.path.join(srcdir, "pybindgen"))
 
     ## Copy WAF to the distdir
-    assert os.path.basename(sys.argv[0]) == 'waf'
-    shutil.copy(sys.argv[0], '.')
+    #assert os.path.basename(sys.argv[0]) == 'waf'
+    shutil.copy(os.path.join(srcdir, sys.argv[0]), '.')
 
     ## Package the api docs in a separate tarball
     apidocs = 'apidocs'
     if not os.path.isdir('apidocs'):
-        Params.warning("Not creating apidocs archive: the `apidocs' directory does not exist")
+        Logs.warn("Not creating apidocs archive: the `apidocs' directory does not exist")
     else:
         tar = tarfile.open(os.path.join("..", "pybindgen-%s-apidocs.tar.bz2" % version), 'w:bz2')
         tar.add('apidocs', "pybindgen-%s-apidocs" % version)
@@ -132,6 +127,7 @@ def set_options(opt):
     opt.tool_options('python')
     opt.tool_options('compiler_cc')
     opt.tool_options('compiler_cxx')
+    opt.tool_options('cflags')
 
     optgrp = opt.add_option_group("PyBindGen Options")
 
@@ -162,7 +158,7 @@ def configure(conf):
     ## Write a pybindgen/version.py file containing the project version
     generate_version_py()
 
-    conf.check_tool('misc')
+    conf.check_tool('command')
     conf.check_tool('python')
     conf.check_python_version((2,3))
 
@@ -170,16 +166,16 @@ def configure(conf):
         conf.check_tool('compiler_cc')
         conf.check_tool('compiler_cxx')
     except Configure.ConfigurationError:
-        Params.warning("C/C++ compiler not detected.  Unit tests and examples will not be compiled.")
+        Logs.warn("C/C++ compiler not detected.  Unit tests and examples will not be compiled.")
         conf.env['CXX'] = ''
     else:
+        conf.check_tool('cflags')
         if os.path.basename(conf.env['CXX']).startswith("g++"):
             conf.env.append_value('CXXFLAGS', ['-Wall', '-fno-strict-aliasing'])
-            if Params.g_options.debug_level == 'ultradebug':
-                conf.env.append_value('CXXFLAGS', ['-Wextra'])
+            conf.env.append_value('CXXFLAGS', ['-Wextra'])
         conf.check_python_headers()
 
-        if not Params.g_options.disable_pygccxml:
+        if not Options.options.disable_pygccxml:
             gccxml = conf.find_program('gccxml')
             if not gccxml:
                 conf.env['ENABLE_PYGCCXML'] = False
@@ -193,22 +189,22 @@ def configure(conf):
 
 
 def build(bld):
-    if getattr(Params.g_options, 'generate_version', False):
+    if getattr(Options.options, 'generate_version', False):
         generate_version_py(force=True)
 
     bld.add_subdirs('pybindgen')
-    if Params.g_options.examples:
+    if Options.options.examples:
         bld.add_subdirs('examples')
-    if Params.g_commands['check'] or Params.g_commands['clean']:
+    if Options.commands['check'] or Options.commands['clean']:
         bld.add_subdirs('tests')
 
 def shutdown():
-    if Params.g_commands['check']:
+    if Options.commands['check']:
 
         print "Running pure python unit tests..."
-        retval1 = subprocess.Popen([Params.g_build.env()['PYTHON'], 'tests/test.py']).wait()
+        retval1 = subprocess.Popen([Build.bld.env['PYTHON'], 'tests/test.py']).wait()
 
-        env = Params.g_build.env()
+        env = Build.bld.env
 
         if env['CXX']:
             print "Running manual module generation unit tests (module foo)..."
@@ -237,9 +233,10 @@ def shutdown():
             retval3 = retval3b = retval3c = retval4 = 0
 
         if retval1 or retval2 or retval3 or retval3b or retval3c or retval4:
-            raise Params.fatal("Unit test failures")
+            Logs.error("Unit test failures")
+            raise SystemExit(2)
 
-    if Params.g_options.generate_api_docs:
+    if Options.options.generate_api_docs:
         generate_version_py(force=True)
         retval = subprocess.Popen(["epydoc", "-v", "--html", "--graph=all",  "pybindgen",
                                    "-o", "apidocs",
@@ -249,7 +246,8 @@ def shutdown():
                                    "--no-private",
                                    ]).wait()
         if retval:
-            raise Params.fatal("epydoc returned with code %i" % retval)
+            Logs.error("epydoc returned with code %i" % retval)
+            raise SystemExit(2)
 
         # Patch the generated CSS file to highlight literal blocks (this is a copy of pre.py-doctest)
         css = open("apidocs/epydoc.css", "at")

@@ -1,37 +1,32 @@
 ## -*- python -*-
-import Action
-import Object
-import Params
-import Task
+#import Action
+#import Object
+#import Params
+#import Task
 
-def create_pyext_obj(bld, c_or_cpp_type):
-    waf_version = [int (s) for s in Params.g_version.split('.')]
-    if waf_version >= [1,4]:
-        return bld.create_obj(c_or_cpp_type, 'shlib', 'pyext')
-    else:
-        return bld.create_obj(c_or_cpp_type, 'plugin', 'pyext')
-
+if 1:
+    DEPRECATION_ERRORS = '-Werror::DeprecationWarning' # deprecations become errors
+else:
+    DEPRECATION_ERRORS = '-Wdefault::DeprecationWarning' # normal python behaviour
 
 def build(bld):
-    if not bld.env()['ENABLE_PYGCCXML']:
+    if not bld.env['ENABLE_PYGCCXML']:
         print "gccxml not available; skipping the C hello demo"
         return
 
-    bindgen = bld.create_obj('command-output')
-    bindgen.stdout = 'hellomodule.c'
-    bindgen.argv = [bindgen.input_file('hellomodulegen.py'),
-                    bindgen.input_file('hello.h')]
-    bindgen.command = bindgen.env['PYTHON']
-    bindgen.command_is_external = True
-    bindgen.prio = 55 # must run after the 'py' objects in ../../pybindgen
+    bindgen = bld.new_task_gen(
+        features='command',
+        source='hellomodulegen.py hello.h',
+        target='hellomodule.c',
+        command='${PYTHON} %s ${SRC[0]} ${SRC[1]} > ${TGT[0]}' % (DEPRECATION_ERRORS,))
 
-    if bld.env()['CXX']:
-        obj = create_pyext_obj(bld, 'cc')
+    if bld.env['CXX']:
+        obj = bld.new_task_gen('cc', 'shlib', 'pyext')
         obj.source = [
             'hello.c',
             'hellomodule.c'
             ]
         obj.target = 'hello'
-        obj.inst_var = 0 # do not install
+        obj.install_path = None # do not install
         obj.includes = '.'
 

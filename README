@@ -26,6 +26,9 @@ Notable features NOT implemented:
 
 == Installation ==
 
+NOTE: if checking out pybindgen from bazaar, do not forget to see the
+file HACKING for additional instructions.
+
 Before proceeding make sure the system requirements are met.  PyBindGen requires:
 
 1- Python (http://www.python.org)
@@ -34,10 +37,9 @@ Before proceeding make sure the system requirements are met.  PyBindGen requires
 4- (optional) GCCXML and PyGCCXML (0.9.5 recommended) (http://www.language-binding.net/pygccxml/download.html)
 
 PyBindGen uses WAF (http://code.google.com/p/waf/) as build system.
-However, WAF does not have to be previously installed, as it is shipped
-with PyBindGen in a single 'waf' script.
-
-If checking out pybindgen from bzr, see the HACKING file for additional instructions.
+However, WAF does not have to be previously installed, as it is
+shipped with PyBindGen in a single 'waf' script (but note bzr branches
+don't come with WAF; see HACKING for instructions to obtain WAF).
 
 To install PyBindGen, issue the following commands:
 
