@@ -130,6 +130,7 @@ def set_options(opt):
     opt.tool_options('python')
     opt.tool_options('compiler_cc')
     opt.tool_options('compiler_cxx')
+    opt.tool_options('cflags')
 
     optgrp = opt.add_option_group("PyBindGen Options")
 
@@ -171,6 +172,7 @@ def configure(conf):
         Logs.warn("C/C++ compiler not detected.  Unit tests and examples will not be compiled.")
         conf.env['CXX'] = ''
     else:
+        conf.check_tool('cflags')
         if os.path.basename(conf.env['CXX']).startswith("g++"):
             conf.env.append_value('CXXFLAGS', ['-Wall', '-fno-strict-aliasing'])
             conf.env.append_value('CXXFLAGS', ['-Wextra'])
