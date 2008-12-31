@@ -1872,7 +1872,7 @@ static void
     def _generate_tp_richcompare(self, code_sink):
         tp_richcompare_function_name = "_wrap_%s__tp_richcompare" % (self.pystruct,)
 
-        code_sink.writeln("static PyObject*\n%s (%s *self, %s *other, int opid)"
+        code_sink.writeln("static PyObject*\n%s (%s *PYBINDGEN_UNUSED(self), %s *other, int opid)"
                           % (tp_richcompare_function_name, self.pystruct, self.pystruct))
         code_sink.writeln("{")
         code_sink.indent()

@@ -54,7 +54,7 @@ public:
     Foo () : m_datum (""), m_initialized (false)
         { Foo::instance_count++; }
 
-    Foo (int xpto)  DEPRECATED : m_initialized (false) {}
+    Foo (int xpto)  DEPRECATED : m_initialized (false) { xpto++; }
 
     Foo (std::string const &datum) : m_datum (datum), m_initialized (false)
         { Foo::instance_count++; }
@@ -679,7 +679,7 @@ class AbstractXptoImpl : public AbstractXpto
 public:
     AbstractXptoImpl () {}
 
-    virtual void something (int x) const {}
+    virtual void something (int x) const { x++; }
 };
 
 
