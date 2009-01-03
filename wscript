@@ -3,7 +3,7 @@
 
 import Options
 import Build
-Options.autoconfig = True
+Configure.autoconfig = True
 import Logs
 
 #from Params import fatal
