@@ -3,6 +3,8 @@
 
 import Options
 import Build
+
+import Configure
 Configure.autoconfig = True
 import Logs
 
@@ -14,6 +16,9 @@ import shutil
 import sys
 import Configure
 import tarfile
+
+import Task
+Task.file_deps = Task.extract_deps
 
 
 APPNAME='pybindgen'
@@ -170,9 +175,6 @@ def configure(conf):
         conf.env['CXX'] = ''
     else:
         conf.check_tool('cflags')
-        if os.path.basename(conf.env['CXX']).startswith("g++"):
-            conf.env.append_value('CXXFLAGS', ['-Wall', '-fno-strict-aliasing'])
-            conf.env.append_value('CXXFLAGS', ['-Wextra'])
         conf.check_python_headers()
 
         if not Options.options.disable_pygccxml:

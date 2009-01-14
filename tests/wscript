@@ -34,7 +34,7 @@ def build(bld):
     if env['CXX']:
         obj = bld.new_task_gen('cxx', 'objects', 'pyext')
         obj.source = 'test.cc'
-        if os.path.basename(obj.env['CXX']).startswith("g++"):
+        if env['CXX_NAME'] == 'gcc':
             obj.env.append_value('CXXFLAGS', ['-Werror', '-Wno-unused'])
     
     ## manual code generation using simple pybindgen API calls
