@@ -400,7 +400,6 @@ class ModuleBase(dict):
                 func = Function(*args, **kwargs)
             except utils.SkipWrapper:
                 return None
-        func.stack_where_defined = traceback.extract_stack()
         self._add_function_obj(func)
         return func
 
@@ -413,7 +412,6 @@ class ModuleBase(dict):
             func = CustomFunctionWrapper(*args, **kwargs)
         except utils.SkipWrapper:
             return None
-        func.stack_where_defined = traceback.extract_stack()
         self._add_function_obj(func)
         return func
 
@@ -458,7 +456,6 @@ class ModuleBase(dict):
                           DeprecationWarning, stacklevel=2)
         else:
             cls = CppClass(*args, **kwargs)
-        cls.stack_where_defined = traceback.extract_stack()
         self._add_class_obj(cls)
         return cls
 

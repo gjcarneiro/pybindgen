@@ -1152,7 +1152,6 @@ public:
                         helper_class.add_virtual_method(method)
 
                 return None
-        meth.stack_where_defined = traceback.extract_stack()
         self._add_method_obj(meth)
         return meth
 
@@ -1166,7 +1165,6 @@ public:
             meth = function.Function(*args, **kwargs)
         except utils.SkipWrapper:
             return None
-        meth.stack_where_defined = traceback.extract_stack()
         self._add_method_obj(meth)
         return meth
 
@@ -1178,7 +1176,6 @@ public:
             meth = CustomCppMethodWrapper(*args, **kwargs)
         except utils.SkipWrapper:
             return None
-        meth.stack_where_defined = traceback.extract_stack()
         self._add_method_obj(meth)
         return meth
 
@@ -1245,7 +1242,6 @@ public:
                 constructor = CppConstructor(*args, **kwargs)
             except utils.SkipWrapper:
                 return None
-        constructor.stack_where_defined = traceback.extract_stack()
         self._add_constructor_obj(constructor)
         return constructor
 
@@ -1258,7 +1254,6 @@ public:
                                                                      'ctor_arg')])
         except utils.SkipWrapper:
             return None
-        constructor.stack_where_defined = traceback.extract_stack()
         self._add_constructor_obj(constructor)
         return constructor
 
@@ -1271,7 +1266,6 @@ public:
             constructor = CppFunctionAsConstructor(*args, **kwargs)
         except utils.SkipWrapper:
             return None
-        constructor.stack_where_defined = traceback.extract_stack()
         self._add_constructor_obj(constructor)
         return constructor
 
