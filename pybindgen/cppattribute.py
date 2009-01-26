@@ -19,6 +19,7 @@ class PyGetter(ForwardWrapperBase):
 
 class PySetter(ReverseWrapperBase):
     """generates a setter, for use in a PyGetSetDef table"""
+    NO_GIL_LOCKING = True
     def generate(self, code_sink):
         """Generate the code of the setter to the given code sink"""
         raise NotImplementedError
