@@ -15,7 +15,7 @@ class Enum(object):
         Creates a new enum wrapper, which should be added to a module with module.add_enum().
 
         @param name: C name of the enum type
-        @param values: a list of strings with all enumeration value names
+        @param values: a list of strings with all enumeration value names, or list of (name, C-value-expr) tuples.
         @param values_prefix: prefix to add to value names, or None
         @param cpp_namespace: optional C++ namespace identifier, or None.
                          Note: this namespace is *in addition to*
@@ -23,13 +23,14 @@ class Enum(object):
                          belongs to.  Typically this parameter is to
                          be used when wrapping enums declared inside
                          C++ classes.
+        
         """
         assert isinstance(name, basestring)
         assert '::' not in name
         assert outer_class is None or isinstance(outer_class, CppClass)
         self.outer_class = outer_class
         for val in values:
-            if not isinstance(val, basestring):
+            if not isinstance(val, (basestring, tuple)):
                 raise TypeError
 
         #if not name:
@@ -72,13 +73,13 @@ class Enum(object):
         class ThisEnumParameter(inttype.IntParam):
             CTYPES = []
             full_type_name = self.full_name
-            def __init__(self, ctype, name):
-                super(ThisEnumParameter, self).__init__(self.full_type_name, name)
+            def __init__(self, ctype, name, *args, **kwargs):
+                super(ThisEnumParameter, self).__init__(self.full_type_name, name, *args, **kwargs)
         class ThisEnumReturn(inttype.IntReturn):
             CTYPES = []
             full_type_name = self.full_name
-            def __init__(self, ctype):
-                super(ThisEnumReturn, self).__init__(self.full_type_name)
+            def __init__(self, ctype, *args, **kwargs):
+                super(ThisEnumReturn, self).__init__(self.full_type_name, *args, **kwargs)
         self.ThisEnumParameter = ThisEnumParameter
         self.ThisEnumReturn = ThisEnumReturn
         param_type_matcher.register(self.full_name, self.ThisEnumParameter)
@@ -106,22 +107,31 @@ class Enum(object):
             if self.cpp_namespace:
                 namespace.append(self.cpp_namespace)
             for value in self.values:
-                module.after_init.write_code(
-                    "PyModule_AddIntConstant(m, (char *) \"%s\", %s);"
-                    % (value, '::'.join(namespace + [self.values_prefix + value])))
+                if isinstance(value, tuple):
+                    name, real_value = value
+                    module.after_init.write_code(
+                        "PyModule_AddIntConstant(m, (char *) \"%s\", %s);" % (name, real_value))
+                else:
+                    module.after_init.write_code(
+                        "PyModule_AddIntConstant(m, (char *) \"%s\", %s);"
+                        % (value, '::'.join(namespace + [self.values_prefix + value])))
         else:
             module.after_init.write_code("{")
             module.after_init.indent()
             module.after_init.write_code("PyObject *tmp_value;")
             for value in self.values:
-                value_str = "%s::%s" % (self.outer_class.full_name, value)
+                if isinstance(value, tuple):
+                    value_name, value_str = value
+                else:
+                    value_name = value
+                    value_str = "%s::%s" % (self.outer_class.full_name, value)
                 module.after_init.write_code(
                     ' // %s\n'
                     'tmp_value = PyInt_FromLong(%s);\n'
                     'PyDict_SetItemString((PyObject*) %s.tp_dict, \"%s\", tmp_value);\n'
                     'Py_DECREF(tmp_value);'
                     % (
-                    value_str, value_str, self.outer_class.pytypestruct, value))
+                    value_str, value_str, self.outer_class.pytypestruct, value_name))
             module.after_init.unindent()
             module.after_init.write_code("}")
 
