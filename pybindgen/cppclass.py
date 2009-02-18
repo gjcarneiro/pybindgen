@@ -388,7 +388,8 @@ class CppClass(object):
                  template_parameters=(), custom_template_class_name=None,
                  incomplete_type=False, free_function=None,
                  incref_function=None, decref_function=None,
-                 python_name=None, memory_policy=None):
+                 python_name=None, memory_policy=None,
+                 foreign_cpp_namespace=None):
         """
         @param name: class name
         @param parent: optional parent class wrapper
@@ -421,6 +422,13 @@ class CppClass(object):
         inherits from the parent class.  Only root classes can have a
         memory policy defined.
         @type memory_policy: L{MemoryPolicy}
+        
+        @param foreign_cpp_namespace: if set, the class is assumed to
+        belong to the given C++ namespace, regardless of the C++
+        namespace of the python module it will be added to.  For
+        instance, this can be useful to wrap std classes, like
+        std::ofstream, without having to create an extra python
+        submodule.
         """
         assert outer_class is None or isinstance(outer_class, CppClass)
         self.incomplete_type = incomplete_type
@@ -433,6 +441,7 @@ class CppClass(object):
         self.template_parameters = template_parameters
         self.custom_template_class_name = custom_template_class_name
         self.is_singleton = is_singleton
+        self.foreign_cpp_namespace = foreign_cpp_namespace
         self.full_name = None # full name with C++ namespaces attached and template parameters
         self.methods = {} # name => OverloadedMethod
         self._dummy_methods = [] # methods that have parameter/retval binding problems
@@ -826,14 +835,18 @@ class CppClass(object):
         prefix = settings.name_prefix.capitalize()
 
         if self.outer_class is None:
-            if self._module.cpp_namespace_prefix:
-                if self._module.cpp_namespace_prefix == '::':
-                    self.full_name = '::' + self.name
-                else:
-                    self.full_name = self._module.cpp_namespace_prefix + '::' + self.name
+            if self.foreign_cpp_namespace:
+                self.full_name = self.foreign_cpp_namespace + '::' + self.name
             else:
-                self.full_name = self.name
+                if self._module.cpp_namespace_prefix:
+                    if self._module.cpp_namespace_prefix == '::':
+                        self.full_name = '::' + self.name
+                    else:
+                        self.full_name = self._module.cpp_namespace_prefix + '::' + self.name
+                else:
+                    self.full_name = self.name
         else:
+            assert not self.foreign_cpp_namespace
             self.full_name = '::'.join([self.outer_class.full_name, self.name])
 
         def make_upper(s):
