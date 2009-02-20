@@ -767,13 +767,9 @@ class ForwardWrapperBase(object):
             and return_value.ctype != 'void'
             and not return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR):
             self.declarations.declare_variable(return_value.ctype_no_const, 'retval')
-        for param in self.parameters:
-            self.declarations.reserve_variable(param.name)
 
     def reset_code_generation_state(self):
         self.declarations.clear()
-        for param in self.parameters:
-            self.declarations.reserve_variable(param.name)
         self.before_parse.clear()
         self.before_call.clear()
         self.after_call.clear()
