@@ -332,6 +332,8 @@ class ParseTupleParameters(object):
             else:
                 keywords.append(name)
         if keywords:
+            if len(keywords) != len(self._parse_tuple_items):
+                raise ValueError("mixing parameters with and without keywords")
             return keywords
         else:
             return None
