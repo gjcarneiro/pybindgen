@@ -32,7 +32,7 @@ class PyObjectParam(Parameter):
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
         name = wrapper.declarations.declare_variable(self.ctype_no_const, self.name)
-        wrapper.parse_params.add_parameter('O', ['&'+name])
+        wrapper.parse_params.add_parameter('O', ['&'+name], self.name)
         wrapper.call_params.append(name)
         if self.transfer_ownership:
             wrapper.before_call.write_code("Py_INCREF((PyObject*) %s);" % name)
