@@ -189,6 +189,11 @@ def configure(conf):
                 else:
                     conf.env['ENABLE_PYGCCXML'] = True
 
+        if conf.env['CXX_NAME'] == 'gcc':
+            conf.env.append_value('CXXFLAGS_PYEXT', '-fvisibility=hidden')
+        if conf.env['CC_NAME'] == 'gcc':
+            conf.env.append_value('CCFLAGS_PYEXT', '-fvisibility=hidden')
+
 
 def build(bld):
     if getattr(Options.options, 'generate_version', False):

@@ -765,7 +765,11 @@ class ModuleBase(dict):
         ## now generate the module init function itself
         main_sink.writeln()
         if self.parent is None:
-            main_sink.writeln("PyMODINIT_FUNC")
+            main_sink.writeln('''
+PyMODINIT_FUNC
+#if defined(__GNUC__) && __GNUC__ >= 4
+__attribute__ ((visibility("default")))
+#endif''')
         else:
             main_sink.writeln("static PyObject *")
         if module_file_base_name is None:
