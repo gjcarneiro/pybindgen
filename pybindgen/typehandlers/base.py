@@ -718,6 +718,10 @@ class ForwardWrapperBase(object):
     PARSE_TUPLE = 1
     PARSE_TUPLE_AND_KEYWORDS = 2
 
+    HAVE_RETURN_VALUE = False # change to true if the wrapper
+                              # generates a return value even if the
+                              # return_value attribute is None
+
     def __init__(self, return_value, parameters,
                  parse_error_return, error_return,
                  force_parse=None, no_c_retval=False,
@@ -778,9 +782,9 @@ class ForwardWrapperBase(object):
         self.call_params = []
         self.meth_flags = []
 
-        if self.return_value is not None:
+        if self.return_value is not None or self.HAVE_RETURN_VALUE:
             self.declarations.declare_variable('PyObject*', 'py_retval')
-        if (not self.no_c_retval and self.return_value is not None
+        if (not self.no_c_retval and (self.return_value is not None or self.HAVE_RETURN_VALUE)
             and self.return_value.ctype != 'void'
             and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR):
             self.declarations.declare_variable(self.return_value.ctype_no_const, 'retval')
@@ -887,18 +891,22 @@ class ForwardWrapperBase(object):
             self.meth_flags.append("METH_NOARGS")
         
         ## convert the return value(s)
-        if self.return_value is None:
+        if self.return_value is None and not self.HAVE_RETURN_VALUE:
+
             assert self.build_params.get_parameters() == ['""'], \
                    "this wrapper is not supposed to return values"
             self._before_return_hook()
             self.after_call.write_cleanup()
+
         else:
-            try:
-                self.return_value.convert_c_to_python(self)
-            except NotImplementedError:
-                raise CodeGenerationError(
-                    'convert_c_to_python method of return value %s not implemented'
-                    % (self.return_value.ctype,))
+
+            if self.return_value is not None:
+                try:
+                    self.return_value.convert_c_to_python(self)
+                except NotImplementedError:
+                    raise CodeGenerationError(
+                        'convert_c_to_python method of return value %s not implemented'
+                        % (self.return_value.ctype,))
 
             self._before_return_hook()
 

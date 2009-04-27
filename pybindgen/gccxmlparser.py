@@ -4,6 +4,7 @@ import sys
 import os.path
 import warnings
 import re
+import pygccxml
 from pygccxml import parser
 from pygccxml import declarations
 from module import Module
@@ -1292,7 +1293,8 @@ pybindgen.settings.error_handler = ErrorHandler()
             return
 
         kwargs = {}
-        
+        key_type = None
+
         if traits is container_traits.list_traits:
             container_type = 'list'
         elif traits is container_traits.deque_traits:
@@ -1313,6 +1315,15 @@ pybindgen.settings.error_handler = ErrorHandler()
             container_type = 'hash_set'
         elif traits is container_traits.hash_multiset_traits:
             container_type = 'hash_multiset'
+        elif traits is container_traits.map_traits:
+            container_type = 'map'
+            if hasattr(traits, "key_type"):
+                key_type = traits.key_type(definition)
+            else:
+                warnings.warn("pygccxml 0.9.5 or earlier don't have the key_type method, "
+                              "so we don't support mapping types with this  pygccxml version (%r)"
+                              % pygccxml.__version__)
+                return
 
         elif (traits is container_traits.map_traits
               or traits is container_traits.multimap_traits
@@ -1342,26 +1353,43 @@ pybindgen.settings.error_handler = ErrorHandler()
             #print >> sys.stderr, "************* register_container %s; element_type=%s, key_type=%s" % \
             #    (name, element_type, key_type.partial_decl_string)
         
-        return_type_spec = self.type_registry.lookup_return(element_type)
         element_decl = type_traits.remove_declarated(element_type)
 
         kwargs['container_type'] = container_type
         
         pygen_sink = self._get_pygen_sink_for_definition(element_decl)
+
+        elem_type_spec = self.type_registry.lookup_return(element_type)
+        if key_type is not None:
+            key_type_spec = self.type_registry.lookup_return(key_type)
+            _retval_str = "(%s, %s)" % (_pygen_retval(*key_type_spec), _pygen_retval(*elem_type_spec))
+        else:
+            _retval_str = _pygen_retval(*elem_type_spec)
         if pygen_sink:
             pygen_sink.writeln("module.add_container(%s)" %
-                               ", ".join([repr(name), _pygen_retval(*return_type_spec)] + _pygen_kwargs(kwargs)))
+                               ", ".join([repr(name), _retval_str] + _pygen_kwargs(kwargs)))
 
         ## convert the return value
         try:
-            return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
+            return_type_elem = ReturnValue.new(*elem_type_spec[0], **elem_type_spec[1])
         except (TypeLookupError, TypeConfigurationError), ex:
             warnings.warn("Return value '%s' error (used in %s): %r"
                           % (definition.partial_decl_string, definition, ex),
                           WrapperWarning)
             return
 
-        module.add_container(name, return_type, **kwargs)
+        if key_type is not None:
+            try:
+                return_type_key = ReturnValue.new(*key_type_spec[0], **key_type_spec[1])
+            except (TypeLookupError, TypeConfigurationError), ex:
+                warnings.warn("Return value '%s' error (used in %s): %r"
+                              % (definition.partial_decl_string, definition, ex),
+                              WrapperWarning)
+                return
+
+            module.add_container(name, (return_type_key, return_type_elem), **kwargs)
+        else:
+            module.add_container(name, return_type_elem, **kwargs)
         
 
     def _class_has_virtual_methods(self, cls):

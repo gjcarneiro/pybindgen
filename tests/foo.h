@@ -748,6 +748,8 @@ struct simple_struct_t
 
 typedef std::vector<simple_struct_t> SimpleStructList;
 typedef std::vector<simple_struct_t> SimpleStructVec;
+typedef std::map<std::string, simple_struct_t> SimpleStructMap;
+
 
 SimpleStructList get_simple_list ();
 int set_simple_list (SimpleStructList list);
@@ -769,6 +771,9 @@ public:
     virtual SimpleStructVec get_simple_vec ();
     virtual int set_simple_vec (SimpleStructVec vec);
 
+    virtual SimpleStructMap get_simple_map ();
+    virtual int set_simple_map (SimpleStructMap map);
+
     // -#- @outVec(direction=out) -#-
     void get_vec (std::vector<std::string> &outVec);
 
@@ -780,6 +785,7 @@ public:
 
 private:
     SimpleStructList m_simpleList;
+    SimpleStructMap m_simpleMap;
 
     std::vector<std::string> *m_vec;
     

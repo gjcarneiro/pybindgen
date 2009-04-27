@@ -18,13 +18,16 @@ class IterNextWrapper(ForwardWrapperBase):
     '''
     tp_iternext wrapper
     '''
+
+    HAVE_RETURN_VALUE = True
+
     def __init__(self, container):
         """
         value_type -- a ReturnValue object handling the value type;
         container -- the L{Container}
         """
         super(IterNextWrapper, self).__init__(
-            container.value_type, [], "return NULL;", "return NULL;", no_c_retval=True)
+            None, [], "return NULL;", "return NULL;", no_c_retval=True)
         assert isinstance(container, Container)
         self.container = container
         self.c_function_name = "_wrap_%s__tp_iternext" % (self.container.iter_pystruct)
@@ -38,14 +41,21 @@ class IterNextWrapper(ForwardWrapperBase):
         super(IterNextWrapper, self).reset_code_generation_state()
         self.iter_variable_name = self.declarations.declare_variable(
             "%s::iterator" % self.container.full_name , 'iter')
-        self.container.value_type.value = "(*%s)" % self.iter_variable_name        
 
     def generate_call(self):
         self.before_call.write_code("%s = *self->iterator;" % (self.iter_variable_name,))
         self.before_call.write_error_check(
             "%s == self->container->obj->end()" % (self.iter_variable_name,),
             "PyErr_SetNone(PyExc_StopIteration);")
-        self.before_call.write_code("++(*self->iterator);")        
+        self.before_call.write_code("++(*self->iterator);")
+        if self.container.key_type is None:
+            self.container.value_type.value = "(*%s)" % self.iter_variable_name
+            self.container.value_type.convert_c_to_python(self)
+        else:
+            self.container.value_type.value = "%s->second" % self.iter_variable_name
+            self.container.value_type.convert_c_to_python(self)
+            self.container.key_type.value = "%s->first" % self.iter_variable_name
+            self.container.key_type.convert_c_to_python(self)
 
     def generate(self, code_sink):
         """
@@ -64,8 +74,9 @@ class IterNextWrapper(ForwardWrapperBase):
 
 
 class ContainerTraits(object):
-    def __init__(self, add_value_method):
+    def __init__(self, add_value_method, is_mapping=False):
         self.add_value_method = add_value_method
+        self.is_mapping = is_mapping
 
 container_traits_list = {
     'list': 		ContainerTraits(add_value_method='push_back'),
@@ -78,17 +89,21 @@ container_traits_list = {
     'multiset': 	ContainerTraits(add_value_method='insert'),
     'hash_set':		ContainerTraits(add_value_method='insert'),
     'hash_multiset':	ContainerTraits(add_value_method='insert'),
+    'map':		ContainerTraits(add_value_method='insert', is_mapping=True),
 }
 
 class Container(object):
     def __init__(self, name, value_type, container_type, outer_class=None, custom_name=None):
         """
         @param name: C++ type name of the container, e.g. std::vector<int> or MyIntList
-        @param value_type: a ReturnValue of the element type
+
+        @param value_type: a ReturnValue of the element type: note,
+        for mapping containers, value_type is a tuple with two
+        ReturnValue's: (key, element).
 
         @param container_type: a string with the type of container,
         one of 'list', 'deque', 'queue', 'priority_queue', 'vector',
-        'stack', 'set', 'multiset', 'hash_set', 'hash_multiset'.
+        'stack', 'set', 'multiset', 'hash_set', 'hash_multiset', 'map'
 
         @param outer_class: if the type is defined inside a class, must be a reference to the outer class
         @type outer_class: None or L{CppClass}
@@ -118,8 +133,13 @@ class Container(object):
         self.iter_pytype = PyTypeObject()
         self._iter_pystruct = None
 
-        value_type = utils.eval_retval(value_type, self)
-        self.value_type = value_type
+        if self.container_traits.is_mapping:
+            (key_type, value_type) = value_type
+            self.key_type = utils.eval_retval(key_type, self)
+            self.value_type = utils.eval_retval(value_type, self)
+        else:
+            self.key_type = None
+            self.value_type = utils.eval_retval(value_type, self)
         self.python_to_c_converter = None
 
         if name != 'dummy':
@@ -485,6 +505,8 @@ static PyObject*
     def _generate_container_constructor(self, code_sink):
         container_tp_init_function_name = "_wrap_%s__tp_init" % (self.pystruct,)
         item_python_to_c_converter = self.module.get_root().generate_python_to_c_type_converter(self.value_type, code_sink)
+        if self.key_type is not None:
+            key_python_to_c_converter = self.module.get_root().generate_python_to_c_type_converter(self.key_type, code_sink)
         this_type_converter = self.module.get_root().get_python_to_c_type_converter_function_name(
             self.ThisContainerReturn(self.full_name))
         subst_vars = {
@@ -499,7 +521,11 @@ static PyObject*
             'ADD_VALUE': self.container_traits.add_value_method,
             }
 
-        code_sink.writeln(r'''
+        if self.key_type is None:
+
+            # generate mapping converter function
+
+            code_sink.writeln(r'''
 int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
 {
     if (PyObject_IsInstance(arg, (PyObject*) &%(PYTYPESTRUCT)s)) {
@@ -520,8 +546,51 @@ int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
     }
     return 1;
 }
+''' % subst_vars)
 
+        else:
 
+            # generate mapping converter function
+
+            subst_vars.update({
+                    'KEY_CONVERTER': key_python_to_c_converter,
+                    'KEY_CTYPE': self.key_type.ctype,
+                    })
+
+            code_sink.writeln(r'''
+int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
+{
+    if (PyObject_IsInstance(arg, (PyObject*) &%(PYTYPESTRUCT)s)) {
+        *container = *((%(PYSTRUCT)s*)arg)->obj;
+    } else if (PyList_Check(arg)) {
+        container->clear();
+        Py_ssize_t size = PyList_Size(arg);
+        for (Py_ssize_t i = 0; i < size; i++) {
+            PyObject *tup = PyList_GET_ITEM(arg, i);
+            if (!PyTuple_Check(tup) || PyTuple_Size(tup) != 2) {
+                PyErr_SetString(PyExc_TypeError, "items must be tuples with two elements");
+                return 0;
+            }
+            std::pair<%(KEY_CTYPE)s, %(ITEM_CTYPE)s> item;
+            if (!%(KEY_CONVERTER)s(PyTuple_GET_ITEM(tup, 0), &item.first)) {
+                return 0;
+            }
+            if (!%(ITEM_CONVERTER)s(PyTuple_GET_ITEM(tup, 1), &item.second)) {
+                return 0;
+            }
+            container->%(ADD_VALUE)s(item);
+        }
+    } else {
+        PyErr_SetString(PyExc_TypeError, "parameter must be None, a %(PYTHON_NAME)s instance, or a list of %(ITEM_CTYPE)s");
+        return 0;
+    }
+    return 1;
+}
+''' % subst_vars)
+            # ---
+
+        # constructor, calling the above converter function
+        code_sink.writeln(r'''
 static int
 %(FUNC)s(%(PYSTRUCT)s *self, PyObject *args, PyObject *kwargs)
 {

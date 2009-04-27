@@ -4,7 +4,7 @@
 #import Params
 #import Task
 
-if 1:
+if 0:
     DEPRECATION_ERRORS = '-Werror::DeprecationWarning' # deprecations become errors
 else:
     DEPRECATION_ERRORS = '-Wdefault::DeprecationWarning' # normal python behaviour
@@ -21,7 +21,7 @@ def build(bld):
         command='${PYTHON} %s ${SRC[0]} ${SRC[1]} > ${TGT[0]}' % (DEPRECATION_ERRORS,))
 
     if bld.env['CXX']:
-        obj = bld.new_task_gen('cc', 'shlib', 'pyext')
+        obj = bld.new_task_gen(features='cc cshlib pyext')
         obj.source = [
             'hello.c',
             'hellomodule.c'

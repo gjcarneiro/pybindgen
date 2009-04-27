@@ -904,6 +904,20 @@ class TestFoo(unittest.TestCase):
         rv = test.set_simple_vec(container)
         self.assertEqual(rv, sum(range(10)))
 
+
+    def test_map_container(self):
+        test = foo.TestContainer()
+        container = test.get_simple_map()
+        count = 0
+        for i, (simple_key, simple_val) in enumerate(container):
+            self.assertEqual(simple_key, str(i))
+            self.assertEqual(simple_val.xpto, i)
+            count += 1
+        self.assertEqual(count, 10)
+
+        rv = test.set_simple_map(container)
+        self.assertEqual(rv, sum(range(10)))
+
     def test_copy(self):
         s1 = foo.simple_struct_t()
         s1.xpto = 123

@@ -354,6 +354,32 @@ TestContainer::set_simple_vec (std::vector<simple_struct_t> list)
     return count;
 }
 
+
+SimpleStructMap
+TestContainer::get_simple_map ()
+{
+    SimpleStructMap retval;
+    for (int i = 0; i < 10; i++)
+    {
+        simple_struct_t val = {i};
+        std::ostringstream os;
+        os << i;
+        retval[os.str()] = val;
+    }
+    return retval;
+}
+
+int
+TestContainer::set_simple_map (SimpleStructMap map)
+{
+    int count = 0;
+    m_simpleMap = map;
+    for (SimpleStructMap::iterator iter = m_simpleMap.begin(); iter != m_simpleMap.end(); iter++)
+        count += iter->second.xpto;
+    return count;
+}
+
+
 void
 TestContainer::get_vec (std::vector<std::string> &outVec)
 {

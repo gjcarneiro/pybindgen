@@ -420,6 +420,14 @@ int %s::custom_method_added_by_a_hook(int x)
     TestContainer.add_method('get_vec_ptr', 'void', [Parameter.new('std::vector<std::string>*', 'outVec',
                                                                    direction=Parameter.DIRECTION_OUT)])
 
+
+    mod.add_container('std::map<std::string, simple_struct_t>',
+                      (ReturnValue.new('std::string'), ReturnValue.new('simple_struct_t')),
+                      'map')
+    TestContainer.add_method('get_simple_map', ReturnValue.new('std::map<std::string, simple_struct_t>'), [], is_virtual=True)
+    TestContainer.add_method('set_simple_map', 'int', [Parameter.new('std::map<std::string, simple_struct_t>', 'map')], is_virtual=True)
+
+
     Tupl = mod.add_class('Tupl')
     Tupl.add_binary_comparison_operator('<')
     Tupl.add_binary_comparison_operator('<=')
