@@ -14,7 +14,7 @@ import pproc as subprocess
 #os.environ["PYBINDGEN_ENABLE_PROFILING"] = ""
 
 
-if 1:
+if 0:
     DEPRECATION_ERRORS = '-Werror::DeprecationWarning' # deprecations become errors
 else:
     DEPRECATION_ERRORS = '-Wdefault::DeprecationWarning' # normal python behaviour
@@ -32,7 +32,7 @@ def build(bld):
         command='${PYTHON} ${SRC[0]} ${TOP_SRCDIR} > ${TGT[0]}')
 
     if env['CXX']:
-        obj = bld.new_task_gen('cxx', 'objects', 'pyext')
+        obj = bld.new_task_gen(features='cxx pyext')
         obj.source = 'test.cc'
         if env['CXX_NAME'] == 'gcc':
             obj.env.append_value('CXXFLAGS', ['-Werror', '-Wno-unused'])
@@ -45,7 +45,7 @@ def build(bld):
         command='${PYTHON} %s ${SRC[0]} ${TOP_SRCDIR} > ${TGT[0]}' % (DEPRECATION_ERRORS,))
 
     if env['CXX']:
-        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
+        obj = bld.new_task_gen(features='cxx cshlib pyext')
         obj.source = [
             'foo.cc',
             'foomodule.cc'
@@ -65,7 +65,7 @@ def build(bld):
             command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[1]} > ${TGT[0]}' % (DEPRECATION_ERRORS,),
             variables=dict(cpp_path_repr=repr(bindgen.env['CPPPATH_PYEXT'])))
 
-        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
+        obj = bld.new_task_gen(features='cxx cshlib pyext')
         obj.source = [
             'foo.cc',
             'foomodule2.cc'
@@ -86,7 +86,7 @@ def build(bld):
         ## TODO: add WAF command-output support for customising command OS environment
         os.environ["PYTHONPATH"] = os.pathsep.join([os.environ.get("PYTHONPATH", ''), bindgen.path.abspath(bindgen.env)])
 
-        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
+        obj = bld.new_task_gen(features='cxx cshlib pyext')
         obj.source = [
             'foo.cc',
             'foomodule3.cc'
@@ -121,7 +121,7 @@ def build(bld):
             command='${PYTHON} %s ${SRC[0]} ${TGT[0]}' % (DEPRECATION_ERRORS,))
 
 
-        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
+        obj = bld.new_task_gen(features='cxx cshlib pyext')
         obj.source = [
             'foo.cc',
             'foomodule4.cc',
