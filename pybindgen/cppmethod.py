@@ -23,7 +23,7 @@ class CppMethod(ForwardWrapperBase):
                  template_parameters=(), is_virtual=False, is_const=False,
                  unblock_threads=None, is_pure_virtual=False,
                  custom_template_method_name=None, visibility='public',
-                 custom_name=None, deprecated=False):
+                 custom_name=None, deprecated=False, docstring=None):
         """
         Create an object the generates code to wrap a C++ class method.
 
@@ -95,7 +95,7 @@ class CppMethod(ForwardWrapperBase):
         #self.static_decl = True
         self._class = None
         self._helper_class = None
-        self.docstring = None
+        self.docstring = docstring
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
         self.return_value = None
