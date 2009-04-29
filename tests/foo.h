@@ -459,6 +459,9 @@ void delete_some_object();
 
 namespace xpto
 {
+    typedef uint32_t FlowId;
+    FlowId get_flow_id (FlowId flowId);
+
     std::string some_function();
 
     class SomeClass
@@ -865,6 +868,8 @@ inline Tupl operator - (Tupl const &a, Tupl const &b)
     retval.y = a.y - b.y;
     return retval;
 }
+
+
 
 
 

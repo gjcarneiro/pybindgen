@@ -10,3 +10,5 @@ import floattype
 import pyobjecttype
 
 
+from base import add_type_alias
+

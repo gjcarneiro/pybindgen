@@ -1066,6 +1066,9 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(r.x, t1.x / t2.x)
         self.assertEqual(r.y, t1.y / t2.y)
 
+    def test_int_typedef(self):
+        rv = foo.xpto.get_flow_id(123)
+        self.assertEqual(rv, 124)
 
 if __name__ == '__main__':
     unittest.main()

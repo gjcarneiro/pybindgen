@@ -418,3 +418,12 @@ get_set ()
     return rv;
 }
 
+namespace xpto
+{    
+    FlowId
+    get_flow_id (FlowId flowId)
+    {
+        return flowId + 1;
+    }
+}
+

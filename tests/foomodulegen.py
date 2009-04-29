@@ -270,6 +270,9 @@ int %s::custom_method_added_by_a_hook(int x)
 
     xpto.add_typedef(Foo, 'FooXpto')
     xpto.add_function('get_foo_datum', 'std::string', [Parameter.new('const xpto::FooXpto&', 'foo')])
+
+    typehandlers.add_type_alias('uint32_t', 'xpto::FlowId')    
+    xpto.add_function('get_flow_id', 'xpto::FlowId', [Parameter.new('xpto::FlowId', 'flowId')])
     
 
     ## ---- some implicity conversion APIs

@@ -1301,6 +1301,7 @@ class TypeMatcher(object):
         """Constructor"""
         self._types = {}
         self._transformations = []
+        self._type_aliases = {}
 
 
     def register_transformation(self, transformation):
@@ -1317,7 +1318,14 @@ class TypeMatcher(object):
         if name in self._types:
             raise ValueError("return type %s already registered" % (name,))
         self._types[name] = type_handler
-            
+
+    def _raw_lookup_with_alias_support(self, name):
+        try:
+            alias = self._type_aliases[name]
+        except KeyError:
+            return self._types[name]
+        else:
+            return self._raw_lookup_with_alias_support(alias)
         
     def lookup(self, name):
         """
@@ -1333,7 +1341,7 @@ class TypeMatcher(object):
         noconst_name = str(given_type_traits.ctype_no_modifiers)
         tried_names = [noconst_name]
         try:
-            rv = self._types[noconst_name], None, given_type_traits
+            rv = self._raw_lookup_with_alias_support(noconst_name), None, given_type_traits
         except KeyError:
             logger.debug("try to lookup type handler for %r => failure", name)
             ## Now try all the type transformations
@@ -1344,7 +1352,7 @@ class TypeMatcher(object):
                 untransformed_type_traits = ctypeparser.TypeTraits(untransformed_name)
                 untransformed_name = str(untransformed_type_traits.ctype_no_modifiers)
                 try:
-                    rv = self._types[untransformed_name], transf, untransformed_type_traits
+                    rv = self._raw_lookup_with_alias_support(untransformed_name), transf, untransformed_type_traits
                 except KeyError:
                     logger.debug("try to lookup type handler for %r => failure (%r)", untransformed_name)
                     tried_names.append(untransformed_name)
@@ -1362,7 +1370,13 @@ class TypeMatcher(object):
         "Returns an iterator over all registered items"
         return self._types.iteritems()
 
+    def add_type_alias(self, from_type_name, to_type_name):
+        self._type_aliases[to_type_name] = from_type_name
 
 return_type_matcher = TypeMatcher()
 param_type_matcher = TypeMatcher()
+
+def add_type_alias(from_type_name, to_type_name):
+    return_type_matcher.add_type_alias(from_type_name, to_type_name)
+    param_type_matcher.add_type_alias(from_type_name, to_type_name)
 

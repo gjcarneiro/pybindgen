@@ -657,7 +657,7 @@ class ModuleParser(object):
             self.module.add_include(inc)
 
         for pygen_sink in self._get_all_pygen_sinks():
-            pygen_sink.writeln("from pybindgen import Module, FileCodeSink, param, retval, cppclass")
+            pygen_sink.writeln("from pybindgen import Module, FileCodeSink, param, retval, cppclass, typehandlers")
             pygen_sink.writeln()
 
         pygen_sink = self._get_main_pygen_sink()
@@ -1172,17 +1172,13 @@ pybindgen.settings.error_handler = ErrorHandler()
             for alias in module_namespace.typedefs(function=self.location_filter,
                                                    recursive=False, allow_empty=True):
 
-                ## handle "typedef int Something;"
-                if isinstance(alias.type, cpptypes.int_t):
-                    param_cls, dummy_transf, dummy_traits = typehandlers.base.param_type_matcher.lookup('int')
-                    for ctype in param_cls.CTYPES:
-                        #print >> sys.stderr, "%s -> int" % ctype.replace('int', alias.name)
-                        typehandlers.base.param_type_matcher.register(ctype.replace('int', alias.name), param_cls)
-                    return_cls, dummy_transf, dummy_traits = typehandlers.base.return_type_matcher.lookup('int')
-                    for ctype in return_cls.CTYPES:
-                        #print >> sys.stderr, "%s -> int" % ctype.replace('int', alias.name)
-                        typehandlers.base.return_type_matcher.register(ctype.replace('int', alias.name), return_cls)
-                    continue
+                type_from_name = normalize_name(str(alias.type))
+                type_to_name = normalize_name(utils.ascii('::'.join([module.cpp_namespace_prefix, alias.name])))
+
+                typehandlers.base.add_type_alias(type_from_name, type_to_name)
+                pygen_sink = self._get_pygen_sink_for_definition(alias)
+                if pygen_sink:
+                    pygen_sink.writeln("typehandlers.add_type_alias(%r, %r)" % (type_from_name, type_to_name))
 
                 ## Look for forward declarations of class/structs like
                 ## "typedef struct _Foo Foo"; these are represented in
