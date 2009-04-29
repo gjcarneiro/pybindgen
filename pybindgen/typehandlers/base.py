@@ -1321,10 +1321,9 @@ class TypeMatcher(object):
 
     def _raw_lookup_with_alias_support(self, name):
         try:
-            alias = self._type_aliases[name]
-        except KeyError:
             return self._types[name]
-        else:
+        except KeyError:
+            alias = self._type_aliases[name]
             return self._raw_lookup_with_alias_support(alias)
         
     def lookup(self, name):
