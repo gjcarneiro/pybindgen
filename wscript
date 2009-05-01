@@ -17,6 +17,7 @@ import shutil
 import sys
 import Configure
 import tarfile
+import re
 
 import Task
 Task.file_deps = Task.extract_deps
@@ -32,11 +33,7 @@ blddir = 'build'
 os.environ['PYTHONPATH'] = os.getcwd()
 
 
-_version = None
-def get_version_from_bzr(path):
-    global _version
-    if _version is not None:
-        return _version
+def _get_version_from_bzr_lib(path):
     import bzrlib.tag, bzrlib.branch
     fullpath = os.path.abspath(path)
     if sys.platform == 'win32':
@@ -68,6 +65,41 @@ def get_version_from_bzr(path):
     return _version
 
 
+def _get_version_from_bzr_command(path):
+    # get most recent tag first
+    most_recent_tag = None
+    proc = subprocess.Popen(['bzr', 'log', '--short'], stdout=subprocess.PIPE)
+    reg = re.compile('{([0-9]+)\.([0-9]+)\.([0-9]+)}')
+    for line in proc.stdout:
+        result = reg.search(line)
+        if result is not None:
+            most_recent_tag = [int(result.group(1)), int(result.group(2)), int(result.group(3))]
+            break
+    proc.stdout.close()
+    proc.wait()
+    assert most_recent_tag is not None
+    # get most recent revno
+    most_recent_revno = None
+    proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE)
+    most_recent_revno = int(proc.stdout.read().strip())
+    proc.wait()
+    version = most_recent_tag + [most_recent_revno]
+    return version
+    
+
+_version = None
+def get_version_from_bzr(path):
+    global _version
+    if _version is not None:
+        return _version
+    try:
+        import bzrlib.tag, bzrlib.branch
+    except ImportError:
+        return _get_version_from_bzr_command(path)
+    else:
+        return _get_version_from_bzr_lib(path)
+
+    
 def get_version(path=None):
     if path is None:
         path = srcdir
