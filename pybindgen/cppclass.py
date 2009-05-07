@@ -389,7 +389,8 @@ class CppClass(object):
                  incomplete_type=False, free_function=None,
                  incref_function=None, decref_function=None,
                  python_name=None, memory_policy=None,
-                 foreign_cpp_namespace=None):
+                 foreign_cpp_namespace=None,
+                 docstring=None):
         """
         @param name: class name
         @param parent: optional parent class wrapper
@@ -429,12 +430,17 @@ class CppClass(object):
         instance, this can be useful to wrap std classes, like
         std::ofstream, without having to create an extra python
         submodule.
+
+        @param docstring: None or a string containing the docstring
+        that will be generated for the class
+
         """
         assert outer_class is None or isinstance(outer_class, CppClass)
         self.incomplete_type = incomplete_type
         self.outer_class = outer_class
         self._module = None
         self.name = name
+        self.docstring = docstring
         self.python_name = python_name
         self.mangled_name = None
         self.mangled_full_name = None
@@ -1418,7 +1424,7 @@ typedef struct {
         if self.parent is None:
             self.wrapper_registry.generate_forward_declarations(code_sink, module)
 
-    def generate(self, code_sink, module, docstring=None):
+    def generate(self, code_sink, module):
         """Generates the class to a code sink"""
 
         if self.typeid_map_name is not None:
@@ -1505,7 +1511,7 @@ typedef struct {
         if self.binary_numeric_operators:
             self.slots["tp_as_number"] = self._generate_number_methods(code_sink)
         
-        self._generate_type_structure(code_sink, docstring)
+        self._generate_type_structure(code_sink, self.docstring)
 
     def _generate_number_methods(self, code_sink):
         number_methods_var_name = "%s__py_number_methods" % (self.mangled_full_name,)

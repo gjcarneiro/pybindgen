@@ -265,7 +265,7 @@ int %s::custom_method_added_by_a_hook(int x)
     xpto.add_function('set_foo_type', ReturnValue.new('void'), [Parameter.new("FooType", 'type')])
 
 
-    xpto_SomeClass = xpto.add_class('SomeClass')
+    xpto_SomeClass = xpto.add_class('SomeClass', docstring="This is the docstring for SomeClass")
     xpto_SomeClass.add_constructor([])
 
     xpto.add_typedef(Foo, 'FooXpto')
