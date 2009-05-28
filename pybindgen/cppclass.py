@@ -319,6 +319,7 @@ void set_pyobj(PyObject *pyobj)
                     if virtual_proxy.method.is_pure_virtual:
                         return False
                     continue
+
             finally:
                 virtual_proxy.reset_code_generation_state()
                 
@@ -366,6 +367,7 @@ void set_pyobj(PyObject *pyobj)
                 utils.call_with_error_handling(virtual_proxy.generate,
                                                (code_sink,), {}, virtual_proxy)
             except utils.SkipWrapper:
+                assert not virtual_proxy.method.is_pure_virtual
                 continue
 
         for dummy, custom_body in self.custom_methods:
@@ -952,7 +954,10 @@ class CppClass(object):
 
     def get_helper_class(self):
         """gets the "helper class" for this class wrapper, creating it if necessary"""
-        if self.helper_class_disabled or not self.allow_subclassing:
+        for cls in self.get_mro():
+            if cls.helper_class_disabled:
+                return None
+        if not self.allow_subclassing:
             return None
         if self.helper_class is None:
             if not self.is_singleton:
@@ -1169,6 +1174,9 @@ public:
                     helper_class = self.get_helper_class()
                     if helper_class is not None:
                         helper_class.add_virtual_method(method)
+                        if helper_class.cannot_be_constructed:
+                            self.helper_class = None
+                            self.helper_class_disabled = True
 
                 return None
         self._add_method_obj(meth)

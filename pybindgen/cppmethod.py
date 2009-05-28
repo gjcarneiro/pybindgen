@@ -853,6 +853,9 @@ Py_FatalError("Error detected, but parent virtual is pure virtual or private vir
             decl_post_modifiers=decl_post_modifiers)
 
 
+    def __str__(self):
+        return str(self.method)
+
 
 class CustomCppMethodWrapper(CppMethod):
     """
