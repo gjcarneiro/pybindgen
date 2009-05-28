@@ -75,15 +75,26 @@ class Enum(object):
             full_type_name = self.full_name
             def __init__(self, ctype, name, *args, **kwargs):
                 super(ThisEnumParameter, self).__init__(self.full_type_name, name, *args, **kwargs)
+
         class ThisEnumReturn(inttype.IntReturn):
             CTYPES = []
             full_type_name = self.full_name
             def __init__(self, ctype, *args, **kwargs):
                 super(ThisEnumReturn, self).__init__(self.full_type_name, *args, **kwargs)
+
+        class ThisEnumRefParameter(inttype.IntRefParam):
+            CTYPES = []
+            full_type_name = self.full_name + " &"
+            def __init__(self, ctype, name, *args, **kwargs):
+                super(ThisEnumRefParameter, self).__init__(self.full_type_name, name, *args, **kwargs)
+
         self.ThisEnumParameter = ThisEnumParameter
         self.ThisEnumReturn = ThisEnumReturn
+        self.ThisEnumRefParameter = ThisEnumRefParameter
+
         param_type_matcher.register(self.full_name, self.ThisEnumParameter)
         return_type_matcher.register(self.full_name, self.ThisEnumReturn)
+        param_type_matcher.register(self.full_name + ' &', self.ThisEnumRefParameter)
 
         if self.name != self.full_name:
             try:
@@ -92,6 +103,10 @@ class Enum(object):
                 pass
             try:
                 return_type_matcher.register(self.name, self.ThisEnumReturn)
+            except ValueError:
+                pass
+            try:
+                param_type_matcher.register(self.name+' &', self.ThisEnumRefParameter)
             except ValueError:
                 pass
 

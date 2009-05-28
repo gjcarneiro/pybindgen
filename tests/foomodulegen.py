@@ -263,6 +263,8 @@ int %s::custom_method_added_by_a_hook(int x)
     xpto.add_enum('FooType', ['FOO_TYPE_AAA', 'FOO_TYPE_BBB', 'FOO_TYPE_CCC'])
     xpto.add_function('get_foo_type', ReturnValue.new('FooType'), [])
     xpto.add_function('set_foo_type', ReturnValue.new('void'), [Parameter.new("FooType", 'type')])
+    xpto.add_function('set_foo_type_inout', ReturnValue.new('void'),
+                      [Parameter.new("FooType&", 'type', direction=Parameter.DIRECTION_INOUT)])
 
 
     xpto_SomeClass = xpto.add_class('SomeClass', docstring="This is the docstring for SomeClass")

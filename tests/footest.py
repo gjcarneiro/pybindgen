@@ -590,6 +590,8 @@ class TestFoo(unittest.TestCase):
     def test_enum(self):
         foo.xpto.set_foo_type(foo.xpto.FOO_TYPE_BBB)
         self.assertEqual(foo.xpto.get_foo_type(), foo.xpto.FOO_TYPE_BBB)
+        old = foo.xpto.set_foo_type_inout(foo.xpto.FOO_TYPE_CCC)
+        self.assertEqual(old, foo.xpto.FOO_TYPE_BBB)
 
     def test_virtual_overload(self):
         ## first test the plain object

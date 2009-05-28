@@ -216,6 +216,13 @@ namespace xpto
     {
         g_fooType = type;
     }
+    void set_foo_type_inout (FooType &type)
+    {
+        FooType oldfooType = g_fooType;
+        g_fooType = type;
+        type = oldfooType;
+    }
+
 }
 
 
