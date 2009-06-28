@@ -543,7 +543,7 @@ class ReverseWrapperBase(object):
 
         '''
 
-        assert isinstance(return_value, ReturnValue)
+        assert isinstance(return_value, TypeHandler)
         assert isinstance(parameters, list)
         assert all([isinstance(param, Parameter) for param in parameters])
 

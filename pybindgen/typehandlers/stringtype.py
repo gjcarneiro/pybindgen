@@ -50,9 +50,9 @@ class StdStringParam(Parameter):
         ptr = wrapper.declarations.declare_variable("const char *", self.name + "_ptr")
         len_ = wrapper.declarations.declare_variable("Py_ssize_t", self.name + "_len")
         wrapper.before_call.write_code(
-            "%s = %s.c_str();" % (ptr, self.value))
+            "%s = (%s).c_str();" % (ptr, self.value))
         wrapper.before_call.write_code(
-            "%s = %s.size();" % (len_, self.value))
+            "%s = (%s).size();" % (len_, self.value))
         wrapper.build_params.add_parameter('s#', [ptr, len_])
 
     def convert_python_to_c(self, wrapper):
@@ -85,9 +85,9 @@ class StdStringRefParam(Parameter):
             ptr = wrapper.declarations.declare_variable("const char *", self.name + "_ptr")
             len_ = wrapper.declarations.declare_variable("Py_ssize_t", self.name + "_len")
             wrapper.before_call.write_code(
-                "%s = %s.c_str();" % (ptr, self.value))
+                "%s = (%s).c_str();" % (ptr, self.value))
             wrapper.before_call.write_code(
-                "%s = %s.size();" % (len_, self.value))
+                "%s = (%s).size();" % (len_, self.value))
             wrapper.build_params.add_parameter('s#', [ptr, len_])
 
         if self.direction & Parameter.DIRECTION_OUT:
@@ -111,7 +111,7 @@ class StdStringRefParam(Parameter):
                                            (name_std, name, name_len))
 
         if self.direction & Parameter.DIRECTION_OUT:
-            wrapper.build_params.add_parameter("s#", [name_std+'.c_str()', name_std+'.size()'])
+            wrapper.build_params.add_parameter("s#", ['('+name_std+').c_str()', '('+name_std+').size()'])
 
 
 class CharReturn(ReturnValue):
@@ -162,6 +162,6 @@ class StdStringReturn(ReturnValue):
             "%s = std::string(%s, %s);" % (self.value, ptr, len_))
 
     def convert_c_to_python(self, wrapper):
-        wrapper.build_params.add_parameter("s#", ['%s.c_str()' % self.value,
-                                                  '%s.size()' % self.value],
+        wrapper.build_params.add_parameter("s#", ['(%s).c_str()' % self.value,
+                                                  '(%s).size()' % self.value],
                                            prepend=True)

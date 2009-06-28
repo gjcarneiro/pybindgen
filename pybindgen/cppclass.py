@@ -5,7 +5,7 @@ Wrap C++ classes and methods
 import warnings
 import traceback
 
-from typehandlers.base import ReturnValue, \
+from typehandlers.base import Parameter, ReturnValue, \
     join_ctype_and_name, CodeGenerationError, \
     param_type_matcher, return_type_matcher, CodegenErrorBase, \
     DeclarationsScope, CodeBlock
@@ -16,7 +16,7 @@ from cppattribute import CppInstanceAttributeGetter, CppInstanceAttributeSetter,
     CppStaticAttributeGetter, CppStaticAttributeSetter, \
     PyGetSetDef, PyMetaclass
 
-from pytypeobject import PyTypeObject, PyNumberMethods
+from pytypeobject import PyTypeObject, PyNumberMethods, PySequenceMethods
 
 import settings
 import utils
@@ -26,6 +26,35 @@ try:
 except NameError:
     from sets import Set as set
 
+def get_python_to_c_converter(value, root_module, code_sink):
+    if isinstance(value, CppClass):
+        val_converter = root_module.generate_python_to_c_type_converter(value.ThisClassReturn(value.full_name), code_sink)
+        val_name = value.full_name
+    elif isinstance(value, ReturnValue):
+        val_converter = root_module.generate_python_to_c_type_converter(value, code_sink)
+        val_name = value.ctype
+    elif isinstance(value, Parameter):
+        val_return_type = ReturnValue.new(value.ctype)
+        val_converter = root_module.generate_python_to_c_type_converter(val_return_type, code_sink)
+        val_name = value.ctype
+    else:
+        raise ValueError, "Don't know how to convert %s" % str(value)
+    return val_converter, val_name
+
+def get_c_to_python_converter(value, root_module, code_sink):
+    if isinstance(value, CppClass):
+        val_converter = root_module.generate_c_to_python_type_converter(value.ThisClassReturn(value.full_name), code_sink)
+        val_name = value.full_name
+    elif isinstance(value, ReturnValue):
+        val_converter = root_module.generate_c_to_python_type_converter(value, code_sink)
+        val_name = value.ctype
+    elif isinstance(value, Parameter):
+        val_return_type = ReturnValue.new(value.ctype)
+        val_converter = root_module.generate_c_to_python_type_converter(val_return_type, code_sink)
+        val_name = value.ctype
+    else:
+        raise ValueError, "Don't know how to convert %s" % str(value)
+    return val_converter, val_name
 
 class MemoryPolicy(object):
     """memory management policy for a C++ class or C/C++ struct"""
@@ -470,6 +499,7 @@ class CppClass(object):
         self._wrapper_registry = None
         self.binary_comparison_operators = set()
         self.binary_numeric_operators = dict()
+        self.inplace_numeric_operators = dict()
 
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
@@ -643,6 +673,30 @@ class CppClass(object):
         op = (result_cppclass, left_cppclass, right_cppclass)
         if op not in l:
             l.append(op)
+
+    def add_inplace_numeric_operator(self, operator, right_cppclass=None):
+        """
+        Add support for a C++ inplace numeric operator, such as +=, -=, *=, or /=.
+
+        @param operator: string indicating the name of the operator to
+        support, e.g. '+='
+
+        @param right_cppclass: the CppClass object of the right operand type, assumed to be this class if omitted
+        """
+        operator = utils.ascii(operator)
+        if not isinstance(operator, str):
+            raise TypeError("expected operator name as string")
+        if operator not in ['+=', '-=', '*=', '/=']:
+            raise ValueError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
+        try:
+            l = self.inplace_numeric_operators[operator]
+        except KeyError:
+            l = []
+            self.inplace_numeric_operators[operator] = l
+        if right_cppclass is None:
+            right_cppclass = self
+        if right_cppclass not in l:
+            l.append((self, self, right_cppclass))
 
     def add_class(self, *args, **kwargs):
         """
@@ -1516,9 +1570,10 @@ typedef struct {
         if self.slots.get("tp_richcompare", "NULL") == "NULL":
             self.slots["tp_richcompare"] = self._generate_tp_richcompare(code_sink)
 
-        if self.binary_numeric_operators:
+        if self.binary_numeric_operators or self.inplace_numeric_operators:
             self.slots["tp_as_number"] = self._generate_number_methods(code_sink)
-        
+        self.slots["tp_as_sequence"] = self._generate_sequence_methods(code_sink)
+
         self._generate_type_structure(code_sink, self.docstring)
 
     def _generate_number_methods(self, code_sink):
@@ -1534,15 +1589,22 @@ typedef struct {
         root_module = self.module.get_root()
         for dummy_op_symbol, op_types in self.binary_numeric_operators.iteritems():
             for (retval, left, right) in op_types:
-                root_module.generate_c_to_python_type_converter(retval.ThisClassReturn(retval.full_name), code_sink)
-                root_module.generate_python_to_c_type_converter(left.ThisClassReturn(left.full_name), code_sink)
-                root_module.generate_python_to_c_type_converter(right.ThisClassReturn(right.full_name), code_sink)
+                get_c_to_python_converter(retval, root_module, code_sink)
+                get_python_to_c_converter(left, root_module, code_sink)
+                get_python_to_c_converter(right, root_module, code_sink)
+
+        for dummy_op_symbol, op_types in self.inplace_numeric_operators.iteritems():
+            for (retval, left, right) in op_types:
+                get_python_to_c_converter(right, root_module, code_sink)
 
         def try_wrap_operator(op_symbol, slot_name):
-            try:
+            if op_symbol in self.binary_numeric_operators:
                 op_types = self.binary_numeric_operators[op_symbol]
-            except KeyError:
+            elif op_symbol in self.inplace_numeric_operators:
+                op_types = self.inplace_numeric_operators[op_symbol]
+            else:
                 return
+
             wrapper_name = "%s__%s" % (self.mangled_full_name, slot_name)
             pynumbermethods.slots[slot_name] = wrapper_name
             code_sink.writeln(("static PyObject*\n"
@@ -1550,19 +1612,19 @@ typedef struct {
                                "{") % wrapper_name)
             code_sink.indent()
             for (retval, left, right) in op_types:
-                retval_converter = root_module.generate_c_to_python_type_converter(retval.ThisClassReturn(retval.full_name), code_sink)
-                left_converter = root_module.generate_python_to_c_type_converter(left.ThisClassReturn(left.full_name), code_sink)
-                right_converter = root_module.generate_python_to_c_type_converter(right.ThisClassReturn(right.full_name), code_sink)
+                retval_converter, retval_name = get_c_to_python_converter(retval, root_module, code_sink)
+                left_converter, left_name = get_python_to_c_converter(left, root_module, code_sink)
+                right_converter, right_name = get_python_to_c_converter(right, root_module, code_sink)
 
                 code_sink.writeln("{")
                 code_sink.indent()
                 
-                code_sink.writeln("%s left;" % left.full_name)
-                code_sink.writeln("%s right;" % right.full_name)
+                code_sink.writeln("%s left;" % left_name)
+                code_sink.writeln("%s right;" % right_name)
                 
                 code_sink.writeln("if (%s(py_left, &left) && %s(py_right, &right)) {" % (left_converter, right_converter))
                 code_sink.indent()
-                code_sink.writeln("%s result = (left %s right);" % (retval.full_name, op_symbol))
+                code_sink.writeln("%s result = (left %s right);" % (retval_name, op_symbol))
                 code_sink.writeln("return %s(&result);" % retval_converter)
                 code_sink.unindent()
                 code_sink.writeln("}")
@@ -1581,8 +1643,89 @@ typedef struct {
         try_wrap_operator('*', 'nb_multiply')
         try_wrap_operator('/', 'nb_divide')
         
+        try_wrap_operator('+=', 'nb_inplace_add')
+        try_wrap_operator('-=', 'nb_inplace_subtract')
+        try_wrap_operator('*=', 'nb_inplace_multiply')
+        try_wrap_operator('/=', 'nb_inplace_divide')
+
         pynumbermethods.generate(code_sink)
         return '&' + number_methods_var_name
+        
+    def _generate_sequence_methods(self, code_sink):
+        sequence_methods_var_name = "%s__py_sequence_methods" % (self.mangled_full_name,)
+
+        pysequencemethods = PySequenceMethods()
+        pysequencemethods.slots['variable'] = sequence_methods_var_name
+
+        root_module = self.module.get_root()
+        self_converter = root_module.generate_python_to_c_type_converter(self.ThisClassReturn(self.full_name), code_sink)
+
+        # __len__
+        if "__len__" in self.methods:
+            slot_name = "sq_length"
+            wrapper_name = "%s__%s" % (self.mangled_full_name, slot_name)
+            pysequencemethods.slots[slot_name] = wrapper_name
+            assert len(self.methods["__len__"].wrappers) == 1
+            assert len(self.methods["__len__"].wrappers[0].parameters) == 0
+            meth = self.methods["__len__"].wrappers[0]
+            code_sink.writeln(pysequencemethods.LENFUNCTEMPLATE % {'wrapper_name'   : wrapper_name,
+                                                                   'py_struct'      : self._pystruct,
+                                                                   'method_name'    : meth.method_name})
+
+        # __getitem__
+        if "__getitem__" in self.methods:
+            slot_name = "sq_item"
+            wrapper_name = "%s__%s" % (self.mangled_full_name, slot_name)
+            pysequencemethods.slots[slot_name] = wrapper_name
+            assert len(self.methods["__getitem__"].wrappers) == 1
+            meth = self.methods["__getitem__"].wrappers[0]
+            nparams = len(meth.parameters)
+            assert nparams in (1, 2)
+            methIsFunction = (nparams == 2)
+            retval_converter, retval_name = get_c_to_python_converter(meth.return_value, root_module, code_sink)
+            if methIsFunction:
+                code_sink.writeln(pysequencemethods.GETITEMFUNCTEMPLATE % {'wrapper_name'     : wrapper_name,
+                                                                           'py_struct'        : self._pystruct,
+                                                                           'retval_name'      : retval_name,
+                                                                           'retval_converter' : retval_converter,
+                                                                           'method_name'      : meth.function_name})
+            else:
+                code_sink.writeln(pysequencemethods.GETITEMTEMPLATE % {'wrapper_name'     : wrapper_name,
+                                                                       'py_struct'        : self._pystruct,
+                                                                       'retval_name'      : retval_name,
+                                                                       'retval_converter' : retval_converter,
+                                                                       'method_name'      : meth.method_name})
+
+        # __setitem__
+        if "__setitem__" in self.methods:
+            slot_name = "sq_ass_item"
+            wrapper_name = "%s__%s" % (self.mangled_full_name, slot_name)
+            pysequencemethods.slots[slot_name] = wrapper_name
+            assert len(self.methods["__setitem__"].wrappers) == 1
+            meth = self.methods["__setitem__"].wrappers[0]
+            nparams = len(meth.parameters)
+            assert nparams in (2, 3)
+            methIsFunction = (nparams == 3)
+            if methIsFunction:
+                val_param = meth.parameters[2]
+            else:
+                val_param = meth.parameters[1]
+            val_converter, val_name = get_python_to_c_converter(val_param, root_module, code_sink)
+            if methIsFunction:
+                code_sink.writeln(pysequencemethods.SETITEMFUNCTEMPLATE % {'wrapper_name'     : wrapper_name,
+                                                                           'py_struct'        : self._pystruct,
+                                                                           'val_name'         : val_name,
+                                                                           'val_converter'    : val_converter,
+                                                                           'method_name'      : meth.function_name})
+            else:
+                code_sink.writeln(pysequencemethods.SETITEMTEMPLATE % {'wrapper_name'     : wrapper_name,
+                                                                       'py_struct'        : self._pystruct,
+                                                                       'val_name'         : val_name,
+                                                                       'val_converter'    : val_converter,
+                                                                       'method_name'      : meth.method_name})
+
+        pysequencemethods.generate(code_sink)
+        return '&' + sequence_methods_var_name
         
     def _generate_type_structure(self, code_sink, docstring):
         """generate the type structure"""

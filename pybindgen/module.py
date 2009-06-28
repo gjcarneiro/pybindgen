@@ -46,7 +46,7 @@ to create sub-modules for wrapping nested namespaces.  For instance::
 """
 
 from function import Function, OverloadedFunction, CustomFunctionWrapper
-from typehandlers.base import CodeBlock, DeclarationsScope, ReturnValue
+from typehandlers.base import CodeBlock, DeclarationsScope, ReturnValue, TypeHandler
 from typehandlers.codesink import MemoryCodeSink, CodeSink, FileCodeSink, NullCodeSink
 from cppclass import CppClass
 from enum import Enum
@@ -844,7 +844,7 @@ class Module(ModuleBase):
         """
         Internal API, do not use.
         """
-        assert isinstance(value_type, ReturnValue)
+        assert isinstance(value_type, TypeHandler)
         ctype = value_type.ctype
         mangled_ctype = utils.mangle_name(ctype)
         converter_function_name = "_wrap_convert_py2c__%s" % mangled_ctype
@@ -864,7 +864,7 @@ class Module(ModuleBase):
         @type code_sink: L{CodeSink}
         @returns: name of the converter function
         """
-        assert isinstance(value_type, ReturnValue)
+        assert isinstance(value_type, TypeHandler)
         converter_function_name = self.get_python_to_c_type_converter_function_name(value_type)
         try:
             self.declare_one_time_definition(converter_function_name)
@@ -883,7 +883,7 @@ class Module(ModuleBase):
         """
         Internal API, do not use.
         """
-        assert isinstance(value_type, ReturnValue)
+        assert isinstance(value_type, TypeHandler)
         ctype = value_type.ctype
         mangled_ctype = utils.mangle_name(ctype)
         converter_function_name = "_wrap_convert_c2py__%s" % mangled_ctype
@@ -903,7 +903,7 @@ class Module(ModuleBase):
         @type code_sink: L{CodeSink}
         @returns: name of the converter function
         """
-        assert isinstance(value_type, ReturnValue)
+        assert isinstance(value_type, TypeHandler)
         converter_function_name = self.get_c_to_python_type_converter_function_name(value_type)
         try:
             self.declare_one_time_definition(converter_function_name)
