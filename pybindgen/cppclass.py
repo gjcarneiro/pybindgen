@@ -1652,6 +1652,12 @@ typedef struct {
         return '&' + number_methods_var_name
         
     def _generate_sequence_methods(self, code_sink):
+        if not ("__len__" in self.methods
+                or "__setitem__" in self.methods
+                or "__setitem__" in self.methods):
+            return 'NULL'
+
+
         sequence_methods_var_name = "%s__py_sequence_methods" % (self.mangled_full_name,)
 
         pysequencemethods = PySequenceMethods()
