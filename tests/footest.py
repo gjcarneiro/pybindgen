@@ -1072,5 +1072,14 @@ class TestFoo(unittest.TestCase):
         rv = foo.xpto.get_flow_id(123)
         self.assertEqual(rv, 124)
 
+    def test_virtual_method_reference_parameter(self):
+        class MyReferenceManipulator(foo.ReferenceManipulator):
+            def _do_manipulate_object(self, obj):
+                obj.SetValue(12345)
+        manip = MyReferenceManipulator()
+        retval = manip.manipulate_object()
+        self.assertEqual(retval, 12345)
+
+
 if __name__ == '__main__':
     unittest.main()

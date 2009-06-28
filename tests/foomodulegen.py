@@ -448,6 +448,20 @@ int %s::custom_method_added_by_a_hook(int x)
     Tupl.add_instance_attribute('y', 'int', is_const=False)
     Tupl.add_constructor([Parameter.new('Tupl const &', 'arg0')])
     Tupl.add_constructor([])
+
+
+    ManipulatedObject = mod.add_class('ManipulatedObject')
+    ManipulatedObject.add_constructor([])
+    ManipulatedObject.add_method('GetValue', 'int', [], is_const=True)
+    ManipulatedObject.add_method('SetValue', 'void', [Parameter.new('int', 'value')])
+
+    ReferenceManipulator = mod.add_class('ReferenceManipulator', allow_subclassing=True)
+    ReferenceManipulator.add_constructor([])
+    ReferenceManipulator.add_method('manipulate_object', 'int', [])
+    ReferenceManipulator.add_method('do_manipulate_object', 'void',
+                                    [Parameter.new('ManipulatedObject&', 'obj', direction=Parameter.DIRECTION_INOUT)],
+                                    is_virtual=True, is_pure_virtual=True)
+
     
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):
@@ -464,6 +478,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
     ## ---- finally, generate the whole thing ----
     mod.generate(FileCodeSink(out_file))
+
 
 if __name__ == '__main__':
     import os

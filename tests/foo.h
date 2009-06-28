@@ -874,6 +874,35 @@ inline Tupl operator - (Tupl const &a, Tupl const &b)
 
 
 
+class ManipulatedObject
+{
+private:
+    int m_value;
+    
+public:
+    ManipulatedObject () : m_value (0) {}
+    void SetValue (int value) { m_value = value; }
+    int GetValue () const { return m_value; }
+};
+
+
+class ReferenceManipulator
+{
+    ManipulatedObject m_obj;
+    
+public:
+    ReferenceManipulator () {}
+    
+    int manipulate_object () {
+        do_manipulate_object (m_obj);
+        return m_obj.GetValue ();
+    }
+
+    // -#- @obj(direction=inout) -#-
+    virtual void do_manipulate_object (ManipulatedObject &obj) = 0;
+
+};
+
 
 
 #endif 	    /* !FOO_H_ */
