@@ -207,3 +207,119 @@ class PyNumberMethods(object):
 
         code_sink.writeln(self.TEMPLATE % slots)
 
+class PySequenceMethods(object):
+    TEMPLATE = '''
+static PySequenceMethods %(variable)s = {
+    (lenfunc) %(sq_length)s,
+    (binaryfunc) %(sq_concat)s,
+    (ssizeargfunc) %(sq_repeat)s,
+    (ssizeargfunc) %(sq_item)s,
+    (ssizessizeargfunc) %(sq_slice)s,
+    (ssizeobjargproc) %(sq_ass_item)s,
+    (ssizessizeobjargproc) %(sq_ass_slice)s,
+    (objobjproc) %(sq_contains)s,
+    /* Added in release 2.0 */
+    (binaryfunc) %(sq_inplace_concat)s,
+    (ssizeargfunc) %(sq_inplace_repeat)s,
+};
+
+'''
+
+    LENFUNCTEMPLATE = '''
+static Py_ssize_t
+%(wrapper_name)s (%(py_struct)s *py_self)
+{
+    return py_self->obj->%(method_name)s();
+}
+
+'''
+
+    GETITEMFUNCTEMPLATE = '''
+static PyObject*
+%(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i)
+{
+    PyObject *result;
+    %(retval_name)s& cresult = %(method_name)s(*(py_self->obj), py_i);
+    if (PyErr_ExceptionMatches(PyExc_IndexError) ||
+        PyErr_ExceptionMatches(PyExc_StopIteration)) {
+        return NULL;
+    } else {
+        result = %(retval_converter)s(&cresult);
+        return result;
+    }
+}
+
+
+'''
+
+    GETITEMTEMPLATE = '''
+static PyObject*
+%(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i)
+{
+    PyObject *result;
+    %(retval_name)s& cresult = py_self->obj->%(method_name)s(py_i);
+    if (PyErr_ExceptionMatches(PyExc_IndexError) ||
+        PyErr_ExceptionMatches(PyExc_StopIteration)) {
+        return NULL;
+    } else {
+        result = %(retval_converter)s(&cresult);
+        return result;
+    }
+}
+
+
+'''
+
+    SETITEMFUNCTEMPLATE = '''
+static int
+%(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i, PyObject *py_val)
+{
+    %(val_name)s c_val;
+    if (%(val_converter)s(py_val, &c_val))
+    {
+        %(method_name)s(*(py_self->obj), py_i, c_val);
+        return 0;
+    }
+    return -1;
+}
+
+'''
+
+    SETITEMTEMPLATE = '''
+static int
+%(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i, PyObject *py_val)
+{
+    %(val_name)s c_val;
+    if (%(val_converter)s(py_val, &c_val))
+    {
+        py_self->obj->%(method_name)s(py_i, c_val);
+        return 0;
+    }
+    return -1;
+}
+
+'''
+
+    def __init__(self):
+        self.slots = {}
+
+    def generate(self, code_sink):
+        """
+        Generates the structure.  All slots are optional except 'variable'.
+        """
+
+        slots = dict(self.slots)
+
+	slots.setdefault('sq_length', 'NULL')
+	slots.setdefault('sq_concat', 'NULL')
+	slots.setdefault('sq_repeat', 'NULL')
+	slots.setdefault('sq_item', 'NULL')
+	slots.setdefault('sq_slice', 'NULL')
+	slots.setdefault('sq_ass_item', 'NULL')
+	slots.setdefault('sq_ass_slice', 'NULL')
+	slots.setdefault('sq_contains', 'NULL')
+	slots.setdefault('sq_inplace_concat', 'NULL')
+	slots.setdefault('sq_inplace_repeat', 'NULL')
+
+        code_sink.writeln(self.TEMPLATE % slots)
+
