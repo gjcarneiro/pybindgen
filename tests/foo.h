@@ -878,6 +878,9 @@ class ManipulatedObject
 {
 private:
     int m_value;
+
+    // disable the copy constructor
+    ManipulatedObject (const ManipulatedObject &ctor_arg);
     
 public:
     ManipulatedObject () : m_value (0) {}
