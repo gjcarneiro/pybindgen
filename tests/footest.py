@@ -1108,6 +1108,15 @@ class TestFoo(unittest.TestCase):
         retval = manip.manipulate_object()
         self.assertEqual(retval, 12345)
 
+    def test_sequence_protocol(self):
+        vec = foo.VectorLike()
+        vec.append(1)
+        vec.append(2)
+        vec.append(3)
+        self.assertEqual(len(vec), 3)
+        self.assertEqual(vec[2], 3)
+        vec[2] = 6
+        self.assertEqual(vec[2], 6)
 
 if __name__ == '__main__':
     unittest.main()

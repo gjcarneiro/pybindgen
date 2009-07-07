@@ -934,5 +934,36 @@ public:
 };
 
 
+class VectorLike
+{
+    std::vector<double> m_vec;
+    
+public:
+    VectorLike () 
+        {
+        }
+    // -#- name=__len__ -#-
+    std::vector<double>::size_type get_len () const 
+        {
+            return m_vec.size ();
+        }
+    // -#- name=__setitem__ -#-
+    void set_item (std::vector<double>::size_type index, double value)
+        {
+            m_vec[index] = value;
+        }
+    // -#- name=__getitem__ -#-
+    double get_item (std::vector<double>::size_type index) const
+        {
+            return m_vec[index];
+        }
 
+    void append (double value)
+        {
+            m_vec.push_back (value);
+        }
+    
+};
+
+    
 #endif 	    /* !FOO_H_ */

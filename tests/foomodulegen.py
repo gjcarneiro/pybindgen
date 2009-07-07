@@ -466,6 +466,15 @@ int %s::custom_method_added_by_a_hook(int x)
                                     [Parameter.new('ManipulatedObject&', 'obj', direction=Parameter.DIRECTION_INOUT)],
                                     is_virtual=True, is_pure_virtual=True)
 
+
+    VectorLike = mod.add_class('VectorLike')
+    VectorLike.add_constructor([])
+    VectorLike.add_method('append', 'void', [Parameter.new('double', 'value')])
+    VectorLike.add_method('get_item', 'double', [Parameter.new('size_t', 'index')], custom_name='__getitem__')
+    VectorLike.add_method('set_item', 'void', [Parameter.new('size_t', 'index'), Parameter.new('double', 'value')],
+                          custom_name='__setitem__')
+    VectorLike.add_method('get_len', 'size_t', [], custom_name='__len__')
+
     
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):
