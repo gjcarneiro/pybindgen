@@ -1468,8 +1468,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     and len(argument_types) == 2 \
                     and (type_traits.is_convertible(cls, argument_types[0]) 
                          or type_traits.is_convertible(cls, argument_types[1])):
-                print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>>  %s: %s : %s --> %s" \
-                    % (op.symbol, cls, [str(x) for x in argument_types], return_type)
+                #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>>  %s: %s : %s --> %s" \
+                #    % (op.symbol, cls, [str(x) for x in argument_types], return_type)
 
                 def get_class_wrapper(pygccxml_type):
                     traits = ctypeparser.TypeTraits(normalize_name(pygccxml_type.partial_decl_string))
@@ -1486,8 +1486,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 2 class %s not registered" % (argument_types[1],)
                     return
 
-                print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>>  %s: %s (%s) " \
-                    % (op.symbol, cls, arg1.full_name)
+                #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>>  %s: %s (%s) " \
+                #    % (op.symbol, cls, arg1.full_name)
 
                 class_wrapper.add_inplace_numeric_operator(op.symbol, arg1)
                 pygen_sink.writeln("cls.add_inplace_numeric_operator(%r, root_module[%r])"
@@ -1567,6 +1567,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                         pass
                     elif key == 'unblock_threads':
                         kwargs['unblock_threads'] = annotations_scanner.parse_boolean(val)
+                    elif key == 'name':
+                        kwargs['custom_name'] = val
                     else:
                         warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
                                                % (key, val, member),
