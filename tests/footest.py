@@ -1068,6 +1068,34 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(r.x, t1.x / t2.x)
         self.assertEqual(r.y, t1.y / t2.y)
 
+
+    def test_inplace_numeric_operators(self):
+        t1 = foo.Tupl()
+
+        t1.x = 4
+        t1.y = 6
+
+        t2 = foo.Tupl()
+        t2.x = 2
+        t2.y = 3
+
+        t1 += t2
+        self.assertEqual(t1.x, 6)
+        self.assertEqual(t1.y, 9)
+
+        t1 -= t2
+        self.assertEqual(t1.x, 4)
+        self.assertEqual(t1.y, 6)
+
+        t1 *= t2
+        self.assertEqual(t1.x, 8)
+        self.assertEqual(t1.y, 18)
+
+        t1 /= t2
+        self.assertEqual(t1.x, 4)
+        self.assertEqual(t1.y, 6)
+
+
     def test_int_typedef(self):
         rv = foo.xpto.get_flow_id(123)
         self.assertEqual(rv, 124)

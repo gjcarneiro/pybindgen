@@ -834,6 +834,7 @@ struct Tupl
             return (x != b.x || y != b.y);
         }
 
+
 };
 
 inline bool operator < (Tupl const &a, Tupl const &b)
@@ -872,7 +873,33 @@ inline Tupl operator - (Tupl const &a, Tupl const &b)
     return retval;
 }
 
+inline Tupl & operator += (Tupl &a, Tupl const &b)
+{
+    a.x += b.x;
+    a.y += b.y;
+    return a;
+}
 
+inline Tupl & operator -= (Tupl &a, Tupl const &b)
+{
+    a.x -= b.x;
+    a.y -= b.y;
+    return a;
+}
+
+inline Tupl & operator *= (Tupl &a, Tupl const &b)
+{
+    a.x *= b.x;
+    a.y *= b.y;
+    return a;
+}
+
+inline Tupl & operator /= (Tupl &a, Tupl const &b)
+{
+    a.x /= b.x;
+    a.y /= b.y;
+    return a;
+}
 
 class ManipulatedObject
 {

@@ -448,6 +448,10 @@ int %s::custom_method_added_by_a_hook(int x)
     Tupl.add_instance_attribute('y', 'int', is_const=False)
     Tupl.add_constructor([Parameter.new('Tupl const &', 'arg0')])
     Tupl.add_constructor([])
+    Tupl.add_inplace_numeric_operator('+=')
+    Tupl.add_inplace_numeric_operator('-=')
+    Tupl.add_inplace_numeric_operator('*=')
+    Tupl.add_inplace_numeric_operator('/=')
 
 
     ManipulatedObject = mod.add_class('ManipulatedObject')
