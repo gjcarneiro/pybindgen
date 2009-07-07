@@ -259,7 +259,7 @@ static PyObject*
 %(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i)
 {
     PyObject *result;
-    %(retval_name)s& cresult = py_self->obj->%(method_name)s(py_i);
+    %(retval_name)s cresult = py_self->obj->%(method_name)s(py_i);
     if (PyErr_ExceptionMatches(PyExc_IndexError) ||
         PyErr_ExceptionMatches(PyExc_StopIteration)) {
         return NULL;
