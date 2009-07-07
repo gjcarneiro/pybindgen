@@ -323,23 +323,28 @@ class CppClassRefParameter(CppClassParameterBase):
             wrapper.build_params.add_parameter("O", [self.py_name])
             wrapper.before_call.add_cleanup_code("Py_DECREF(%s);" % self.py_name)
 
-            ## if after the call we notice the callee kept a reference
-            ## to the pyobject, we then swap pywrapper->obj for a copy
-            ## of the original object.  Else the ->obj pointer is
-            ## simply erased (we never owned this object in the first
-            ## place).
-            wrapper.after_call.write_code(
-                "if (%s->ob_refcnt == 1)\n"
-                "    %s->obj = NULL;\n"
-                "else{\n" % (self.py_name, self.py_name))
-            wrapper.after_call.indent()
-            self.cpp_class.write_create_instance(wrapper.after_call,
-                                                 "%s->obj" % self.py_name,
-                                                 self.value)
-            self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.after_call, self.py_name,
-                                                                       "%s->obj" % self.py_name)
-            wrapper.after_call.unindent()
-            wrapper.after_call.write_code('}')
+            if self.cpp_class.has_copy_constructor:
+                ## if after the call we notice the callee kept a reference
+                ## to the pyobject, we then swap pywrapper->obj for a copy
+                ## of the original object.  Else the ->obj pointer is
+                ## simply erased (we never owned this object in the first
+                ## place).
+                wrapper.after_call.write_code(
+                    "if (%s->ob_refcnt == 1)\n"
+                    "    %s->obj = NULL;\n"
+                    "else{\n" % (self.py_name, self.py_name))
+                wrapper.after_call.indent()
+                self.cpp_class.write_create_instance(wrapper.after_call,
+                                                     "%s->obj" % self.py_name,
+                                                     self.value)
+                self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.after_call, self.py_name,
+                                                                           "%s->obj" % self.py_name)
+                wrapper.after_call.unindent()
+                wrapper.after_call.write_code('}')
+            else:
+                ## it's not safe for the python wrapper to keep a
+                ## pointer to the object anymore; just set it to NULL.
+                wrapper.after_call.write_code("%s->obj = NULL;" % (self.py_name,))
 
 
 class CppClassReturnValue(CppClassReturnValueBase):
