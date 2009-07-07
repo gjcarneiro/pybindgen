@@ -92,7 +92,8 @@ class CToPythonConverter(ForwardWrapperBase):
         attribute_name -- name of attribute
         getter -- None, or name of a method of the class used to get the value
         """
-        super(CToPythonConverter, self).__init__(value_type, [], parse_error_return="return 0;", error_return="return 0;")
+        super(CToPythonConverter, self).__init__(value_type, [], parse_error_return="return 0;", error_return="return 0;",
+                                                 no_c_retval=True)
         self.c_function_name = c_function_name
         self.unblock_threads = False
 
