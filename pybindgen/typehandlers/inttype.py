@@ -345,6 +345,44 @@ class UnsignedLongLongReturn(ReturnValue):
         wrapper.build_params.add_parameter("K", [self.value], prepend=True)
 
 
+class SizeTReturn(ReturnValue):
+
+    CTYPES = ['size_t',]
+
+    def get_c_error_return(self):
+        return "return 0;"
+    
+    def convert_python_to_c(self, wrapper):
+        # using the intermediate variable is not always necessary but
+        # it's safer this way in case of weird platforms where
+        # sizeof(size_t) != sizeof(unsigned PY_LONG_LONG).
+        name = wrapper.declarations.declare_variable("unsigned PY_LONG_LONG", "retval_tmp", self.value)
+        wrapper.parse_params.add_parameter("K", ["&"+name], prepend=True)
+        wrapper.after_call.write_code("retval = %s;" % (name))
+
+    def convert_c_to_python(self, wrapper):
+        wrapper.build_params.add_parameter("K", ["((unsigned PY_LONG_LONG) %s)" % self.value], prepend=True)
+
+
+class SizeTParam(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['size_t']
+
+    def get_ctype_without_ref(self):
+        return str(self.type_traits.ctype_no_const)
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        wrapper.build_params.add_parameter('K', ["((unsigned PY_LONG_LONG) %s)" % self.value])
+
+    def convert_python_to_c(self, wrapper):
+        assert isinstance(wrapper, ForwardWrapperBase)
+        name = wrapper.declarations.declare_variable("unsigned PY_LONG_LONG", self.name, self.default_value)
+        wrapper.parse_params.add_parameter('K', ['&'+name], self.name, optional=bool(self.default_value))
+        wrapper.call_params.append(name)
+
+
 
 class LongLongParam(Parameter):
 
