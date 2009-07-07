@@ -1463,6 +1463,36 @@ pybindgen.settings.error_handler = ErrorHandler()
                                    % (op.symbol, ret.full_name,
                                       arg0.full_name, arg1.full_name))
 
+            # -- inplace numeric operators --
+            if op.symbol in ['+=', '-=', '/=', '*='] \
+                    and len(argument_types) == 2 \
+                    and (type_traits.is_convertible(cls, argument_types[0]) 
+                         or type_traits.is_convertible(cls, argument_types[1])):
+                print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>>  %s: %s : %s --> %s" \
+                    % (op.symbol, cls, [str(x) for x in argument_types], return_type)
+
+                def get_class_wrapper(pygccxml_type):
+                    traits = ctypeparser.TypeTraits(normalize_name(pygccxml_type.partial_decl_string))
+                    if traits.type_is_reference:
+                        name = str(traits.target)
+                    else:
+                        name = str(traits.ctype)
+                    class_wrapper = self.type_registry.root_module.get(name, None)
+                    #print >> sys.stderr, "(lookup %r: %r)" % (name, class_wrapper)
+                    return class_wrapper
+
+                arg1 = get_class_wrapper(argument_types[1])
+                if arg1 is None:
+                    #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 2 class %s not registered" % (argument_types[1],)
+                    return
+
+                print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>>  %s: %s (%s) " \
+                    % (op.symbol, cls, arg1.full_name)
+
+                class_wrapper.add_inplace_numeric_operator(op.symbol, arg1)
+                pygen_sink.writeln("cls.add_inplace_numeric_operator(%r, root_module[%r])"
+                                   % (op.symbol, arg1.full_name))
+
 
         for op in self.module_namespace.free_operators(function=self.location_filter,
                                                        allow_empty=True,
