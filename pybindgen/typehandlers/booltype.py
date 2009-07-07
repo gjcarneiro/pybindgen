@@ -19,7 +19,7 @@ class BoolParam(Parameter):
         name = wrapper.declarations.declare_variable(self.ctype_no_const, self.name)
         py_name = wrapper.declarations.declare_variable('PyObject *', 'py_'+self.name)
         wrapper.parse_params.add_parameter('O', ['&'+py_name], self.value)
-        wrapper.before_call.write_code("%s = PyObject_IsTrue(%s);" % (name, py_name))
+        wrapper.before_call.write_code("%s = (bool) PyObject_IsTrue(%s);" % (name, py_name))
         wrapper.call_params.append(name)
 
 
