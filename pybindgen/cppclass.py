@@ -1654,7 +1654,7 @@ typedef struct {
     def _generate_sequence_methods(self, code_sink):
         if not ("__len__" in self.methods
                 or "__setitem__" in self.methods
-                or "__setitem__" in self.methods):
+                or "__getitem__" in self.methods):
             return 'NULL'
 
 
