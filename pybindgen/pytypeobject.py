@@ -236,8 +236,11 @@ static Py_ssize_t
     Py_ssize_t result;
 
     py_result = %(method_name)s(py_self);
+    if (py_result == NULL) {
+        return -1;
+    }
     result = PyInt_AsSsize_t(py_result);
-
+    Py_DECREF(py_result);
     return result;
 }
 
@@ -249,13 +252,12 @@ static PyObject*
 {
     PyObject *result;
     PyObject *args;
-    PyObject *kwargs;
 
     args = Py_BuildValue("(i)", py_i);
-    kwargs = Py_BuildValue("{}");
-    result = %(method_name)s(py_self, args, kwargs);
+    result = %(method_name)s(py_self, args, NULL);
     if (PyErr_ExceptionMatches(PyExc_IndexError) ||
         PyErr_ExceptionMatches(PyExc_StopIteration)) {
+        Py_XDECREF(result);
         return NULL;
     } else {
         return result;
@@ -271,14 +273,14 @@ static int
 {
     PyObject *result;
     PyObject *args;
-    PyObject *kwargs;
 
     args = Py_BuildValue("(iO)", py_i, py_val);
-    kwargs = Py_BuildValue("{}");
-    result = %(method_name)s(py_self, args, kwargs);
+    result = %(method_name)s(py_self, args, NULL);
+    Py_DECREF(args);
     if (result == NULL) {
         return -1;
     } else {
+        Py_DECREF(result);
         return 0;
     }
 }
