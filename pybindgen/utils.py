@@ -95,6 +95,7 @@ def mangle_name(name):
     s = name.replace('<', '__lt__').replace('>', '__gt__').replace(',', '_')
     s = s.replace(' ', '_').replace('&', '__amp__').replace('*', '__star__')
     s = s.replace(':', '_')
+    s = s.replace('(', '_lp_').replace(')', '_rp_')
     return s
 
 
@@ -104,10 +105,10 @@ def get_mangled_name(base_name, template_args):
     assert isinstance(template_args, (tuple, list))
 
     if template_args:
-        return '%s__lt__%s__gt__' % (base_name, '_'.join(
+        return '%s__lt__%s__gt__' % (mangle_name(base_name), '_'.join(
                 [mangle_name(arg) for arg in template_args]))
     else:
-        return base_name
+        return mangle_name(base_name)
 
 
 class SkipWrapper(Exception):
