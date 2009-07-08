@@ -227,80 +227,64 @@ static PySequenceMethods %(variable)s = {
 
 '''
 
-    LENFUNCTEMPLATE = '''
+    FUNCTION_TEMPLATES = {
+        "sq_length" : '''
 static Py_ssize_t
 %(wrapper_name)s (%(py_struct)s *py_self)
 {
-    return py_self->obj->%(method_name)s();
+    PyObject *py_result;
+    Py_ssize_t result;
+
+    py_result = %(method_name)s(py_self);
+    result = PyInt_AsSsize_t(py_result);
+
+    return result;
 }
 
-'''
+''',
 
-    GETITEMFUNCTEMPLATE = '''
+        "sq_item" : '''
 static PyObject*
 %(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i)
 {
     PyObject *result;
-    %(retval_name)s& cresult = %(method_name)s(*(py_self->obj), py_i);
+    PyObject *args;
+    PyObject *kwargs;
+
+    args = Py_BuildValue("(i)", py_i);
+    kwargs = Py_BuildValue("{}");
+    result = %(method_name)s(py_self, args, kwargs);
     if (PyErr_ExceptionMatches(PyExc_IndexError) ||
         PyErr_ExceptionMatches(PyExc_StopIteration)) {
         return NULL;
     } else {
-        result = %(retval_converter)s(&cresult);
         return result;
     }
 }
 
 
-'''
+''',
 
-    GETITEMTEMPLATE = '''
-static PyObject*
-%(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i)
+        "sq_ass_item" : '''
+static int
+%(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i, PyObject *py_val)
 {
     PyObject *result;
-    %(retval_name)s cresult = py_self->obj->%(method_name)s(py_i);
-    if (PyErr_ExceptionMatches(PyExc_IndexError) ||
-        PyErr_ExceptionMatches(PyExc_StopIteration)) {
-        return NULL;
+    PyObject *args;
+    PyObject *kwargs;
+
+    args = Py_BuildValue("(iO)", py_i, py_val);
+    kwargs = Py_BuildValue("{}");
+    result = %(method_name)s(py_self, args, kwargs);
+    if (result == NULL) {
+        return -1;
     } else {
-        result = %(retval_converter)s(&cresult);
-        return result;
-    }
-}
-
-
-'''
-
-    SETITEMFUNCTEMPLATE = '''
-static int
-%(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i, PyObject *py_val)
-{
-    %(val_name)s c_val;
-    if (%(val_converter)s(py_val, &c_val))
-    {
-        %(method_name)s(*(py_self->obj), py_i, c_val);
         return 0;
     }
-    return -1;
 }
 
-'''
-
-    SETITEMTEMPLATE = '''
-static int
-%(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i, PyObject *py_val)
-{
-    %(val_name)s c_val;
-    if (%(val_converter)s(py_val, &c_val))
-    {
-        py_self->obj->%(method_name)s(py_i, c_val);
-        return 0;
-    }
-    return -1;
-}
-
-'''
+''',
+        }
 
     def __init__(self):
         self.slots = {}

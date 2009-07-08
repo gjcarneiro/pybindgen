@@ -500,6 +500,7 @@ class CppClass(object):
         self.binary_comparison_operators = set()
         self.binary_numeric_operators = dict()
         self.inplace_numeric_operators = dict()
+        self.valid_sequence_methods = ("__len__", "__getitem__", "__setitem__")
 
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
@@ -1572,7 +1573,9 @@ typedef struct {
 
         if self.binary_numeric_operators or self.inplace_numeric_operators:
             self.slots["tp_as_number"] = self._generate_number_methods(code_sink)
-        self.slots["tp_as_sequence"] = self._generate_sequence_methods(code_sink)
+
+        if self.have_sequence_methods():
+            self.slots["tp_as_sequence"] = self._generate_sequence_methods(code_sink)
 
         self._generate_type_structure(code_sink, self.docstring)
 
@@ -1652,12 +1655,6 @@ typedef struct {
         return '&' + number_methods_var_name
         
     def _generate_sequence_methods(self, code_sink):
-        if not ("__len__" in self.methods
-                or "__setitem__" in self.methods
-                or "__getitem__" in self.methods):
-            return 'NULL'
-
-
         sequence_methods_var_name = "%s__py_sequence_methods" % (self.mangled_full_name,)
 
         pysequencemethods = PySequenceMethods()
@@ -1666,73 +1663,33 @@ typedef struct {
         root_module = self.module.get_root()
         self_converter = root_module.generate_python_to_c_type_converter(self.ThisClassReturn(self.full_name), code_sink)
 
-        # __len__
-        if "__len__" in self.methods:
-            slot_name = "sq_length"
-            wrapper_name = "%s__%s" % (self.mangled_full_name, slot_name)
-            pysequencemethods.slots[slot_name] = wrapper_name
-            assert len(self.methods["__len__"].wrappers) == 1
-            assert len(self.methods["__len__"].wrappers[0].parameters) == 0
-            meth = self.methods["__len__"].wrappers[0]
-            code_sink.writeln(pysequencemethods.LENFUNCTEMPLATE % {'wrapper_name'   : wrapper_name,
-                                                                   'py_struct'      : self._pystruct,
-                                                                   'method_name'    : meth.method_name})
+        def try_wrap_sequence_method(py_name, slot_name):
+            if py_name in self.methods:
+                assert len(self.methods[py_name].wrappers) == 1
+                meth = self.methods[py_name].wrappers[0]
+                wrapper_name = "%s__%s" % (self.mangled_full_name, slot_name)
+                pysequencemethods.slots[slot_name] = wrapper_name
+                code_sink.writeln(pysequencemethods.FUNCTION_TEMPLATES[slot_name] % {'wrapper_name'   : wrapper_name,
+                                                                                     'py_struct'      : self._pystruct,
+                                                                                     'method_name'    : meth.wrapper_actual_name})
+                return
 
-        # __getitem__
-        if "__getitem__" in self.methods:
-            slot_name = "sq_item"
-            wrapper_name = "%s__%s" % (self.mangled_full_name, slot_name)
-            pysequencemethods.slots[slot_name] = wrapper_name
-            assert len(self.methods["__getitem__"].wrappers) == 1
-            meth = self.methods["__getitem__"].wrappers[0]
-            nparams = len(meth.parameters)
-            assert nparams in (1, 2)
-            methIsFunction = (nparams == 2)
-            retval_converter, retval_name = get_c_to_python_converter(meth.return_value, root_module, code_sink)
-            if methIsFunction:
-                code_sink.writeln(pysequencemethods.GETITEMFUNCTEMPLATE % {'wrapper_name'     : wrapper_name,
-                                                                           'py_struct'        : self._pystruct,
-                                                                           'retval_name'      : retval_name,
-                                                                           'retval_converter' : retval_converter,
-                                                                           'method_name'      : meth.function_name})
-            else:
-                code_sink.writeln(pysequencemethods.GETITEMTEMPLATE % {'wrapper_name'     : wrapper_name,
-                                                                       'py_struct'        : self._pystruct,
-                                                                       'retval_name'      : retval_name,
-                                                                       'retval_converter' : retval_converter,
-                                                                       'method_name'      : meth.method_name})
-
-        # __setitem__
-        if "__setitem__" in self.methods:
-            slot_name = "sq_ass_item"
-            wrapper_name = "%s__%s" % (self.mangled_full_name, slot_name)
-            pysequencemethods.slots[slot_name] = wrapper_name
-            assert len(self.methods["__setitem__"].wrappers) == 1
-            meth = self.methods["__setitem__"].wrappers[0]
-            nparams = len(meth.parameters)
-            assert nparams in (2, 3)
-            methIsFunction = (nparams == 3)
-            if methIsFunction:
-                val_param = meth.parameters[2]
-            else:
-                val_param = meth.parameters[1]
-            val_converter, val_name = get_python_to_c_converter(val_param, root_module, code_sink)
-            if methIsFunction:
-                code_sink.writeln(pysequencemethods.SETITEMFUNCTEMPLATE % {'wrapper_name'     : wrapper_name,
-                                                                           'py_struct'        : self._pystruct,
-                                                                           'val_name'         : val_name,
-                                                                           'val_converter'    : val_converter,
-                                                                           'method_name'      : meth.function_name})
-            else:
-                code_sink.writeln(pysequencemethods.SETITEMTEMPLATE % {'wrapper_name'     : wrapper_name,
-                                                                       'py_struct'        : self._pystruct,
-                                                                       'val_name'         : val_name,
-                                                                       'val_converter'    : val_converter,
-                                                                       'method_name'      : meth.method_name})
+        for (py_name, slot_name) in [("__len__", "sq_length"),
+                                     ("__getitem__", "sq_item"),
+                                     ("__setitem__", "sq_ass_item")]:
+            try_wrap_sequence_method(py_name, slot_name)
+            
 
         pysequencemethods.generate(code_sink)
         return '&' + sequence_methods_var_name
         
+    def have_sequence_methods(self):
+        """Determine if this object has sequence methods registered."""
+        for x in self.valid_sequence_methods:
+            if x in self.methods:
+                return True
+        return False
+
     def _generate_type_structure(self, code_sink, docstring):
         """generate the type structure"""
         self.slots.setdefault("tp_basicsize",
