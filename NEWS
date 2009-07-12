@@ -1,3 +1,33 @@
+=== pybindgen 0.11 ===
+    - Generate code that supports GCC's -fvisibility=hidden
+
+    - Add rudimentary support for std::map containers
+
+    - Some inplace numeric operators now supported (J. Michael Owen)
+
+    - Partial sequence protocol support: __len__, __getitem__,
+      and __setitem__ (J. Michael Owen)
+
+    - Partially support pointer-to-container parameters
+
+    - Call traceback.extract_stack() less often (faster on win32)
+
+    - No need for GIL locking in attribute setters (thanks Stuart Stock)
+
+    - Allow wrapping enum given list of (name, value) pairs
+
+    - New foreign_cpp_namespace option, for wrapping classes outside
+      our module's C++ namespace
+
+    - Add a docstring parameter to CppMethod constructor (Robin Gilks)
+      Also add a docstring parameter for CppClass
+
+    - Better support for typedefs
+
+    - Implement support for enum reference parameters
+
+
+
 === pybindgen 0.10 ===
 
     - New null_ok, default_value options for pointer-to-class parameters;
