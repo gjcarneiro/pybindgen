@@ -26,7 +26,7 @@
 
     - Implement support for enum reference parameters
 
-
+    - Add support for size_t "by-value" type
 
 === pybindgen 0.10 ===
 
