@@ -6,7 +6,7 @@ def build(bld):
         features='command',
         source='modulegen.py',
         target='amodule.cc',
-        command='${PYTHON} -Werror::DeprecationWarning ${SRC[0]} > ${TGT[0]}')
+        command='${PYTHON} ${SRC[0]} > ${TGT[0]}')
 
     if bld.env['CXX']:
         obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
@@ -25,7 +25,7 @@ def build(bld):
             features='command',
             source='module-autogen.py a.h',
             target='a1module.cc',
-            command='${PYTHON} -Werror::DeprecationWarning ${SRC[0]} ${SRC[1]} > ${TGT[0]}')
+            command='${PYTHON} ${SRC[0]} ${SRC[1]} > ${TGT[0]}')
 
         obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
         obj.source = [
@@ -42,13 +42,13 @@ def build(bld):
             features='command',
             source='module-autoscan.py a.h',
             target='a2modulegen.py',
-            command='${PYTHON} -Werror::DeprecationWarning ${SRC[0]} ${SRC[1]} > ${TGT[0]}')
+            command='${PYTHON} ${SRC[0]} ${SRC[1]} > ${TGT[0]}')
 
         bld.new_task_gen(
             features='command',
             source='a2modulegen.py',
             target='a2module.cc',
-            command='${PYTHON} -Werror::DeprecationWarning ${SRC[0]} > ${TGT[0]}')
+            command='${PYTHON} ${SRC[0]} > ${TGT[0]}')
 
         obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
         obj.source = [
