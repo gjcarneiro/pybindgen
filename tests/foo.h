@@ -736,6 +736,8 @@ struct Socket
 {
     virtual int Bind () { return -1; }
     virtual int Bind (int address) { return address; }
+
+    virtual ~Socket () {}
 };
 
 struct UdpSocket : public Socket
@@ -767,6 +769,7 @@ public:
     std::set<float> m_floatSet;
 
     TestContainer () { m_floatSet.insert (1.0); m_floatSet.insert (2.0); m_floatSet.insert (3.0); }
+    virtual ~TestContainer () {}
 
     virtual SimpleStructList get_simple_list ();
     virtual int set_simple_list (SimpleStructList list);
@@ -922,7 +925,8 @@ class ReferenceManipulator
     
 public:
     ReferenceManipulator () {}
-    
+    virtual ~ReferenceManipulator () {}
+
     int manipulate_object () {
         do_manipulate_object (m_obj);
         return m_obj.GetValue ();

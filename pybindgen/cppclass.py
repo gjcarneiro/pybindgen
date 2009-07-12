@@ -304,7 +304,7 @@ void set_pyobj(PyObject *pyobj)
 """)
 
         ## write a destructor
-        code_sink.writeln("~%s()\n{" % self.name)
+        code_sink.writeln("virtual ~%s()\n{" % self.name)
         code_sink.indent()
         code_sink.writeln("Py_CLEAR(m_pyself);")
         code_sink.unindent()
