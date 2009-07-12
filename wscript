@@ -18,6 +18,7 @@ import sys
 import Configure
 import tarfile
 import re
+import types
 
 import Task
 Task.file_deps = Task.extract_deps
@@ -188,6 +189,28 @@ def set_options(opt):
                       dest='disable_pygccxml')
 
 def configure(conf):
+
+    def _check_compilation_flag(conf, flag):
+        """
+        Checks if the C++ compiler accepts a certain compilation flag or flags
+        flag: can be a string or a list of strings
+        """
+
+        env = conf.env.copy()
+        env.append_value('CXXFLAGS', flag)
+        try:
+            retval = conf.run_c_code(code='#include <stdio.h>\nint main() { return 0; }\n',
+                                     env=env, compile_filename='test.cc',
+                                     compile_mode='cxx',type='cprogram', execute=False)
+        except Configure.ConfigurationError:
+            ok = False
+        else:
+            ok = (retval == 0)
+        conf.check_message_custom(flag, 'support', (ok and 'yes' or 'no'))
+        return ok
+
+    conf.check_compilation_flag = types.MethodType(_check_compilation_flag, conf)
+
     ## Write a pybindgen/version.py file containing the project version
     generate_version_py()
 
@@ -217,9 +240,10 @@ def configure(conf):
                 else:
                     conf.env['ENABLE_PYGCCXML'] = True
 
-        if conf.env['CXX_NAME'] == 'gcc':
+        # -fvisibility=hidden optimization
+        if (conf.env['CXX_NAME'] == 'gcc' and [int(x) for x in conf.env['CC_VERSION']] >= [4,0,0]
+            and conf.check_compilation_flag('-fvisibility=hidden')):
             conf.env.append_value('CXXFLAGS_PYEXT', '-fvisibility=hidden')
-        if conf.env['CC_NAME'] == 'gcc':
             conf.env.append_value('CCFLAGS_PYEXT', '-fvisibility=hidden')
 
 
