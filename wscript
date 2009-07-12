@@ -109,14 +109,16 @@ def get_version(path=None):
     except ImportError:
         return 'unknown'
 
-def generate_version_py(force=False):
+def generate_version_py(force=False, path=None):
     """generates pybindgen/version.py, unless it already exists"""
 
     filename = os.path.join('pybindgen', 'version.py')
     if not force and os.path.exists(filename):
         return
 
-    version = get_version_from_bzr(srcdir)
+    if path is None:
+        path = srcdir
+    version = get_version_from_bzr(path)
     dest = open(filename, 'w')
     if isinstance(version, list):
         dest.write('__version__ = %r\n' % (version,))
@@ -139,7 +141,7 @@ def dist_hook():
     shutil.copy(os.path.join(srcdir, "ChangeLog"), '.')
 
     ## Write a pybindgen/version.py file containing the project version
-    generate_version_py(force=True)
+    generate_version_py(force=True, path=srcdir)
 
     ## Copy it to the source dir
     shutil.copy(os.path.join('pybindgen', 'version.py'), os.path.join(srcdir, "pybindgen"))
@@ -160,6 +162,13 @@ def dist_hook():
 
     ## This is a directory I usually keep in my tree -- gjc
     shutil.rmtree('pybindgen-google-code', True)
+
+    shutil.rmtree('.shelf', True)
+
+    try:
+        os.unlink('waf-light')
+    except OSError:
+        pass
 
 
 def set_options(opt):
