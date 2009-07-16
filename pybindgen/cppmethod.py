@@ -20,7 +20,7 @@ class CppMethod(ForwardWrapperBase):
     """
 
     def __init__(self, method_name, return_value, parameters, is_static=False,
-                 template_parameters=(), is_virtual=False, is_const=False,
+                 template_parameters=(), is_virtual=None, is_const=False,
                  unblock_threads=None, is_pure_virtual=False,
                  custom_template_method_name=None, visibility='public',
                  custom_name=None, deprecated=False, docstring=None):
@@ -75,6 +75,10 @@ class CppMethod(ForwardWrapperBase):
                           DeprecationWarning, stacklevel=2)
             method_name, return_value = return_value, method_name
 
+        # bug 399870
+        if is_virtual is None:
+            is_virtual = is_pure_virtual
+            
         if return_value is None:
             return_value = ReturnValue.new('void')
 
