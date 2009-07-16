@@ -809,8 +809,13 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         ## if the python subclass doesn't define a virtual method,
         ## just chain to parent class and don't do anything else
         call_params = ', '.join([param.name for param in self.parameters])
+        py_method = self.declarations.declare_variable('PyObject*', 'py_method')
+        self.before_call.write_code('%s = PyObject_GetAttrString(m_pyself, (char *) "_%s");'
+                                    % (py_method, self.method_name))
+        self.before_call.add_cleanup_code('Py_XDECREF(%s);' % py_method)
+        
         self.before_call.write_code(
-            r'if (!PyObject_HasAttrString(m_pyself, (char *) "_%s")) {' % self.method_name)
+            r'if (%s == NULL || %s->ob_type == &PyCFunction_Type) {' % (py_method, py_method))
         if self.return_value.ctype == 'void':
             if not (self.method.is_pure_virtual or self.method.visibility == 'private'):
                 self.before_call.write_code(r'    %s::%s(%s);'
