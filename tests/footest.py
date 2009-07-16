@@ -642,6 +642,13 @@ class TestFoo(unittest.TestCase):
         x = c.invoke_protected_virtual(2)
         self.assertEqual(x, 9)
 
+    def test_protected_pure_virtual(self):
+        class Class(foo.AbstractBaseClass2):
+            def _protected_pure_virtual(self, x):
+                return x*x+1
+        c = Class()
+        x = c.invoke_protected_pure_virtual(2)
+        self.assertEqual(x, 5)
 
     def test_subclass_with_reference_counting(self):
         class Test(foo.Zbr):

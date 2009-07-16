@@ -334,12 +334,18 @@ int %s::custom_method_added_by_a_hook(int x)
                                   [Parameter.new('int', 'x')], is_const=True)
     AbstractBaseClass2.add_method('invoke_protected_virtual', ReturnValue.new('int'),
                                   [Parameter.new('int', 'x')], is_const=True)
+    AbstractBaseClass2.add_method('invoke_protected_pure_virtual', ReturnValue.new('int'),
+                                  [Parameter.new('int', 'x')], is_const=True)
     AbstractBaseClass2.add_constructor([], visibility='protected')
 
     AbstractBaseClass2.add_method('protected_virtual',
                                   ReturnValue.new('int'),
                                   [Parameter.new('int', 'x')],
                                   is_virtual=True, visibility='protected', is_const=True)
+    AbstractBaseClass2.add_method('protected_pure_virtual',
+                                  ReturnValue.new('int'),
+                                  [Parameter.new('int', 'x')],
+                                  is_virtual=True, is_pure_virtual=True, visibility='protected', is_const=True)
     
     AbstractBaseClass2.add_method('private_virtual',
                                   ReturnValue.new('int'), [Parameter.new('int', 'x')],

@@ -661,8 +661,14 @@ public:
         return protected_virtual (x);
     }
 
+    int invoke_protected_pure_virtual (int x) const {
+        return protected_pure_virtual (x);
+    }
+
 protected:
     virtual int protected_virtual (int x) const { return x+1; }
+
+    virtual int protected_pure_virtual (int x) const = 0;
 
 private:
     virtual int private_virtual (int x) const = 0;
