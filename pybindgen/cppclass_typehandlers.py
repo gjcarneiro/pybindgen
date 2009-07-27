@@ -361,6 +361,8 @@ class CppClassReturnValue(CppClassReturnValueBase):
 
     def get_c_error_return(self): # only used in reverse wrappers
         """See ReturnValue.get_c_error_return"""
+        if self.type_traits.type_is_reference:
+            raise NotSupportedError
         return "return %s();" % (self.cpp_class.full_name,)
 
     def convert_c_to_python(self, wrapper):
@@ -388,6 +390,8 @@ class CppClassReturnValue(CppClassReturnValueBase):
 
     def convert_python_to_c(self, wrapper):
         """see ReturnValue.convert_python_to_c"""
+        if self.type_traits.type_is_reference:
+            raise NotSupportedError
         name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
         wrapper.parse_params.add_parameter(

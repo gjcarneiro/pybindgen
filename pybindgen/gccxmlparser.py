@@ -1128,6 +1128,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     self._containers_to_register.append((traits, type_info, None, name))
 
             class_wrapper = module.add_class(cls_name, **kwargs)
+            print >> sys.stderr, "<<<<<ADD CLASS>>>>> ", cls_name
+
             class_wrapper.gccxml_definition = cls
             self._registered_classes[cls] = class_wrapper
             if alias:
@@ -1403,11 +1405,11 @@ pybindgen.settings.error_handler = ErrorHandler()
 
     def _scan_class_operators(self, cls, class_wrapper, pygen_sink):
         
-        def _handle_operator(symbol, return_type, argument_types):
+        def _handle_operator(op, argument_types):
             #print >> sys.stderr, "<<<<<OP>>>>>  %s: %s : %s --> %s" % (op.symbol, cls, [str(x) for x in argument_types], return_type)
 
-            if symbol == '<<' \
-                    and self._is_ostream(return_type) \
+            if op.symbol == '<<' \
+                    and self._is_ostream(op.return_type) \
                     and len(op.arguments) == 2 \
                     and self._is_ostream(argument_types[0]) \
                     and type_traits.is_convertible(cls, argument_types[1]):
@@ -1422,89 +1424,80 @@ pybindgen.settings.error_handler = ErrorHandler()
                 #print >> sys.stderr, "<<<<<BINARY COMPARISON OP>>>>>  %s: %s " % (op.symbol, cls)
                 class_wrapper.add_binary_comparison_operator(op.symbol)
                 pygen_sink.writeln("cls.add_binary_comparison_operator(%r)" % (op.symbol,))
+
+            def get_class_wrapper(pygccxml_type):
+                traits = ctypeparser.TypeTraits(normalize_name(pygccxml_type.partial_decl_string))
+                if traits.type_is_reference:
+                    name = str(traits.target)
+                else:
+                    name = str(traits.ctype)
+                class_wrapper = self.type_registry.root_module.get(name, None)
+                #print >> sys.stderr, "(lookup %r: %r)" % (name, class_wrapper)
+                return class_wrapper
+
+            if len(argument_types) != 2:
+                return
+            if not type_traits.is_convertible(cls, argument_types[0]):
+                return
+            if not type_traits.is_convertible(cls, op.return_type):
+                return
+
+            ret = get_class_wrapper(op.return_type)
+            if ret is None:
+                print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> retval class %s not registered" % (op.return_type,)
+                return
+
+            arg0 = get_class_wrapper(argument_types[0])
+            if arg0 is None:
+                print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 0 class %s not registered" % (argument_types[0],)
+                return
+
+            dummy_global_annotations, parameter_annotations = annotations_scanner.get_annotations(op)
+            arg_spec = self.type_registry.lookup_parameter(argument_types[1], 'right',
+                                                           parameter_annotations.get('right', {}))
+
+            arg_repr = _pygen_param(arg_spec[0], arg_spec[1])
+
+            try:
+                param = Parameter.new(*arg_spec[0], **arg_spec[1])
+            except (TypeLookupError, TypeConfigurationError), ex:
+                warnings.warn_explicit("Parameter '%s' error (used in %s): %r"
+                                       % (argument_types[1].partial_decl_string, op, ex),
+                                       WrapperWarning, op.location.file_name, op.location.line)
+                param = None
             
-            if op.symbol in ['+', '-', '/', '*'] \
-                    and len(argument_types) == 2 \
-                    and (type_traits.is_convertible(cls, argument_types[0]) 
-                         or type_traits.is_convertible(cls, argument_types[1])):
+            print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>> ", param, ('?' if param is None else param.ctype)
+
+            if op.symbol in ['+', '-', '/', '*']:
                 #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>>  %s: %s : %s --> %s" \
                 #    % (op.symbol, cls, [str(x) for x in argument_types], return_type)
 
-                def get_class_wrapper(pygccxml_type):
-                    traits = ctypeparser.TypeTraits(normalize_name(pygccxml_type.partial_decl_string))
-                    if traits.type_is_reference:
-                        name = str(traits.target)
-                    else:
-                        name = str(traits.ctype)
-                    class_wrapper = self.type_registry.root_module.get(name, None)
-                    #print >> sys.stderr, "(lookup %r: %r)" % (name, class_wrapper)
-                    return class_wrapper
-
-                ret = get_class_wrapper(return_type)
-                if ret is None:
-                    #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> retval class %s not registered" % (return_type,)
-                    return
-
-                arg0 = get_class_wrapper(argument_types[0])
-                if arg0 is None:
-                    #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 1 class %s not registered" % (argument_types[0],)
-                    return
-
-                arg1 = get_class_wrapper(argument_types[1])
-                if arg1 is None:
-                    #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 2 class %s not registered" % (argument_types[1],)
-                    return
-
-                #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>>  %r: %s: %s (%s, %s) " \
-                #    % (op.symbol, cls, ret.full_name, arg0.full_name, arg1.full_name)
-
-                class_wrapper.add_binary_numeric_operator(op.symbol, ret, arg0, arg1)
-                pygen_sink.writeln("cls.add_binary_numeric_operator(%r, root_module[%r], root_module[%r], root_module[%r])"
-                                   % (op.symbol, ret.full_name,
-                                      arg0.full_name, arg1.full_name))
+                pygen_sink.writeln("cls.add_binary_numeric_operator(%r, root_module[%r], root_module[%r], %s)"
+                                   % (op.symbol, ret.full_name, arg0.full_name, arg_repr))
+                if param is not None:
+                    class_wrapper.add_binary_numeric_operator(op.symbol, ret, arg0, param)
 
             # -- inplace numeric operators --
-            if op.symbol in ['+=', '-=', '/=', '*='] \
-                    and len(argument_types) == 2 \
-                    and (type_traits.is_convertible(cls, argument_types[0]) 
-                         or type_traits.is_convertible(cls, argument_types[1])):
+            if op.symbol in ['+=', '-=', '/=', '*=']:
                 #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>>  %s: %s : %s --> %s" \
                 #    % (op.symbol, cls, [str(x) for x in argument_types], return_type)
 
-                def get_class_wrapper(pygccxml_type):
-                    traits = ctypeparser.TypeTraits(normalize_name(pygccxml_type.partial_decl_string))
-                    if traits.type_is_reference:
-                        name = str(traits.target)
-                    else:
-                        name = str(traits.ctype)
-                    class_wrapper = self.type_registry.root_module.get(name, None)
-                    #print >> sys.stderr, "(lookup %r: %r)" % (name, class_wrapper)
-                    return class_wrapper
-
-                arg1 = get_class_wrapper(argument_types[1])
-                if arg1 is None:
-                    #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 2 class %s not registered" % (argument_types[1],)
-                    return
-
-                #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>>  %s: %s (%s) " \
-                #    % (op.symbol, cls, arg1.full_name)
-
-                class_wrapper.add_inplace_numeric_operator(op.symbol, arg1)
-                pygen_sink.writeln("cls.add_inplace_numeric_operator(%r, root_module[%r])"
-                                   % (op.symbol, arg1.full_name))
+                pygen_sink.writeln("cls.add_inplace_numeric_operator(%r, %s)" % (op.symbol, arg_repr))
+                if param is not None:
+                    class_wrapper.add_inplace_numeric_operator(op.symbol, param)
 
 
         for op in self.module_namespace.free_operators(function=self.location_filter,
                                                        allow_empty=True,
                                                        recursive=True):
-            _handle_operator(op.symbol, op.return_type, [arg.type for arg in op.arguments])
+            _handle_operator(op, [arg.type for arg in op.arguments])
 
         for op in cls.member_operators(function=self.location_filter,
                                        allow_empty=True, 
                                        recursive=True):
             arg_types = [arg.type for arg in op.arguments]
             arg_types.insert(0, cls)
-            _handle_operator(op.symbol, op.return_type, arg_types)
+            _handle_operator(op, arg_types)
 
 
     def _scan_class_methods(self, cls, class_wrapper, pygen_sink):

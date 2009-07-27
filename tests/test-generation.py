@@ -9,6 +9,7 @@ from pybindgen.typehandlers.base import Parameter, ReturnValue
 from pybindgen.function import Function
 from pybindgen.module import Module
 from pybindgen import cppclass
+from pybindgen.typehandlers.base import NotSupportedError
 
 import re
 
@@ -84,7 +85,10 @@ public:
                 print
         else:
             retval = return_handler(return_type)
-            wrapper = MyReverseWrapper(retval, [])
+            try:
+                wrapper = MyReverseWrapper(retval, [])
+            except NotSupportedError:
+                continue
             wrapper_number += 1
             try:
                 wrapper.generate(code_out,

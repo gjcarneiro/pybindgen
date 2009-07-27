@@ -889,6 +889,13 @@ inline Tupl & operator += (Tupl &a, Tupl const &b)
     return a;
 }
 
+inline Tupl & operator += (Tupl &a, double b)
+{
+    a.x += b;
+    a.y += b;
+    return a;
+}
+
 inline Tupl & operator -= (Tupl &a, Tupl const &b)
 {
     a.x -= b.x;

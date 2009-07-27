@@ -5,7 +5,7 @@ specialized contexts, such as converting list elements.
 """
 
 from typehandlers.base import ReverseWrapperBase, ForwardWrapperBase
-
+from typehandlers import ctypeparser
 
 class PythonToCConverter(ReverseWrapperBase):
     '''
@@ -22,8 +22,14 @@ class PythonToCConverter(ReverseWrapperBase):
         attribute_name -- name of attribute
         getter -- None, or name of a method of the class used to get the value
         """
-        super(PythonToCConverter, self).__init__(value_type, [], error_return="return 0;")
         self.c_function_name = c_function_name
+
+        if value_type.type_traits.type_is_reference:
+            value_type.type_traits = ctypeparser.TypeTraits(str(value_type.type_traits.target))
+        value_type.ctype = str(value_type.ctype)
+
+        self.type_no_ref = str(value_type.type_traits.ctype_no_modifiers)
+        super(PythonToCConverter, self).__init__(value_type, [], error_return="return 0;")
 
     def generate_python_call(self):
         pass
@@ -63,7 +69,7 @@ class PythonToCConverter(ReverseWrapperBase):
 
         ## now generate the function itself
         code_sink.writeln("int %s(PyObject *value, %s *address)"
-                          % (wrapper_name, self.return_value.ctype))
+                          % (wrapper_name, self.type_no_ref))
         code_sink.writeln('{')
         code_sink.indent()
 
@@ -76,7 +82,7 @@ class PythonToCConverter(ReverseWrapperBase):
         code_sink.writeln('}')
 
     def get_prototype(self):
-        return "int %s(PyObject *value, %s *address)" % (self.c_function_name, self.return_value.ctype)
+        return "int %s(PyObject *value, %s *address)" % (self.c_function_name, self.type_no_ref)
 
 
 

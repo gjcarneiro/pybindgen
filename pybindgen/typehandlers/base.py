@@ -1360,6 +1360,8 @@ class TypeMatcher(object):
                     logger.debug("try to lookup type handler for %r => success (%r)", untransformed_name, rv)
                     return rv
             else:
+                #existing = self._types.keys()
+                #existing.sort()
                 raise TypeLookupError(tried_names)
         else:
             logger.debug("try to lookup type handler for %r => success (%r)", name, rv)

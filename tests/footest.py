@@ -1102,6 +1102,10 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(t1.x, 4)
         self.assertEqual(t1.y, 6)
 
+        t1 += 3
+        self.assertEqual(t1.x, 7)
+        self.assertEqual(t1.y, 9)
+
 
     def test_int_typedef(self):
         rv = foo.xpto.get_flow_id(123)

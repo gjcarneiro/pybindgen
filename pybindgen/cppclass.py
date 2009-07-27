@@ -26,19 +26,26 @@ try:
 except NameError:
     from sets import Set as set
 
+def _type_no_ref(value_type):
+    if value_type.type_traits.type_is_reference:
+        return str(value_type.type_traits.target)
+    else:
+        return str(value_type.type_traits.ctype_no_modifiers)
+
+
 def get_python_to_c_converter(value, root_module, code_sink):
     if isinstance(value, CppClass):
         val_converter = root_module.generate_python_to_c_type_converter(value.ThisClassReturn(value.full_name), code_sink)
         val_name = value.full_name
     elif isinstance(value, ReturnValue):
         val_converter = root_module.generate_python_to_c_type_converter(value, code_sink)
-        val_name = value.ctype
+        val_name = _type_no_ref(value)
     elif isinstance(value, Parameter):
         val_return_type = ReturnValue.new(value.ctype)
         val_converter = root_module.generate_python_to_c_type_converter(val_return_type, code_sink)
-        val_name = value.ctype
+        val_name = _type_no_ref(value)
     else:
-        raise ValueError, "Don't know how to convert %s" % str(value)
+        raise ValueError, "Don't know how to convert %r" % (value,)
     return val_converter, val_name
 
 def get_c_to_python_converter(value, root_module, code_sink):
@@ -47,11 +54,11 @@ def get_c_to_python_converter(value, root_module, code_sink):
         val_name = value.full_name
     elif isinstance(value, ReturnValue):
         val_converter = root_module.generate_c_to_python_type_converter(value, code_sink)
-        val_name = value.ctype
+        val_name = _type_no_ref(value)
     elif isinstance(value, Parameter):
         val_return_type = ReturnValue.new(value.ctype)
         val_converter = root_module.generate_c_to_python_type_converter(val_return_type, code_sink)
-        val_name = value.ctype
+        val_name = _type_no_ref(value)
     else:
         raise ValueError, "Don't know how to convert %s" % str(value)
     return val_converter, val_name
@@ -623,6 +630,16 @@ class CppClass(object):
             except ValueError:
                 pass
 
+            class ThisClassRefReturn(CppClassReturnValue):
+                """Register this C++ class as reference return"""
+                CTYPES = []
+                cpp_class = self
+            self.ThisClassPtrReturn = ThisClassPtrReturn
+            try:
+                return_type_matcher.register(name+'&', self.ThisClassRefReturn)
+            except ValueError:
+                pass
+
     def __repr__(self):
         return "<pybindgen.CppClass %r>" % self.full_name
 
@@ -644,7 +661,7 @@ class CppClass(object):
         self.binary_comparison_operators.add(operator)
 
     def add_binary_numeric_operator(self, operator, result_cppclass=None,
-                                    left_cppclass=None, right_cppclass=None):
+                                    left_cppclass=None, right=None):
         """
         Add support for a C++ binary numeric operator, such as +, -, *, or /.
 
@@ -653,7 +670,10 @@ class CppClass(object):
 
         @param result_cppclass: the CppClass object of the result type, assumed to be this class if omitted
         @param left_cppclass: the CppClass object of the left operand type, assumed to be this class if omitted
-        @param right_cppclass: the CppClass object of the right operand type, assumed to be this class if omitted
+
+        @param right: the type of the right parameter. Can be a
+        CppClass, Parameter, or param spec. Assumed to be this class
+        if omitted
         """
         operator = utils.ascii(operator)
         if not isinstance(operator, str):
@@ -669,20 +689,32 @@ class CppClass(object):
             result_cppclass = self
         if left_cppclass is None:
             left_cppclass = self
-        if right_cppclass is None:
-            right_cppclass = self
-        op = (result_cppclass, left_cppclass, right_cppclass)
+
+        if right is None:
+            right = self
+        else:
+            if isinstance(right, str):
+                right = utils.param(right, 'right')
+            try:
+                right = utils.eval_param(right, None)
+            except utils.SkipWrapper:
+                return
+
+        op = (result_cppclass, left_cppclass, right)
         if op not in l:
             l.append(op)
 
-    def add_inplace_numeric_operator(self, operator, right_cppclass=None):
+
+    def add_inplace_numeric_operator(self, operator, right=None):
         """
         Add support for a C++ inplace numeric operator, such as +=, -=, *=, or /=.
 
         @param operator: string indicating the name of the operator to
         support, e.g. '+='
 
-        @param right_cppclass: the CppClass object of the right operand type, assumed to be this class if omitted
+        @param right: the type of the right parameter. Can be a
+        CppClass, Parameter, or param spec. Assumed to be this class
+        if omitted
         """
         operator = utils.ascii(operator)
         if not isinstance(operator, str):
@@ -694,10 +726,17 @@ class CppClass(object):
         except KeyError:
             l = []
             self.inplace_numeric_operators[operator] = l
-        if right_cppclass is None:
-            right_cppclass = self
-        if right_cppclass not in l:
-            l.append((self, self, right_cppclass))
+        if right is None:
+            right = self
+        else:
+            if isinstance(right, str):
+                right = utils.param(right, 'right')
+            try:
+                right = utils.eval_param(right, None)
+            except utils.SkipWrapper:
+                return
+        if right not in l:
+            l.append((self, self, right))
 
     def add_class(self, *args, **kwargs):
         """
@@ -1598,7 +1637,9 @@ typedef struct {
 
         for dummy_op_symbol, op_types in self.inplace_numeric_operators.iteritems():
             for (retval, left, right) in op_types:
+                get_python_to_c_converter(left, root_module, code_sink)
                 get_python_to_c_converter(right, root_module, code_sink)
+                get_c_to_python_converter(retval, root_module, code_sink)
 
         def try_wrap_operator(op_symbol, slot_name):
             if op_symbol in self.binary_numeric_operators:
