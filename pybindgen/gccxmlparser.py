@@ -1128,7 +1128,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     self._containers_to_register.append((traits, type_info, None, name))
 
             class_wrapper = module.add_class(cls_name, **kwargs)
-            print >> sys.stderr, "<<<<<ADD CLASS>>>>> ", cls_name
+            #print >> sys.stderr, "<<<<<ADD CLASS>>>>> ", cls_name
 
             class_wrapper.gccxml_definition = cls
             self._registered_classes[cls] = class_wrapper
@@ -1444,12 +1444,12 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             ret = get_class_wrapper(op.return_type)
             if ret is None:
-                print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> retval class %s not registered" % (op.return_type,)
+                #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> retval class %s not registered" % (op.return_type,)
                 return
 
             arg0 = get_class_wrapper(argument_types[0])
             if arg0 is None:
-                print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 0 class %s not registered" % (argument_types[0],)
+                #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 0 class %s not registered" % (argument_types[0],)
                 return
 
             dummy_global_annotations, parameter_annotations = annotations_scanner.get_annotations(op)
@@ -1466,7 +1466,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                                        WrapperWarning, op.location.file_name, op.location.line)
                 param = None
             
-            print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>> ", param, ('?' if param is None else param.ctype)
+            #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>> ", param, ('?' if param is None else param.ctype)
 
             if op.symbol in ['+', '-', '/', '*']:
                 #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>>  %s: %s : %s --> %s" \
@@ -1495,6 +1495,8 @@ pybindgen.settings.error_handler = ErrorHandler()
         for op in cls.member_operators(function=self.location_filter,
                                        allow_empty=True, 
                                        recursive=True):
+            if op.access_type != 'public':
+                continue
             arg_types = [arg.type for arg in op.arguments]
             arg_types.insert(0, cls)
             _handle_operator(op, arg_types)
