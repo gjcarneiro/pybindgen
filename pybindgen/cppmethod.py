@@ -810,7 +810,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         ## just chain to parent class and don't do anything else
         call_params = ', '.join([param.name for param in self.parameters])
         py_method = self.declarations.declare_variable('PyObject*', 'py_method')
-        self.before_call.write_code('%s = PyObject_GetAttrString(m_pyself, (char *) "_%s");'
+        self.before_call.write_code('%s = PyObject_GetAttrString(m_pyself, (char *) "_%s"); PyErr_Clear();'
                                     % (py_method, self.method_name))
         self.before_call.add_cleanup_code('Py_XDECREF(%s);' % py_method)
         
