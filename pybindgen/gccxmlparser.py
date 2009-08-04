@@ -1177,10 +1177,11 @@ pybindgen.settings.error_handler = ErrorHandler()
                 type_from_name = normalize_name(str(alias.type))
                 type_to_name = normalize_name(utils.ascii('::'.join([module.cpp_namespace_prefix, alias.name])))
 
-                typehandlers.base.add_type_alias(type_from_name, type_to_name)
-                pygen_sink = self._get_pygen_sink_for_definition(alias)
-                if pygen_sink:
-                    pygen_sink.writeln("typehandlers.add_type_alias(%r, %r)" % (type_from_name, type_to_name))
+                for sym in '', '*', '&':
+                    typehandlers.base.add_type_alias(type_from_name+sym, type_to_name+sym)
+                    pygen_sink = self._get_pygen_sink_for_definition(alias)
+                    if pygen_sink:
+                        pygen_sink.writeln("typehandlers.add_type_alias(%r, %r)" % (type_from_name+sym, type_to_name+sym))
 
                 ## Look for forward declarations of class/structs like
                 ## "typedef struct _Foo Foo"; these are represented in

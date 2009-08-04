@@ -1302,6 +1302,7 @@ class TypeMatcher(object):
         self._types = {}
         self._transformations = []
         self._type_aliases = {}
+        self._type_aliases_rev = {}
 
 
     def register_transformation(self, transformation):
@@ -1320,11 +1321,31 @@ class TypeMatcher(object):
         self._types[name] = type_handler
 
     def _raw_lookup_with_alias_support(self, name):
+        already_tried = []
+        return self._raw_lookup_with_alias_support_recursive(name, already_tried)
+
+    def _raw_lookup_with_alias_support_recursive(self, name, already_tried):
         try:
             return self._types[name]
         except KeyError:
-            alias = self._type_aliases[name]
-            return self._raw_lookup_with_alias_support(alias)
+            aliases_to_try = []
+            try:
+                aliases_to_try.append(self._type_aliases[name])
+            except KeyError:
+                pass
+            try:
+                aliases_to_try.append(self._type_aliases_rev[name])
+            except KeyError:
+                pass
+            for alias in aliases_to_try:
+                if alias in already_tried:
+                    continue
+                already_tried.append(name)
+                #if 'Time' in name or 'Time' in alias:
+                #    import sys
+                #    print >> sys.stderr, "**** trying name %r in place of %r" % (alias, name)
+                return self._raw_lookup_with_alias_support_recursive(alias, already_tried)
+            raise KeyError
         
     def lookup(self, name):
         """
@@ -1360,8 +1381,11 @@ class TypeMatcher(object):
                     logger.debug("try to lookup type handler for %r => success (%r)", untransformed_name, rv)
                     return rv
             else:
-                #existing = self._types.keys()
-                #existing.sort()
+                #if 'Time' in name:
+                #    existing = [k for k in self._types.iterkeys() if 'Time' in k]
+                #    existing.sort()
+                #    raise TypeLookupError((tried_names, existing, self._type_aliases))
+                #else:
                 raise TypeLookupError(tried_names)
         else:
             logger.debug("try to lookup type handler for %r => success (%r)", name, rv)
@@ -1372,7 +1396,10 @@ class TypeMatcher(object):
         return self._types.iteritems()
 
     def add_type_alias(self, from_type_name, to_type_name):
-        self._type_aliases[to_type_name] = from_type_name
+        from_type_name_normalized = str(ctypeparser.TypeTraits(from_type_name).ctype)
+        to_type_name_normalized = str(ctypeparser.TypeTraits(to_type_name).ctype)
+        self._type_aliases[to_type_name_normalized] = from_type_name_normalized
+        self._type_aliases_rev[from_type_name_normalized] = to_type_name_normalized
 
 return_type_matcher = TypeMatcher()
 param_type_matcher = TypeMatcher()

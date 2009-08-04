@@ -634,7 +634,7 @@ class CppClass(object):
                 """Register this C++ class as reference return"""
                 CTYPES = []
                 cpp_class = self
-            self.ThisClassPtrReturn = ThisClassPtrReturn
+            self.ThisClassRefReturn = ThisClassRefReturn
             try:
                 return_type_matcher.register(name+'&', self.ThisClassRefReturn)
             except ValueError:
@@ -1021,6 +1021,12 @@ class CppClass(object):
         try:
             return_type_matcher.register(alias+'*', self.ThisClassPtrReturn)
         except ValueError: pass
+
+        self.ThisClassRefReturn.CTYPES.append(alias)
+        try:
+            return_type_matcher.register(alias+'&', self.ThisClassRefReturn)
+        except ValueError: pass
+
         
     def get_module(self):
         """Get the Module object this class belongs to"""
