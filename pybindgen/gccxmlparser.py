@@ -1407,7 +1407,8 @@ pybindgen.settings.error_handler = ErrorHandler()
     def _scan_class_operators(self, cls, class_wrapper, pygen_sink):
         
         def _handle_operator(op, argument_types):
-            #print >> sys.stderr, "<<<<<OP>>>>>  %s: %s : %s --> %s" % (op.symbol, cls, [str(x) for x in argument_types], return_type)
+            #print >> sys.stderr, "<<<<<OP>>>>>  (OP %s in class %s) : %s --> %s" % \
+            #    (op.symbol, cls, [str(x) for x in argument_types], op.return_type)
 
             if op.symbol == '<<' \
                     and self._is_ostream(op.return_type) \
@@ -1437,20 +1438,27 @@ pybindgen.settings.error_handler = ErrorHandler()
                 return class_wrapper
 
             if len(argument_types) != 2:
+                warnings.warn_explicit("BINARY NUMERIC OP: wrong number of arguments, got %i, expected 2"
+                                       % len(argument_types),
+                                       WrapperWarning, op.location.file_name, op.location.line)
                 return
             if not type_traits.is_convertible(cls, argument_types[0]):
+                warnings.warn_explicit("BINARY NUMERIC OP: arg0 is not convertible to the class",
+                                       WrapperWarning, op.location.file_name, op.location.line)
                 return
-            if not type_traits.is_convertible(cls, op.return_type):
-                return
+            #if not type_traits.is_convertible(cls, op.return_type):
+            #    return
 
             ret = get_class_wrapper(op.return_type)
             if ret is None:
-                #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> retval class %s not registered" % (op.return_type,)
+                warnings.warn_explicit("BINARY NUMERIC OP: retval class %s not registered" % (op.return_type,),
+                                       WrapperWarning, op.location.file_name, op.location.line)
                 return
 
             arg0 = get_class_wrapper(argument_types[0])
             if arg0 is None:
-                #print >> sys.stderr, "<<<<<BINARY NUMERIC OP>>>>> arg 0 class %s not registered" % (argument_types[0],)
+                warnings.warn_explicit("BINARY NUMERIC OP: arg0 class %s not registered" % (op.return_type,),
+                                       WrapperWarning, op.location.file_name, op.location.line)
                 return
 
             dummy_global_annotations, parameter_annotations = annotations_scanner.get_annotations(op)
