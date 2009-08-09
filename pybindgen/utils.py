@@ -85,7 +85,7 @@ typedef intobjargproc ssizeobjargproc;
 #elif     __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ > 4)
 # define PYBINDGEN_UNUSED(param) __attribute__((__unused__)) param
 #else
-# define PYBINDGEN_UNUSED(param)
+# define PYBINDGEN_UNUSED(param) param
 #endif  /* !__GNUC__ */
 ''')
     
