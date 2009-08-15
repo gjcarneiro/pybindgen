@@ -254,10 +254,11 @@ static Py_ssize_t
 {
     PyObject *py_result;
     PyObject *args;
-
     Py_ssize_t result;
 
+    args = PyTuple_New (0);
     py_result = %(method_name)s(py_self, args, NULL);
+    Py_DECREF(args);
     if (py_result == NULL) {
         return -1;
     }
