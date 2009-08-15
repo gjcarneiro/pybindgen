@@ -345,6 +345,46 @@ class UnsignedLongLongReturn(ReturnValue):
         wrapper.build_params.add_parameter("K", [self.value], prepend=True)
 
 
+class UnsignedLongParam(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['unsigned long']
+
+    def get_ctype_without_ref(self):
+        return str(self.type_traits.ctype_no_const)
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        wrapper.build_params.add_parameter('k', [self.value])
+
+    def convert_python_to_c(self, wrapper):
+        assert isinstance(wrapper, ForwardWrapperBase)
+        name = wrapper.declarations.declare_variable(self.get_ctype_without_ref(), self.name, self.default_value)
+        wrapper.parse_params.add_parameter('k', ['&'+name], self.name, optional=bool(self.default_value))
+        wrapper.call_params.append(name)
+
+class UnsignedLongRefParam(UnsignedLongParam):
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['unsigned long&']
+
+    def get_ctype_without_ref(self):
+        assert self.type_traits.target is not None
+        return str(self.type_traits.target)
+
+class UnsignedLongReturn(ReturnValue):
+
+    CTYPES = ['unsigned long', 'long unsigned int']
+
+    def get_c_error_return(self):
+        return "return 0;"
+    
+    def convert_python_to_c(self, wrapper):
+        wrapper.parse_params.add_parameter("k", ["&"+self.value], prepend=True)
+
+    def convert_c_to_python(self, wrapper):
+        wrapper.build_params.add_parameter("k", [self.value], prepend=True)
+
+
 class SizeTReturn(ReturnValue):
 
     CTYPES = ['size_t',]
