@@ -1712,13 +1712,18 @@ typedef struct {
 
         def try_wrap_sequence_method(py_name, slot_name):
             if py_name in self.methods:
-                assert len(self.methods[py_name].wrappers) == 1
-                meth = self.methods[py_name].wrappers[0]
+                numwraps = len(self.methods[py_name].wrappers)
+                some_wrapper_is_function = max([isinstance(x, function.Function) for x in self.methods[py_name].wrappers])
+                meth_wrapper_actual_name = self.methods[py_name].wrapper_actual_name
                 wrapper_name = "%s__%s" % (self.mangled_full_name, slot_name)
                 pysequencemethods.slots[slot_name] = wrapper_name
-                code_sink.writeln(pysequencemethods.FUNCTION_TEMPLATES[slot_name] % {'wrapper_name'   : wrapper_name,
-                                                                                     'py_struct'      : self._pystruct,
-                                                                                     'method_name'    : meth.wrapper_actual_name})
+                if py_name == "__len__" and (numwraps > 1 or some_wrapper_is_function):
+                    template = pysequencemethods.FUNCTION_TEMPLATES[slot_name + "_ARGS"]
+                else:
+                    template = pysequencemethods.FUNCTION_TEMPLATES[slot_name]
+                code_sink.writeln(template % {'wrapper_name'   : wrapper_name,
+                                              'py_struct'      : self._pystruct,
+                                              'method_name'    : meth_wrapper_actual_name})
                 return
 
         for (py_name, slot_name) in [("__len__", "sq_length"),

@@ -246,6 +246,28 @@ static Py_ssize_t
 
 ''',
 
+        # This hacky version is necessary 'cause if we're calling a function rather than a method
+        # or an overloaded wrapper the args parameter gets tacked into the call sequence.
+        "sq_length_ARGS" : '''
+static Py_ssize_t
+%(wrapper_name)s (%(py_struct)s *py_self)
+{
+    PyObject *py_result;
+    PyObject *args;
+
+    Py_ssize_t result;
+
+    py_result = %(method_name)s(py_self, args, NULL);
+    if (py_result == NULL) {
+        return -1;
+    }
+    result = PyInt_AsSsize_t(py_result);
+    Py_DECREF(py_result);
+    return result;
+}
+
+''',
+
         "sq_item" : '''
 static PyObject*
 %(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i)
