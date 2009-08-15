@@ -507,6 +507,7 @@ class CppClass(object):
         self.binary_comparison_operators = set()
         self.binary_numeric_operators = dict()
         self.inplace_numeric_operators = dict()
+        self.unary_numeric_operators = dict()
         self.valid_sequence_methods = ("__len__", "__getitem__", "__setitem__")
 
         ## list of CppClasses from which a value of this class can be
@@ -737,6 +738,34 @@ class CppClass(object):
                 return
         if right not in l:
             l.append((self, self, right))
+
+    def add_unary_numeric_operator(self, operator, result_cppclass=None, left_cppclass=None):
+        """
+        Add support for a C++ unary numeric operators, currently only -.
+
+        @param operator: string indicating the name of the operator to
+        support, e.g. '-'
+
+        @param result_cppclass: the CppClass object of the result type, assumed to be this class if omitted
+        @param left_cppclass: the CppClass object of the left operand type, assumed to be this class if omitted
+        """
+        operator = utils.ascii(operator)
+        if not isinstance(operator, str):
+            raise TypeError("expected operator name as string")
+        if operator not in ['-']:
+            raise ValueError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
+        try:
+            l = self.unary_numeric_operators[operator]
+        except KeyError:
+            l = []
+            self.unary_numeric_operators[operator] = l
+        if result_cppclass is None:
+            result_cppclass = self
+        if left_cppclass is None:
+            left_cppclass = self
+        op = (result_cppclass, left_cppclass)
+        if op not in l:
+            l.append(op)
 
     def add_class(self, *args, **kwargs):
         """
@@ -1647,6 +1676,11 @@ typedef struct {
                 get_python_to_c_converter(right, root_module, code_sink)
                 get_c_to_python_converter(retval, root_module, code_sink)
 
+        for dummy_op_symbol, op_types in self.unary_numeric_operators.iteritems():
+            for (retval, left) in op_types:
+                get_c_to_python_converter(retval, root_module, code_sink)
+                get_python_to_c_converter(left, root_module, code_sink)
+
         def try_wrap_operator(op_symbol, slot_name):
             if op_symbol in self.binary_numeric_operators:
                 op_types = self.binary_numeric_operators[op_symbol]
@@ -1688,6 +1722,43 @@ typedef struct {
             code_sink.unindent()
             code_sink.writeln("}")
 
+        def try_wrap_unary_operator(op_symbol, slot_name):
+            if op_symbol in self.unary_numeric_operators:
+                op_types = self.unary_numeric_operators[op_symbol]
+            else:
+                return
+
+            wrapper_name = "%s__%s" % (self.mangled_full_name, slot_name)
+            pynumbermethods.slots[slot_name] = wrapper_name
+            code_sink.writeln(("static PyObject*\n"
+                               "%s (PyObject *py_self)\n"
+                               "{") % wrapper_name)
+            code_sink.indent()
+            for (retval, left) in op_types:
+                retval_converter, retval_name = get_c_to_python_converter(retval, root_module, code_sink)
+                left_converter, left_name = get_python_to_c_converter(left, root_module, code_sink)
+
+                code_sink.writeln("{")
+                code_sink.indent()
+                
+                code_sink.writeln("%s self;" % left_name)
+                
+                code_sink.writeln("if (%s(py_self, &self)) {" % (left_converter))
+                code_sink.indent()
+                code_sink.writeln("%s result = %s(self);" % (retval_name, op_symbol))
+                code_sink.writeln("return %s(&result);" % retval_converter)
+                code_sink.unindent()
+                code_sink.writeln("}")
+                code_sink.writeln("PyErr_Clear();")
+
+                code_sink.unindent()
+                code_sink.writeln("}")
+                
+            code_sink.writeln("Py_INCREF(Py_NotImplemented);")
+            code_sink.writeln("return Py_NotImplemented;")
+            code_sink.unindent()
+            code_sink.writeln("}")
+
         try_wrap_operator('+', 'nb_add')
         try_wrap_operator('-', 'nb_subtract')
         try_wrap_operator('*', 'nb_multiply')
@@ -1697,6 +1768,8 @@ typedef struct {
         try_wrap_operator('-=', 'nb_inplace_subtract')
         try_wrap_operator('*=', 'nb_inplace_multiply')
         try_wrap_operator('/=', 'nb_inplace_divide')
+
+        try_wrap_unary_operator('-', 'nb_negative')
 
         pynumbermethods.generate(code_sink)
         return '&' + number_methods_var_name
