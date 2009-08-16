@@ -844,6 +844,14 @@ struct Tupl
         }
 
 
+    inline Tupl operator - ()
+        {
+            Tupl retval;
+            retval.x = -x;
+            retval.y = -y;
+            return retval;
+        }
+
 };
 
 inline bool operator < (Tupl const &a, Tupl const &b)

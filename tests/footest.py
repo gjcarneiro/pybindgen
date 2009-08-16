@@ -1106,6 +1106,14 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(t1.x, 7)
         self.assertEqual(t1.y, 9)
 
+    def test_unary_numeric_operators(self):
+        t1 = foo.Tupl()
+        t1.x = 4
+        t1.y = 6
+        t2 = -t1
+        self.assertEqual(t2.x, -4)
+        self.assertEqual(t2.y, -6)
+
 
     def test_int_typedef(self):
         rv = foo.xpto.get_flow_id(123)
