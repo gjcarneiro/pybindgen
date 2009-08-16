@@ -18,7 +18,7 @@ class Function(ForwardWrapperBase):
     """
 
     def __init__(self, function_name, return_value, parameters, docstring=None, unblock_threads=None,
-                 template_parameters=(), custom_name=None, deprecated=False):
+                 template_parameters=(), custom_name=None, deprecated=False, foreign_cpp_namespace=None):
         """
         @param function_name: name of the C function
         @param return_value: the function return value
@@ -29,6 +29,9 @@ class Function(ForwardWrapperBase):
           - False: Not deprecated
           - True: Deprecated
           - "message": Deprecated, and deprecation warning contains the given message
+        @param foreign_cpp_namespace: if set, the function is assumed to
+        belong to the given C++ namespace, regardless of the C++
+        namespace of the python module it will be added to.
         """
         self.stack_where_defined = traceback.extract_stack()
 
@@ -53,6 +56,7 @@ class Function(ForwardWrapperBase):
             error_return="return NULL;",
             unblock_threads=unblock_threads)
         self.deprecated = deprecated
+        self.foreign_cpp_namespace = foreign_cpp_namespace
         self._module = None
         function_name = utils.ascii(function_name)
         self.function_name = function_name
@@ -90,7 +94,9 @@ class Function(ForwardWrapperBase):
     
     def generate_call(self):
         "virtual method implementation; do not call"
-        if self._module.cpp_namespace_prefix:
+        if self.foreign_cpp_namespace:
+            namespace = self.foreign_cpp_namespace + '::'
+        elif self._module.cpp_namespace_prefix:
             namespace = self._module.cpp_namespace_prefix + '::'
         else:
             namespace = ''
