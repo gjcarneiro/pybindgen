@@ -1418,6 +1418,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 #print >> sys.stderr, "<<<<<OUTPUT STREAM OP>>>>>  %s: %s " % (op.symbol, cls)
                 class_wrapper.add_output_stream_operator()
                 pygen_sink.writeln("cls.add_output_stream_operator()")
+                return
 
             if op.symbol in ['==', '!=', '<', '<=', '>', '>='] \
                     and len(argument_types) == 2 \
@@ -1426,6 +1427,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 #print >> sys.stderr, "<<<<<BINARY COMPARISON OP>>>>>  %s: %s " % (op.symbol, cls)
                 class_wrapper.add_binary_comparison_operator(op.symbol)
                 pygen_sink.writeln("cls.add_binary_comparison_operator(%r)" % (op.symbol,))
+                return
 
             def get_class_wrapper(pygccxml_type):
                 traits = ctypeparser.TypeTraits(normalize_name(pygccxml_type.partial_decl_string))
@@ -1443,11 +1445,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                                        WrapperWarning, op.location.file_name, op.location.line)
                 return
             if not type_traits.is_convertible(cls, argument_types[0]):
-                warnings.warn_explicit("BINARY NUMERIC OP: arg0 is not convertible to the class",
-                                       WrapperWarning, op.location.file_name, op.location.line)
                 return
-            #if not type_traits.is_convertible(cls, op.return_type):
-            #    return
 
             ret = get_class_wrapper(op.return_type)
             if ret is None:
