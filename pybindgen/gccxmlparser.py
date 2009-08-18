@@ -1439,59 +1439,67 @@ pybindgen.settings.error_handler = ErrorHandler()
                 #print >> sys.stderr, "(lookup %r: %r)" % (name, class_wrapper)
                 return class_wrapper
 
-            if len(argument_types) != 2:
-                warnings.warn_explicit("BINARY NUMERIC OP: wrong number of arguments, got %i, expected 2"
-                                       % len(argument_types),
-                                       WrapperWarning, op.location.file_name, op.location.line)
-                return
             if not type_traits.is_convertible(cls, argument_types[0]):
                 return
 
             ret = get_class_wrapper(op.return_type)
             if ret is None:
-                warnings.warn_explicit("BINARY NUMERIC OP: retval class %s not registered" % (op.return_type,),
+                warnings.warn_explicit("NUMERIC OP: retval class %s not registered" % (op.return_type,),
                                        WrapperWarning, op.location.file_name, op.location.line)
                 return
 
             arg0 = get_class_wrapper(argument_types[0])
             if arg0 is None:
-                warnings.warn_explicit("BINARY NUMERIC OP: arg0 class %s not registered" % (op.return_type,),
+                warnings.warn_explicit("NUMERIC OP: arg0 class %s not registered" % (op.return_type,),
                                        WrapperWarning, op.location.file_name, op.location.line)
                 return
 
-            dummy_global_annotations, parameter_annotations = annotations_scanner.get_annotations(op)
-            arg_spec = self.type_registry.lookup_parameter(argument_types[1], 'right',
-                                                           parameter_annotations.get('right', {}))
+            if len(argument_types) == 2:
+                dummy_global_annotations, parameter_annotations = annotations_scanner.get_annotations(op)
+                arg_spec = self.type_registry.lookup_parameter(argument_types[1], 'right',
+                                                               parameter_annotations.get('right', {}))
 
-            arg_repr = _pygen_param(arg_spec[0], arg_spec[1])
+                arg_repr = _pygen_param(arg_spec[0], arg_spec[1])
 
-            try:
-                param = Parameter.new(*arg_spec[0], **arg_spec[1])
-            except (TypeLookupError, TypeConfigurationError), ex:
-                warnings.warn_explicit("Parameter '%s' error (used in %s): %r"
-                                       % (argument_types[1].partial_decl_string, op, ex),
+                try:
+                    param = Parameter.new(*arg_spec[0], **arg_spec[1])
+                except (TypeLookupError, TypeConfigurationError), ex:
+                    warnings.warn_explicit("Parameter '%s' error (used in %s): %r"
+                                           % (argument_types[1].partial_decl_string, op, ex),
+                                           WrapperWarning, op.location.file_name, op.location.line)
+                    param = None
+
+                #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>> ", param, ('?' if param is None else param.ctype)
+
+                if op.symbol in ['+', '-', '/', '*']:
+                    #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>>  %s: %s : %s --> %s" \
+                    #    % (op.symbol, cls, [str(x) for x in argument_types], return_type)
+
+                    pygen_sink.writeln("cls.add_binary_numeric_operator(%r, root_module[%r], root_module[%r], %s)"
+                                       % (op.symbol, ret.full_name, arg0.full_name, arg_repr))
+                    if param is not None:
+                        class_wrapper.add_binary_numeric_operator(op.symbol, ret, arg0, param)
+
+                # -- inplace numeric operators --
+                if op.symbol in ['+=', '-=', '/=', '*=']:
+                    #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>>  %s: %s : %s --> %s" \
+                    #    % (op.symbol, cls, [str(x) for x in argument_types], return_type)
+
+                    pygen_sink.writeln("cls.add_inplace_numeric_operator(%r, %s)" % (op.symbol, arg_repr))
+                    if param is not None:
+                        class_wrapper.add_inplace_numeric_operator(op.symbol, param)
+
+            elif len(argument_types) == 1: # unary operator
+                if op.symbol in ['-']:
+                    pygen_sink.writeln("cls.add_unary_numeric_operator(%r)" % (op.symbol,))
+                    class_wrapper.add_unary_numeric_operator(op.symbol)
+
+            else:
+                warnings.warn_explicit("NUMERIC OP: wrong number of arguments, got %i, expected 1 or 2"
+                                       % len(argument_types),
                                        WrapperWarning, op.location.file_name, op.location.line)
-                param = None
-            
-            #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>> ", param, ('?' if param is None else param.ctype)
-
-            if op.symbol in ['+', '-', '/', '*']:
-                #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>>  %s: %s : %s --> %s" \
-                #    % (op.symbol, cls, [str(x) for x in argument_types], return_type)
-
-                pygen_sink.writeln("cls.add_binary_numeric_operator(%r, root_module[%r], root_module[%r], %s)"
-                                   % (op.symbol, ret.full_name, arg0.full_name, arg_repr))
-                if param is not None:
-                    class_wrapper.add_binary_numeric_operator(op.symbol, ret, arg0, param)
-
-            # -- inplace numeric operators --
-            if op.symbol in ['+=', '-=', '/=', '*=']:
-                #print >> sys.stderr, "<<<<<potential NUMERIC OP>>>>>  %s: %s : %s --> %s" \
-                #    % (op.symbol, cls, [str(x) for x in argument_types], return_type)
-
-                pygen_sink.writeln("cls.add_inplace_numeric_operator(%r, %s)" % (op.symbol, arg_repr))
-                if param is not None:
-                    class_wrapper.add_inplace_numeric_operator(op.symbol, param)
+                return
+                
 
 
         for op in self.module_namespace.free_operators(function=self.location_filter,
