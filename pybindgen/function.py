@@ -25,6 +25,12 @@ class Function(ForwardWrapperBase):
         @type return_value: L{ReturnValue}
         @param parameters: the function parameters
         @type parameters: list of L{Parameter}
+
+        @param custom_name: an alternative name to give to this
+        function at python-side; if omitted, the name of the function
+        in the python module will be the same name as the function in
+        C++ (minus namespace).
+
         @param deprecated: deprecation state for this API:
           - False: Not deprecated
           - True: Deprecated

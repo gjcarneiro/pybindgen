@@ -18,7 +18,7 @@ def pre_scan_hook(dummy_module_parser,
         global_annotations['free_function'] = 'hello_foo_unref'
         global_annotations['incref_function'] = 'hello_foo_ref'
         global_annotations['decref_function'] = 'hello_foo_unref'
-        global_annotations['python_name'] = 'Foo'
+        global_annotations['custom_name'] = 'Foo'
 
     ## constructor?
     m = constructor_rx.match(pygccxml_definition.name)

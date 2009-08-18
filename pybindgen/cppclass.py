@@ -428,7 +428,9 @@ class CppClass(object):
                  incref_function=None, decref_function=None,
                  python_name=None, memory_policy=None,
                  foreign_cpp_namespace=None,
-                 docstring=None):
+                 docstring=None,
+                 custom_name=None,
+                 ):
         """
         @param name: class name
         @param parent: optional parent class wrapper
@@ -455,7 +457,9 @@ class CppClass(object):
         @param free_function: (deprecated in favour of memory_policy) name of C function used to deallocate class instances
         @param incref_function: (deprecated in favour of memory_policy) same as incref_method, but as a function instead of method
         @param decref_function: (deprecated in favour of memory_policy) same as decref_method, but as a function instead of method
-        @param python_name: name of the class as it will appear from Python side
+        @param python_name: name of the class as it will appear from
+        Python side.  This parameter is DEPRECATED in favour of
+        custom_name.
 
         @param memory_policy: memory management policy; if None, it
         inherits from the parent class.  Only root classes can have a
@@ -472,6 +476,11 @@ class CppClass(object):
         @param docstring: None or a string containing the docstring
         that will be generated for the class
 
+        @param custom_name: an alternative name to give to this class
+        at python-side; if omitted, the name of the class in the
+        python module will be the same name as the class in C++ (minus
+        namespace).
+
         """
         assert outer_class is None or isinstance(outer_class, CppClass)
         self.incomplete_type = incomplete_type
@@ -479,11 +488,20 @@ class CppClass(object):
         self._module = None
         self.name = name
         self.docstring = docstring
-        self.python_name = python_name
         self.mangled_name = None
         self.mangled_full_name = None
         self.template_parameters = template_parameters
-        self.custom_template_class_name = custom_template_class_name
+
+        self.custom_name = custom_name
+        if custom_template_class_name:
+            warnings.warn("Use the custom_name parameter.",
+                          DeprecationWarning, stacklevel=2)
+            self.custom_name = custom_template_class_name
+        if python_name:
+            warnings.warn("Use the custom_name parameter.",
+                          DeprecationWarning, stacklevel=2)
+            self.custom_name = python_name
+
         self.is_singleton = is_singleton
         self.foreign_cpp_namespace = foreign_cpp_namespace
         self.full_name = None # full name with C++ namespaces attached and template parameters
@@ -1609,15 +1627,15 @@ typedef struct {
                                           % (self.pytypestruct,))
 
         if self.template_parameters:
-            if self.custom_template_class_name is None:
+            if self.custom_name is None:
                 class_python_name = self.mangled_name
             else:
-                class_python_name = self.custom_template_class_name
+                class_python_name = self.custom_name
         else:
-            if self.python_name is None:
+            if self.custom_name is None:
                 class_python_name = self.name
             else:
-                class_python_name = self.python_name
+                class_python_name = self.custom_name
 
         if self.outer_class is None:
             module.after_init.write_code(

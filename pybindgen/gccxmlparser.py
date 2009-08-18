@@ -831,7 +831,11 @@ pybindgen.settings.error_handler = ErrorHandler()
             elif name == 'decref_function':
                 pass
             elif name == 'python_name':
-                kwargs.setdefault('python_name', value)
+                kwargs.setdefault('custom_name', value)
+                warnings.warn_explicit("Class annotation 'python_name' is deprecated in favour of 'custom_name'",
+                                       AnnotationsWarning, cls.location.file_name, cls.location.line)
+            elif name == 'custom_name':
+                kwargs.setdefault('custom_name', value)
             elif name == 'pygen_comment':
                 pass
             else:
@@ -1095,7 +1099,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             if template_parameters:
                 kwargs["template_parameters"] = template_parameters
             if custom_template_class_name:
-                kwargs["custom_template_class_name"] = custom_template_class_name
+                kwargs["custom_name"] = custom_template_class_name
 
             pygen_sink = self._get_pygen_sink_for_definition(cls)
             if pygen_sink:
