@@ -1008,6 +1008,12 @@ class TestFoo(unittest.TestCase):
 
         self.assertEqual(zbr_count_after, zbr_count_before)
 
+    def test_out_intptr(self):
+        zbr = foo.Zbr()
+        v1, v2  = zbr.get_value()
+        self.assertEqual(v1, -1)
+        self.assertEqual(v2, 123)
+
     def test_scan_containers_in_attributes(self):
         t = foo.TestContainer()
         v = list(t.m_floatSet)

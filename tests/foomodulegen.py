@@ -80,6 +80,7 @@ int %s::custom_method_added_by_a_hook(int x)
     Zbr.add_method('get_int', ReturnValue.new('int'), [Parameter.new('int', 'x')],
                              is_virtual=True)
     Zbr.add_static_attribute('instance_count', ReturnValue.new('int'))
+    Zbr.add_method('get_value', ReturnValue.new('int'), [Parameter.new('int*', 'x', direction=Parameter.DIRECTION_OUT)])
     
     mod.add_function('store_zbr', None,
                      [Parameter.new('Zbr*', 'zbr', transfer_ownership=True)])

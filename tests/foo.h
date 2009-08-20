@@ -159,6 +159,9 @@ public:
     virtual ~Zbr () {
         --Zbr::instance_count;
     }
+
+    // -#- @foobaz(transfer_ownership=true, direction=out) -#-
+    int get_value (int* foobaz) { *foobaz = 123; return -1; }
 };
 
 // -#- @zbr(transfer_ownership=true) -#-
