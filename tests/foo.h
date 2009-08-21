@@ -990,7 +990,31 @@ public:
         {
             m_vec.push_back (value);
         }
+
+    typedef std::vector<double>::iterator Iterator;
+    Iterator Begin () { return m_vec.begin (); }
+    Iterator End () { return m_vec.end (); }
+};
+
+
+
+class VectorLike2
+{
+    std::vector<double> m_vec;
     
+public:
+    VectorLike2 () 
+        {
+        }
+
+    void append (double value)
+        {
+            m_vec.push_back (value);
+        }
+
+    typedef std::vector<double>::iterator Iterator;
+    Iterator Begin () { return m_vec.begin (); }
+    Iterator End () { return m_vec.end (); }
 };
 
     

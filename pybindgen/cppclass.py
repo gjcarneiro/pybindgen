@@ -21,6 +21,8 @@ from pytypeobject import PyTypeObject, PyNumberMethods, PySequenceMethods
 import settings
 import utils
 
+from cppclass_container import CppClassContainerTraits
+
 try:
     set
 except NameError:
@@ -491,6 +493,7 @@ class CppClass(object):
         self.mangled_name = None
         self.mangled_full_name = None
         self.template_parameters = template_parameters
+        self.container_traits = None
 
         self.custom_name = custom_name
         if custom_template_class_name:
@@ -661,6 +664,10 @@ class CppClass(object):
 
     def __repr__(self):
         return "<pybindgen.CppClass %r>" % self.full_name
+
+    def add_container_traits(self, *args, **kwargs):
+        assert self.container_traits is None
+        self.container_traits = CppClassContainerTraits(self, *args, **kwargs)
 
     def add_binary_comparison_operator(self, operator):
         """
@@ -1576,8 +1583,24 @@ typedef struct {
         if self.typeid_map_name is not None:
             self._generate_typeid_map(code_sink, module)
 
+        if self.container_traits is not None:
+            self.container_traits.generate_forward_declarations(code_sink, module)
+
         if self.parent is None:
             self.wrapper_registry.generate_forward_declarations(code_sink, module)
+
+    def get_python_name(self):
+        if self.template_parameters:
+            if self.custom_name is None:
+                class_python_name = self.mangled_name
+            else:
+                class_python_name = self.custom_name
+        else:
+            if self.custom_name is None:
+                class_python_name = self.name
+            else:
+                class_python_name = self.custom_name
+        return class_python_name
 
     def generate(self, code_sink, module):
         """Generates the class to a code sink"""
@@ -1626,16 +1649,7 @@ typedef struct {
         module.after_init.write_error_check('PyType_Ready(&%s)'
                                           % (self.pytypestruct,))
 
-        if self.template_parameters:
-            if self.custom_name is None:
-                class_python_name = self.mangled_name
-            else:
-                class_python_name = self.custom_name
-        else:
-            if self.custom_name is None:
-                class_python_name = self.name
-            else:
-                class_python_name = self.custom_name
+        class_python_name = self.get_python_name()
 
         if self.outer_class is None:
             module.after_init.write_code(
@@ -1668,6 +1682,9 @@ typedef struct {
 
         if self.have_sequence_methods():
             self.slots["tp_as_sequence"] = self._generate_sequence_methods(code_sink)
+
+        if self.container_traits is not None:
+            self.container_traits.generate(code_sink, module)
 
         self._generate_type_structure(code_sink, self.docstring)
 

@@ -1143,5 +1143,14 @@ class TestFoo(unittest.TestCase):
         vec[2] = 6
         self.assertEqual(vec[2], 6)
 
+    def test_class_with_iterator_protocol(self):
+        vec = foo.VectorLike2()
+        vec.append(1)
+        vec.append(2)
+        vec.append(3)
+        i = iter(vec)
+        l = list(i)
+        self.assertEqual(l, [1,2,3])
+
 if __name__ == '__main__':
     unittest.main()
