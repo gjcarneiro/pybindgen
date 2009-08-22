@@ -489,7 +489,6 @@ int %s::custom_method_added_by_a_hook(int x)
     VectorLike2 = mod.add_class('VectorLike2')
     VectorLike2.add_constructor([])
     VectorLike2.add_method('append', 'void', [Parameter.new('double', 'value')])
-    VectorLike2.add_container_traits(ReturnValue.new('double'), begin_method='Begin', end_method='End', iterator_type='Iterator')
     
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):

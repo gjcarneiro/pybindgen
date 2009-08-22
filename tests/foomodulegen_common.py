@@ -121,3 +121,5 @@ _wrap_PyBar_Hooray_lenx(PyBar *PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject
         code_block.write_code("%s->initialize();" % (lvalue,))
     Foo.set_instance_creation_function(Foo_instance_creation_function)
 
+    VectorLike2, = [cls for cls in module.classes if cls.name == 'VectorLike2']
+    VectorLike2.add_container_traits(ReturnValue.new('double'), begin_method='Begin', end_method='End', iterator_type='Iterator')
