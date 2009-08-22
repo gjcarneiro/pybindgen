@@ -1017,5 +1017,19 @@ public:
     Iterator End () { return m_vec.end (); }
 };
 
+
+class MapLike
+{
+    std::map<int, double> m_map;
     
+public:
+    MapLike () {}
+
+    void set (int key, double value) { m_map[key] = value; }
+
+    typedef std::map<int, double>::iterator Iterator;
+    Iterator Begin () { return m_map.begin (); }
+    Iterator End () { return m_map.end (); }
+};
+
 #endif 	    /* !FOO_H_ */

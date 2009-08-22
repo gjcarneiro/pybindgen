@@ -1152,5 +1152,14 @@ class TestFoo(unittest.TestCase):
         l = list(i)
         self.assertEqual(l, [1,2,3])
 
+    def test_class_with_mapping_iterator_protocol(self):
+        map = foo.MapLike()
+        map.set(1, 1.5)
+        map.set(2, 2.5)
+        map.set(3, 3.5)
+        i = iter(map)
+        l = list(i)
+        self.assertEqual(l, [(1, 1.5), (2, 2.5), (3, 3.5)])
+
 if __name__ == '__main__':
     unittest.main()

@@ -123,3 +123,8 @@ _wrap_PyBar_Hooray_lenx(PyBar *PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject
 
     VectorLike2, = [cls for cls in module.classes if cls.name == 'VectorLike2']
     VectorLike2.add_container_traits(ReturnValue.new('double'), begin_method='Begin', end_method='End', iterator_type='Iterator')
+
+    MapLike, = [cls for cls in module.classes if cls.name == 'MapLike']
+    MapLike.add_container_traits((ReturnValue.new('int'), ReturnValue.new('double')),
+                                 begin_method='Begin', end_method='End', iterator_type='Iterator',
+                                 is_mapping=True)

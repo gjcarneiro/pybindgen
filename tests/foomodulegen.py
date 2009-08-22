@@ -489,6 +489,11 @@ int %s::custom_method_added_by_a_hook(int x)
     VectorLike2 = mod.add_class('VectorLike2')
     VectorLike2.add_constructor([])
     VectorLike2.add_method('append', 'void', [Parameter.new('double', 'value')])
+
+    MapLike = mod.add_class('MapLike')
+    MapLike.add_constructor([])
+    MapLike.add_method('set', 'void', [Parameter.new('int', 'key'), Parameter.new('double', 'value')])
+
     
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):
