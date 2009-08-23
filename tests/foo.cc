@@ -434,7 +434,20 @@ namespace xpto
     }
 }
 
-double my_inverse_func (double x) throw (DomainError)
+double
+my_inverse_func (double x) throw (DomainError)
+{
+    if (x == 0)
+    {
+        DomainError ex;
+        ex.message = "value must be != 0";
+        throw ex;
+    }
+    return 1/x;
+}
+
+double
+ClassThatThrows::my_inverse_method (double x) throw (DomainError)
 {
     if (x == 0)
     {

@@ -13,6 +13,8 @@ from typehandlers import codesink
 import overloading
 import settings
 import utils
+from cppexception import CppException
+
 
 class CppMethod(ForwardWrapperBase):
     """
@@ -23,7 +25,7 @@ class CppMethod(ForwardWrapperBase):
                  template_parameters=(), is_virtual=None, is_const=False,
                  unblock_threads=None, is_pure_virtual=False,
                  custom_template_method_name=None, visibility='public',
-                 custom_name=None, deprecated=False, docstring=None):
+                 custom_name=None, deprecated=False, docstring=None, throw=()):
         """
         Create an object the generates code to wrap a C++ class method.
 
@@ -66,6 +68,9 @@ class CppMethod(ForwardWrapperBase):
           - False: Not deprecated
           - True: Deprecated
           - "message": Deprecated, and deprecation warning contains the given message
+
+        @param throw: list of C++ exceptions that the function may throw
+        @type throw: list of L{CppException}
         """
         self.stack_where_defined = traceback.extract_stack()
 
@@ -113,6 +118,10 @@ class CppMethod(ForwardWrapperBase):
             "return NULL;", "return NULL;",
             unblock_threads=unblock_threads)
         self.deprecated = deprecated
+
+        for t in throw:
+            assert isinstance(t, CppException)
+        self.throw = list(throw)
 
     def set_helper_class(self, helper_class):
         "Set the C++ helper class, which is used for overriding virtual methods"
@@ -189,6 +198,12 @@ class CppMethod(ForwardWrapperBase):
             method = '%s::%s%s' % (class_.full_name, self.method_name, template_params)
         else:
             method = 'self->obj->%s%s' % (self.method_name, template_params)
+
+
+        if self.throw:
+            self.before_call.write_code('try\n{')
+            self.before_call.indent()
+
         if self.return_value.ctype == 'void':
             self.before_call.write_code(
                 '%s(%s);' %
@@ -202,6 +217,17 @@ class CppMethod(ForwardWrapperBase):
                 self.before_call.write_code(
                     'retval = %s(%s);' %
                     (method, ", ".join(self.call_params)))
+
+        if self.throw:
+            for exc in self.throw:
+                self.before_call.unindent()
+                self.before_call.write_code('} catch (%s const &exc) {' % exc.full_name)
+                self.before_call.indent()
+                self.before_call.write_cleanup()
+                self.before_call.write_code('PyErr_SetNone((PyObject *) %s);\nreturn NULL;' % exc.pytypestruct)
+            self.before_call.unindent()
+            self.before_call.write_code('}')
+
 
     def _before_return_hook(self):
         """hook that post-processes parameters and check for custodian=<n>
