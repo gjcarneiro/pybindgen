@@ -2,11 +2,7 @@
 Add container iteration powers to wrapped C++ classes
 """
 
-#import warnings
-
-from typehandlers.base import ForwardWrapperBase, \
-    ReturnValue, param_type_matcher, return_type_matcher
-
+from typehandlers.base import ForwardWrapperBase
 from typehandlers import codesink
 from pytypeobject import PyTypeObject
 import utils
@@ -66,26 +62,6 @@ class IterNextWrapper(ForwardWrapperBase):
         tmp_sink.flush_to(code_sink)
         code_sink.unindent()
         code_sink.writeln('}')
-
-
-# class ContainerTraits(object):
-#     def __init__(self, add_value_method, is_mapping=False):
-#         self.add_value_method = add_value_method
-#         self.is_mapping = is_mapping
-
-# container_traits_list = {
-#     'list': 		ContainerTraits(add_value_method='push_back'),
-#     'deque': 		ContainerTraits(add_value_method='push_back'),
-#     'queue': 		ContainerTraits(add_value_method='push'),
-#     'priority_queue':	ContainerTraits(add_value_method='push'),
-#     'vector': 		ContainerTraits(add_value_method='push_back'),
-#     'stack': 		ContainerTraits(add_value_method='push'),
-#     'set': 		ContainerTraits(add_value_method='insert'),
-#     'multiset': 	ContainerTraits(add_value_method='insert'),
-#     'hash_set':		ContainerTraits(add_value_method='insert'),
-#     'hash_multiset':	ContainerTraits(add_value_method='insert'),
-#     'map':		ContainerTraits(add_value_method='insert', is_mapping=True),
-# }
 
 
 class CppClassContainerTraits(object):
@@ -186,6 +162,8 @@ typedef struct {
         self.iter_pytype.slots.setdefault("tp_flags", ("Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_GC"))
         self.iter_pytype.slots.setdefault("typestruct", self.iter_pytypestruct)
         self.iter_pytype.slots.setdefault("tp_name", self.get_iter_python_full_name(module))
+        if docstring:
+            self.iter_pytype.slots.setdefault("tp_doc", '"%s"' % docstring)
         self.iter_pytype.generate(code_sink)
 
     def _get_iter_delete_code(self):
