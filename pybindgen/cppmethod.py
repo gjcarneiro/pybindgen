@@ -430,7 +430,7 @@ class CppConstructor(ForwardWrapperBase):
     wrapper is used as the python class __init__ method.
     """
 
-    def __init__(self, parameters, unblock_threads=None, visibility='public', deprecated=False):
+    def __init__(self, parameters, unblock_threads=None, visibility='public', deprecated=False, throw=()):
         """
         @param parameters: the constructor parameters
 
@@ -438,6 +438,10 @@ class CppConstructor(ForwardWrapperBase):
           - False: Not deprecated
           - True: Deprecated
           - "message": Deprecated, and deprecation warning contains the given message
+
+        @param throw: list of C++ exceptions that the constructor may throw
+        @type throw: list of L{CppException}
+
         """
         self.stack_where_defined = traceback.extract_stack()
         if unblock_threads is None:
@@ -456,6 +460,10 @@ class CppConstructor(ForwardWrapperBase):
         self.wrapper_base_name = None
         self.wrapper_actual_name = None
         self._class = None
+
+        for t in throw:
+            assert isinstance(t, CppException)
+        self.throw = list(throw)
 
     def clone(self):
         """Creates a semi-deep copy of this constructor wrapper.  The returned
@@ -482,6 +490,11 @@ class CppConstructor(ForwardWrapperBase):
         "virtual method implementation; do not call"
         if class_ is None:
             class_ = self._class
+
+        if self.throw:
+            self.before_call.write_code('try\n{')
+            self.before_call.indent()
+
         #assert isinstance(class_, CppClass)
         if class_.helper_class is None:
             class_.write_create_instance(self.before_call, "self->obj", ", ".join(self.call_params))
@@ -515,6 +528,17 @@ class CppConstructor(ForwardWrapperBase):
 
             self.before_call.unindent()
             self.before_call.write_code("}")
+
+        if self.throw:
+            for exc in self.throw:
+                self.before_call.unindent()
+                self.before_call.write_code('} catch (%s const &exc) {' % exc.full_name)
+                self.before_call.indent()
+                self.before_call.write_cleanup()
+                self.before_call.write_code('PyErr_SetNone((PyObject *) %s);\nreturn -1;' % exc.pytypestruct)
+            self.before_call.unindent()
+            self.before_call.write_code('}')
+
 
     def _before_return_hook(self):
         "hook that post-processes parameters and check for custodian=<n> CppClass parameters"

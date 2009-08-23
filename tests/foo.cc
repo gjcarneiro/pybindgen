@@ -458,3 +458,14 @@ ClassThatThrows::my_inverse_method (double x) throw (DomainError)
     return 1/x;
 }
 
+
+ClassThatThrows::ClassThatThrows (double x) throw (DomainError)
+{
+    if (x == 0)
+    {
+        DomainError ex;
+        ex.message = "value must be != 0";
+        throw ex;
+    }
+}
+

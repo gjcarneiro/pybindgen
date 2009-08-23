@@ -1046,8 +1046,11 @@ struct DomainError : public Error
 // returns 1/x, raises DomainError if x == 0
 double my_inverse_func (double x) throw (DomainError);
 
-struct ClassThatThrows
+class ClassThatThrows
 {
+public:
+    ClassThatThrows (double x) throw (DomainError);
+    
     // returns 1/x, raises DomainError if x == 0
     double my_inverse_method (double x) throw (DomainError);
 };

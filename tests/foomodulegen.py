@@ -500,7 +500,8 @@ int %s::custom_method_added_by_a_hook(int x)
     mod.add_function('my_inverse_func', 'double', [Parameter.new('double', 'x')],
                      throw=[DomainError])
 
-    ClassThatThrows = mod.add_struct('ClassThatThrows')
+    ClassThatThrows = mod.add_class('ClassThatThrows')
+    ClassThatThrows.add_constructor([Parameter.new('double', 'x')], throw=[DomainError])
     ClassThatThrows.add_method('my_inverse_method', 'double', [Parameter.new('double', 'x')],
                                throw=[DomainError])
 
