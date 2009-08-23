@@ -49,6 +49,7 @@ from function import Function, OverloadedFunction, CustomFunctionWrapper
 from typehandlers.base import CodeBlock, DeclarationsScope, ReturnValue, TypeHandler
 from typehandlers.codesink import MemoryCodeSink, CodeSink, FileCodeSink, NullCodeSink
 from cppclass import CppClass
+from cppexception import CppException
 from enum import Enum
 from container import Container
 from converter_functions import PythonToCConverter, CToPythonConverter
@@ -244,6 +245,7 @@ class ModuleBase(dict):
         self.functions = {} # name => OverloadedFunction
         self.classes = []
         self.containers = []
+        self.exceptions = []
         self.before_init = CodeBlock(error_return, self.declarations)
         self.after_init = CodeBlock(error_return, self.declarations,
                                     predecessor=self.before_init)
@@ -572,6 +574,21 @@ class ModuleBase(dict):
         self._add_container_obj(container)
         return container
 
+    def _add_exception_obj(self, exc):
+        assert isinstance(exc, CppException)
+        exc.module = self
+        exc.section = self.current_section
+        self.exceptions.append(exc)
+
+    def add_exception(self, *args, **kwargs):
+        """
+        Add a C++ exception to the module. See the documentation for
+        L{CppException.__init__} for information on accepted parameters.
+        """
+        exc = CppException(*args, **kwargs)
+        self._add_exception_obj(exc)
+        return exc
+
     def declare_one_time_definition(self, definition_name):
         """
         Internal helper method for code geneneration to coordinate
@@ -600,13 +617,15 @@ class ModuleBase(dict):
     def generate_forward_declarations(self, code_sink):
         """(internal) generate forward declarations for types"""
         assert not self._forward_declarations_declared
-        if self.classes or self.containers:
+        if self.classes or self.containers or self.exceptions:
             code_sink.writeln('/* --- forward declarations --- */')
             code_sink.writeln()
         for class_ in self.classes:
             class_.generate_forward_declarations(code_sink, self)
         for container in self.containers:
             container.generate_forward_declarations(code_sink, self)
+        for exc in self.exceptions:
+            exc.generate_forward_declarations(code_sink, self)
         ## recurse to submodules
         for submodule in self.submodules:
             submodule.generate_forward_declarations(code_sink)
@@ -726,6 +745,16 @@ class ModuleBase(dict):
                 sink, header_sink = out.get_code_sink_for_wrapper(container)
                 sink.writeln()
                 container.generate(sink, self)
+                sink.writeln()
+
+        ## generate the exceptions
+        if self.exceptions:
+            main_sink.writeln('/* --- exceptions --- */')
+            main_sink.writeln()
+            for exc in self.exceptions:
+                sink, header_sink = out.get_code_sink_for_wrapper(exc)
+                sink.writeln()
+                exc.generate(sink, self)
                 sink.writeln()
 
         # typedefs

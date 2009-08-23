@@ -6,6 +6,8 @@ from copy import copy
 
 from typehandlers.base import ForwardWrapperBase, ReturnValue
 from typehandlers import codesink
+from cppexception import CppException
+
 import overloading
 import settings
 import utils
@@ -18,7 +20,8 @@ class Function(ForwardWrapperBase):
     """
 
     def __init__(self, function_name, return_value, parameters, docstring=None, unblock_threads=None,
-                 template_parameters=(), custom_name=None, deprecated=False, foreign_cpp_namespace=None):
+                 template_parameters=(), custom_name=None, deprecated=False, foreign_cpp_namespace=None,
+                 throw=()):
         """
         @param function_name: name of the C function
         @param return_value: the function return value
@@ -38,6 +41,9 @@ class Function(ForwardWrapperBase):
         @param foreign_cpp_namespace: if set, the function is assumed to
         belong to the given C++ namespace, regardless of the C++
         namespace of the python module it will be added to.
+
+        @param throw: list of C++ exceptions that the function may throw
+        @type throw: list of L{CppException}
         """
         self.stack_where_defined = traceback.extract_stack()
 
@@ -73,6 +79,9 @@ class Function(ForwardWrapperBase):
         self.template_parameters = template_parameters
         self.custom_name = custom_name
         self.mangled_name = utils.get_mangled_name(function_name, self.template_parameters)
+        for t in throw:
+            assert isinstance(t, CppException)
+        self.throw = list(throw)
 
     def clone(self):
         """Creates a semi-deep copy of this function wrapper.  The returned
@@ -112,6 +121,10 @@ class Function(ForwardWrapperBase):
         else:
             template_params = ''
  
+        if self.throw:
+            self.before_call.write_code('try\n{')
+            self.before_call.indent()
+
         if self.return_value.ctype == 'void':
             self.before_call.write_code(
                 '%s%s%s(%s);' % (namespace, self.function_name, template_params,
@@ -126,6 +139,16 @@ class Function(ForwardWrapperBase):
                 self.before_call.write_code(
                     'retval = %s%s%s(%s);' % (namespace, self.function_name, template_params,
                                               ", ".join(self.call_params)))
+
+        if self.throw:
+            for exc in self.throw:
+                self.before_call.unindent()
+                self.before_call.write_code('} catch (%s const &exc) {' % exc.full_name)
+                self.before_call.indent()
+                self.before_call.write_cleanup()
+                self.before_call.write_code('PyErr_SetNone((PyObject *) %s);\nreturn NULL;' % exc.pytypestruct)
+            self.before_call.unindent()
+            self.before_call.write_code('}')
 
     def _before_return_hook(self):
         "hook that post-processes parameters and check for custodian=<n> CppClass parameters"

@@ -1032,4 +1032,20 @@ public:
     Iterator End () { return m_map.end (); }
 };
 
+
+struct Error
+{
+    std::string message;
+};
+
+struct DomainError : public Error
+{
+};    
+
+
+// returns 1/x, raises DomainError if x == 0
+double my_inverse_func (double x) throw (DomainError);
+
+
+
 #endif 	    /* !FOO_H_ */

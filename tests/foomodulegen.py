@@ -494,6 +494,12 @@ int %s::custom_method_added_by_a_hook(int x)
     MapLike.add_constructor([])
     MapLike.add_method('set', 'void', [Parameter.new('int', 'key'), Parameter.new('double', 'value')])
 
+    Error = mod.add_exception('Error')
+    DomainError = mod.add_exception('DomainError', parent=Error)
+
+    mod.add_function('my_inverse_func', 'double', [Parameter.new('double', 'x')],
+                     throw=[DomainError])
+
     
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):

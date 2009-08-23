@@ -1161,5 +1161,10 @@ class TestFoo(unittest.TestCase):
         l = list(i)
         self.assertEqual(l, [(1, 1.5), (2, 2.5), (3, 3.5)])
 
+    def test_function_exception(self):
+        y = foo.my_inverse_func(2)
+        self.assertEqual(y, 0.5)
+        self.assertRaises(foo.DomainError, foo.my_inverse_func, 0)
+
 if __name__ == '__main__':
     unittest.main()
