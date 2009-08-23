@@ -101,9 +101,11 @@ class CppException(object):
 
         if self.outer_class is None:
             module.after_init.write_code(
-                'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) &%s);' % (
-                self.python_name, self.pytypestruct))
+                'Py_INCREF((PyObject *) %s);\n'
+                'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) %s);' % (
+                self.pytypestruct, self.python_name, self.pytypestruct))
         else:
             module.after_init.write_code(
-                'PyDict_SetItemString((PyObject*) %s.tp_dict, (char *) \"%s\", (PyObject *) &%s);' % (
-                self.outer_class.pytypestruct, self.python_name, self.pytypestruct))
+                'Py_INCREF((PyObject *) %s);\n'
+                'PyDict_SetItemString((PyObject*) %s.tp_dict, (char *) \"%s\", (PyObject *) %s);' % (
+                self.pytypestruct, self.outer_class.pytypestruct, self.python_name, self.pytypestruct))
