@@ -17,7 +17,7 @@ class CppException(object):
         self.pytypestruct = None
 
     def __repr__(self):
-        return "<pybindgen.Container %r>" % self.full_name
+        return "<pybindgen.CppException %r>" % self.full_name
     
     def get_module(self):
         """Get the Module object this type belongs to"""

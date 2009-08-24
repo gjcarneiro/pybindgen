@@ -14,6 +14,7 @@ from typehandlers.base import ctypeparser
 from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
 from pygccxml.declarations.enumeration import enumeration_t
 from cppclass import CppClass, ReferenceCountingMethodsPolicy, FreeFunctionPolicy, ReferenceCountingFunctionsPolicy
+from cppexception import CppException
 from pygccxml.declarations import type_traits
 from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
@@ -145,10 +146,13 @@ def normalize_class_name(class_name, module_namespace):
 def _pygen_kwargs(kwargs):
     l = []
     for key, val in kwargs.iteritems():
-        if isinstance(val, CppClass):
+        if isinstance(val, (CppClass, CppException)):
             l.append("%s=root_module[%r]" % (key, utils.ascii(val.full_name)))
         else:
-            l.append("%s=%r" % (key, val))
+            if key == 'throw':
+                l.append("throw=[%s]" % (', '.join(["root_module[%r]" % utils.ascii(t.full_name) for t in val])))
+            else:
+                l.append("%s=%r" % (key, val))
     return l
 
 def _pygen_args_kwargs(args, kwargs):
@@ -181,7 +185,7 @@ class GccXmlTypeRegistry(object):
         self._root_ns_rx = re.compile(r"(^|\s)(::)")
     
     def class_registered(self, cpp_class):
-        assert isinstance(cpp_class, CppClass)
+        assert isinstance(cpp_class, (CppClass, CppException))
         self.ordered_classes.append(cpp_class)
 
 #     def get_type_traits(self, type_info):
@@ -741,6 +745,8 @@ pybindgen.settings.error_handler = ErrorHandler()
         for class_wrapper in self.type_registry.ordered_classes:
             if isinstance(class_wrapper.gccxml_definition, class_declaration_t):
                 continue # skip classes not fully defined
+            if isinstance(class_wrapper, CppException):
+                continue # exceptions cannot have methods (yet)
             pygen_sink =  self._get_pygen_sink_for_definition(class_wrapper.gccxml_definition)
             if pygen_sink:
                 register_methods_func = "register_%s_methods"  % (class_wrapper.mangled_full_name,)
@@ -770,6 +776,8 @@ pybindgen.settings.error_handler = ErrorHandler()
         for class_wrapper in self.type_registry.ordered_classes:
             if isinstance(class_wrapper.gccxml_definition, class_declaration_t):
                 continue # skip classes not fully defined
+            if isinstance(class_wrapper, CppException):
+                continue # exceptions cannot have methods (yet)
             register_methods_func = "register_%s_methods"  % (class_wrapper.mangled_full_name,)
 
             pygen_sink =  self._get_pygen_sink_for_definition(class_wrapper.gccxml_definition)
@@ -808,6 +816,7 @@ pybindgen.settings.error_handler = ErrorHandler()
         return self.module
 
     def _apply_class_annotations(self, cls, annotations, kwargs):
+        is_exception = False
         for name, value in annotations.iteritems():
             if name == 'allow_subclassing':
                 kwargs.setdefault('allow_subclassing', annotations_scanner.parse_boolean(value))
@@ -838,10 +847,11 @@ pybindgen.settings.error_handler = ErrorHandler()
                 kwargs.setdefault('custom_name', value)
             elif name == 'pygen_comment':
                 pass
+            elif name == 'exception':
+                is_exception = True
             else:
                 warnings.warn_explicit("Class annotation %r ignored" % name,
                                        AnnotationsWarning, cls.location.file_name, cls.location.line)
-                
         if isinstance(cls, class_t):
             if self._class_has_virtual_methods(cls) and not cls.bases:
                 kwargs.setdefault('allow_subclassing', True)
@@ -849,6 +859,9 @@ pybindgen.settings.error_handler = ErrorHandler()
             if not self._has_public_destructor(cls):
                 kwargs.setdefault('is_singleton', True)
                 #print >> sys.stderr, "##### class %s has no public destructor" % cls.decl_string
+
+        return is_exception
+                
 
     def _has_public_destructor(self, cls):
         for member in cls.get_members():
@@ -1067,7 +1080,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                                      % (operator.return_type.partial_decl_string,)))
                 continue
 
-            self._apply_class_annotations(cls, global_annotations, kwargs)
+            is_exception = self._apply_class_annotations(cls, global_annotations, kwargs)
 
             custom_template_class_name = None
             template_parameters = ()
@@ -1105,8 +1118,12 @@ pybindgen.settings.error_handler = ErrorHandler()
             if pygen_sink:
                 if 'pygen_comment' in global_annotations:
                     pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
-                pygen_sink.writeln("module.add_class(%s)" %
-                                   ", ".join([repr(cls_name)] + _pygen_kwargs(kwargs)))
+                if is_exception:
+                    pygen_sink.writeln("module.add_exception(%s)" %
+                                       ", ".join([repr(cls_name)] + _pygen_kwargs(kwargs)))
+                else:
+                    pygen_sink.writeln("module.add_class(%s)" %
+                                       ", ".join([repr(cls_name)] + _pygen_kwargs(kwargs)))
 
             ## detect use of unregistered container types: need to look at
             ## all parameters and return values of all functions in this namespace...
@@ -1131,7 +1148,10 @@ pybindgen.settings.error_handler = ErrorHandler()
                     # type.
                     self._containers_to_register.append((traits, type_info, None, name))
 
-            class_wrapper = module.add_class(cls_name, **kwargs)
+            if is_exception:
+                class_wrapper = module.add_exception(cls_name, **kwargs)
+            else:
+                class_wrapper = module.add_class(cls_name, **kwargs)
             #print >> sys.stderr, "<<<<<ADD CLASS>>>>> ", cls_name
 
             class_wrapper.gccxml_definition = cls
@@ -1587,12 +1607,15 @@ pybindgen.settings.error_handler = ErrorHandler()
                         warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
                                                % (key, val, member),
                                                AnnotationsWarning, member.location.file_name, member.location.line)
-
                 if isinstance(member, calldef.member_operator_t):
                     if member.symbol == '()':
                         kwargs['custom_name'] = '__call__'
                     else:
                         continue
+
+                throw = self._get_calldef_exceptions(member)
+                if throw:
+                    kwargs['throw'] = throw
 
                 ## --- pygen ---
                 return_type_spec = self.type_registry.lookup_return(member.return_type,
@@ -1746,6 +1769,10 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if member.access_type != 'public':
                     kwargs['visibility'] = member.access_type
 
+                throw = self._get_calldef_exceptions(member)
+                if throw:
+                    kwargs['throw'] = throw
+
                 kwargs_repr = _pygen_kwargs(kwargs)
                 if kwargs_repr:
                     kwargs_repr[0] = '\n' + 20*' '+ kwargs_repr[0]
@@ -1846,6 +1873,24 @@ pybindgen.settings.error_handler = ErrorHandler()
                 class_wrapper.add_copy_constructor()
                 pygen_sink.writeln("cls.add_copy_constructor()")
                 
+
+    def _get_calldef_exceptions(self, calldef):
+        retval = []
+        for decl in calldef.exceptions:
+            traits = ctypeparser.TypeTraits(normalize_name(decl.partial_decl_string))
+            if traits.type_is_reference:
+                name = str(traits.target)
+            else:
+                name = str(traits.ctype)
+            exc = self.type_registry.root_module.get(name, None)
+            if isinstance(exc, CppException):
+                retval.append(exc)
+            else:
+                warnings.warn_explicit("Thrown exception '%s' was not previously detected as an exception class."
+                                       " PyBindGen bug?"
+                                       % (normalize_name(decl.partial_decl_string)),
+                                       WrapperWarning, calldef.location.file_name, calldef.location.line)
+        return retval
 
 
     def scan_functions(self):
@@ -1970,6 +2015,10 @@ pybindgen.settings.error_handler = ErrorHandler()
                                            % (arg.type.partial_decl_string, arg.name, fun, ex),
                                            WrapperWarning, fun.location.file_name, fun.location.line)
                     raise
+
+            throw = self._get_calldef_exceptions(fun)
+            if throw:
+                kwargs['throw'] = throw
 
             arglist_repr = ("[" + ', '.join([_pygen_param(*arg)  for arg in argument_specs]) +  "]")
             retval_repr = _pygen_retval(*return_type_spec)

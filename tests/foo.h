@@ -1034,11 +1034,13 @@ public:
 
 
 struct Error
+// -#- exception -#-
 {
     std::string message;
 };
 
 struct DomainError : public Error
+// -#- exception -#-
 {
 };    
 

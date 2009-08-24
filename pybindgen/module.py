@@ -579,6 +579,7 @@ class ModuleBase(dict):
         exc.module = self
         exc.section = self.current_section
         self.exceptions.append(exc)
+        self.register_type(exc.name, exc.full_name, exc)
 
     def add_exception(self, *args, **kwargs):
         """
