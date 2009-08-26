@@ -1980,7 +1980,9 @@ static PyObject*\n%s(%s *self)
                 utils.call_with_error_handling(overload.generate, (code_sink,), {}, overload)
             except utils.SkipWrapper:
                 continue
-            if meth_name not in ['__call__']: # need to be converted to slots
+            # skip methods registered via special type slots, not method table
+            if meth_name not in ['__call__', "__len__",
+                                 "__getitem__", "__setitem__"]:
                 method_defs.append(overload.get_py_method_def(meth_name))
             code_sink.writeln()
         method_defs.extend(parent_caller_methods)
