@@ -303,13 +303,13 @@ class ParseTupleParameters(object):
         template = ['"']
         last_was_optional = False
         for (param_template, dummy,
-             dummy, optional) in self._parse_tuple_items:
-            if not (last_was_optional and optional or not last_was_optional):
-                raise ValueError("Error: optional parameter followed by a non-optional one"
-                                 " (debug: self._parse_tuple_parameters=%r)" % self._parse_tuple_items)
+             param_name, optional) in self._parse_tuple_items:
+            if last_was_optional and not optional:
+                raise ValueError("Error: optional parameter followed by a non-optional one (%r)"
+                                 " (debug: self._parse_tuple_parameters=%r)" % (param_name, self._parse_tuple_items))
             if not last_was_optional and optional:
                 template.append('|')
-            last_was_optional = optional
+                last_was_optional = True
             template.append(param_template)
         template.append('"')
         params = [''.join(template)]
