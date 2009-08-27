@@ -718,6 +718,8 @@ class CppClass(object):
 
         if right is None:
             right = self
+        elif isinstance(right, CppClass):
+            pass
         else:
             if isinstance(right, str):
                 right = utils.param(right, 'right')
