@@ -505,6 +505,14 @@ int %s::custom_method_added_by_a_hook(int x)
     ClassThatThrows.add_method('my_inverse_method', 'double', [Parameter.new('double', 'x')],
                                throw=[DomainError])
 
+    std_exception = mod.add_exception('exception', foreign_cpp_namespace='std')
+    mod.add_function('my_inverse_func2', 'double', [Parameter.new('double', 'x')],
+                     throw=[std_exception])
+    ClassThatThrows.add_method('my_inverse_method2', 'double', [Parameter.new('double', 'x')],
+                               throw=[std_exception])
+
+
+
     
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):

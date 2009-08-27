@@ -1176,5 +1176,17 @@ class TestFoo(unittest.TestCase):
         c = foo.ClassThatThrows(1)
         self.assertRaises(foo.DomainError, foo.ClassThatThrows, 0)
 
+
+    def test_function_exception2(self):
+        y = foo.my_inverse_func2(2)
+        self.assertEqual(y, 0.5)
+        self.assertRaises(foo.exception, foo.my_inverse_func2, 0)
+
+    def test_method_exception2(self):
+        c = foo.ClassThatThrows(1)
+        y = c.my_inverse_method2(2)
+        self.assertEqual(y, 0.5)
+        self.assertRaises(foo.exception, c.my_inverse_method2, 0)
+
 if __name__ == '__main__':
     unittest.main()

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string.h>
 #include <stdlib.h>
+#include <stdexcept>
 
 int print_something(const char *message)
 {
@@ -469,3 +470,23 @@ ClassThatThrows::ClassThatThrows (double x) throw (DomainError)
     }
 }
 
+
+double
+my_inverse_func2 (double x) throw (std::exception)
+{
+    if (x == 0)
+    {
+        throw std::runtime_error ("value must be != 0");
+    }
+    return 1/x;
+}
+
+double
+ClassThatThrows::my_inverse_method2 (double x) throw (std::exception)
+{
+    if (x == 0)
+    {
+        throw std::runtime_error ("value must be != 0");
+    }
+    return 1/x;
+}

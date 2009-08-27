@@ -5,7 +5,25 @@ import utils
 
 
 class CppException(object):
-    def __init__(self, name, parent=None, outer_class=None, custom_name=None):
+    def __init__(self, name, parent=None, outer_class=None, custom_name=None,
+                 foreign_cpp_namespace=None
+                 ):
+        """
+        @param name: exception class name
+        @param parent: optional parent class wrapper
+
+        @param custom_name: an alternative name to give to this exception class
+        at python-side; if omitted, the name of the class in the
+        python module will be the same name as the class in C++ (minus
+        namespace).
+
+        @param foreign_cpp_namespace: if set, the class is assumed to
+        belong to the given C++ namespace, regardless of the C++
+        namespace of the python module it will be added to.  For
+        instance, this can be useful to wrap std classes, like
+        std::ofstream, without having to create an extra python
+        submodule.
+        """
         self.name = name
         self.full_name = None
         self.parent = parent
@@ -15,7 +33,8 @@ class CppException(object):
         self.mangled_name = None
         self.mangled_full_name = None
         self.pytypestruct = None
-
+        self.foreign_cpp_namespace = foreign_cpp_namespace
+        
     def __repr__(self):
         return "<pybindgen.CppException %r>" % self.full_name
     
@@ -35,14 +54,18 @@ class CppException(object):
         prefix = settings.name_prefix.capitalize()
 
         if self.outer_class is None:
-            if self._module.cpp_namespace_prefix:
-                if self._module.cpp_namespace_prefix == '::':
-                    self.full_name = '::' + self.name
-                else:
-                    self.full_name = self._module.cpp_namespace_prefix + '::' + self.name
+            if self.foreign_cpp_namespace:
+                self.full_name = self.foreign_cpp_namespace + '::' + self.name
             else:
-                self.full_name = self.name
+                if self._module.cpp_namespace_prefix:
+                    if self._module.cpp_namespace_prefix == '::':
+                        self.full_name = '::' + self.name
+                    else:
+                        self.full_name = self._module.cpp_namespace_prefix + '::' + self.name
+                else:
+                    self.full_name = self.name
         else:
+            assert not self.foreign_cpp_namespace
             self.full_name = '::'.join([self.outer_class.full_name, self.name])
 
         def make_upper(s):
@@ -62,7 +85,7 @@ class CppException(object):
 
     def _get_python_name(self):
         if self.custom_name is None:
-            class_python_name = self.mangled_name
+            class_python_name = self.name
         else:
             class_python_name = self.custom_name
         return class_python_name

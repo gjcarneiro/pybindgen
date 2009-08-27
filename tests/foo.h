@@ -9,6 +9,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <exception>
 
 // Deprecation warnings look ugly and confusing; better to just
 // disable them and change this macro when we want to specifically
@@ -1047,6 +1048,7 @@ struct DomainError : public Error
 
 // returns 1/x, raises DomainError if x == 0
 double my_inverse_func (double x) throw (DomainError);
+double my_inverse_func2 (double x) throw (std::exception);
 
 class ClassThatThrows
 {
@@ -1055,6 +1057,7 @@ public:
     
     // returns 1/x, raises DomainError if x == 0
     double my_inverse_method (double x) throw (DomainError);
+    double my_inverse_method2 (double x) throw (std::exception);
 };
 
 

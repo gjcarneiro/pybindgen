@@ -37,8 +37,15 @@ def my_module_gen():
         include_paths=eval(sys.argv[2]),
         )
 
-    module_parser.parse([sys.argv[1]], includes=['"foo.h"'], pygen_sink=pygen, pygen_classifier=MyPygenClassifier(),
-                        gccxml_options=gccxml_options)
+    module_parser.parse_init([sys.argv[1]], includes=['"foo.h"'], pygen_sink=pygen, pygen_classifier=MyPygenClassifier(),
+                             gccxml_options=gccxml_options)
+    module = module_parser.module
+    module.add_exception('exception', foreign_cpp_namespace='std')
+    module_parser.scan_types()
+    module_parser.scan_methods()
+    module_parser.scan_functions()
+    module_parser.parse_finalize()
+
     for sect in pygen:
         sect.code_sink.file.close()
 

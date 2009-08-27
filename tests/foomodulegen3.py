@@ -23,6 +23,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 def my_module_gen():
     out = FileCodeSink(sys.stdout)
     root_module = foomodulegen_generated.module_init()
+    root_module.add_exception('exception', foreign_cpp_namespace='std')
 
     ## this is a very special case when we want to change the name of
     ## the python module to allow parallel testing of the same basic
