@@ -1181,12 +1181,22 @@ class TestFoo(unittest.TestCase):
         y = foo.my_inverse_func2(2)
         self.assertEqual(y, 0.5)
         self.assertRaises(foo.exception, foo.my_inverse_func2, 0)
+        try:
+            foo.my_inverse_func2(0)
+        except foo.exception, ex:
+            msg = str(ex)
+        self.assertEqual(msg, "value must be != 0")
 
     def test_method_exception2(self):
         c = foo.ClassThatThrows(1)
         y = c.my_inverse_method2(2)
         self.assertEqual(y, 0.5)
         self.assertRaises(foo.exception, c.my_inverse_method2, 0)
+        try:
+            c.my_inverse_method2(0)
+        except foo.exception, ex:
+            msg = str(ex)
+        self.assertEqual(msg, "value must be != 0")
 
 if __name__ == '__main__':
     unittest.main()

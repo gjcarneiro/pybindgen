@@ -224,7 +224,8 @@ class CppMethod(ForwardWrapperBase):
                 self.before_call.write_code('} catch (%s const &exc) {' % exc.full_name)
                 self.before_call.indent()
                 self.before_call.write_cleanup()
-                self.before_call.write_code('PyErr_SetNone((PyObject *) %s);\nreturn NULL;' % exc.pytypestruct)
+                exc.write_convert_to_python(self.before_call, 'exc')
+                self.before_call.write_code('return NULL;')
             self.before_call.unindent()
             self.before_call.write_code('}')
 
@@ -535,7 +536,8 @@ class CppConstructor(ForwardWrapperBase):
                 self.before_call.write_code('} catch (%s const &exc) {' % exc.full_name)
                 self.before_call.indent()
                 self.before_call.write_cleanup()
-                self.before_call.write_code('PyErr_SetNone((PyObject *) %s);\nreturn -1;' % exc.pytypestruct)
+                exc.write_convert_to_python(self.before_call, 'exc')
+                self.before_call.write_code('return -1;')
             self.before_call.unindent()
             self.before_call.write_code('}')
 

@@ -6,8 +6,7 @@ import utils
 
 class CppException(object):
     def __init__(self, name, parent=None, outer_class=None, custom_name=None,
-                 foreign_cpp_namespace=None
-                 ):
+                 foreign_cpp_namespace=None, message_rvalue=None):
         """
         @param name: exception class name
         @param parent: optional parent class wrapper
@@ -23,6 +22,13 @@ class CppException(object):
         instance, this can be useful to wrap std classes, like
         std::ofstream, without having to create an extra python
         submodule.
+
+        @param message_rvalue: if not None, this parameter is a string
+        that contains an rvalue C expression that evaluates to the
+        exception message.  The Python % operator will be used to
+        substitute %(EXC)s for the caught exception variable name.  The
+        rvalue expression must return a string of type "char const*",
+        a pointer owned by the exception instance.
         """
         self.name = name
         self.full_name = None
@@ -34,9 +40,18 @@ class CppException(object):
         self.mangled_full_name = None
         self.pytypestruct = None
         self.foreign_cpp_namespace = foreign_cpp_namespace
+        self.message_rvalue = message_rvalue
+
         
     def __repr__(self):
         return "<pybindgen.CppException %r>" % self.full_name
+
+    def write_convert_to_python(self, code_block, variable_name):
+        if self.message_rvalue is None:
+            code_block.write_code('PyErr_SetNone((PyObject *) %s);' % self.pytypestruct)
+        else:
+            code_block.write_code('PyErr_SetString((PyObject *) %s, %s);'
+                                  % (self.pytypestruct, (self.message_rvalue % dict(EXC=variable_name))))
     
     def get_module(self):
         """Get the Module object this type belongs to"""
