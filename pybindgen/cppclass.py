@@ -237,7 +237,12 @@ class CppHelperClass(object):
             overload.pystruct = self.class_.pystruct
             self.virtual_parent_callers[name] = overload
             assert self.class_ is not None
-        overload.add(parent_caller)
+
+        for existing in overload.wrappers:
+            if parent_caller.matches_signature(existing):
+                break # don't re-add already existing method
+        else:
+            overload.add(parent_caller)
 
     def add_custom_method(self, declaration, body=None):
         """
