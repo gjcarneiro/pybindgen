@@ -72,11 +72,6 @@ class CppClassContainerTraits(object):
         @param value_type: a ReturnValue of the element type: note,
         for mapping containers, value_type is a tuple with two
         ReturnValue's: (key, element).
-
-        @param container_type: a string with the type of container,
-        one of 'list', 'deque', 'queue', 'priority_queue', 'vector',
-        'stack', 'set', 'multiset', 'hash_set', 'hash_multiset', 'map'
-
         """
         self.cppclass = cppclass
         self.begin_method = begin_method
