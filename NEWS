@@ -1,3 +1,30 @@
+=== pybindgen 0.12 ===
+
+    - Now we can catch C++ exceptions and translate them into Python
+
+    - New API to add container iteration powers to wrapped C++ classes
+
+    - Unary minus operator support (J. Michael Owen)
+
+    - CppMethod: is_pure_virtual=True should imply is_virtual=True
+
+    - More polish for numeric operators with non-class right operand
+
+    - Virtual methods regressions fixed
+
+    - gccxmlparser: don't try to wrap private/protected operators
+
+    - MSVC compilation fix
+
+    - unsigned long type handlers (J. Michael Owen)
+
+    - tp_len/__len__ works now with overloaded methods (J. Michael Owen)
+
+    - Add foreign_cpp_namespace option to Function wrappers
+
+    - Misc. cleanup and bug fixes
+
+
 === pybindgen 0.11 ===
     - Generate code that supports GCC's -fvisibility=hidden
 
