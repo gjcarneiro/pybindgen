@@ -122,58 +122,17 @@ class OverloadedWrapper(object):
         conversion requirements.  The resulting list is stored as
         self.all_wrappers
         """
-        self.all_wrappers = []
-        for wrapper in self.wrappers:
-            self.all_wrappers.append(wrapper)
-            continue ### XXXX: implicit conversions are now handled
-                     ### differently; the code is embedded in
-                     ### CppClassParameter and CppClassRefParameter.
-
-#             if not self.enable_implicit_conversions:
-#                 continue
-#             ## add additional wrappers to support implicit conversion
-#             if not hasattr(wrapper, "clone"):
-#                 continue
-#             implicit_conversion_classes = []
-#             implicit_conversion_positions = []
-#             for pos, param in enumerate(wrapper.parameters):
-#                 if not isinstance(param, (CppClassParameter, CppClassRefParameter)):
-#                     continue
-#                 if isinstance(param, (CppClassRefParameter)) and not param.is_const:
-#                     continue
-#                 conversion_sources = param.cpp_class.get_all_implicit_conversions()
-#                 if conversion_sources:
-#                     conversion_sources.insert(0, param.cpp_class)
-#                     implicit_conversion_classes.append(conversion_sources)
-#                     implicit_conversion_positions.append(pos)
-#             if not implicit_conversion_classes:
-#                 continue
-#             ## Now generate the addition wrappers, with all possible
-#             ## combinations of implicit conversion source classes...
-#             combinations = vector_counter(implicit_conversion_classes)
-#             ## skip the first one, as it is the same as in the original wrapper
-#             combinations.next()
-#             for combination in combinations:
-#                 wrapper_clone = wrapper.clone()
-#                 for pos, cpp_class in zip(implicit_conversion_positions, combination):
-#                     ## now make this parameter handle a different C++ class
-#                     param = wrapper_clone.parameters[pos]
-#                     ref = (isinstance(param, CppClassRefParameter) and ' &' or '')
-#                     const = (param.is_const and 'const ' or '')
-#                     param.cpp_class = cpp_class
-#                     param.ctype = '%s%s%s' % (const, cpp_class.full_name, ref)
-#                 self.all_wrappers.append(wrapper_clone)
-                
+        self.all_wrappers = list(self.wrappers)
 
     def generate(self, code_sink):
         """
         Generate all the wrappers plus the 'aggregator' wrapper to a code sink.
         """
-
         self._normalize_py_method_flags()
         self._compute_all_wrappers()
-
-        if len(self.all_wrappers) == 1 \
+        if len(self.all_wrappers) == 0:
+            raise utils.SkipWrapper
+        elif len(self.all_wrappers) == 1 \
                 and not getattr(self.all_wrappers[0], 'NEEDS_OVERLOADING_INTERFACE', False):
             ## special case when there's only one wrapper; keep
             ## simple things simple
