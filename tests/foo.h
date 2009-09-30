@@ -70,6 +70,11 @@ public:
     bool is_initialized () const { return m_initialized; }
 
     virtual ~Foo() { Foo::instance_count--; }
+
+    static int add_sub (int a, int b=3, bool subtract=false)
+        {
+            return a+b;
+        }
 };
 
 inline std::ostream & operator << (std::ostream &os, Foo const &foo)

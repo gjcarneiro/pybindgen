@@ -1198,5 +1198,9 @@ class TestFoo(unittest.TestCase):
             msg = str(ex)
         self.assertEqual(msg, "value must be != 0")
 
+    def test_bug436154(self):
+        r = foo.Foo.add_sub(1, 2)
+        self.assertEqual(r, 3)
+
 if __name__ == '__main__':
     unittest.main()
