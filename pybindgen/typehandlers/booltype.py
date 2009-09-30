@@ -17,7 +17,7 @@ class BoolParam(Parameter):
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
         name = wrapper.declarations.declare_variable(self.ctype_no_const, self.name)
-        if self.default_value:
+        if self.default_value is None:
             py_name = wrapper.declarations.declare_variable('PyObject *', 'py_'+self.name)
         else:
             py_name = wrapper.declarations.declare_variable('PyObject *', 'py_'+self.name, 'NULL')
