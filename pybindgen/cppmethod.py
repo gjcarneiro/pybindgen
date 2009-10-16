@@ -136,8 +136,6 @@ class CppMethod(ForwardWrapperBase):
     def matches_signature(self, other):
         if self.mangled_name != other.mangled_name:
             return False
-        if self.return_value.ctype != other.return_value.ctype:
-            return False
         if len(self.parameters) != len(other.parameters):
             return False
         for param1, param2 in zip(self.parameters, other.parameters):
