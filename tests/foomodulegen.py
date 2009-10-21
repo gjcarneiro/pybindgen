@@ -516,17 +516,22 @@ int %s::custom_method_added_by_a_hook(int x)
     ClassThatThrows.add_method('my_inverse_method2', 'double', [Parameter.new('double', 'x')],
                                throw=[std_exception])
 
-
-
+    # https://bugs.launchpad.net/pybindgen/+bug/450255
+    ProtectedConstructor = mod.add_class('ProtectedConstructor')
+    ProtectedConstructor.add_constructor([])
+    ProtectedConstructor.add_constructor([Parameter.new('ProtectedConstructor&', 'c')], visibility='protected')
     
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):
         def __init__(self):
             super(MyErrorHandler, self).__init__()
             self.num_errors = 0
-        def handle_error(self, wrapper, exception, dummy_traceback_):
+        def handle_error(self, wrapper, exception, traceback_):
             print >> sys.stderr, "exception %s in wrapper %s" % (exception, wrapper)
             self.num_errors += 1
+            if 0: # verbose?
+                import traceback
+                traceback.print_tb(traceback_)
             return True
     pybindgen.settings.error_handler = MyErrorHandler()
 

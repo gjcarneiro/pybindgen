@@ -1066,4 +1066,16 @@ public:
 };
 
 
+// https://bugs.launchpad.net/pybindgen/+bug/450255
+class ProtectedConstructor
+{
+public:
+    ProtectedConstructor() {}
+protected:
+    // Not to be implemented
+    ProtectedConstructor(ProtectedConstructor&);
+    void operator=(ProtectedConstructor&);
+};
+
+
 #endif 	    /* !FOO_H_ */

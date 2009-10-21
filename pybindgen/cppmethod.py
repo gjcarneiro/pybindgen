@@ -553,12 +553,12 @@ class CppConstructor(ForwardWrapperBase):
         Returns the wrapper function name.
         """
         if self.visibility == 'private':
-            raise CodeGenerationError("Class %r has a private constructor ->"
-                                      " cannot generate a constructor for it" % self._class.full_name)
+            raise utils.SkipWrapper("Class %r has a private constructor ->"
+                                    " cannot generate a constructor for it" % self._class.full_name)
         elif self.visibility == 'protected':
             if self._class.helper_class is None:
-                raise CodeGenerationError("Class %r has a protected constructor and no helper class"
-                                          " -> cannot generate a constructor for it" % self._class.full_name)
+                raise utils.SkipWrapper("Class %r has a protected constructor and no helper class"
+                                        " -> cannot generate a constructor for it" % self._class.full_name)
 
         #assert isinstance(class_, CppClass)
         tmp_sink = codesink.MemoryCodeSink()

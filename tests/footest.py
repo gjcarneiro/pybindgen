@@ -1202,5 +1202,8 @@ class TestFoo(unittest.TestCase):
         r = foo.Foo.add_sub(1, 2)
         self.assertEqual(r, 3)
 
+    def test_bug450255(self):
+        c = foo.ProtectedConstructor()
+
 if __name__ == '__main__':
     unittest.main()
