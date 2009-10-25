@@ -1078,4 +1078,37 @@ protected:
 };
 
 
+
+template<typename ValueType>
+class property
+{
+private:
+    ValueType m_value;
+    
+public:
+    property<ValueType> ()
+    {
+    }
+
+    operator ValueType()
+
+    {
+        return m_value;
+    }
+
+    const ValueType &operator =(const ValueType &value)
+    {
+        m_value = value;
+        return value;
+    }
+};
+
+static inline std::string __property_inst()
+{
+    property<std::string> prop;
+    prop = std::string("foo");
+    return (std::string) prop;
+}
+
+
 #endif 	    /* !FOO_H_ */

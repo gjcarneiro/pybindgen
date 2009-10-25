@@ -1205,5 +1205,8 @@ class TestFoo(unittest.TestCase):
     def test_bug450255(self):
         c = foo.ProtectedConstructor()
 
+    def test_bug455689(self):
+        p = foo.Property__StdString()
+
 if __name__ == '__main__':
     unittest.main()

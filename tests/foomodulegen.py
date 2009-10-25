@@ -520,6 +520,9 @@ int %s::custom_method_added_by_a_hook(int x)
     ProtectedConstructor = mod.add_class('ProtectedConstructor')
     ProtectedConstructor.add_constructor([])
     ProtectedConstructor.add_constructor([Parameter.new('ProtectedConstructor&', 'c')], visibility='protected')
+
+    # https://bugs.launchpad.net/pybindgen/+bug/455689
+    property_std_string = mod.add_struct('property', template_parameters=['std::string'])
     
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):

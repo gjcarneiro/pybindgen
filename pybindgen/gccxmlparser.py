@@ -1068,10 +1068,14 @@ pybindgen.settings.error_handler = ErrorHandler()
                 target_type = type_traits.remove_declarated(operator.return_type)
                 if not isinstance(target_type, class_t):
                     continue
+                target_class_name = normalize_class_name(operator.return_type.partial_decl_string, '::')
                 try:
-                    dummy = root_module[normalize_class_name(operator.return_type.partial_decl_string, '::')]
+                    dummy = root_module[target_class_name]
                 except KeyError:
-                    ok = False
+                    if target_class_name not in [normalize_class_name(t.partial_decl_string, '::') for t in unregistered_classes]:
+                        ok = True # (lp:455689)
+                    else:
+                        ok = False
                     break
             else:
                 ok = True
@@ -1168,18 +1172,26 @@ pybindgen.settings.error_handler = ErrorHandler()
             ## scan for nested classes/enums
             self._scan_namespace_types(module, module_namespace, outer_class=class_wrapper)
 
+            # scan for implicit conversion casting operators
             for operator in cls.casting_operators(allow_empty=True):
                 target_type = type_traits.remove_declarated(operator.return_type)
                 if not isinstance(target_type, class_t):
                     continue
-                #other_class = type_registry.find_class(operator.return_type.decl_string, '::')
-                other_class = root_module[normalize_class_name(operator.return_type.partial_decl_string, '::')]
-                class_wrapper.implicitly_converts_to(other_class)
-                if pygen_sink:
-                    if 'pygen_comment' in global_annotations:
-                        pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
-                    pygen_sink.writeln("root_module[%r].implicitly_converts_to(root_module[%r])"
-                                       % (class_wrapper.full_name, other_class.full_name))
+                other_class_name = normalize_class_name(operator.return_type.partial_decl_string, '::')
+                try:
+                    other_class = root_module[other_class_name]
+                except KeyError:
+                    warnings.warn_explicit("Implicit conversion target type %s not registered"
+                                           % (other_class_name,),
+                                           WrapperWarning, operator.location.file_name,
+                                           operator.location.line)
+                else:
+                    class_wrapper.implicitly_converts_to(other_class)
+                    if pygen_sink:
+                        if 'pygen_comment' in global_annotations:
+                            pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
+                        pygen_sink.writeln("root_module[%r].implicitly_converts_to(root_module[%r])"
+                                           % (class_wrapper.full_name, other_class.full_name))
 
         # -- register containers
         if outer_class is None:
