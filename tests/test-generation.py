@@ -29,7 +29,8 @@ class MyReverseWrapper(typehandlers.base.ReverseWrapperBase):
         
 
 def test():
-    pybindgen.write_preamble(codesink.FileCodeSink(sys.stdout))
+    code_out = codesink.FileCodeSink(sys.stdout)
+    pybindgen.write_preamble(code_out)
     print
     print "#include <string>"
     print
@@ -52,7 +53,6 @@ public:
 ''')
 
     module = Module("foo")
-    code_out = codesink.FileCodeSink(sys.stdout)
 
     ## Register type handlers for the class
     Foo = cppclass.CppClass('Foo')

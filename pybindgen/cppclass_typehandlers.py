@@ -141,6 +141,7 @@ class CppClassParameter(CppClassParameterBase):
         if self.cpp_class.allow_subclassing:
             wrapper.before_call.write_code(
                 "%s->inst_dict = NULL;" % (self.py_name,))
+        wrapper.before_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (self.py_name,))
 
         self.cpp_class.write_create_instance(wrapper.before_call,
                                              "%s->obj" % self.py_name,
@@ -258,6 +259,7 @@ class CppClassRefParameter(CppClassParameterBase):
             if self.cpp_class.allow_subclassing:
                 wrapper.after_call.write_code(
                     "%s->inst_dict = NULL;" % (self.py_name,))
+            wrapper.after_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (self.py_name,))
 
             self.cpp_class.write_create_instance(wrapper.before_call,
                                                  "%s->obj" % self.py_name,
@@ -300,6 +302,7 @@ class CppClassRefParameter(CppClassParameterBase):
         if self.cpp_class.allow_subclassing:
             wrapper.before_call.write_code(
                 "%s->inst_dict = NULL;" % (self.py_name,))
+        wrapper.before_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (self.py_name,))
 
         if self.direction == Parameter.DIRECTION_IN:
             self.cpp_class.write_create_instance(wrapper.before_call,
@@ -380,6 +383,7 @@ class CppClassReturnValue(CppClassReturnValueBase):
         if self.cpp_class.allow_subclassing:
             wrapper.after_call.write_code(
                 "%s->inst_dict = NULL;" % (py_name,))
+        wrapper.after_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
 
         self.cpp_class.write_create_instance(wrapper.after_call,
                                              "%s->obj" % py_name,
@@ -402,6 +406,22 @@ class CppClassReturnValue(CppClassReturnValueBase):
         else:
             wrapper.after_call.write_code('%s = *%s->obj;' % (self.value, name))
     
+def _add_ward(wrapper, custodian, ward):
+    wards = wrapper.declarations.declare_variable(
+        'PyObject*', 'wards')
+    wrapper.after_call.write_code(
+        "%(wards)s = PyObject_GetAttrString(%(custodian)s, (char *) \"__wards__\");"
+        % vars())
+    wrapper.after_call.write_code(
+        "if (%(wards)s == NULL) {\n"
+        "    PyErr_Clear();\n"
+        "    %(wards)s = PyList_New(0);\n"
+        "    PyObject_SetAttrString(%(custodian)s, (char *) \"__wards__\", %(wards)s);\n"
+        "}" % vars())
+    wrapper.after_call.write_code("PyList_Append(%s, %s);" % (wards, ward))
+    wrapper.after_call.add_cleanup_code("Py_DECREF(%s);" % wards)
+
+
 
 class CppClassPtrParameter(CppClassParameterBase):
     "Class* handlers"
@@ -519,6 +539,11 @@ class CppClassPtrParameter(CppClassParameterBase):
                 wrapper.before_call.unindent()
                 wrapper.before_call.write_code("}")
 
+        if self.custodian is not None:
+            wrapper.after_call.write_code("%s->flags = (PyBindGenWrapperFlags) (%s->flags |"
+                                           " PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED);"
+                                           % (self.py_name, self.py_name))
+
 
     def convert_c_to_python(self, wrapper):
         """foo"""
@@ -564,6 +589,7 @@ class CppClassPtrParameter(CppClassParameterBase):
             if self.cpp_class.allow_subclassing:
                 wrapper.before_call.write_code(
                     "%s->inst_dict = NULL;" % (py_name,))
+            wrapper.before_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % py_name)
 
             ## Assign the C++ value to the Python wrapper
             if self.transfer_ownership:
@@ -680,24 +706,6 @@ class CppClassPtrParameter(CppClassParameterBase):
             wrapper.build_params.add_parameter("N", [py_name])
             
 
-
-def _add_ward(wrapper, custodian, ward):
-    wards = wrapper.declarations.declare_variable(
-        'PyObject*', 'wards')
-    wrapper.after_call.write_code(
-        "%(wards)s = PyObject_GetAttrString(%(custodian)s, (char *) \"__wards__\");"
-        % vars())
-    wrapper.after_call.write_code(
-        "if (%(wards)s == NULL) {\n"
-        "    PyErr_Clear();\n"
-        "    %(wards)s = PyList_New(0);\n"
-        "    PyObject_SetAttrString(%(custodian)s, (char *) \"__wards__\", %(wards)s);\n"
-        "}" % vars())
-    wrapper.after_call.write_code("PyList_Append(%s, %s);" % (wards, ward))
-    wrapper.after_call.add_cleanup_code("Py_DECREF(%s);" % wards)
-
-
-
 class CppClassPtrReturnValue(CppClassReturnValueBase):
     "Class* return handler"
     CTYPES = []
@@ -797,6 +805,12 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             if self.cpp_class.allow_subclassing:
                 wrapper.after_call.write_code(
                     "%s->inst_dict = NULL;" % (py_name,))
+            if self.custodian is None:
+                wrapper.after_call.write_code(
+                    "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
+            else:
+                wrapper.after_call.write_code(
+                    "%s->flags = PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED;" % (py_name,))
 
             ## Assign the C++ value to the Python wrapper
             if self.caller_owns_return:

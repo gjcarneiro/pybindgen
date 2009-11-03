@@ -625,6 +625,7 @@ class CppFunctionAsConstructor(CppConstructor):
         ## FIXME: check caller_owns_return in self.function_return_value
         self.before_call.write_code("self->obj = %s(%s);" %
                                     (self.c_function_name, ", ".join(self.call_params)))
+        self.before_call.write_code("self->flags = PYBINDGEN_WRAPPER_FLAG_NONE;")
 
 
 class CppOverloadedConstructor(overloading.OverloadedWrapper):

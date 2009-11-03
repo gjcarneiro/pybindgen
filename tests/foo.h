@@ -245,6 +245,7 @@ private:
     Zbr *m_internal_zbr;
 
     PyObject *m_pyobject;
+    Foobar *m_foobar;
 
     SomeObject ();
 
@@ -426,16 +427,19 @@ public:
 
     // -#- @return(custodian=0) -#-
     Foobar* get_foobar_with_self_as_custodian () {
-        return new Foobar;
+        if (m_foobar == NULL) {
+            m_foobar = new Foobar;
+        }
+        return m_foobar;
     }
-    // -#- @return(custodian=1) -#-
-    Foobar* get_foobar_with_other_as_custodian (const SomeObject *other) {
-        other++;
-        return new Foobar;
+    // -#- @return(custodian=1); @other(transfer_ownership=false) -#-
+    Foobar* get_foobar_with_other_as_custodian (SomeObject *other) {
+        return other->get_foobar_with_self_as_custodian ();
     }
     // -#- @foobar(custodian=0) -#-
     void set_foobar_with_self_as_custodian (Foobar *foobar) {
-        foobar++;
+        delete m_foobar;
+        m_foobar = foobar;
     }
 };
 
@@ -496,13 +500,13 @@ namespace xpto
     std::string get_foo_datum(FooXpto const &foo);
 }
 
-// -#- @return(custodian=1) -#-
-Foobar* get_foobar_with_other_as_custodian(const SomeObject *other);
+// -#- @return(custodian=1); @other(transfer_ownership=false) -#-
+Foobar* get_foobar_with_other_as_custodian(SomeObject *other);
 
 // -#- @return(caller_owns_return=true) -#-
 Foobar* create_new_foobar();
-// -#- @foobar(custodian=2) -#-
-void set_foobar_with_other_as_custodian(Foobar *foobar, const SomeObject *other);
+// -#- @foobar(custodian=2); @other(transfer_ownership=false) -#-
+void set_foobar_with_other_as_custodian(Foobar *foobar, SomeObject *other);
 // -#- @foobar(custodian=-1); @return(caller_owns_return=true) -#-
 SomeObject * set_foobar_with_return_as_custodian(Foobar *foobar);
 

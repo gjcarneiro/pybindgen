@@ -1555,6 +1555,7 @@ typedef struct {
     PyObject_HEAD
     %s *obj;
     PyObject *inst_dict;
+    PyBindGenWrapperFlags flags:8;
 } %s;
     ''' % (self.full_name, self.pystruct))
 
@@ -1564,6 +1565,7 @@ typedef struct {
 typedef struct {
     PyObject_HEAD
     %s *obj;
+    PyBindGenWrapperFlags flags:8;
 } %s;
     ''' % (self.full_name, self.pystruct))
 
@@ -1962,6 +1964,7 @@ static PyObject*\n%s(%s *self)
         code_block.write_code("%s->obj = new %s(*self->obj);" % (py_copy, construct_name))
         if self.allow_subclassing:
             code_block.write_code("%s->inst_dict = NULL;" % py_copy)
+        code_block.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % py_copy)
 
         self.wrapper_registry.write_register_new_wrapper(code_block, py_copy, "%s->obj" % py_copy)
 
@@ -2030,7 +2033,9 @@ static PyObject*\n%s(%s *self)
                                               % self.full_name)
                 delete_code = ("    %s *tmp = self->obj;\n"
                                "    self->obj = NULL;\n"
-                               "    delete tmp;"
+                               "    if (!(self->flags&PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED)) {\n"
+                               "        delete tmp;\n"
+                               "    }"
                                % (self.full_name,))
         return delete_code
 

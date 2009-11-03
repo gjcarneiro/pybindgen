@@ -39,10 +39,13 @@ SomeObject::~SomeObject ()
         m_internal_zbr->Unref ();
         m_internal_zbr = NULL;
     }
+    delete m_foobar;
+    m_foobar = NULL;
 }
 
 SomeObject::SomeObject (const SomeObject &other)
-    : m_prefix (other.m_prefix)
+    : m_prefix (other.m_prefix),
+      m_foobar (NULL)
 {
     if (other.m_foo_ptr)
         m_foo_ptr = new Foo (*other.m_foo_ptr);
@@ -58,6 +61,7 @@ SomeObject::SomeObject (const SomeObject &other)
 
     m_internal_zbr = new Zbr;
     m_pyobject = NULL;
+    m_foobar = NULL;
     SomeObject::instance_count++;
 }
 
@@ -65,7 +69,8 @@ SomeObject::SomeObject (std::string const prefix)
     : m_prefix (prefix), m_foo_ptr (0),
       m_foo_shared_ptr (0), m_zbr (0),
       m_internal_zbr (new Zbr),
-      m_pyobject (NULL)
+      m_pyobject (NULL),
+      m_foobar (NULL)
 {
     SomeObject::instance_count++;
 }
@@ -74,7 +79,8 @@ SomeObject::SomeObject (int prefix_len)
     : m_prefix (prefix_len, 'X'), m_foo_ptr (0),
       m_foo_shared_ptr (0), m_zbr (0),
       m_internal_zbr (new Zbr),
-      m_pyobject (NULL)
+      m_pyobject (NULL),
+      m_foobar (NULL)
 {
     SomeObject::instance_count++;
 }
@@ -168,10 +174,9 @@ int Foo::instance_count = 0;
 int SomeObject::NestedClass::instance_count = 0;
 int Foobar::instance_count = 0;
 
-Foobar* get_foobar_with_other_as_custodian (const SomeObject *other)
+Foobar* get_foobar_with_other_as_custodian (SomeObject *other)
 {
-    other++;
-    return new Foobar;
+    return other->get_foobar_with_self_as_custodian();
 }
 
 Foobar* create_new_foobar()
@@ -179,16 +184,16 @@ Foobar* create_new_foobar()
     return new Foobar;
 }
 
-void set_foobar_with_other_as_custodian(Foobar *foobar, const SomeObject *other)
+void set_foobar_with_other_as_custodian(Foobar *foobar, SomeObject *other)
 {
-    foobar++;
-    other++;
+    other->set_foobar_with_self_as_custodian(foobar);
 }
 
 SomeObject * set_foobar_with_return_as_custodian(Foobar *foobar)
 {
-    foobar++;
-    return new SomeObject("xxx");
+    SomeObject *some = new SomeObject("xxx");
+    some->set_foobar_with_self_as_custodian(foobar);
+    return some;
 }
 
 std::string some_object_get_something_prefixed(const SomeObject *obj, const std::string something)
