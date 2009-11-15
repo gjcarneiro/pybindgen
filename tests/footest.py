@@ -355,13 +355,20 @@ class TestFoo(unittest.TestCase):
         SomeObject_count_before = foo.SomeObject.instance_count
         obj1 = foo.SomeObject("xxx")
         Foobar_count1 = foo.Foobar.instance_count
+
+        # get once
         foo1 = obj1.get_foobar_with_self_as_custodian()
         Foobar_count2 = foo.Foobar.instance_count
         self.assertEqual(Foobar_count2, Foobar_count1 + 1)
 
+        # get another time, the C++ object should be the same
+        foo2 = obj1.get_foobar_with_self_as_custodian()
+        Foobar_count3 = foo.Foobar.instance_count
+        self.assertEqual(Foobar_count3, Foobar_count2)
+
         ## now, deleting foo1 should keep the Foobar count the same, since
         ## obj1 is keeping it alive
-        del foo1
+        del foo1, foo2
         while gc.collect():
             pass
         self.assertEqual(foo.Foobar.instance_count, Foobar_count2)
