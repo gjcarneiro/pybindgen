@@ -1,5 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+
+DEBUG = False
+
 import sys
 import os.path
 import warnings
@@ -740,7 +743,10 @@ pybindgen.settings.error_handler = ErrorHandler()
 
     def _get_pygen_sink_for_definition(self, pygccxml_definition, with_section_precedence=False):
         if self._pygen_classifier is None:
-            return self._pygen
+            if with_section_precedence:
+                return (0, self._pygen)
+            else:
+                return self._pygen
         else:
             if isinstance(pygccxml_definition, declaration_t):
                 section = self._pygen_classifier.classify(pygccxml_definition)
