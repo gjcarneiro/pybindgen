@@ -89,6 +89,13 @@ def remove_const(type):
 ###
 
 
+## --- utility ---
+
+import pygccxml.declarations.type_traits
+def find_declaration_from_name(global_ns, declaration_name):
+    decl = pygccxml.declarations.type_traits.impl_details.find_value_type(global_ns, declaration_name)
+    return decl
+
 
 class ModuleParserWarning(Warning):
     """
@@ -437,6 +444,19 @@ class PygenClassifier(object):
         """
         raise NotImplementedError
 
+    def get_section_precedence(self, section_name):
+        """
+        This is a pure virtual method that may (or not) be implemented by
+        subclasses.  It will be called by PyBindGen for every API
+        definition, and should return the precedence of a section.
+        This is used when sections reflect 'modules' whose types must be
+        registered in a certain order.
+
+        @param section_name: the name of the section @returns: order
+        of precedence of the section.  The lower the number, the
+        sooner the section is to be registered.
+        """
+        raise NotImplementedError
 
 
 class ModuleParser(object):
@@ -466,7 +486,8 @@ class ModuleParser(object):
         self.whitelist_paths = []
         self.module_namespace = None # pygccxml module C++ namespace
         self.module = None # the toplevel pybindgen.module.Module instance (module being generated)
-        self.declarations = None # pygccxml.declarations.namespace.namespace_t (as returned by pygccxml.parser.parse)
+        self.declarations = None # (as returned by pygccxml.parser.parse)
+        self.global_ns = None
         self._types_scanned = False
         self._pre_scan_hooks = []
         self._post_scan_hooks = []
@@ -651,12 +672,14 @@ class ModuleParser(object):
             self.gccxml_config = parser.config_t(**gccxml_options)
 
         self.declarations = parser.parse(header_files, self.gccxml_config)
+        self.global_ns = declarations.get_global_namespace(self.declarations)
         if self.module_namespace_name == '::':
-            self.module_namespace = declarations.get_global_namespace(self.declarations)
+            self.module_namespace = self.global_ns
         else:
-            self.module_namespace = declarations.get_global_namespace(self.declarations).\
-                namespace(self.module_namespace_name)
+            self.module_namespace = self.global_ns.namespace(self.module_namespace_name)
+
         self.module = Module(self.module_name, cpp_namespace=self.module_namespace.decl_string)
+
         for inc in includes:
             self.module.add_include(inc)
 
@@ -715,7 +738,7 @@ pybindgen.settings.error_handler = ErrorHandler()
         else:
             return []
 
-    def _get_pygen_sink_for_definition(self, pygccxml_definition):
+    def _get_pygen_sink_for_definition(self, pygccxml_definition, with_section_precedence=False):
         if self._pygen_classifier is None:
             return self._pygen
         else:
@@ -723,11 +746,21 @@ pybindgen.settings.error_handler = ErrorHandler()
                 section = self._pygen_classifier.classify(pygccxml_definition)
                 for sect in self._pygen:
                     if sect is section or sect.name == section:
-                        return sect.code_sink
+                        sink = sect.code_sink
+                        break
                 else:
                     raise ValueError("CodeSink for section %r not available" % section)
             else:
-                return self._get_main_pygen_sink()
+                sink = self._get_main_pygen_sink()
+                section = '__main__'
+            if with_section_precedence:
+                try:
+                    prec = self._pygen_classifier.get_section_precedence(section)
+                except NotImplementedError:
+                    prec = 0
+                return (prec, sink)
+            else:
+                return sink
 
     def scan_types(self):
         self._stage = 'scan types'
@@ -998,17 +1031,21 @@ pybindgen.settings.error_handler = ErrorHandler()
             count = getattr(cls, "_pybindgen_postpone_count", 0)
             count += 1
             cls._pybindgen_postpone_count = count
-            if count >= 100:
+            if count >= 10:
                 raise AssertionError("The class %s registration is being postponed for "
                                      "the %ith time (last reason: %r, current reason: %r);"
                                      " something is wrong, please file a bug report"
                                      " (https://bugs.launchpad.net/pybindgen/+filebug) with a test case."
                                      % (cls, count, cls._pybindgen_postpone_reason, reason))
             cls._pybindgen_postpone_reason = reason
+            if DEBUG:
+                print >> sys.stderr, ">>> class %s is being postponed (%s)" % (str(cls), reason)
             unregistered_classes.append(cls)
 
         while unregistered_classes:
             cls = unregistered_classes.pop(0)
+            if DEBUG:
+                print >> sys.stderr, ">>> looking at class ", str(cls)
             typedef = None
 
             kwargs = {}
@@ -1109,6 +1146,26 @@ pybindgen.settings.error_handler = ErrorHandler()
                 cls_name = typedef.name
                 alias = '::'.join([module.cpp_namespace_prefix, cls.name])
 
+            template_parameters_decls = [find_declaration_from_name(self.global_ns, templ_param)
+                                         for templ_param in template_parameters]
+
+            if 0: # this is disabled due to ns3
+                ## if any template argument is a class that is not yet
+                ## registered, postpone scanning/registering the template
+                ## instantiation class until the template argument gets
+                ## registered.
+                postponed = False
+                for templ in template_parameters_decls:
+                    if isinstance(templ, class_t):
+                        try:
+                            self._registered_classes[templ]
+                        except KeyError:
+                            if templ in unregistered_classes:
+                                postpone_class(cls, "waiting for template argument class %s to be registered first" % templ)
+                                postponed = True
+                if postponed:
+                    continue
+
             if base_class_wrapper is not None:
                 kwargs["parent"] = base_class_wrapper
             if outer_class is not None:
@@ -1118,7 +1175,18 @@ pybindgen.settings.error_handler = ErrorHandler()
             if custom_template_class_name:
                 kwargs["custom_name"] = custom_template_class_name
 
-            pygen_sink = self._get_pygen_sink_for_definition(cls)
+            # given the pygen sinks for the class itself and the sinks
+            # for the template parameters, get the one with lowest
+            # precedence (the higher the number, the lowest the
+            # precedence).
+            pygen_sinks = [self._get_pygen_sink_for_definition(cls, with_section_precedence=True)]
+            for templ in template_parameters_decls:
+                if templ is not None:
+                    pygen_sinks.append(self._get_pygen_sink_for_definition(templ, with_section_precedence=True))
+            pygen_sinks.sort()
+            pygen_sink = pygen_sinks[-1][1]
+            del pygen_sinks
+
             if pygen_sink:
                 if 'pygen_comment' in global_annotations:
                     pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
