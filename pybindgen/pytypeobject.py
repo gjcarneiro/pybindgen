@@ -278,6 +278,7 @@ static PyObject*
 
     args = Py_BuildValue("(i)", py_i);
     result = %(method_name)s(py_self, args, NULL);
+    Py_DECREF(args);
     if (PyErr_ExceptionMatches(PyExc_IndexError) ||
         PyErr_ExceptionMatches(PyExc_StopIteration)) {
         Py_XDECREF(result);
