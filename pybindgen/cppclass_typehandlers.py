@@ -436,13 +436,18 @@ class CppClassPtrParameter(CppClassParameterBase):
         @param ctype: C type, normally 'MyClass*'
         @param name: parameter name
 
-        @param transfer_ownership: this parameter transfer the ownership of
-                              the pointed-to object to the called
-                              function; should be omitted if custodian
-                              is given.
-        @param custodian: the object (custodian) that is responsible for
-                     managing the life cycle of the parameter.
-                     Possible values are:
+        @param transfer_ownership: if True, the callee becomes
+                  responsible for freeing the object.  If False, the
+                  caller remains responsible for the object.  In
+                  either case, the original object pointer is passed,
+                  not a copy.  In case transfer_ownership=True, it is
+                  invalid to perform operations on the object after
+                  the call (calling any method will cause a null
+                  pointer dereference and crash the program).
+
+        @param custodian: if given, points to an object (custodian)
+                          that keeps the python wrapper for the
+                          parameter alive. Possible values are:
                        - None: no object is custodian;
                        - -1: the return value object;
                        - 0: the instance of the method in which
@@ -468,21 +473,16 @@ class CppClassPtrParameter(CppClassParameterBase):
         super(CppClassPtrParameter, self).__init__(
             ctype, name, direction=Parameter.DIRECTION_IN, is_const=is_const)
 
-        if custodian is None:
-            if transfer_ownership is None:
-                if self.type_traits.target_is_const:
-                    transfer_ownership = False
-                else:
-                    raise TypeConfigurationError("transfer_ownership parameter missing")
-            self.transfer_ownership = transfer_ownership
-        else:
-            if transfer_ownership is not None:
-                raise TypeConfigurationError("the transfer_ownership parameter should "
-                                             "not be given when there is a custodian")
-            self.transfer_ownership = False
+        if transfer_ownership is None and self.type_traits.target_is_const:
+            transfer_ownership = False
+
         self.custodian = custodian
+        self.transfer_ownership = transfer_ownership
         self.null_ok = null_ok
         self.default_value = default_value
+
+        if transfer_ownership is None:
+            raise TypeConfigurationError("Missing transfer_ownership option")
 
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
@@ -508,7 +508,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                     "%s && ((PyObject *) %s != Py_None) && !PyObject_IsInstance((PyObject *) %s, (PyObject *) &%s)"
                     % (self.py_name, self.py_name, self.py_name, self.cpp_class.pytypestruct),
 
-                    'PyErr_SetString(PyExc_TypeError, "Parameter %i must be %s");' % (num, self.cpp_class.name))
+                    'PyErr_SetString(PyExc_TypeError, "Parameter %i must be of type %s");' % (num, self.cpp_class.name))
 
                 wrapper.before_call.write_code("if (%(PYNAME)s) {\n"
                                                "    if ((PyObject *) %(PYNAME)s == Py_None)\n"
@@ -531,18 +531,20 @@ class CppClassPtrParameter(CppClassParameterBase):
         if self.transfer_ownership:
             if not isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
                 # if we transfer ownership, in the end we no longer own the object, so clear our pointer
-                wrapper.after_call.write_code('if (%s)\n    %s->obj = NULL;' % (self.py_name, self.py_name,))
+                wrapper.after_call.write_code('if (%s) {' % self.py_name)
+                wrapper.after_call.indent()
+                self.cpp_class.wrapper_registry.write_unregister_wrapper(wrapper.after_call,
+                                                                         '%s' % self.py_name,
+                                                                         '%s->obj' % self.py_name)
+                wrapper.after_call.write_code('%s->obj = NULL;' % self.py_name)
+                wrapper.after_call.unindent()
+                wrapper.after_call.write_code('}')
             else:
                 wrapper.before_call.write_code("if (%s) {" % self.py_name)
                 wrapper.before_call.indent()
                 self.cpp_class.memory_policy.write_incref(wrapper.before_call, "%s->obj" % self.py_name)
                 wrapper.before_call.unindent()
                 wrapper.before_call.write_code("}")
-
-        if self.custodian is not None:
-            wrapper.after_call.write_code("%s->flags = (PyBindGenWrapperFlags) (%s->flags |"
-                                           " PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED);"
-                                           % (self.py_name, self.py_name))
 
 
     def convert_c_to_python(self, wrapper):
@@ -712,15 +714,17 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
     SUPPORTS_TRANSFORMATIONS = True
     cpp_class = cppclass.CppClass('dummy') # CppClass instance
 
-    def __init__(self, ctype, caller_owns_return=None, custodian=None, is_const=False):
+    def __init__(self, ctype, caller_owns_return=None, custodian=None,
+                 is_const=False, reference_existing_object=None):
         """
         @param ctype: C type, normally 'MyClass*'
         @param caller_owns_return: if true, ownership of the object pointer
-                              is transferred to the caller; should be
-                              omitted when custodian is given.
-        @param custodian: the object (custodian) that becomes responsible for
-                     managing the life cycle of the return value.
-                     Possible values are:
+                              is transferred to the caller
+
+        @param custodian: bind the life cycle of the python wrapper
+                          for the return value object (ward) to that
+                          of the object indicated by this parameter
+                          (custodian). Possible values are:
                        - None: no object is custodian;
                        - 0: the instance of the method in which
                      the ReturnValue is being used will become the
@@ -728,27 +732,38 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                        - integer > 0: parameter number, starting at 1
                      (i.e. not counting the self/this parameter),
                      whose object will be used as custodian.
+
+        @param reference_existing_object: if true, ownership of the
+                  pointed-to object remains to be the caller's, but we
+                  do not make a copy. The callee gets a reference to
+                  the existing object, but is not responsible for
+                  freeing it.  Note that using this memory management
+                  style is dangerous, as it exposes the Python
+                  programmer to the possibility of keeping a reference
+                  to an object that may have been deallocated in the
+                  mean time.  Calling methods on such an object would
+                  lead to a memory error.
+
         @note: only arguments which are instances of C++ classes
         wrapped by PyBindGen can be used as custodians.
         """
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassPtrReturnValue, self).__init__(ctype, is_const=is_const)
-        if custodian is None:
-            if caller_owns_return is None:
-                if self.type_traits.target_is_const:
-                    caller_owns_return = False
-                else:
-                    raise TypeConfigurationError("caller_owns_return not given")
-        else:
-            if caller_owns_return is not None:
-                raise TypeConfigurationError("caller_owns_return should not given together with custodian")
+
+        if caller_owns_return is None:
+            # For "const Foo*", we assume caller_owns_return=False by default
+            if self.type_traits.target_is_const:
+                caller_owns_return = False
+
+        self.caller_owns_return = caller_owns_return
+        self.reference_existing_object = reference_existing_object
         self.custodian = custodian
-        if custodian is None:
-            self.caller_owns_return = caller_owns_return
-        else:
-            assert caller_owns_return is None
-            self.caller_owns_return = True
+
+        if self.caller_owns_return is None\
+                and self.reference_existing_object is None:
+            raise TypeConfigurationError("Either caller_owns_return or self.reference_existing_object must be given")
+
 
     def get_c_error_return(self): # only used in reverse wrappers
         """See ReturnValue.get_c_error_return"""
@@ -805,30 +820,36 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             if self.cpp_class.allow_subclassing:
                 wrapper.after_call.write_code(
                     "%s->inst_dict = NULL;" % (py_name,))
-            if self.custodian is None:
-                wrapper.after_call.write_code(
-                    "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
-            else:
-                wrapper.after_call.write_code(
-                    "%s->flags = PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED;" % (py_name,))
 
             ## Assign the C++ value to the Python wrapper
             if self.caller_owns_return:
                 wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
+                wrapper.after_call.write_code(
+                    "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
             else:
                 if not isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
-                    ## The PyObject creates its own copy
-                    self.cpp_class.write_create_instance(wrapper.after_call,
-                                                         "%s->obj" % py_name,
-                                                         '*'+value)
+                    if self.reference_existing_object:
+                        wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
+                        wrapper.after_call.write_code(
+                            "%s->flags = PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED;" % (py_name,))
+                    else:
+                        # The PyObject creates its own copy
+                        self.cpp_class.write_create_instance(wrapper.after_call,
+                                                             "%s->obj" % py_name,
+                                                             '*'+value)
+                        wrapper.after_call.write_code(
+                            "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
                 else:
                     ## The PyObject gets a new reference to the same obj
+                    wrapper.after_call.write_code(
+                        "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
                     self.cpp_class.memory_policy.write_incref(wrapper.after_call, value)
                     if self.type_traits.target_is_const:
                         wrapper.after_call.write_code("%s->obj = (%s*) (%s);" %
                                                       (py_name, self.cpp_class.full_name, value))
                     else:
                         wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
+
         ## closes def write_create_new_wrapper():
 
         if self.cpp_class.helper_class is None:

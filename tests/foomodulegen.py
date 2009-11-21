@@ -211,24 +211,28 @@ int %s::custom_method_added_by_a_hook(int x)
 
     ## custodian/ward tests
     SomeObject.add_method('get_foobar_with_self_as_custodian',
-                          ReturnValue.new('Foobar*', custodian=0), [])
+                          ReturnValue.new('Foobar*', custodian=0, reference_existing_object=True), [])
     SomeObject.add_method('get_foobar_with_other_as_custodian',
-                          ReturnValue.new('Foobar*', custodian=1),
+                          ReturnValue.new('Foobar*', custodian=1, reference_existing_object=True),
                           [Parameter.new('SomeObject*', 'other', transfer_ownership=False)])
     SomeObject.add_method('set_foobar_with_self_as_custodian', ReturnValue.new('void'),
-                          [Parameter.new('Foobar*', 'foobar', custodian=0)])
+                          [Parameter.new('Foobar*', 'foobar',
+                                         transfer_ownership=True, custodian=0)])
 
-    mod.add_function('get_foobar_with_other_as_custodian', ReturnValue.new('Foobar*', custodian=1),
+    mod.add_function('get_foobar_with_other_as_custodian',
+                     ReturnValue.new('Foobar*', custodian=1, reference_existing_object=True),
                      [Parameter.new('SomeObject*', 'other', transfer_ownership=False)])
 
     mod.add_function('create_new_foobar', ReturnValue.new('Foobar*', caller_owns_return=True), [])
 
     mod.add_function('set_foobar_with_other_as_custodian', ReturnValue.new('void'),
-                     [Parameter.new('Foobar*', 'foobar', custodian=2),
+                     [Parameter.new('Foobar*', 'foobar', transfer_ownership=True, custodian=2),
                       Parameter.new('SomeObject*', 'other', transfer_ownership=False)])
 
-    mod.add_function('set_foobar_with_return_as_custodian', ReturnValue.new('SomeObject*', caller_owns_return=True),
-                     [Parameter.new('Foobar*', 'foobar', custodian=-1)])
+    mod.add_function('set_foobar_with_return_as_custodian',
+                     ReturnValue.new('SomeObject*', caller_owns_return=True),
+                     [Parameter.new('Foobar*', 'foobar',
+                                    transfer_ownership=True, custodian=-1)])
 
 
     ## get/set recfcounted object Zbr

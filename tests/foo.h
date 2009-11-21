@@ -425,18 +425,18 @@ public:
 
     // custodian/ward tests
 
-    // -#- @return(custodian=0) -#-
+    // -#- @return(custodian=0, reference_existing_object=true) -#-
     Foobar* get_foobar_with_self_as_custodian () {
         if (m_foobar == NULL) {
             m_foobar = new Foobar;
         }
         return m_foobar;
     }
-    // -#- @return(custodian=1); @other(transfer_ownership=false) -#-
+    // -#- @return(custodian=1, reference_existing_object=true); @other(transfer_ownership=false) -#-
     Foobar* get_foobar_with_other_as_custodian (SomeObject *other) {
         return other->get_foobar_with_self_as_custodian ();
     }
-    // -#- @foobar(custodian=0) -#-
+    // -#- @foobar(custodian=0, transfer_ownership=True) -#-
     void set_foobar_with_self_as_custodian (Foobar *foobar) {
         delete m_foobar;
         m_foobar = foobar;
@@ -500,14 +500,14 @@ namespace xpto
     std::string get_foo_datum(FooXpto const &foo);
 }
 
-// -#- @return(custodian=1); @other(transfer_ownership=false) -#-
+// -#- @return(custodian=1, reference_existing_object=true); @other(transfer_ownership=false) -#-
 Foobar* get_foobar_with_other_as_custodian(SomeObject *other);
 
 // -#- @return(caller_owns_return=true) -#-
 Foobar* create_new_foobar();
-// -#- @foobar(custodian=2); @other(transfer_ownership=false) -#-
+// -#- @foobar(custodian=2, transfer_ownership=true); @other(transfer_ownership=false) -#-
 void set_foobar_with_other_as_custodian(Foobar *foobar, SomeObject *other);
-// -#- @foobar(custodian=-1); @return(caller_owns_return=true) -#-
+// -#- @foobar(custodian=-1, transfer_ownership=true); @return(caller_owns_return=true) -#-
 SomeObject * set_foobar_with_return_as_custodian(Foobar *foobar);
 
 class SingletonClass
