@@ -418,7 +418,9 @@ def _add_ward(wrapper, custodian, ward):
         "    %(wards)s = PyList_New(0);\n"
         "    PyObject_SetAttrString(%(custodian)s, (char *) \"__wards__\", %(wards)s);\n"
         "}" % vars())
-    wrapper.after_call.write_code("PyList_Append(%s, %s);" % (wards, ward))
+    wrapper.after_call.write_code(
+        "if (!PySequence_Contains(%(wards)s, %(ward)s))\n"
+        "    PyList_Append(%(wards)s, %(ward)s);" % dict(wards=wards, ward=ward))
     wrapper.after_call.add_cleanup_code("Py_DECREF(%s);" % wards)
 
 
