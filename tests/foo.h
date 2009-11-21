@@ -787,8 +787,14 @@ public:
     
     std::set<float> m_floatSet;
 
-    TestContainer () { m_floatSet.insert (1.0); m_floatSet.insert (2.0); m_floatSet.insert (3.0); }
-    virtual ~TestContainer () {}
+    TestContainer () : m_vec (NULL) {
+        m_floatSet.insert (1.0);
+        m_floatSet.insert (2.0);
+        m_floatSet.insert (3.0);
+    }
+    virtual ~TestContainer () {
+        delete m_vec;
+    }
 
     virtual SimpleStructList get_simple_list ();
     virtual int set_simple_list (SimpleStructList list);
