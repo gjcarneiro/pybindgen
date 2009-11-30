@@ -778,6 +778,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         value = self.transformation.untransform(
             self, wrapper.declarations, wrapper.after_call, self.value)
         
+        # if value is NULL, return None
         wrapper.after_call.write_code("if (!(%s)) {\n"
                                       "    Py_INCREF(Py_None);\n"
                                       "    return Py_None;\n"
@@ -882,10 +883,14 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                 else:
                     wrapper.after_call.write_code("}")            
         else:
+            # since there is a helper class, check if this C++ object is an instance of that class
             wrapper.after_call.write_code("if (typeid(*(%s)) == typeid(%s))\n{"
                                           % (value, self.cpp_class.helper_class.name))
             wrapper.after_call.indent()
 
+            # yes, this is an instance of the helper class; we can get
+            # the existing python wrapper directly from the helper
+            # class...
             if self.type_traits.target_is_const:
                 const_cast_value = "const_cast<%s *>(%s) " % (self.cpp_class.full_name, value)
             else:
@@ -908,7 +913,11 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             wrapper.after_call.write_code("} else {") # if (typeid(*(%s)) == typeid(%s)) { ...
             wrapper.after_call.indent()
 
-            # creater new wrapper or reference existing one
+            # no, this is not an instance of the helper class, we may
+            # need to create a new wrapper, or reference existing one
+            # if the wrapper registry tells us there is one already.
+
+            # first check in the wrapper registry...
             try:
                 self.cpp_class.wrapper_registry.write_lookup_wrapper(
                     wrapper.after_call, self.cpp_class.pystruct, py_name, value)
@@ -919,11 +928,15 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             else:
                 wrapper.after_call.write_code("if (%s == NULL) {" % py_name)
                 wrapper.after_call.indent()
+
+                # wrapper registry told us there is no wrapper for
+                # this instance => need to create new one
                 write_create_new_wrapper()
                 self.cpp_class.wrapper_registry.write_register_new_wrapper(
                     wrapper.after_call, py_name, "%s->obj" % py_name)
                 wrapper.after_call.unindent()
 
+                # handle ownership rules...
                 if self.caller_owns_return and \
                         isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
                     wrapper.after_call.write_code("} else {")
@@ -936,12 +949,13 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                 else:
                     wrapper.after_call.write_code("}")            
 
-
             wrapper.after_call.unindent()
             wrapper.after_call.write_code("}") # closes: if (typeid(*(%s)) == typeid(%s)) { ... } else { ...
-            
+
+        # return the value
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
         
+        # custodian/ward stuff...
         if self.custodian is None:
             pass
         elif self.custodian == 0:
