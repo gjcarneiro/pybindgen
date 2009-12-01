@@ -550,10 +550,70 @@ class CppClassReturnValue(CppClassReturnValueBase):
         py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
         self.py_name = py_name
+        if self.cpp_class.allow_subclassing:
+            new_func = 'PyObject_GC_New'
+        else:
+            new_func = 'PyObject_New'
+        wrapper.after_call.write_code(
+            "%s = %s(%s, %s);" %
+            (py_name, new_func, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+        if self.cpp_class.allow_subclassing:
+            wrapper.after_call.write_code(
+                "%s->inst_dict = NULL;" % (py_name,))
+        wrapper.after_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
 
-        if self.reference_existing_object:
+        self.cpp_class.write_create_instance(wrapper.after_call,
+                                             "%s->obj" % py_name,
+                                             self.value)
+        self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.after_call, py_name,
+                                                                   "%s->obj" % py_name)
+        #...
+        wrapper.build_params.add_parameter("N", [py_name], prepend=True)
+
+    def convert_python_to_c(self, wrapper):
+        """see ReturnValue.convert_python_to_c"""
+        if self.type_traits.type_is_reference:
+            raise NotSupportedError
+        name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
+        wrapper.parse_params.add_parameter(
+            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name])
+        if self.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
+            wrapper.after_call.write_code('%s %s = *%s->obj;' %
+                                          (self.cpp_class.full_name, self.value, name))
+        else:
+            wrapper.after_call.write_code('%s = *%s->obj;' % (self.value, name))
+
+
+class CppClassRefReturnValue(CppClassReturnValueBase):
+    "Class return handlers"
+    CTYPES = []
+    cpp_class = cppclass.CppClass('dummy') # CppClass instance
+    REQUIRES_ASSIGNMENT_CONSTRUCTOR = True
+
+    def __init__(self, ctype, is_const=False, caller_owns_return=False, reference_existing_object=False):
+        #override to fix the ctype parameter with namespace information
+        if ctype == self.cpp_class.name:
+            ctype = self.cpp_class.full_name
+        super(CppClassRefReturnValue, self).__init__(ctype, is_const=is_const)
+        self.reference_existing_object = reference_existing_object
+        self.caller_owns_return = caller_owns_return
+
+    def get_c_error_return(self): # only used in reverse wrappers
+        """See ReturnValue.get_c_error_return"""
+        if self.type_traits.type_is_reference:
+            raise NotSupportedError
+        return "return %s();" % (self.cpp_class.full_name,)
+
+    def convert_c_to_python(self, wrapper):
+        """see ReturnValue.convert_c_to_python"""
+        py_name = wrapper.declarations.declare_variable(
+            self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
+        self.py_name = py_name
+
+        if self.reference_existing_object or self.caller_owns_return:
             common_shared_object_return(self.value, py_name, self.cpp_class, wrapper.after_call,
-                                        self.type_traits, False,
+                                        self.type_traits, self.caller_owns_return,
                                         self.reference_existing_object,
                                         type_is_pointer=False)
         else:
@@ -591,6 +651,7 @@ class CppClassReturnValue(CppClassReturnValueBase):
                                           (self.cpp_class.full_name, self.value, name))
         else:
             wrapper.after_call.write_code('%s = *%s->obj;' % (self.value, name))
+
     
 def _add_ward(wrapper, custodian, ward):
     wards = wrapper.declarations.declare_variable(

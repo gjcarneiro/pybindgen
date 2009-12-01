@@ -657,7 +657,7 @@ class CppClass(object):
             except ValueError:
                 pass
 
-            class ThisClassRefReturn(CppClassReturnValue):
+            class ThisClassRefReturn(CppClassRefReturnValue):
                 """Register this C++ class as reference return"""
                 CTYPES = []
                 cpp_class = self
@@ -2231,7 +2231,7 @@ if (!PyObject_IsInstance((PyObject*) other, (PyObject*) &%s)) {
 
 
 from cppclass_typehandlers import CppClassParameter, CppClassRefParameter, \
-    CppClassReturnValue, CppClassPtrParameter, CppClassPtrReturnValue, CppClassParameterBase
+    CppClassReturnValue, CppClassRefReturnValue, CppClassPtrParameter, CppClassPtrReturnValue, CppClassParameterBase
 import function
 
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor, CppFunctionAsConstructor, \
