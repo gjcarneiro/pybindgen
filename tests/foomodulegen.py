@@ -527,6 +527,15 @@ int %s::custom_method_added_by_a_hook(int x)
 
     # https://bugs.launchpad.net/pybindgen/+bug/455689
     property_std_string = mod.add_struct('property', template_parameters=['std::string'])
+
+
+
+    Box = mod.add_class('Box')
+    Box.add_constructor([])
+    Box.add_method('getFoobarInternalPtr', ReturnValue.new('Foobar*', reference_existing_object=True), [])
+    Box.add_method('getFoobarInternalRef', ReturnValue.new('Foobar&', reference_existing_object=True), [])
+
+
     
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):

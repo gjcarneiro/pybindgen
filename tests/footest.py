@@ -1215,5 +1215,46 @@ class TestFoo(unittest.TestCase):
     def test_bug455689(self):
         p = foo.Property__StdString()
 
+    def test_reference_existing_object_ptr(self):
+        while gc.collect():
+            pass
+        Foobar_count1 = foo.Foobar.instance_count
+        box = foo.Box()
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+
+        f1 = box.getFoobarInternalPtr()
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+        f2 = box.getFoobarInternalPtr()
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+        self.assert_(f2 is f1)
+        
+        del f1, f2, box
+        
+        while gc.collect():
+            pass
+
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1)
+        
+
+    def test_reference_existing_object_ref(self):
+        while gc.collect():
+            pass
+        Foobar_count1 = foo.Foobar.instance_count
+        box = foo.Box()
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+
+        f1 = box.getFoobarInternalRef()
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+        f2 = box.getFoobarInternalRef()
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+        self.assert_(f2 is f1)
+        
+        del f1, f2, box
+        
+        while gc.collect():
+            pass
+
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1)
+
 if __name__ == '__main__':
     unittest.main()

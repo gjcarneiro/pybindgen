@@ -9,6 +9,182 @@ import cppclass
 ###
 ### ------------ C++ class parameter type handlers ------------
 ###
+
+
+def common_shared_object_return(value, py_name, cpp_class, code_block,
+                                type_traits, caller_owns_return,
+                                reference_existing_object, type_is_pointer):
+
+    if type_is_pointer:
+        value_value = '(*%s)' % value
+        value_ptr = value
+    else:
+        value_ptr = '(&%s)' % value
+        value_value = value
+    def write_create_new_wrapper():
+        """Code path that creates a new wrapper for the returned object"""
+
+        ## Find out what Python wrapper to use, in case
+        ## automatic_type_narrowing is active and we are not forced to
+        ## make a copy of the object
+        if (cpp_class.automatic_type_narrowing
+            and (caller_owns_return or isinstance(cpp_class.memory_policy,
+                                                  cppclass.ReferenceCountingPolicy))):
+
+            typeid_map_name = cpp_class.get_type_narrowing_root().typeid_map_name
+            wrapper_type = code_block.declare_variable(
+                'PyTypeObject*', 'wrapper_type', '0')
+            code_block.write_code(
+                '%s = %s.lookup_wrapper(typeid(%s), &%s);'
+                % (wrapper_type, typeid_map_name, value_value, cpp_class.pytypestruct))
+
+        else:
+
+            wrapper_type = '&'+cpp_class.pytypestruct
+
+        ## Create the Python wrapper object
+        if cpp_class.allow_subclassing:
+            new_func = 'PyObject_GC_New'
+        else:
+            new_func = 'PyObject_New'
+        code_block.write_code(
+            "%s = %s(%s, %s);" %
+            (py_name, new_func, cpp_class.pystruct, wrapper_type))
+
+        if cpp_class.allow_subclassing:
+            code_block.write_code(
+                "%s->inst_dict = NULL;" % (py_name,))
+
+        ## Assign the C++ value to the Python wrapper
+        if caller_owns_return:
+            code_block.write_code("%s->obj = %s;" % (py_name, value_ptr))
+            code_block.write_code(
+                "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
+        else:
+            if not isinstance(cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
+                if reference_existing_object:
+                    code_block.write_code("%s->obj = %s;" % (py_name, value_ptr))
+                    code_block.write_code(
+                        "%s->flags = PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED;" % (py_name,))
+                else:
+                    # The PyObject creates its own copy
+                    cpp_class.write_create_instance(code_block,
+                                                         "%s->obj" % py_name,
+                                                         value_value)
+                    code_block.write_code(
+                        "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
+            else:
+                ## The PyObject gets a new reference to the same obj
+                code_block.write_code(
+                    "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
+                cpp_class.memory_policy.write_incref(code_block, value_ptr)
+                if type_traits.target_is_const:
+                    code_block.write_code("%s->obj = (%s*) (%s);" %
+                                                  (py_name, cpp_class.full_name, value_ptr))
+                else:
+                    code_block.write_code("%s->obj = %s;" % (py_name, value_ptr))
+
+    ## closes def write_create_new_wrapper():
+
+    if cpp_class.helper_class is None:
+        try:
+            cpp_class.wrapper_registry.write_lookup_wrapper(
+                code_block, cpp_class.pystruct, py_name, value_ptr)
+        except NotSupportedError:
+            write_create_new_wrapper()
+            cpp_class.wrapper_registry.write_register_new_wrapper(
+                code_block, py_name, "%s->obj" % py_name)
+        else:
+            code_block.write_code("if (%s == NULL) {" % py_name)
+            code_block.indent()
+            write_create_new_wrapper()
+            cpp_class.wrapper_registry.write_register_new_wrapper(
+                code_block, py_name, "%s->obj" % py_name)
+            code_block.unindent()
+
+            # If we are already referencing the existing python wrapper,
+            # we do not need a reference to the C++ object as well.
+            if caller_owns_return and \
+                    isinstance(cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
+                code_block.write_code("} else {")
+                code_block.indent()
+                cpp_class.memory_policy.write_decref(code_block, value_ptr)
+                code_block.unindent()
+                code_block.write_code("}")
+            else:
+                code_block.write_code("}")            
+    else:
+        # since there is a helper class, check if this C++ object is an instance of that class
+        code_block.write_code("if (typeid(%s) == typeid(%s))\n{"
+                                      % (value_value, cpp_class.helper_class.name))
+        code_block.indent()
+
+        # yes, this is an instance of the helper class; we can get
+        # the existing python wrapper directly from the helper
+        # class...
+        if type_traits.target_is_const:
+            const_cast_value = "const_cast<%s *>(%s) " % (cpp_class.full_name, value_ptr)
+        else:
+            const_cast_value = value_ptr
+        code_block.write_code(
+            "%s = reinterpret_cast< %s* >(reinterpret_cast< %s* >(%s)->m_pyself);"
+            % (py_name, cpp_class.pystruct,
+               cpp_class.helper_class.name, const_cast_value))
+
+        code_block.write_code("%s->obj = %s;" % (py_name, const_cast_value))
+
+        # We are already referencing the existing python wrapper,
+        # so we do not need a reference to the C++ object as well.
+        if caller_owns_return and \
+                isinstance(cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
+            cpp_class.memory_policy.write_decref(code_block, value_ptr)
+
+        code_block.write_code("Py_INCREF(%s);" % py_name)
+        code_block.unindent()
+        code_block.write_code("} else {") # if (typeid(*(%s)) == typeid(%s)) { ...
+        code_block.indent()
+
+        # no, this is not an instance of the helper class, we may
+        # need to create a new wrapper, or reference existing one
+        # if the wrapper registry tells us there is one already.
+
+        # first check in the wrapper registry...
+        try:
+            cpp_class.wrapper_registry.write_lookup_wrapper(
+                code_block, cpp_class.pystruct, py_name, value_ptr)
+        except NotSupportedError:
+            write_create_new_wrapper()
+            cpp_class.wrapper_registry.write_register_new_wrapper(
+                code_block, py_name, "%s->obj" % py_name)
+        else:
+            code_block.write_code("if (%s == NULL) {" % py_name)
+            code_block.indent()
+
+            # wrapper registry told us there is no wrapper for
+            # this instance => need to create new one
+            write_create_new_wrapper()
+            cpp_class.wrapper_registry.write_register_new_wrapper(
+                code_block, py_name, "%s->obj" % py_name)
+            code_block.unindent()
+
+            # handle ownership rules...
+            if caller_owns_return and \
+                    isinstance(cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
+                code_block.write_code("} else {")
+                code_block.indent()
+                # If we are already referencing the existing python wrapper,
+                # we do not need a reference to the C++ object as well.
+                cpp_class.memory_policy.write_decref(code_block, value_ptr)
+                code_block.unindent()
+                code_block.write_code("}")
+            else:
+                code_block.write_code("}")            
+
+        code_block.unindent()
+        code_block.write_code("}") # closes: if (typeid(*(%s)) == typeid(%s)) { ... } else { ...
+
+
+
 class CppClassParameterBase(Parameter):
     "Base class for all C++ Class parameter handlers"
     CTYPES = []
@@ -356,11 +532,12 @@ class CppClassReturnValue(CppClassReturnValueBase):
     cpp_class = cppclass.CppClass('dummy') # CppClass instance
     REQUIRES_ASSIGNMENT_CONSTRUCTOR = True
 
-    def __init__(self, ctype, is_const=False):
+    def __init__(self, ctype, is_const=False, reference_existing_object=False):
         """override to fix the ctype parameter with namespace information"""
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassReturnValue, self).__init__(ctype, is_const=is_const)
+        self.reference_existing_object = reference_existing_object
 
     def get_c_error_return(self): # only used in reverse wrappers
         """See ReturnValue.get_c_error_return"""
@@ -373,23 +550,32 @@ class CppClassReturnValue(CppClassReturnValueBase):
         py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
         self.py_name = py_name
-        if self.cpp_class.allow_subclassing:
-            new_func = 'PyObject_GC_New'
-        else:
-            new_func = 'PyObject_New'
-        wrapper.after_call.write_code(
-            "%s = %s(%s, %s);" %
-            (py_name, new_func, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
-        if self.cpp_class.allow_subclassing:
-            wrapper.after_call.write_code(
-                "%s->inst_dict = NULL;" % (py_name,))
-        wrapper.after_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
 
-        self.cpp_class.write_create_instance(wrapper.after_call,
-                                             "%s->obj" % py_name,
-                                             self.value)
-        self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.after_call, py_name,
-                                                                   "%s->obj" % py_name)
+        if self.reference_existing_object:
+            common_shared_object_return(self.value, py_name, self.cpp_class, wrapper.after_call,
+                                        self.type_traits, False,
+                                        self.reference_existing_object,
+                                        type_is_pointer=False)
+        else:
+
+            if self.cpp_class.allow_subclassing:
+                new_func = 'PyObject_GC_New'
+            else:
+                new_func = 'PyObject_New'
+            wrapper.after_call.write_code(
+                "%s = %s(%s, %s);" %
+                (py_name, new_func, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+            if self.cpp_class.allow_subclassing:
+                wrapper.after_call.write_code(
+                    "%s->inst_dict = NULL;" % (py_name,))
+            wrapper.after_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
+
+            self.cpp_class.write_create_instance(wrapper.after_call,
+                                                 "%s->obj" % py_name,
+                                                 self.value)
+            self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.after_call, py_name,
+                                                                       "%s->obj" % py_name)
+        #...
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
     def convert_python_to_c(self, wrapper):
@@ -710,6 +896,8 @@ class CppClassPtrParameter(CppClassParameterBase):
             wrapper.build_params.add_parameter("N", [py_name])
             
 
+
+
 class CppClassPtrReturnValue(CppClassReturnValueBase):
     "Class* return handler"
     CTYPES = []
@@ -789,168 +977,10 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
         self.py_name = py_name
 
-        def write_create_new_wrapper():
-            """Code path that creates a new wrapper for the returned object"""
-
-            ## Find out what Python wrapper to use, in case
-            ## automatic_type_narrowing is active and we are not forced to
-            ## make a copy of the object
-            if (self.cpp_class.automatic_type_narrowing
-                and (self.caller_owns_return or isinstance(self.cpp_class.memory_policy,
-                                                           cppclass.ReferenceCountingPolicy))):
-
-                typeid_map_name = self.cpp_class.get_type_narrowing_root().typeid_map_name
-                wrapper_type = wrapper.declarations.declare_variable(
-                    'PyTypeObject*', 'wrapper_type', '0')
-                wrapper.after_call.write_code(
-                    '%s = %s.lookup_wrapper(typeid(*%s), &%s);'
-                    % (wrapper_type, typeid_map_name, value, self.cpp_class.pytypestruct))
-
-            else:
-
-                wrapper_type = '&'+self.cpp_class.pytypestruct
-
-            ## Create the Python wrapper object
-            if self.cpp_class.allow_subclassing:
-                new_func = 'PyObject_GC_New'
-            else:
-                new_func = 'PyObject_New'
-            wrapper.after_call.write_code(
-                "%s = %s(%s, %s);" %
-                (py_name, new_func, self.cpp_class.pystruct, wrapper_type))
-            self.py_name = py_name
-
-            if self.cpp_class.allow_subclassing:
-                wrapper.after_call.write_code(
-                    "%s->inst_dict = NULL;" % (py_name,))
-
-            ## Assign the C++ value to the Python wrapper
-            if self.caller_owns_return:
-                wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
-                wrapper.after_call.write_code(
-                    "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
-            else:
-                if not isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
-                    if self.reference_existing_object:
-                        wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
-                        wrapper.after_call.write_code(
-                            "%s->flags = PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED;" % (py_name,))
-                    else:
-                        # The PyObject creates its own copy
-                        self.cpp_class.write_create_instance(wrapper.after_call,
-                                                             "%s->obj" % py_name,
-                                                             '*'+value)
-                        wrapper.after_call.write_code(
-                            "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
-                else:
-                    ## The PyObject gets a new reference to the same obj
-                    wrapper.after_call.write_code(
-                        "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
-                    self.cpp_class.memory_policy.write_incref(wrapper.after_call, value)
-                    if self.type_traits.target_is_const:
-                        wrapper.after_call.write_code("%s->obj = (%s*) (%s);" %
-                                                      (py_name, self.cpp_class.full_name, value))
-                    else:
-                        wrapper.after_call.write_code("%s->obj = %s;" % (py_name, value))
-
-        ## closes def write_create_new_wrapper():
-
-        if self.cpp_class.helper_class is None:
-            try:
-                self.cpp_class.wrapper_registry.write_lookup_wrapper(
-                    wrapper.after_call, self.cpp_class.pystruct, py_name, value)
-            except NotSupportedError:
-                write_create_new_wrapper()
-                self.cpp_class.wrapper_registry.write_register_new_wrapper(
-                    wrapper.after_call, py_name, "%s->obj" % py_name)
-            else:
-                wrapper.after_call.write_code("if (%s == NULL) {" % py_name)
-                wrapper.after_call.indent()
-                write_create_new_wrapper()
-                self.cpp_class.wrapper_registry.write_register_new_wrapper(
-                    wrapper.after_call, py_name, "%s->obj" % py_name)
-                wrapper.after_call.unindent()
-
-                # If we are already referencing the existing python wrapper,
-                # we do not need a reference to the C++ object as well.
-                if self.caller_owns_return and \
-                        isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
-                    wrapper.after_call.write_code("} else {")
-                    wrapper.after_call.indent()
-                    self.cpp_class.memory_policy.write_decref(wrapper.after_call, value)
-                    wrapper.after_call.unindent()
-                    wrapper.after_call.write_code("}")
-                else:
-                    wrapper.after_call.write_code("}")            
-        else:
-            # since there is a helper class, check if this C++ object is an instance of that class
-            wrapper.after_call.write_code("if (typeid(*(%s)) == typeid(%s))\n{"
-                                          % (value, self.cpp_class.helper_class.name))
-            wrapper.after_call.indent()
-
-            # yes, this is an instance of the helper class; we can get
-            # the existing python wrapper directly from the helper
-            # class...
-            if self.type_traits.target_is_const:
-                const_cast_value = "const_cast<%s *>(%s) " % (self.cpp_class.full_name, value)
-            else:
-                const_cast_value = value
-            wrapper.after_call.write_code(
-                "%s = reinterpret_cast< %s* >(reinterpret_cast< %s* >(%s)->m_pyself);"
-                % (py_name, self.cpp_class.pystruct,
-                   self.cpp_class.helper_class.name, const_cast_value))
-
-            wrapper.after_call.write_code("%s->obj = %s;" % (py_name, const_cast_value))
-        
-            # We are already referencing the existing python wrapper,
-            # so we do not need a reference to the C++ object as well.
-            if self.caller_owns_return and \
-                    isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
-                self.cpp_class.memory_policy.write_decref(wrapper.after_call, value)
-
-            wrapper.after_call.write_code("Py_INCREF(%s);" % py_name)
-            wrapper.after_call.unindent()
-            wrapper.after_call.write_code("} else {") # if (typeid(*(%s)) == typeid(%s)) { ...
-            wrapper.after_call.indent()
-
-            # no, this is not an instance of the helper class, we may
-            # need to create a new wrapper, or reference existing one
-            # if the wrapper registry tells us there is one already.
-
-            # first check in the wrapper registry...
-            try:
-                self.cpp_class.wrapper_registry.write_lookup_wrapper(
-                    wrapper.after_call, self.cpp_class.pystruct, py_name, value)
-            except NotSupportedError:
-                write_create_new_wrapper()
-                self.cpp_class.wrapper_registry.write_register_new_wrapper(
-                    wrapper.after_call, py_name, "%s->obj" % py_name)
-            else:
-                wrapper.after_call.write_code("if (%s == NULL) {" % py_name)
-                wrapper.after_call.indent()
-
-                # wrapper registry told us there is no wrapper for
-                # this instance => need to create new one
-                write_create_new_wrapper()
-                self.cpp_class.wrapper_registry.write_register_new_wrapper(
-                    wrapper.after_call, py_name, "%s->obj" % py_name)
-                wrapper.after_call.unindent()
-
-                # handle ownership rules...
-                if self.caller_owns_return and \
-                        isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
-                    wrapper.after_call.write_code("} else {")
-                    wrapper.after_call.indent()
-                    # If we are already referencing the existing python wrapper,
-                    # we do not need a reference to the C++ object as well.
-                    self.cpp_class.memory_policy.write_decref(wrapper.after_call, value)
-                    wrapper.after_call.unindent()
-                    wrapper.after_call.write_code("}")
-                else:
-                    wrapper.after_call.write_code("}")            
-
-            wrapper.after_call.unindent()
-            wrapper.after_call.write_code("}") # closes: if (typeid(*(%s)) == typeid(%s)) { ... } else { ...
+        common_shared_object_return(value, py_name, self.cpp_class, wrapper.after_call,
+                                    self.type_traits, self.caller_owns_return,
+                                    self.reference_existing_object,
+                                    type_is_pointer=True)
 
         # return the value
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)

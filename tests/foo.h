@@ -178,6 +178,9 @@ void delete_stored_zbr (void);
 
 class Foobar
 {
+    Foobar (const Foobar &);
+    Foobar& operator= (const Foobar &);
+    
 public:
     static int instance_count;
 
@@ -1119,6 +1122,22 @@ static inline std::string __property_inst()
     prop = std::string("foo");
     return (std::string) prop;
 }
+
+
+
+class Box
+{
+    Foobar m_foobar;
+
+public:
+    Box () {}
+
+    // -#- @return(reference_existing_object=true) -#-
+    Foobar* getFoobarInternalPtr () { return &m_foobar; }
+    
+    // -#- @return(reference_existing_object=true) -#-
+    Foobar& getFoobarInternalRef () { return m_foobar; }
+};
 
 
 #endif 	    /* !FOO_H_ */
