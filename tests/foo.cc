@@ -173,6 +173,7 @@ Foo function_that_returns_foo()
 int Foo::instance_count = 0;
 int SomeObject::NestedClass::instance_count = 0;
 int Foobar::instance_count = 0;
+int Box::instance_count = 0;
 
 Foobar* get_foobar_with_other_as_custodian (SomeObject *other)
 {

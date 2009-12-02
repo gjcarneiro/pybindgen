@@ -47,7 +47,7 @@ def my_module_gen(out_file):
     Zoo.add_method('get_datum', ReturnValue.new('std::string'), [])
     Zoo.implicitly_converts_to(Foo)
 
-    Foobar = mod.add_class('Foobar')
+    Foobar = mod.add_class('Foobar', allow_subclassing=True)
     Foobar.add_static_attribute('instance_count', ReturnValue.new('int'))
 
 
@@ -532,8 +532,11 @@ int %s::custom_method_added_by_a_hook(int x)
 
     Box = mod.add_class('Box')
     Box.add_constructor([])
+    Box.add_static_attribute('instance_count', ReturnValue.new('int'))
     Box.add_method('getFoobarInternalPtr', ReturnValue.new('Foobar*', reference_existing_object=True), [])
     Box.add_method('getFoobarInternalRef', ReturnValue.new('Foobar&', reference_existing_object=True), [])
+    Box.add_method('getFoobarInternalPtr2', ReturnValue.new('Foobar*', return_internal_reference=True), [])
+    Box.add_method('getFoobarInternalRef2', ReturnValue.new('Foobar&', return_internal_reference=True), [])
 
 
     

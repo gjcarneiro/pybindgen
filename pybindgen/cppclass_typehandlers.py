@@ -532,12 +532,11 @@ class CppClassReturnValue(CppClassReturnValueBase):
     cpp_class = cppclass.CppClass('dummy') # CppClass instance
     REQUIRES_ASSIGNMENT_CONSTRUCTOR = True
 
-    def __init__(self, ctype, is_const=False, reference_existing_object=False):
+    def __init__(self, ctype, is_const=False):
         """override to fix the ctype parameter with namespace information"""
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassReturnValue, self).__init__(ctype, is_const=is_const)
-        self.reference_existing_object = reference_existing_object
 
     def get_c_error_return(self): # only used in reverse wrappers
         """See ReturnValue.get_c_error_return"""
@@ -591,12 +590,19 @@ class CppClassRefReturnValue(CppClassReturnValueBase):
     cpp_class = cppclass.CppClass('dummy') # CppClass instance
     REQUIRES_ASSIGNMENT_CONSTRUCTOR = True
 
-    def __init__(self, ctype, is_const=False, caller_owns_return=False, reference_existing_object=False):
+    def __init__(self, ctype, is_const=False, caller_owns_return=False, reference_existing_object=None,
+                 return_internal_reference=None):
         #override to fix the ctype parameter with namespace information
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassRefReturnValue, self).__init__(ctype, is_const=is_const)
         self.reference_existing_object = reference_existing_object
+
+        self.return_internal_reference = return_internal_reference
+        if self.return_internal_reference:
+            assert self.reference_existing_object is None
+            self.reference_existing_object = True
+
         self.caller_owns_return = caller_owns_return
 
     def get_c_error_return(self): # only used in reverse wrappers
@@ -947,7 +953,8 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
     cpp_class = cppclass.CppClass('dummy') # CppClass instance
 
     def __init__(self, ctype, caller_owns_return=None, custodian=None,
-                 is_const=False, reference_existing_object=None):
+                 is_const=False, reference_existing_object=None,
+                 return_internal_reference=None):
         """
         @param ctype: C type, normally 'MyClass*'
         @param caller_owns_return: if true, ownership of the object pointer
@@ -975,6 +982,12 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                   to an object that may have been deallocated in the
                   mean time.  Calling methods on such an object would
                   lead to a memory error.
+                  
+        @param return_internal_reference: like
+            reference_existing_object, but additionally adds
+            custodian/ward to bind the lifetime of the 'self' object
+            (instance the method is bound to) to the lifetime of the
+            return value.
 
         @note: only arguments which are instances of C++ classes
         wrapped by PyBindGen can be used as custodians.
@@ -990,6 +1003,10 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
 
         self.caller_owns_return = caller_owns_return
         self.reference_existing_object = reference_existing_object
+        self.return_internal_reference = return_internal_reference
+        if self.return_internal_reference:
+            assert self.reference_existing_object is None
+            self.reference_existing_object = True
         self.custodian = custodian
 
         if self.caller_owns_return is None\
@@ -1086,6 +1103,9 @@ def scan_custodians_and_wards(wrapper):
     custodian = getattr(wrapper.return_value, 'custodian', None)
     if custodian is not None:
         wrapper.add_custodian_and_ward(custodian, -1)
+
+    if getattr(wrapper.return_value, "return_internal_reference", False):
+        wrapper.add_custodian_and_ward(-1, 0)
 
 
 

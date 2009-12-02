@@ -1256,5 +1256,71 @@ class TestFoo(unittest.TestCase):
 
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1)
 
+
+    def test_reference_existing_object_ptr2(self):
+        while gc.collect():
+            pass
+        Foobar_count1 = foo.Foobar.instance_count
+        Box_count1 = foo.Box.instance_count;
+
+        box = foo.Box()
+        self.assertEqual(foo.Box.instance_count, Box_count1 + 1)
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+
+        f1 = box.getFoobarInternalPtr2()
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+        f2 = box.getFoobarInternalPtr2()
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+        self.assert_(f2 is f1)
+        
+        del f2, box
+        while gc.collect():
+            pass
+
+        # f1 is still alive, so box should still exist, in spite of having been locally unreferenced
+        self.assertEqual(foo.Box.instance_count, Box_count1 + 1)
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1 + 1)
+
+        # delete f1, it should cause box to be freeable
+        del f1
+        while gc.collect():
+            pass
+
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1)
+        self.assertEqual(foo.Box.instance_count, Box_count1)
+        
+
+    def test_reference_existing_object_ref2(self):
+        while gc.collect():
+            pass
+        Foobar_count1 = foo.Foobar.instance_count
+        Box_count1 = foo.Box.instance_count;
+
+        box = foo.Box()
+        self.assertEqual(foo.Box.instance_count, Box_count1 + 1)
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+
+        f1 = box.getFoobarInternalRef2()
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+        f2 = box.getFoobarInternalRef2()
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+        self.assert_(f2 is f1)
+        
+        del f2, box
+        while gc.collect():
+            pass
+
+        # f1 is still alive, so box should still exist, in spite of having been locally unreferenced
+        self.assertEqual(foo.Box.instance_count, Box_count1 + 1)
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1 + 1)
+
+        # delete f1, it should cause box to be freeable
+        del f1
+        while gc.collect():
+            pass
+
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1)
+        self.assertEqual(foo.Box.instance_count, Box_count1)
+
 if __name__ == '__main__':
     unittest.main()

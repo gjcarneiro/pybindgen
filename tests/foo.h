@@ -177,6 +177,7 @@ void delete_stored_zbr (void);
 
 
 class Foobar
+// -#- allow_subclassing=true -#-
 {
     Foobar (const Foobar &);
     Foobar& operator= (const Foobar &);
@@ -1130,13 +1131,23 @@ class Box
     Foobar m_foobar;
 
 public:
-    Box () {}
+    static int instance_count;
+
+    Box () { ++instance_count;}
+    virtual ~Box () { --instance_count;}
 
     // -#- @return(reference_existing_object=true) -#-
     Foobar* getFoobarInternalPtr () { return &m_foobar; }
     
     // -#- @return(reference_existing_object=true) -#-
     Foobar& getFoobarInternalRef () { return m_foobar; }
+
+    // -#- @return(return_internal_reference=true) -#-
+    Foobar* getFoobarInternalPtr2 () { return &m_foobar; }
+    
+    // -#- @return(return_internal_reference=true) -#-
+    Foobar& getFoobarInternalRef2 () { return m_foobar; }
+
 };
 
 

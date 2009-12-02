@@ -259,6 +259,8 @@ class GccXmlTypeRegistry(object):
                 kwargs['caller_owns_return'] = annotations_scanner.parse_boolean(value)
             elif name == 'reference_existing_object':
                 kwargs['reference_existing_object'] = annotations_scanner.parse_boolean(value)
+            elif name == 'return_internal_reference':
+                kwargs['return_internal_reference'] = annotations_scanner.parse_boolean(value)
             elif name == 'custodian':
                 kwargs['custodian'] = int(value)
             else:
