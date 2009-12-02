@@ -123,6 +123,24 @@ class CppMethod(ForwardWrapperBase):
             assert isinstance(t, CppException)
         self.throw = list(throw)
 
+        self.custodians_and_wards = [] # list of (custodian, ward, postcall)
+        cppclass_typehandlers.scan_custodians_and_wards(self)
+
+
+    def add_custodian_and_ward(self, custodian, ward, postcall=None):
+        """ TODO: document this """
+        if custodian == -1 or ward == -1:
+            if postcall is None:
+                postcall = True
+            if not postcall:
+                raise TypeConfigurationError("custodian/ward policy must be postcall "
+                                             "when a return value is involved")
+        else:
+            if postcall is None:
+                postcall = False
+        self.custodians_and_wards.append((custodian, ward, postcall))
+
+
     def set_helper_class(self, helper_class):
         "Set the C++ helper class, which is used for overriding virtual methods"
         self._helper_class = helper_class
@@ -227,11 +245,14 @@ class CppMethod(ForwardWrapperBase):
             self.before_call.unindent()
             self.before_call.write_code('}')
 
+    def _before_call_hook(self):
+        "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
+        cppclass_typehandlers.implement_parameter_custodians_precall(self)
 
     def _before_return_hook(self):
         """hook that post-processes parameters and check for custodian=<n>
         CppClass parameters"""
-        cppclass_typehandlers.implement_parameter_custodians(self)
+        cppclass_typehandlers.implement_parameter_custodians_postcall(self)
 
     def _get_pystruct(self):
         # When a method is used in the context of a helper class, we
@@ -464,6 +485,24 @@ class CppConstructor(ForwardWrapperBase):
             assert isinstance(t, CppException)
         self.throw = list(throw)
 
+        self.custodians_and_wards = [] # list of (custodian, ward, postcall)
+        cppclass_typehandlers.scan_custodians_and_wards(self)
+
+
+    def add_custodian_and_ward(self, custodian, ward, postcall=None):
+        """ TODO: document this """
+        if custodian == -1 or ward == -1:
+            if postcall is None:
+                postcall = True
+            if not postcall:
+                raise TypeConfigurationError("custodian/ward policy must be postcall "
+                                             "when a return value is involved")
+        else:
+            if postcall is None:
+                postcall = False
+        self.custodians_and_wards.append((custodian, ward, postcall))
+
+
     def clone(self):
         """Creates a semi-deep copy of this constructor wrapper.  The returned
         constructor wrapper clone contains copies of all parameters, so
@@ -539,10 +578,13 @@ class CppConstructor(ForwardWrapperBase):
             self.before_call.unindent()
             self.before_call.write_code('}')
 
+    def _before_call_hook(self):
+        "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
+        cppclass_typehandlers.implement_parameter_custodians_precall(self)
 
     def _before_return_hook(self):
         "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
-        cppclass_typehandlers.implement_parameter_custodians(self)
+        cppclass_typehandlers.implement_parameter_custodians_postcall(self)
 
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """

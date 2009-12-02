@@ -800,6 +800,14 @@ class ForwardWrapperBase(object):
         """
         raise NotImplementedError
 
+    def _before_call_hook(self):
+        """
+        Optional hook that lets subclasses add code after all
+        parameters are parsed, but before the C function/method call.
+        Subclasses may add code to self.before_call.
+        """
+        pass
+
     def _before_return_hook(self):
         """
         Optional hook that lets subclasses add code after all
@@ -854,6 +862,8 @@ class ForwardWrapperBase(object):
             else:
                 msg = "Deprecated"
             self.before_call.write_error_check( 'PyErr_Warn(PyExc_DeprecationWarning, (char *) "%s")' % msg)
+
+        self._before_call_hook()
 
         if self.unblock_threads:
             self.before_call.write_code(

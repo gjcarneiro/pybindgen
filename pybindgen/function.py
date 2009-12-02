@@ -82,6 +82,9 @@ class Function(ForwardWrapperBase):
         for t in throw:
             assert isinstance(t, CppException)
         self.throw = list(throw)
+        self.custodians_and_wards = [] # list of (custodian, ward, postcall)
+        cppclass_typehandlers.scan_custodians_and_wards(self)
+        
 
     def clone(self):
         """Creates a semi-deep copy of this function wrapper.  The returned
@@ -95,7 +98,23 @@ class Function(ForwardWrapperBase):
         func._module = self._module
         func.wrapper_base_name = self.wrapper_base_name
         func.wrapper_actual_name = self.wrapper_actual_name
+        func.throw = list(self.throw)
+        func.custodians_and_wards = list(self.custodians_and_wards)
+
         return func
+
+    def add_custodian_and_ward(self, custodian, ward, postcall=None):
+        """ TODO: document this """
+        if custodian == -1 or ward == -1:
+            if postcall is None:
+                postcall = True
+            if not postcall:
+                raise TypeConfigurationError("custodian/ward policy must be postcall "
+                                             "when a return value is involved")
+        else:
+            if postcall is None:
+                postcall = False
+        self.custodians_and_wards.append((custodian, ward, postcall))
 
     def get_module(self):
         """Get the Module object this function belongs to"""
@@ -151,9 +170,13 @@ class Function(ForwardWrapperBase):
             self.before_call.unindent()
             self.before_call.write_code('}')
 
+    def _before_call_hook(self):
+        "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
+        cppclass_typehandlers.implement_parameter_custodians_precall(self)
+
     def _before_return_hook(self):
         "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
-        cppclass_typehandlers.implement_parameter_custodians(self)
+        cppclass_typehandlers.implement_parameter_custodians_postcall(self)
 
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """

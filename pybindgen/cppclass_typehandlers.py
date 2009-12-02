@@ -653,25 +653,6 @@ class CppClassRefReturnValue(CppClassReturnValueBase):
             wrapper.after_call.write_code('%s = *%s->obj;' % (self.value, name))
 
     
-def _add_ward(wrapper, custodian, ward):
-    wards = wrapper.declarations.declare_variable(
-        'PyObject*', 'wards')
-    wrapper.after_call.write_code(
-        "%(wards)s = PyObject_GetAttrString(%(custodian)s, (char *) \"__wards__\");"
-        % vars())
-    wrapper.after_call.write_code(
-        "if (%(wards)s == NULL) {\n"
-        "    PyErr_Clear();\n"
-        "    %(wards)s = PyList_New(0);\n"
-        "    PyObject_SetAttrString(%(custodian)s, (char *) \"__wards__\", %(wards)s);\n"
-        "}" % vars())
-    wrapper.after_call.write_code(
-        "if (!PySequence_Contains(%(wards)s, %(ward)s))\n"
-        "    PyList_Append(%(wards)s, %(ward)s);" % dict(wards=wards, ward=ward))
-    wrapper.after_call.add_cleanup_code("Py_DECREF(%s);" % wards)
-
-
-
 class CppClassPtrParameter(CppClassParameterBase):
     "Class* handlers"
     CTYPES = []
@@ -1045,19 +1026,6 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
 
         # return the value
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
-        
-        # custodian/ward stuff...
-        if self.custodian is None:
-            pass
-        elif self.custodian == 0:
-            assert wrapper.class_.allow_subclassing
-            _add_ward(wrapper, '((PyObject *) self)', "((PyObject *) %s)" % py_name)
-        else:
-            assert self.custodian > 0
-            param = wrapper.parameters[self.custodian - 1]
-            assert param.cpp_class.allow_subclassing
-            assert isinstance(param, CppClassParameterBase)
-            _add_ward(wrapper, "((PyObject *) %s)" % param.py_name, "((PyObject *) %s)" % py_name)
     
 
     def convert_python_to_c(self, wrapper):
@@ -1095,33 +1063,72 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             warnings.warn("Returning shared pointers is dangerous!"
                           "  The C++ API should be redesigned "
                           "to avoid this situation.")
+
+
+##
+##  Core of the custodians-and-wards implementation
+##
+
+def scan_custodians_and_wards(wrapper):
+    """
+    Scans the return value and parameters for custodian/ward options,
+    converts them to add_custodian_and_ward API calls.  Wrappers that
+    implement custodian_and_ward are: CppMethod, Function, and
+    CppConstructor.
+    """
+    assert hasattr(wrapper, "add_custodian_and_ward")
+
+    for num, param in enumerate(wrapper.parameters):
+        custodian = getattr(param, 'custodian', None)
+        if custodian is  not None:
+            wrapper.add_custodian_and_ward(custodian, num+1)
+
+    custodian = getattr(wrapper.return_value, 'custodian', None)
+    if custodian is not None:
+        wrapper.add_custodian_and_ward(custodian, -1)
+
+
+
+def _add_ward(code_block, custodian, ward):
+    wards = code_block.declare_variable(
+        'PyObject*', 'wards')
+    code_block.write_code(
+        "%(wards)s = PyObject_GetAttrString(%(custodian)s, (char *) \"__wards__\");"
+        % vars())
+    code_block.write_code(
+        "if (%(wards)s == NULL) {\n"
+        "    PyErr_Clear();\n"
+        "    %(wards)s = PyList_New(0);\n"
+        "    PyObject_SetAttrString(%(custodian)s, (char *) \"__wards__\", %(wards)s);\n"
+        "}" % vars())
+    code_block.write_code(
+        "if (!PySequence_Contains(%(wards)s, %(ward)s))\n"
+        "    PyList_Append(%(wards)s, %(ward)s);" % dict(wards=wards, ward=ward))
+    code_block.add_cleanup_code("Py_DECREF(%s);" % wards)
             
 
-
-def implement_parameter_custodians(wrapper):
-    """
-    Generate the necessary code to implement the custodian=<N> option
-    of C++ class parameters.  It accepts a Forward Wrapper as argument.
-    """
-    assert isinstance(wrapper, ForwardWrapperBase)
-    for param in wrapper.parameters:
-        if not isinstance(param, CppClassPtrParameter):
-            continue
-        if param.custodian is None:
-            continue
-        if param.custodian == -1: # the custodian is the return value
-            assert wrapper.return_value.cpp_class.allow_subclassing
-            _add_ward(wrapper, "((PyObject *) %s)" % wrapper.return_value.py_name,
-                       "((PyObject *) %s)" % param.py_name)
-        elif param.custodian == 0: # the custodian is the method self
-            assert wrapper.class_.allow_subclassing
-            _add_ward(wrapper, "((PyObject *) self)",
-                       "((PyObject *) %s)" % param.py_name)
-        else: # the custodian is another parameter
-            assert param.custodian > 0
-            custodian_param = wrapper.parameters[param.custodian - 1]
-            assert custodian_param.cpp_class.allow_subclassing
-            _add_ward(wrapper, "((PyObject *) %s)" % custodian_param.py_name,
-                       "((PyObject *) %s)" % param.py_name)
+def _get_custodian_or_ward(wrapper, num):
+    if num == -1:
+        assert wrapper.return_value.py_name is not None
+        return "((PyObject *) %s)" % wrapper.return_value.py_name
+    elif num == 0:
+        return "((PyObject *) self)"
+    else:
+        assert wrapper.parameters[num-1].py_name is not None
+        return "((PyObject *) %s)" % wrapper.parameters[num-1].py_name
 
 
+def implement_parameter_custodians_precall(wrapper):
+    for custodian, ward, postcall in wrapper.custodians_and_wards:
+        if not postcall:
+            _add_ward(wrapper.before_call,
+                      _get_custodian_or_ward(wrapper, custodian),
+                      _get_custodian_or_ward(wrapper, ward))
+
+
+def implement_parameter_custodians_postcall(wrapper):
+    for custodian, ward, postcall in wrapper.custodians_and_wards:
+        if postcall:
+            _add_ward(wrapper.after_call,
+                      _get_custodian_or_ward(wrapper, custodian),
+                      _get_custodian_or_ward(wrapper, ward))
