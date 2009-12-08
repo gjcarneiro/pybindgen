@@ -11,7 +11,11 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   tutorial
+
    module
+   utils
+   cppclass
    gccxmlparser
 
    

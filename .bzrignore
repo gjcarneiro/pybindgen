@@ -5,3 +5,4 @@ pybindgen*.tar.bz2
 pybindgen/version.py
 pybindgen-google-code
 apidocs
+doc/_build

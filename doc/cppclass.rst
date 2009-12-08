@@ -1,10 +1,10 @@
 
 =======================
-module
+cppclass
 =======================
 
 
-.. automodule:: pybindgen.module
+.. automodule:: pybindgen.cppclass
     :members:
     :undoc-members:
     :show-inheritance:

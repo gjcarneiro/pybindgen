@@ -1,10 +1,10 @@
 
 =======================
-module
+utils
 =======================
 
 
-.. automodule:: pybindgen.module
+.. automodule:: pybindgen.utils
     :members:
     :undoc-members:
     :show-inheritance:

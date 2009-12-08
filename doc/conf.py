@@ -13,7 +13,7 @@
 
 import sys, os
 
-sys.path.insert(0, os.path.join('..', 'pybindgen'))
+sys.path.insert(0, os.path.join('..'))
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -41,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'PyBindGen'
-copyright = u'2009, Gustavo J. A. M. Carneiro'
+copyright = u'2008-2009, Gustavo Carneiro, Mathieu Lacage'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -150,7 +150,7 @@ html_static_path = ['_static']
 #html_split_index = False
 
 # If true, links to the reST sources are added to the pages.
-#html_show_sourcelink = True
+html_show_sourcelink = False
 
 # If true, an OpenSearch description file will be output, and all pages will
 # contain a <link> tag referring to it.  The value of this option must be the
@@ -176,7 +176,7 @@ htmlhelp_basename = 'PyBindGendoc'
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
   ('index', 'PyBindGen.tex', u'PyBindGen Documentation',
-   u'Gustavo J. A. M. Carneiro', 'manual'),
+   u'Gustavo J. A. M. Carneiro, Mathieu Lacage', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
