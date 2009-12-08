@@ -333,6 +333,7 @@ def generate_api_docs(ctx):
                                    "--pstat=build/foomodulegen.pstat",
                                "--pstat=build/hellomodulegen.pstat",
                                "--no-private",
+                               #"--graph-image-format=png",
                                ]).wait()
     if retval:
         Logs.error("epydoc returned with code %i" % retval)

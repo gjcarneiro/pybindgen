@@ -128,7 +128,34 @@ class CppMethod(ForwardWrapperBase):
 
 
     def add_custodian_and_ward(self, custodian, ward, postcall=None):
-        """ TODO: document this """
+        """Add a custodian/ward relationship to the method wrapper
+
+        A custodian/ward relationship is one where one object
+        (custodian) keeps a references to another object (ward), thus
+        keeping it alive.  When the custodian is destroyed, the
+        reference to the ward is released, allowing the ward to be
+        freed if no other reference to it is being kept by the user
+        code.  Please note that custodian/ward manages the lifecycle
+        of Python wrappers, not the C/C++ objects referenced by the
+        wrappers.  In most cases, the wrapper owns the C/C++ object,
+        and so the lifecycle of the C/C++ object is also managed by
+        this.  However, there are cases when a Python wrapper does not
+        own the underlying C/C++ object, only references it.
+
+        The custodian and ward objects are indicated by an integer
+        with the following meaning:
+          - C{-1}: the return value of the function
+          - C{0}: the instance of the method (self)
+          - value > 0: the nth parameter of the function, starting at 1
+
+        @parameter custodian: number of the object that assumes the role of custodian
+        @parameter ward: number of the object that assumes the role of ward
+
+        @parameter postcall: if True, the relationship is added after
+             the C function call, if False it is added before the
+             call.  If not given, the value False is assumed if the
+             return value is not involved, else postcall=True is used.
+        """
         if custodian == -1 or ward == -1:
             if postcall is None:
                 postcall = True
@@ -490,7 +517,33 @@ class CppConstructor(ForwardWrapperBase):
 
 
     def add_custodian_and_ward(self, custodian, ward, postcall=None):
-        """ TODO: document this """
+        """Add a custodian/ward relationship to the constructor wrapper
+
+        A custodian/ward relationship is one where one object
+        (custodian) keeps a references to another object (ward), thus
+        keeping it alive.  When the custodian is destroyed, the
+        reference to the ward is released, allowing the ward to be
+        freed if no other reference to it is being kept by the user
+        code.  Please note that custodian/ward manages the lifecycle
+        of Python wrappers, not the C/C++ objects referenced by the
+        wrappers.  In most cases, the wrapper owns the C/C++ object,
+        and so the lifecycle of the C/C++ object is also managed by
+        this.  However, there are cases when a Python wrapper does not
+        own the underlying C/C++ object, only references it.
+
+        The custodian and ward objects are indicated by an integer
+        with the following meaning:
+          - C{0}: the object being constructed (self)
+          - value > 0: the nth parameter of the function, starting at 1
+
+        @parameter custodian: number of the object that assumes the role of custodian
+        @parameter ward: number of the object that assumes the role of ward
+
+        @parameter postcall: if True, the relationship is added after
+             the C function call, if False it is added before the
+             call.  If not given, the value False is assumed if the
+             return value is not involved, else postcall=True is used.
+        """
         if custodian == -1 or ward == -1:
             if postcall is None:
                 postcall = True

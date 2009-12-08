@@ -669,6 +669,8 @@ class CppClassPtrParameter(CppClassParameterBase):
     def __init__(self, ctype, name, transfer_ownership=None, custodian=None, is_const=False,
                  null_ok=False, default_value=None):
         """
+        Type handler for a pointer-to-class parameter (MyClass*)
+
         @param ctype: C type, normally 'MyClass*'
         @param name: parameter name
 
@@ -682,27 +684,27 @@ class CppClassPtrParameter(CppClassParameterBase):
                   pointer dereference and crash the program).
 
         @param custodian: if given, points to an object (custodian)
-                          that keeps the python wrapper for the
-                          parameter alive. Possible values are:
+            that keeps the python wrapper for the
+            parameter alive. Possible values are:
                        - None: no object is custodian;
                        - -1: the return value object;
                        - 0: the instance of the method in which
-                     the ReturnValue is being used will become the
-                     custodian;
+                            the ReturnValue is being used will become the
+                            custodian;
                        - integer > 0: parameter number, starting at 1
-                     (i.e. not counting the self/this parameter),
-                     whose object will be used as custodian.
+                           (i.e. not counting the self/this parameter),
+                           whose object will be used as custodian.
 
         @param is_const: if true, the parameter has a const attached to the leftmost
 
         @param null_ok: if true, None is accepted and mapped into a C NULL pointer
 
         @param default_value: default parameter value (as C expression
-        string); probably, the only default value that makes sense
-        here is probably 'NULL'.
+            string); probably, the only default value that makes sense
+            here is probably 'NULL'.
 
         @note: only arguments which are instances of C++ classes
-        wrapped by PyBindGen can be used as custodians.
+            wrapped by PyBindGen can be used as custodians.
         """
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
@@ -961,16 +963,16 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                               is transferred to the caller
 
         @param custodian: bind the life cycle of the python wrapper
-                          for the return value object (ward) to that
-                          of the object indicated by this parameter
-                          (custodian). Possible values are:
+               for the return value object (ward) to that
+               of the object indicated by this parameter
+               (custodian). Possible values are:
                        - None: no object is custodian;
                        - 0: the instance of the method in which
-                     the ReturnValue is being used will become the
-                     custodian;
+                            the ReturnValue is being used will become the
+                            custodian;
                        - integer > 0: parameter number, starting at 1
-                     (i.e. not counting the self/this parameter),
-                     whose object will be used as custodian.
+                          (i.e. not counting the self/this parameter),
+                          whose object will be used as custodian.
 
         @param reference_existing_object: if true, ownership of the
                   pointed-to object remains to be the caller's, but we
@@ -990,7 +992,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             return value.
 
         @note: only arguments which are instances of C++ classes
-        wrapped by PyBindGen can be used as custodians.
+           wrapped by PyBindGen can be used as custodians.
         """
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
