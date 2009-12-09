@@ -155,7 +155,7 @@ single argument an 'int' of name 'value'::
                    [pybindgen.param ('int', 'v1'),
                     pybindgen.param ('int', 'v2')])
 
-The above then allows you to write:
+The above then allows you to write::
 
   >>> import MyModule
   >>> v = MyModule.MyModuleDoAction (10, -1)
@@ -263,7 +263,7 @@ pybindgen can wrap both C and C++ APIs: in C++, there exist both instance and st
 members so, pybindgen provides two methods: add_instance_attribute and add_static_attribute
 to register these two kinds of members.
 
-Our C API then becomes accessible from python:
+Our C API then becomes accessible from python::
   >>> import MyModule
   >>> st = MyModule.MyModuleStruct ()
   >>> st.a = 10
@@ -308,7 +308,7 @@ and, then, specify that it has a constructor::
   klass.add_constructor([])
 
 We can declare the setter method which is really
-a straightforward extension from the add_function function.::
+a straightforward extension from the add_function function::
 
   klass.add_method('SetInt', None, [param('int', 'value')])
 
@@ -371,7 +371,7 @@ simply need to carefully use the fully scoped name of the enum.::
 
   inner.add_method('Do', None, [param('Outer::inner_e', value)])
 
-The resulting python API reflects the underlying C++ API very closely:
+The resulting python API reflects the underlying C++ API very closely::
 
   >>> import MyModule
   >>> print MyModule.Outer.INNER_A

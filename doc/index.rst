@@ -15,7 +15,10 @@ Contents:
 
    module
    utils
+   function
    cppclass
+   cppmethod
+
    gccxmlparser
 
    
