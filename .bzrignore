@@ -1,8 +1,8 @@
-.lock-wscript
-build
-ChangeLog
-pybindgen*.tar.bz2
-pybindgen/version.py
-pybindgen-google-code
-apidocs
-doc/_build
+./.lock-wscript
+./build
+./ChangeLog
+./pybindgen*.tar.bz2
+./pybindgen/version.py
+./doc/_build
+./.waf-*
+
