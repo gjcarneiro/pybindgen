@@ -4,6 +4,8 @@
 import Options
 import Build
 import Scripting
+Scripting.excludes.remove('Makefile')
+Scripting.dist_format = 'zip'
 
 import Configure
 Configure.autoconfig = True
@@ -129,6 +131,26 @@ def generate_version_py(force=False, path=None):
     dest.close()
     
 
+# http://coreygoldberg.blogspot.com/2009/07/python-zip-directories-recursively.html
+def zipper(dir, zip_file, archive_main_folder=None):
+    import zipfile
+    zip = zipfile.ZipFile(zip_file, 'w', compression=zipfile.ZIP_DEFLATED)
+    root_len = len(os.path.abspath(dir))
+    for root, dirs, files in os.walk(dir):
+        archive_root = os.path.abspath(root)[root_len:]
+        for f in files:
+            fullpath = os.path.join(root, f)
+            archive_name = os.path.join(archive_root, f)
+            if archive_main_folder is not None:
+                if archive_name.startswith(os.sep):
+                    n = archive_name[len(os.sep):]
+                else:
+                    n = archive_name
+                archive_name = os.path.join(archive_main_folder, n)
+            zip.write(fullpath, archive_name, zipfile.ZIP_DEFLATED)
+    zip.close()
+
+
 def dist_hook():
     blddir = '../build'
     srcdir = '..'
@@ -136,6 +158,10 @@ def dist_hook():
     subprocess.Popen([os.path.join(srcdir, "generate-ChangeLog")],  shell=True).wait()
     try:
         os.chmod(os.path.join(srcdir, "ChangeLog"), 0644)
+    except OSError:
+        pass
+    try:
+        os.unlink("ChangeLog")
     except OSError:
         pass
     shutil.copy(os.path.join(srcdir, "ChangeLog"), '.')
@@ -146,22 +172,17 @@ def dist_hook():
     ## Copy it to the source dir
     shutil.copy(os.path.join('pybindgen', 'version.py'), os.path.join(srcdir, "pybindgen"))
 
-    ## Copy WAF to the distdir
-    #assert os.path.basename(sys.argv[0]) == 'waf'
-    shutil.copy(os.path.join(srcdir, sys.argv[0]), '.')
-
     ## Package the api docs in a separate tarball
     apidocs = 'apidocs'
-    if not os.path.isdir('apidocs'):
-        Logs.warn("Not creating apidocs archive: the `apidocs' directory does not exist")
+    if not os.path.isdir('doc/_build/html'):
+        Logs.warn("Not creating docs archive: the `doc/_build/html' directory does not exist")
     else:
-        tar = tarfile.open(os.path.join("..", "pybindgen-%s-apidocs.tar.bz2" % version), 'w:bz2')
-        tar.add('apidocs', "pybindgen-%s-apidocs" % version)
-        tar.close()
-        shutil.rmtree('apidocs', True)
+        zipper('doc/_build/html', os.path.join("..", "pybindgen-%s-docs.zip" % version))
 
-    ## This is a directory I usually keep in my tree -- gjc
-    shutil.rmtree('pybindgen-google-code', True)
+    # clean up the docs dir
+    r = subprocess.Popen(["make", "clean"], cwd='doc').wait()
+    if r:
+        raise SystemExit(r)
 
     shutil.rmtree('.shelf', True)
 
@@ -324,26 +345,11 @@ def check(bld):
         raise SystemExit(2)
 
 
-def generate_api_docs(ctx):
+def docs(ctx):
     "generate API documentation, using epydoc"
     generate_version_py(force=True)
-    retval = subprocess.Popen(["epydoc", "-v", "--html", "--graph=all",  "pybindgen",
-                               "-o", "apidocs",
-                               "--pstat=build/foomodulegen-auto.pstat",
-                                   "--pstat=build/foomodulegen.pstat",
-                               "--pstat=build/hellomodulegen.pstat",
-                               "--no-private",
-                               #"--graph-image-format=png",
-                               ]).wait()
+    retval = subprocess.Popen(["make", "html"], cwd='doc').wait()
     if retval:
-        Logs.error("epydoc returned with code %i" % retval)
+        Logs.error("make returned with code %i" % retval)
         raise SystemExit(2)
 
-    # Patch the generated CSS file to highlight literal blocks (this is a copy of pre.py-doctest)
-    css = open("apidocs/epydoc.css", "at")
-    css.write("""
-pre.literalblock {  padding: .5em; margin: 1em;
-                    background: #e8f0f8; color: #000000;
-                    border: 1px solid #708890; }
-""")
-    css.close()

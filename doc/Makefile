@@ -28,6 +28,7 @@ help:
 
 clean:
 	-rm -rf _build/*
+	-cd figures && make clean
 
 html:
 	cd figures && $(MAKE)
