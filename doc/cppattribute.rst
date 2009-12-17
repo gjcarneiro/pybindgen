@@ -1,10 +1,10 @@
 
 ==============================================
-cppmethod: wrap class methods and constructors
+cppattribute: wrap class/instance attributes
 ==============================================
 
 
-.. automodule:: pybindgen.cppmethod
+.. automodule:: pybindgen.cppattribute
     :members:
     :undoc-members:
     :show-inheritance:

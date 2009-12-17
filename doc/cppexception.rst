@@ -1,10 +1,10 @@
 
 ==============================================
-cppmethod: wrap class methods and constructors
+cppexceptions: translate C++ exceptions into Python
 ==============================================
 
 
-.. automodule:: pybindgen.cppmethod
+.. automodule:: pybindgen.cppexception
     :members:
     :undoc-members:
     :show-inheritance:

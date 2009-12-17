@@ -30,11 +30,13 @@ clean:
 	-rm -rf _build/*
 
 html:
+	cd figures && $(MAKE)
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) _build/html
 	@echo
 	@echo "Build finished. The HTML pages are in _build/html."
 
 dirhtml:
+	cd figures && $(MAKE)
 	$(SPHINXBUILD) -b dirhtml $(ALLSPHINXOPTS) _build/dirhtml
 	@echo
 	@echo "Build finished. The HTML pages are in _build/dirhtml."
@@ -65,6 +67,7 @@ qthelp:
 	@echo "# assistant -collectionFile _build/qthelp/PyBindGen.qhc"
 
 latex:
+	cd figures && $(MAKE)
 	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) _build/latex
 	@echo
 	@echo "Build finished; the LaTeX files are in _build/latex."

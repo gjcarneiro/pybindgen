@@ -1,6 +1,6 @@
 
 =======================
-utils
+utils: internal utilities
 =======================
 
 

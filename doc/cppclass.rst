@@ -1,6 +1,6 @@
 
 =======================
-cppclass
+cppclass: wrap C++ classes or C structures
 =======================
 
 

@@ -9,17 +9,10 @@ Welcome to PyBindGen's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    tutorial
-
-   module
-   utils
-   function
-   cppclass
-   cppmethod
-
-   gccxmlparser
+   apiref
 
    
 Indices and tables

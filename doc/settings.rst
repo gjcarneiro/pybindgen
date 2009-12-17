@@ -1,10 +1,10 @@
 
 ==============================================
-cppmethod: wrap class methods and constructors
+settings: pybindgen global settings
 ==============================================
 
 
-.. automodule:: pybindgen.cppmethod
+.. automodule:: pybindgen.settings
     :members:
     :undoc-members:
     :show-inheritance:

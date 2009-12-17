@@ -1,28 +1,28 @@
 
 =======================
-tutorial
+PyBindGen Tutorial
 =======================
 
 
 
-What is pybindgen ?
+What is PyBindGen ?
 ===================
 
-Pybindgen is a tool which can be used to generate python bindings
+PyBindGen is a tool which can be used to generate python bindings
 for C or C++ APIs. It is similar in scope to tools such as boost::python,
 SWIG, and a few others but has a number of specific features which make
 it especially useful in a number of cases:
 
-  - pybindgen is implemented in python and is used and controlled
+  - PyBindGen is implemented in python and is used and controlled
     through python;
-  - pybindgen error messages do not involve c++ template deciphering
+  - PyBindGen error messages do not involve c++ template deciphering
     (as in boost::python);
-  - pybindgen generates highly-readable C or C++ code so it is
+  - PyBindGen generates highly-readable C or C++ code so it is
     possible to step into and debug the bindings;
-  - In simple cases, pybindgen is really easy to use. In more
+  - In simple cases, PyBindGen is really easy to use. In more
     complicated cases, it does offer all the flexibility you need to
     wrap complex C or C++ APIs;
-  - pybindgen also provides an optional tool to parse C and C++
+  - PyBindGen also provides an optional tool to parse C and C++
     headers and generate automatically bindings for them, potentially
     using extra inline or out-of-line annotations.  This tool is based
     on gccxml and pygccxml: it can be used to generate the first
@@ -33,9 +33,34 @@ it especially useful in a number of cases:
 This tutorial will show how to build bindings for a couple of common C and C++ API idioms
 and, then, will proceed to show how to use the automatic binding generator.
 
+
+Work flows
+==========
+
+PyBindGen is only a Python module.  The programmer must write a Python
+script that uses the module in order to generate the bindings.  There
+are several ways that PyBindGen can be used:
+
+  1. Basic mode, script that directly generates the bindings;
+
+  .. image:: figures/work-flow-basic.*
+
+  2. Automatically scan header files and generate the bindings
+  directly (see :ref:`Header file scanning with (py)gccxml<header-file-scanning>`);
+
+  .. image:: figures/work-flow-gccxml.*
+
+  3. Automatically scan header files to generate API defs file, that
+  file can later be used to generate the bindings.  See (see
+  :ref:`Header file scanning with (py)gccxml: python intermediate
+  file<header-file-scanning-apidefs>`);
+
+  .. image:: figures/work-flow-gccxml-apidefs.*
+
+
 A simple example
 ================
-The best way to get a feel for what pybindgen looks like is to go through a 
+The best way to get a feel for what PyBindGen looks like is to go through a 
 simple example. Let's assume that we have a simple C API as shown below
 declared in a header my-module.h:
 
@@ -132,7 +157,6 @@ should be self-explanatory::
 Wrapping types by value
 =======================
 
----------------
 Primitive types
 ---------------
 
@@ -219,7 +243,6 @@ With the resulting python-visible API::
   >>> MyModule.MyModuleDoAction (MyModule.CONSTANT_B)
   MyModuleDoAction: 1
 
---------------
 Compound types
 --------------
 
@@ -259,8 +282,8 @@ from python::
   struct.add_instance_attribute('b', 'int')
 
 The name of the method called here, 'add_instance_attribute' reflects the fact that
-pybindgen can wrap both C and C++ APIs: in C++, there exist both instance and static
-members so, pybindgen provides two methods: add_instance_attribute and add_static_attribute
+PyBindGen can wrap both C and C++ APIs: in C++, there exist both instance and static
+members so, PyBindGen provides two methods: add_instance_attribute and add_static_attribute
 to register these two kinds of members.
 
 Our C API then becomes accessible from python::
@@ -282,7 +305,6 @@ Our C API then becomes accessible from python::
   -20
 
 
------------
 C++ classes
 -----------
 
@@ -384,7 +406,6 @@ The resulting python API reflects the underlying C++ API very closely::
   >>> inner.Do(MyModule.Outer.INNER_A)
 
 
---------------
 C++ namespaces
 --------------
 
@@ -441,11 +462,10 @@ only by value but, a large fraction of real-world APIs use raw pointers
 (and, in the case of C++, smart pointers) as arguments or return values 
 of functions/methods.
 
-Rather than try to explain the detail of every option offered by pybindgen
+Rather than try to explain the detail of every option offered by PyBindGen
 to deal with pointers, we will go through a couple of very classic memory
 management schemes and examples.
 
-------------------------
 Function returns pointer
 ------------------------
 
@@ -466,7 +486,7 @@ can write::
 
   mod.add_function('DoSomethingAndReturnClass', retval('MyClass *', caller_owns_return=True), [])
 
-The above will tell pybindgen that the caller (the python runtime) becomes
+The above will tell PyBindGen that the caller (the python runtime) becomes
 responsible for deleting the instance of MyClass returned by the function
 DoSomethingAndReturnClass when it is done with it.
 
@@ -539,7 +559,7 @@ To wrap this class, we first need to declare our class::
                     decref_method='Unref', 
                     peekref_method='PeekRef'))
 
-The above allows pybindgen to maintain and track the reference count
+The above allows PyBindGen to maintain and track the reference count
 of the MyClass object while the code below shows how we can declare
 a function taking a pointer as input::
 
@@ -569,12 +589,12 @@ While classic reference counting rules require that the callee returns
 a reference to the caller (i.e., it calls Ref on behalf of the caller
 before returning the pointer), some APIs will undoubtedly return a pointer
 and expect the caller to acquire a reference to the returned object by
-calling Ref himself. Pybindgen hopefully can be made to support this
+calling Ref himself. PyBindGen hopefully can be made to support this
 case too::
 
   mod.add_function('DoSomething', retval('MyClass *', caller_owns_return=False), [])
 
-Which instructs pybindgen that DoSomething is not to be trusted and that it should
+Which instructs PyBindGen that DoSomething is not to be trusted and that it should
 acquire ownership of the returned pointer if it needs to keep track of it.
 
 
@@ -582,7 +602,7 @@ A STL container
 ---------------
 
 If you have a function that takes a STL container, you have to
-tell pybindgen to wrap the container first:
+tell PyBindGen to wrap the container first:
 
 .. code-block:: c++
 
@@ -602,9 +622,12 @@ Is wrapped by::
 .. ==============================================
 
 
+Advanced usage
+==============
+
 
 Basic interface with error handling
-===================================
+-----------------------------------
 
 It is also possible to declare a error handler.  The error handler
 will be invoked for API definitions that cannot be wrapped for some
@@ -658,7 +681,8 @@ Module.add_function() do that in a way that the error handler can be
 invoked and the function is simply not wrapped if the error handler
 says so.
 
-------------------------------------
+.. _header-file-scanning:
+
 Header file scanning with (py)gccxml
 ------------------------------------
 
@@ -688,7 +712,8 @@ The above script will generate the bindings for the module directly.
 It expects the input header file, a.h, as first command line
 argument.
 
---------------------------------------------------------------
+.. _header-file-scanning-apidefs:
+
 Header file scanning with (py)gccxml: python intermediate file
 --------------------------------------------------------------
 

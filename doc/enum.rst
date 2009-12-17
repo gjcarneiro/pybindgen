@@ -1,10 +1,10 @@
 
 ==========================================================
-gccxmlparser: scan header files to extract API definitions
+enum: wrap enumrations
 ==========================================================
 
 
-.. automodule:: pybindgen.gccxmlparser
+.. automodule:: pybindgen.enum
     :members:
     :undoc-members:
     :show-inheritance:

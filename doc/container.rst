@@ -1,10 +1,10 @@
 
 ==========================================================
-gccxmlparser: scan header files to extract API definitions
+container: wrap STL containers
 ==========================================================
 
 
-.. automodule:: pybindgen.gccxmlparser
+.. automodule:: pybindgen.container
     :members:
     :undoc-members:
     :show-inheritance:
