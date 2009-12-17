@@ -95,20 +95,20 @@ container_traits_list = {
 class Container(object):
     def __init__(self, name, value_type, container_type, outer_class=None, custom_name=None):
         """
-        @param name: C++ type name of the container, e.g. std::vector<int> or MyIntList
+        :param name: C++ type name of the container, e.g. std::vector<int> or MyIntList
 
-        @param value_type: a ReturnValue of the element type: note,
+        :param value_type: a ReturnValue of the element type: note,
         for mapping containers, value_type is a tuple with two
         ReturnValue's: (key, element).
 
-        @param container_type: a string with the type of container,
+        :param container_type: a string with the type of container,
         one of 'list', 'deque', 'queue', 'priority_queue', 'vector',
         'stack', 'set', 'multiset', 'hash_set', 'hash_multiset', 'map'
 
-        @param outer_class: if the type is defined inside a class, must be a reference to the outer class
-        @type outer_class: None or L{CppClass}
+        :param outer_class: if the type is defined inside a class, must be a reference to the outer class
+        :type outer_class: None or L{CppClass}
 
-        @param custom_name: alternative name to register with in the Python module
+        :param custom_name: alternative name to register with in the Python module
 
         """
         if '<' in name or '::' in name:

@@ -117,8 +117,8 @@ def GetTokens(source):
     """
     Returns a sequence of Tokens.
 
-    @param source: string of C++ source code.
-    @returns: an iterator that yields the L{Token}s in the source.
+    :param source: string of C++ source code.
+    :returns: an iterator that yields the L{Token}s in the source.
     """
     # Cache various valid character sets for speed.
     valid_identifier_chars = VALID_IDENTIFIER_CHARS

@@ -161,8 +161,8 @@ def parse_type(type_string):
     """
     Parse a C type string.
 
-    @param type_string: C type expression
-    @returns: a L{CType} object representing the type
+    :param type_string: C type expression
+    :returns: a L{CType} object representing the type
     """
     tokens = list(tokenizer.GetTokens(type_string + '\n'))
     ctype, last_token = _parse_type_recursive(tokens)
@@ -176,8 +176,8 @@ def normalize_type_string(type_string):
     strings match regardless of small variations of representation
     that do not change the meaning.
 
-    @param type_string: C type expression
-    @returns: another string representing the same C type but in a canonical format
+    :param type_string: C type expression
+    :returns: another string representing the same C type but in a canonical format
 
     >>> normalize_type_string('char *')
     'char *'

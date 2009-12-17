@@ -29,48 +29,48 @@ class CppMethod(ForwardWrapperBase):
         """
         Create an object the generates code to wrap a C++ class method.
 
-        @param return_value: the method return value
-        @type  return_value: L{ReturnValue}
+        :param return_value: the method return value
+        :type  return_value: L{ReturnValue}
 
-        @param method_name: name of the method
+        :param method_name: name of the method
 
-        @param parameters: the method parameters
-        @type parameters: list of L{Parameter}
+        :param parameters: the method parameters
+        :type parameters: list of L{Parameter}
 
-        @param is_static: whether it is a static method
+        :param is_static: whether it is a static method
 
-        @param template_parameters: optional list of template parameters needed to invoke the method
-        @type template_parameters: list of strings, each element a template parameter expression
+        :param template_parameters: optional list of template parameters needed to invoke the method
+        :type template_parameters: list of strings, each element a template parameter expression
 
-        @param is_virtual: whether the method is virtual (pure or not)
+        :param is_virtual: whether the method is virtual (pure or not)
 
-        @param is_const: whether the method has a const modifier on it
+        :param is_const: whether the method has a const modifier on it
 
-        @param unblock_threads: whether to release the Python GIL
+        :param unblock_threads: whether to release the Python GIL
         around the method call or not.  If None or omitted, use global
         settings.  Releasing the GIL has a small performance penalty,
         but is recommended if the method is expected to take
         considerable time to complete, because otherwise no other
         Python thread is allowed to run until the method completes.
 
-        @param is_pure_virtual: whether the method is defined as "pure
+        :param is_pure_virtual: whether the method is defined as "pure
         virtual", i.e. virtual method with no default implementation
         in the class being wrapped.
 
-        @param custom_name: alternate name to give to the method, in python side.
+        :param custom_name: alternate name to give to the method, in python side.
 
-        @param custom_template_method_name: (deprecated) same as parameter 'custom_name'.
+        :param custom_template_method_name: (deprecated) same as parameter 'custom_name'.
 
-        @param visibility: visibility of the method within the C++ class
-        @type visibility: a string (allowed values are 'public', 'protected', 'private')
+        :param visibility: visibility of the method within the C++ class
+        :type visibility: a string (allowed values are 'public', 'protected', 'private')
 
-        @param deprecated: deprecation state for this API:
+        :param deprecated: deprecation state for this API:
           - False: Not deprecated
           - True: Deprecated
           - "message": Deprecated, and deprecation warning contains the given message
 
-        @param throw: list of C++ exceptions that the function may throw
-        @type throw: list of L{CppException}
+        :param throw: list of C++ exceptions that the function may throw
+        :type throw: list of L{CppException}
         """
         self.stack_where_defined = traceback.extract_stack()
 
@@ -148,10 +148,10 @@ class CppMethod(ForwardWrapperBase):
           - C{0}: the instance of the method (self)
           - value > 0: the nth parameter of the function, starting at 1
 
-        @parameter custodian: number of the object that assumes the role of custodian
-        @parameter ward: number of the object that assumes the role of ward
+        :parameter custodian: number of the object that assumes the role of custodian
+        :parameter ward: number of the object that assumes the role of ward
 
-        @parameter postcall: if True, the relationship is added after
+        :parameter postcall: if True, the relationship is added after
              the C function call, if False it is added before the
              call.  If not given, the value False is assumed if the
              return value is not involved, else postcall=True is used.
@@ -479,15 +479,15 @@ class CppConstructor(ForwardWrapperBase):
 
     def __init__(self, parameters, unblock_threads=None, visibility='public', deprecated=False, throw=()):
         """
-        @param parameters: the constructor parameters
+        :param parameters: the constructor parameters
 
-        @param deprecated: deprecation state for this API:
+        :param deprecated: deprecation state for this API:
           - False: Not deprecated
           - True: Deprecated
           - "message": Deprecated, and deprecation warning contains the given message
 
-        @param throw: list of C++ exceptions that the constructor may throw
-        @type throw: list of L{CppException}
+        :param throw: list of C++ exceptions that the constructor may throw
+        :type throw: list of L{CppException}
 
         """
         self.stack_where_defined = traceback.extract_stack()
@@ -536,10 +536,10 @@ class CppConstructor(ForwardWrapperBase):
           - C{0}: the object being constructed (self)
           - value > 0: the nth parameter of the function, starting at 1
 
-        @parameter custodian: number of the object that assumes the role of custodian
-        @parameter ward: number of the object that assumes the role of ward
+        :parameter custodian: number of the object that assumes the role of custodian
+        :parameter ward: number of the object that assumes the role of ward
 
-        @parameter postcall: if True, the relationship is added after
+        :parameter postcall: if True, the relationship is added after
              the C function call, if False it is added before the
              call.  If not given, the value False is assumed if the
              return value is not involved, else postcall=True is used.
@@ -690,15 +690,15 @@ class CppFunctionAsConstructor(CppConstructor):
     """
     def __init__(self, c_function_name, return_value, parameters, unblock_threads=None):
         """
-        @param c_function_name: name of the C/C++ function; FIXME: for now it is
+        :param c_function_name: name of the C/C++ function; FIXME: for now it is
         implied that this function returns a pointer to the a class
         instance with caller_owns_return=True semantics.
 
-        @param return_value: function return value type
-        @type return_value: L{ReturnValue}
+        :param return_value: function return value type
+        :type return_value: L{ReturnValue}
 
-        @param parameters: the function/constructor parameters
-        @type parameters: list of L{Parameter}
+        :param parameters: the function/constructor parameters
+        :type parameters: list of L{Parameter}
 
         """
         self.stack_where_defined = traceback.extract_stack()
@@ -754,8 +754,8 @@ class CppNoConstructor(ForwardWrapperBase):
     def generate(self, code_sink, class_):
         """
         Generates the wrapper code
-        code_sink -- a CodeSink instance that will receive the generated code
-        class_ -- the c++ class wrapper the method belongs to
+        :param code_sink: a CodeSink instance that will receive the generated code
+        :param class_: the c++ class wrapper the method belongs to
 
         Returns the wrapper function name.
         """

@@ -186,7 +186,7 @@ def _pygen_param(args, kwargs):
 class GccXmlTypeRegistry(object):
     def __init__(self, root_module):
         """
-        @param root_module: the root L{Module} object
+        :param root_module: the root L{Module} object
         """
         assert isinstance(root_module, Module)
         assert root_module.parent is None
@@ -322,7 +322,7 @@ class AnnotationsScanner(object):
 
     def get_annotations(self, decl):
         """
-        @param decl: pygccxml declaration_t object
+        :param decl: pygccxml declaration_t object
         """
         assert isinstance(decl, declaration_t)
 
@@ -413,23 +413,23 @@ class PygenSection(object):
     "Class to hold information about a python generation section"
     def __init__(self, name, code_sink, local_customizations_module=None):
         """
-        @param name: section name; this name should be a valid python
+        :param name: section name; this name should be a valid python
         module name; the special name '__main__' is used to denote the
         main section, which comprises the main script itself
-        @type name: str
+        :type name: str
 
-        @param code_sink: code sink that will receive the generated
+        :param code_sink: code sink that will receive the generated
         code for the section.  Normally the code sink should write to
         a file with the name of the section and a .py extension, to
         allow importing it as module.
-        @type code_sink: L{CodeSink}
+        :type code_sink: L{CodeSink}
 
-        @param local_customizations_module: name of the python module
+        :param local_customizations_module: name of the python module
         that may contain local customizations for the section, or
         None.  If not None, PyBindGen will generate code that tries to
         import that module in the respective section and call
         functions on it, or ignore it if the module does not exist.
-        @type local_customizations_module: str
+        :type local_customizations_module: str
         """
         assert isinstance(name, str)
         self.name = name
@@ -446,8 +446,8 @@ class PygenClassifier(object):
         subclasses.  It will be called by PyBindGen for every API
         definition, and should return a section name.
 
-        @param pygccxml_definition: gccxml definition object
-        @returns: section name
+        :param pygccxml_definition: gccxml definition object
+        :returns: section name
         """
         raise NotImplementedError
 
@@ -459,9 +459,10 @@ class PygenClassifier(object):
         This is used when sections reflect 'modules' whose types must be
         registered in a certain order.
 
-        @param section_name: the name of the section @returns: order
-        of precedence of the section.  The lower the number, the
-        sooner the section is to be registered.
+        :param section_name: the name of the section
+
+        :returns: order of precedence of the section.  The lower the
+        number, the sooner the section is to be registered.
         """
         raise NotImplementedError
 
@@ -479,8 +480,8 @@ class ModuleParser(object):
         Creates an object that will be able parse header files and
         create a pybindgen module definition.
 
-        @param module_name: name of the Python module
-        @param module_namespace_name: optional C++ namespace name; if
+        :param module_name: name of the Python module
+        :param module_namespace_name: optional C++ namespace name; if
                                  given, only definitions of this
                                  namespace will be included in the
                                  python module
@@ -599,22 +600,22 @@ class ModuleParser(object):
          2. scan_functions()
          3. parse_finalize()
 
-         @param header_files: header files to parse
-         @type header_files: list of string
+         :param header_files: header files to parse
+         :type header_files: list of string
 
-         @param include_paths: (deprecated, use the parameter gccxml_options) list of include paths
-         @type include_paths: list of string
+         :param include_paths: (deprecated, use the parameter gccxml_options) list of include paths
+         :type include_paths: list of string
 
-         @param whitelist_paths: additional directories for definitions to be included
+         :param whitelist_paths: additional directories for definitions to be included
            Normally the module parser filters out API definitions that
            have been defined outside one of the header files indicated
            for parsing.  The parameter whitelist_paths instructs the
            module parser to accept definitions defined in another
            header file if such header file is inside one of the
            directories listed by whitelist_paths.
-         @type whitelist_paths: list of string
+         :type whitelist_paths: list of string
 
-         @param pygen_sink: code sink for python script generation.
+         :param pygen_sink: code sink for python script generation.
 
            This parameter activates a mode wherein ModuleParser, in
            addition to building in memory API definitions, creates a
@@ -628,17 +629,17 @@ class ModuleParser(object):
              2. A list of L{PygenSection} objects.  This option
              requires the pygen_classifier to be given.
 
-         @type pygen_sink: L{CodeSink} or list of L{PygenSection} objects
+         :type pygen_sink: L{CodeSink} or list of L{PygenSection} objects
 
-         @param pygen_classifier: the classifier to use when pygen is given and is a dict
+         :param pygen_classifier: the classifier to use when pygen is given and is a dict
 
 
-         @param gccxml_options: extra options to pass into
+         :param gccxml_options: extra options to pass into
          the gccxml_configuration_t object as keyword arguments (see 
          U{pygccxml API documentation<http://www.language-binding.net/pyplusplus/documentation/apidocs/pygccxml.parser.config.gccxml_configuration_t-class.html>}
          for more information).
 
-         @type gccxml_options: dict
+         :type gccxml_options: dict
 
         """
         assert isinstance(header_files, list)

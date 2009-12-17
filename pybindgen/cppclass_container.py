@@ -67,9 +67,9 @@ class IterNextWrapper(ForwardWrapperBase):
 class CppClassContainerTraits(object):
     def __init__(self, cppclass, value_type, begin_method='begin', end_method='end', iterator_type='iterator', is_mapping=False):
         """
-        @param cppclass: the L{CppClass} object that receives the container traits
+        :param cppclass: the L{CppClass} object that receives the container traits
 
-        @param value_type: a ReturnValue of the element type: note,
+        :param value_type: a ReturnValue of the element type: note,
         for mapping containers, value_type is a tuple with two
         ReturnValue's: (key, element).
         """

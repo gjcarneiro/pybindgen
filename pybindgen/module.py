@@ -82,8 +82,9 @@ class MultiSectionFactory(object):
     def get_section_code_sink(self, section_name):
         """
         Create and/or return a code sink for a given section.
-        @param section_name: name of the section
-        @returns: a L{CodeSink} object that will receive generated code belonging to the section C{section_name}
+
+        :param section_name: name of the section
+        :return: a L{CodeSink} object that will receive generated code belonging to the section C{section_name}
         """
         raise NotImplementedError
     def get_main_code_sink(self):
@@ -100,7 +101,7 @@ class MultiSectionFactory(object):
         """
         Return the argument for an #include directive to include the common header.
 
-        @returns: a string with the header name, including surrounding
+        :returns: a string with the header name, including surrounding
         "" or <>.  For example, '"foomodule.h"'.
         """
         raise NotImplementedError
@@ -113,8 +114,8 @@ class _SinkManager(object):
     """
     def get_code_sink_for_wrapper(self, wrapper):
         """
-        @param wrapper: wrapper object
-        @returns: (body_code_sink, header_code_sink) 
+        :param wrapper: wrapper object
+        :returns: (body_code_sink, header_code_sink) 
         """
         raise NotImplementedError
     def get_includes_code_sink(self):
@@ -208,11 +209,12 @@ class ModuleBase(dict):
     def __init__(self, name, parent=None, docstring=None, cpp_namespace=None):
         """
         Note: this is an abstract base class, see L{Module}
-        @param name: module name
-        @param parent: parent L{module<Module>} (i.e. the one that contains this submodule) or None if this is a root module
-        @param docstring: docstring to use for this module
-        @param cpp_namespace: C++ namespace prefix associated with this module
-        @return: a new module object
+
+        :param name: module name
+        :param parent: parent L{module<Module>} (i.e. the one that contains this submodule) or None if this is a root module
+        :param docstring: docstring to use for this module
+        :param cpp_namespace: C++ namespace prefix associated with this module
+        :return: a new module object
         """
         super(ModuleBase, self).__init__()
         self.parent = parent
@@ -290,7 +292,7 @@ class ModuleBase(dict):
         Declare the end of a section, i.e. further types and functions
         will belong to the main module.
 
-        @param section_name: name of section; must match the one in
+        :param section_name: name of section; must match the one in
         the previous L{begin_section} call.
         """
         assert self.parent is None
@@ -323,7 +325,7 @@ class ModuleBase(dict):
         raise ValueError("submodule %s not found" % submodule_name)
         
     def get_root(self):
-        "@return: the root L{Module} (even if it is self)"
+        ":return: the root L{Module} (even if it is self)"
         root = self
         while root.parent is not None:
             root = root.parent
@@ -356,7 +358,7 @@ class ModuleBase(dict):
         """
         Adds an additional include directive, needed to compile this python module
 
-        @param include: the name of the header file to include, including
+        :param include: the name of the header file to include, including
                    surrounding "" or <>.
         """
         include = utils.ascii(include)
@@ -423,9 +425,9 @@ class ModuleBase(dict):
         the future.  Normally should not be called by the programmer,
         as it is meant for internal pybindgen use and called automatically.
         
-        @param name: type name without any C++ namespace prefix, or None
-        @param full_name: type name with a C++ namespace prefix, or None
-        @param type_wrapper: the wrapper object for the type (e.g. L{CppClass} or L{Enum})
+        :param name: type name without any C++ namespace prefix, or None
+        :param full_name: type name with a C++ namespace prefix, or None
+        :param type_wrapper: the wrapper object for the type (e.g. L{CppClass} or L{Enum})
         """
         module = self
         if name:
@@ -439,7 +441,7 @@ class ModuleBase(dict):
         """
         Add a class to the module.
 
-        @param class_: a CppClass object
+        :param class_: a CppClass object
         """
         assert isinstance(class_, CppClass)
         class_.module = self
@@ -509,11 +511,11 @@ class ModuleBase(dict):
         namespace.  If the requested namespace was already added, the
         existing module is returned instead of creating a new one.
 
-        @param name: name of C++ namespace (just the last component,
+        :param name: name of C++ namespace (just the last component,
         not full scoped name); this also becomes the name of the
         submodule.
 
-        @return: a L{SubModule} object that maps to this namespace.
+        :return: a L{SubModule} object that maps to this namespace.
         """
         name = utils.ascii(name)
         try:
@@ -553,7 +555,7 @@ class ModuleBase(dict):
         """
         Add a container to the module.
 
-        @param container: a L{Container} object
+        :param container: a L{Container} object
         """
         assert isinstance(container, Container)
         container.module = self
@@ -598,7 +600,7 @@ class ModuleBase(dict):
         (note: assuming here one-to-one mapping between 'module' and
         'compilation unit').
 
-        @param definition_name: a string that uniquely identifies the code
+        :param definition_name: a string that uniquely identifies the code
         definition that will be added.  If the given definition was
         already declared KeyError is raised.
         
@@ -826,8 +828,8 @@ __attribute__ ((visibility("default")))
         Declares an equivalent to a typedef in C::
           typedef Foo Bar;
 
-        @param wrapper: the wrapper object to alias (Foo in the example)
-        @param alias: name of the typedef alias
+        :param wrapper: the wrapper object to alias (Foo in the example)
+        :param alias: name of the typedef alias
 
         @note: only typedefs for CppClass objects have been
         implemented so far; others will be implemented in the future.
@@ -844,17 +846,18 @@ __attribute__ ((visibility("default")))
 class Module(ModuleBase):
     def __init__(self, name, docstring=None, cpp_namespace=None):
         """
-        @param name: module name
-        @param docstring: docstring to use for this module
-        @param cpp_namespace: C++ namespace prefix associated with this module
+        :param name: module name
+        :param docstring: docstring to use for this module
+        :param cpp_namespace: C++ namespace prefix associated with this module
         """
         super(Module, self).__init__(name, docstring=docstring, cpp_namespace=cpp_namespace)
 
     def generate(self, out, module_file_base_name=None):
         """Generates the module
-        @type out: a file object, L{FileCodeSink}, or L{MultiSectionFactory}
 
-        @param module_file_base_name: base name of the module file.
+        :type out: a file object, L{FileCodeSink}, or L{MultiSectionFactory}
+
+        :param module_file_base_name: base name of the module file.
         This is useful when we want to produce a _foo module that will
         be imported into a foo module, to avoid making all types
         docstrings contain _foo.Xpto instead of foo.Xpto.
@@ -890,9 +893,9 @@ class Module(ModuleBase):
         Use: this method is to be considered pybindgen internal, used
         by code generation modules.
 
-        @type value_type: L{ReturnValue}
-        @type code_sink: L{CodeSink}
-        @returns: name of the converter function
+        :type value_type: L{ReturnValue}
+        :type code_sink: L{CodeSink}
+        :returns: name of the converter function
         """
         assert isinstance(value_type, TypeHandler)
         converter_function_name = self.get_python_to_c_type_converter_function_name(value_type)
@@ -929,9 +932,9 @@ class Module(ModuleBase):
         Use: this method is to be considered pybindgen internal, used
         by code generation modules.
 
-        @type value_type: L{ReturnValue}
-        @type code_sink: L{CodeSink}
-        @returns: name of the converter function
+        :type value_type: L{ReturnValue}
+        :type code_sink: L{CodeSink}
+        :returns: name of the converter function
         """
         assert isinstance(value_type, TypeHandler)
         converter_function_name = self.get_c_to_python_type_converter_function_name(value_type)
@@ -951,10 +954,10 @@ class Module(ModuleBase):
 class SubModule(ModuleBase):
     def __init__(self, name, parent, docstring=None, cpp_namespace=None):
         """
-        @param parent: parent L{module<Module>} (i.e. the one that contains this submodule)
-        @param name: name of the submodule
-        @param docstring: docstring to use for this module
-        @param cpp_namespace: C++ namespace component associated with this module
+        :param parent: parent L{module<Module>} (i.e. the one that contains this submodule)
+        :param name: name of the submodule
+        :param docstring: docstring to use for this module
+        :param cpp_namespace: C++ namespace component associated with this module
         """
         super(SubModule, self).__init__(name, parent, docstring=docstring, cpp_namespace=cpp_namespace)
 
