@@ -23,26 +23,26 @@ class Function(ForwardWrapperBase):
                  template_parameters=(), custom_name=None, deprecated=False, foreign_cpp_namespace=None,
                  throw=()):
         """
-        @param function_name: name of the C function
-        @param return_value: the function return value
+        :param function_name: name of the C function
+        :param return_value: the function return value
         @type return_value: L{ReturnValue}
-        @param parameters: the function parameters
+        :param parameters: the function parameters
         @type parameters: list of L{Parameter}
 
-        @param custom_name: an alternative name to give to this
+        :param custom_name: an alternative name to give to this
         function at python-side; if omitted, the name of the function
         in the python module will be the same name as the function in
         C++ (minus namespace).
 
-        @param deprecated: deprecation state for this API:
+        :param deprecated: deprecation state for this API:
           - False: Not deprecated
           - True: Deprecated
           - "message": Deprecated, and deprecation warning contains the given message
-        @param foreign_cpp_namespace: if set, the function is assumed to
+        :param foreign_cpp_namespace: if set, the function is assumed to
         belong to the given C++ namespace, regardless of the C++
         namespace of the python module it will be added to.
 
-        @param throw: list of C++ exceptions that the function may throw
+        :param throw: list of C++ exceptions that the function may throw
         @type throw: list of L{CppException}
         """
         self.stack_where_defined = traceback.extract_stack()
@@ -123,10 +123,10 @@ class Function(ForwardWrapperBase):
           - C{-1}: the return value of the function
           - value > 0: the nth parameter of the function, starting at 1
 
-        @parameter custodian: number of the object that assumes the role of custodian
-        @parameter ward: number of the object that assumes the role of ward
+        :parameter custodian: number of the object that assumes the role of custodian
+        :parameter ward: number of the object that assumes the role of ward
 
-        @parameter postcall: if True, the relationship is added after
+        :parameter postcall: if True, the relationship is added after
              the C function call, if False it is added before the
              call.  If not given, the value False is assumed if the
              return value is not involved, else postcall=True is used.
@@ -251,7 +251,7 @@ class Function(ForwardWrapperBase):
         Returns an array element to use in a PyMethodDef table.
         Should only be called after code generation.
 
-        @param name: python function/method name
+        :param name: python function/method name
         """
         flags = self.get_py_method_def_flags()
         assert isinstance(self.wrapper_return, basestring)

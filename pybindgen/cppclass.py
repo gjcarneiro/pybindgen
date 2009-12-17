@@ -158,11 +158,11 @@ def default_instance_creation_function(cpp_class, code_block, lvalue,
     C++ class instance needs to be created; this default
     implementation uses a standard C++ new allocator.
 
-    @param cpp_class: the CppClass object whose instance is to be created
-    @param code_block: CodeBlock object on which the instance creation code should be generated
-    @param lvalue: lvalue expression that should hold the result in the end
-    @param parameters: stringified list of parameters
-    @param construct_type_name: actual name of type to be constructed (it is
+    :param cpp_class: the CppClass object whose instance is to be created
+    :param code_block: CodeBlock object on which the instance creation code should be generated
+    :param lvalue: lvalue expression that should hold the result in the end
+    :param parameters: stringified list of parameters
+    :param construct_type_name: actual name of type to be constructed (it is
                           not always the class name, sometimes it's
                           the python helper class)
     """
@@ -439,51 +439,51 @@ class CppClass(object):
                  custom_name=None,
                  ):
         """
-        @param name: class name
-        @param parent: optional parent class wrapper
-        @param incref_method: (deprecated in favour of memory_policy) if the class supports reference counting, the
+        :param name: class name
+        :param parent: optional parent class wrapper
+        :param incref_method: (deprecated in favour of memory_policy) if the class supports reference counting, the
                          name of the method that increments the
                          reference count (may be inherited from parent
                          if not given)
-        @param decref_method: (deprecated in favour of memory_policy) if the class supports reference counting, the
+        :param decref_method: (deprecated in favour of memory_policy) if the class supports reference counting, the
                          name of the method that decrements the
                          reference count (may be inherited from parent
                          if not given)
-        @param automatic_type_narrowing: if True, automatic return type
+        :param automatic_type_narrowing: if True, automatic return type
                                     narrowing will be done on objects
                                     of this class and its descendants
                                     when returned by pointer from a
                                     function or method.
-        @param allow_subclassing: if True, generated class wrappers will
+        :param allow_subclassing: if True, generated class wrappers will
                              allow subclassing in Python.
-        @param is_singleton: if True, the class is considered a singleton,
+        :param is_singleton: if True, the class is considered a singleton,
                         and so the python wrapper will never call the
                         C++ class destructor to free the value.
-        @param peekref_method: (deprecated in favour of memory_policy) if the class supports reference counting, the
+        :param peekref_method: (deprecated in favour of memory_policy) if the class supports reference counting, the
                           name of the method that returns the current reference count.
-        @param free_function: (deprecated in favour of memory_policy) name of C function used to deallocate class instances
-        @param incref_function: (deprecated in favour of memory_policy) same as incref_method, but as a function instead of method
-        @param decref_function: (deprecated in favour of memory_policy) same as decref_method, but as a function instead of method
-        @param python_name: name of the class as it will appear from
+        :param free_function: (deprecated in favour of memory_policy) name of C function used to deallocate class instances
+        :param incref_function: (deprecated in favour of memory_policy) same as incref_method, but as a function instead of method
+        :param decref_function: (deprecated in favour of memory_policy) same as decref_method, but as a function instead of method
+        :param python_name: name of the class as it will appear from
         Python side.  This parameter is DEPRECATED in favour of
         custom_name.
 
-        @param memory_policy: memory management policy; if None, it
+        :param memory_policy: memory management policy; if None, it
         inherits from the parent class.  Only root classes can have a
         memory policy defined.
-        @type memory_policy: L{MemoryPolicy}
+        :type memory_policy: L{MemoryPolicy}
         
-        @param foreign_cpp_namespace: if set, the class is assumed to
+        :param foreign_cpp_namespace: if set, the class is assumed to
         belong to the given C++ namespace, regardless of the C++
         namespace of the python module it will be added to.  For
         instance, this can be useful to wrap std classes, like
         std::ofstream, without having to create an extra python
         submodule.
 
-        @param docstring: None or a string containing the docstring
+        :param docstring: None or a string containing the docstring
         that will be generated for the class
 
-        @param custom_name: an alternative name to give to this class
+        :param custom_name: an alternative name to give to this class
         at python-side; if omitted, the name of the class in the
         python module will be the same name as the class in C++ (minus
         namespace).
@@ -681,7 +681,7 @@ class CppClass(object):
         The binary operator is assumed to operate with both operands
         of the type of the class, either by reference or by value.
         
-        @param operator: string indicating the name of the operator to
+        :param operator: string indicating the name of the operator to
         support, e.g. '=='
         """
         operator = utils.ascii(operator)
@@ -696,13 +696,13 @@ class CppClass(object):
         """
         Add support for a C++ binary numeric operator, such as +, -, *, or /.
 
-        @param operator: string indicating the name of the operator to
+        :param operator: string indicating the name of the operator to
         support, e.g. '=='
 
-        @param result_cppclass: the CppClass object of the result type, assumed to be this class if omitted
-        @param left_cppclass: the CppClass object of the left operand type, assumed to be this class if omitted
+        :param result_cppclass: the CppClass object of the result type, assumed to be this class if omitted
+        :param left_cppclass: the CppClass object of the left operand type, assumed to be this class if omitted
 
-        @param right: the type of the right parameter. Can be a
+        :param right: the type of the right parameter. Can be a
         CppClass, Parameter, or param spec. Assumed to be this class
         if omitted
         """
@@ -742,10 +742,10 @@ class CppClass(object):
         """
         Add support for a C++ inplace numeric operator, such as +=, -=, *=, or /=.
 
-        @param operator: string indicating the name of the operator to
+        :param operator: string indicating the name of the operator to
         support, e.g. '+='
 
-        @param right: the type of the right parameter. Can be a
+        :param right: the type of the right parameter. Can be a
         CppClass, Parameter, or param spec. Assumed to be this class
         if omitted
         """
@@ -775,11 +775,11 @@ class CppClass(object):
         """
         Add support for a C++ unary numeric operators, currently only -.
 
-        @param operator: string indicating the name of the operator to
+        :param operator: string indicating the name of the operator to
         support, e.g. '-'
 
-        @param result_cppclass: the CppClass object of the result type, assumed to be this class if omitted
-        @param left_cppclass: the CppClass object of the left operand type, assumed to be this class if omitted
+        :param result_cppclass: the CppClass object of the result type, assumed to be this class if omitted
+        :param left_cppclass: the CppClass object of the left operand type, assumed to be this class if omitted
         """
         operator = utils.ascii(operator)
         if not isinstance(operator, str):
@@ -821,7 +821,7 @@ class CppClass(object):
         """
         Get the method resolution order (MRO) of this class.
 
-        @return: an iterator that gives CppClass objects, from leaf to root class
+        :return: an iterator that gives CppClass objects, from leaf to root class
         """
         cls = self
         while cls is not None:
@@ -920,7 +920,7 @@ class CppClass(object):
         """Set a custom function to be called to create instances of this
         class and its subclasses.
 
-        @param instance_creation_function: instance creation function; see
+        :param instance_creation_function: instance creation function; see
                                       default_instance_creation_function()
                                       for signature and example.
         """
@@ -1206,7 +1206,7 @@ public:
         """
         Add a method object to the class.  For internal use.
 
-        @param method: a L{CppMethod} or L{Function} instance that can generate the method wrapper
+        :param method: a L{CppMethod} or L{Function} instance that can generate the method wrapper
         """
         if isinstance(method, CppMethod):
             name = method.mangled_name
@@ -1380,7 +1380,7 @@ public:
         """
         Add a constructor to the class.
 
-        @param wrapper: a CppConstructor instance
+        :param wrapper: a CppConstructor instance
         """
         assert isinstance(wrapper, CppConstructor)
         wrapper.set_class(self)
@@ -1459,9 +1459,9 @@ public:
 
     def add_static_attribute(self, name, value_type, is_const=False):
         """
-        @param value_type: a ReturnValue object
-        @param name: attribute name (i.e. the name of the class member variable)
-        @param is_const: True if the attribute is const, i.e. cannot be modified
+        :param value_type: a ReturnValue object
+        :param name: attribute name (i.e. the name of the class member variable)
+        :param is_const: True if the attribute is const, i.e. cannot be modified
         """
 
         ## backward compatibility check
@@ -1488,11 +1488,11 @@ public:
     def add_instance_attribute(self, name, value_type, is_const=False,
                                getter=None, setter=None):
         """
-        @param value_type: a ReturnValue object
-        @param name: attribute name (i.e. the name of the class member variable)
-        @param is_const: True if the attribute is const, i.e. cannot be modified
-        @param getter: None, or name of a method of this class used to get the value
-        @param setter: None, or name of a method of this class used to set the value
+        :param value_type: a ReturnValue object
+        :param name: attribute name (i.e. the name of the class member variable)
+        :param is_const: True if the attribute is const, i.e. cannot be modified
+        :param getter: None, or name of a method of this class used to get the value
+        :param setter: None, or name of a method of this class used to set the value
         """
 
         ## backward compatibility check

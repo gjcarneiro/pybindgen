@@ -339,8 +339,8 @@ class CppClassRefParameter(CppClassParameterBase):
     def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False,
                  default_value=None, default_value_type=None):
         """
-        @param ctype: C type, normally 'MyClass*'
-        @param name: parameter name
+        :param ctype: C type, normally 'MyClass*'
+        :param name: parameter name
         """
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
@@ -671,10 +671,10 @@ class CppClassPtrParameter(CppClassParameterBase):
         """
         Type handler for a pointer-to-class parameter (MyClass*)
 
-        @param ctype: C type, normally 'MyClass*'
-        @param name: parameter name
+        :param ctype: C type, normally 'MyClass*'
+        :param name: parameter name
 
-        @param transfer_ownership: if True, the callee becomes
+        :param transfer_ownership: if True, the callee becomes
                   responsible for freeing the object.  If False, the
                   caller remains responsible for the object.  In
                   either case, the original object pointer is passed,
@@ -683,7 +683,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                   the call (calling any method will cause a null
                   pointer dereference and crash the program).
 
-        @param custodian: if given, points to an object (custodian)
+        :param custodian: if given, points to an object (custodian)
             that keeps the python wrapper for the
             parameter alive. Possible values are:
                        - None: no object is custodian;
@@ -695,11 +695,11 @@ class CppClassPtrParameter(CppClassParameterBase):
                            (i.e. not counting the self/this parameter),
                            whose object will be used as custodian.
 
-        @param is_const: if true, the parameter has a const attached to the leftmost
+        :param is_const: if true, the parameter has a const attached to the leftmost
 
-        @param null_ok: if true, None is accepted and mapped into a C NULL pointer
+        :param null_ok: if true, None is accepted and mapped into a C NULL pointer
 
-        @param default_value: default parameter value (as C expression
+        :param default_value: default parameter value (as C expression
             string); probably, the only default value that makes sense
             here is probably 'NULL'.
 
@@ -958,11 +958,11 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                  is_const=False, reference_existing_object=None,
                  return_internal_reference=None):
         """
-        @param ctype: C type, normally 'MyClass*'
-        @param caller_owns_return: if true, ownership of the object pointer
+        :param ctype: C type, normally 'MyClass*'
+        :param caller_owns_return: if true, ownership of the object pointer
                               is transferred to the caller
 
-        @param custodian: bind the life cycle of the python wrapper
+        :param custodian: bind the life cycle of the python wrapper
                for the return value object (ward) to that
                of the object indicated by this parameter
                (custodian). Possible values are:
@@ -974,7 +974,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                           (i.e. not counting the self/this parameter),
                           whose object will be used as custodian.
 
-        @param reference_existing_object: if true, ownership of the
+        :param reference_existing_object: if true, ownership of the
                   pointed-to object remains to be the caller's, but we
                   do not make a copy. The callee gets a reference to
                   the existing object, but is not responsible for
@@ -985,7 +985,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                   mean time.  Calling methods on such an object would
                   lead to a memory error.
                   
-        @param return_internal_reference: like
+        :param return_internal_reference: like
             reference_existing_object, but additionally adds
             custodian/ward to bind the lifetime of the 'self' object
             (instance the method is bound to) to the lifetime of the

@@ -128,11 +128,11 @@ class CodeBlock(object):
         clean3();
         clean1();
 
-        @param error_return: code that is generated on error conditions
+        :param error_return: code that is generated on error conditions
                            (detected by write_error_check()); normally
                            it returns from the wrapper function,
                            e.g. return NULL;
-        @param predecessor: optional predecessor code block; a
+        :param predecessor: optional predecessor code block; a
                           predecessor is used to search for additional
                           cleanup actions.        
         '''
@@ -204,9 +204,9 @@ class CodeBlock(object):
     def write_error_check(self, failure_expression, failure_cleanup=None):
         '''Add a chunk of code that checks for a possible error
 
-        @param failure_expression: C boolean expression that is true when
+        :param failure_expression: C boolean expression that is true when
                               an error occurred
-        @param failure_cleanup: optional extra cleanup code to write only
+        :param failure_cleanup: optional extra cleanup code to write only
                            for the the case when failure_expression is
                            true; this extra cleanup code comes before
                            all other cleanup code previously registered.
@@ -273,12 +273,12 @@ class ParseTupleParameters(object):
         """
         Adds a new parameter specification
 
-        @param param_template: template item, see documentation for
+        :param param_template: template item, see documentation for
                           PyArg_ParseTuple for more information
-        @param param_values: list of parameters, see documentation
+        :param param_values: list of parameters, see documentation
                        for PyArg_ParseTuple for more information
-        @param prepend: whether this parameter should be parsed first
-        @param optional: whether the parameter is optional; note that after
+        :param prepend: whether this parameter should be parsed first
+        :param optional: whether the parameter is optional; note that after
                     the first optional parameter, all remaining
                     parameters must also be optional
         """
@@ -365,12 +365,12 @@ class BuildValueParameters(object):
         """
         Adds a new parameter to the Py_BuildValue (or similar) statement.
 
-        @param param_template: template item, see documentation for
+        :param param_template: template item, see documentation for
                           Py_BuildValue for more information
-        @param param_values: list of C expressions to use as value, see documentation
+        :param param_values: list of C expressions to use as value, see documentation
                         for Py_BuildValue for more information
-        @param prepend: whether this parameter should come first in the tuple being built
-        @param cancels_cleanup: optional handle to a cleanup action,
+        :param prepend: whether this parameter should come first in the tuple being built
+        :param cancels_cleanup: optional handle to a cleanup action,
                            that is removed after the call.  Typically
                            this is used for 'N' parameters, which
                            already consume an object reference
@@ -386,7 +386,7 @@ class BuildValueParameters(object):
         Py_BuildValue-style function call, the first paramter in
         the list being the template string.
 
-        @param force_tuple_creation: if True, Py_BuildValue is
+        :param force_tuple_creation: if True, Py_BuildValue is
         instructed to always create a tuple, even for zero or 1
         values.
         """
@@ -433,7 +433,7 @@ class DeclarationsScope(object):
         int foo3 = 1;
         const char *kwargs[] = {"hello", NULL};
 
-        @param parent_scope: optional 'parent scope'; if given,
+        :param parent_scope: optional 'parent scope'; if given,
                         declarations in this scope will avoid clashing
                         with names in the parent scope, and vice
                         versa.
@@ -453,11 +453,12 @@ class DeclarationsScope(object):
     def declare_variable(self, type_, name, initializer=None, array=None):
         """Add code to declare a variable. Returns the actual variable
         name used (uses 'name' as base, with a number in case of conflict.)
-        @param type_: C type name of the variable
-        @param name: base name of the variable; actual name used can be
+
+        :param type_: C type name of the variable
+        :param name: base name of the variable; actual name used can be
                 slightly different in case of name conflict.
-        @param initializer: optional, value to initialize the variable with
-        @param array: optional, array size specifiction, e.g. '[]', or '[100]'
+        :param initializer: optional, value to initialize the variable with
+        :param array: optional, array size specifiction, e.g. '[]', or '[100]'
         """
         try:
             num = self.declared_variables[name]
@@ -479,7 +480,8 @@ class DeclarationsScope(object):
 
     def reserve_variable(self, name):
         """Reserve a variable name, to be used later.
-        @param name: base name of the variable; actual name used can be
+
+        :param name: base name of the variable; actual name used can be
                 slightly different in case of name conflict.
         """
         try:
@@ -538,8 +540,8 @@ class ReverseWrapperBase(object):
         '''
         Base constructor
 
-        @param return_value: type handler for the return value
-        @param parameters: a list of type handlers for the parameters
+        :param return_value: type handler for the return value
+        :param parameters: a list of type handlers for the parameters
 
         '''
 
@@ -595,9 +597,10 @@ class ReverseWrapperBase(object):
     def generate(self, code_sink, wrapper_name, decl_modifiers=('static',),
                  decl_post_modifiers=()):
         """Generate the wrapper
-        @param code_sink: a CodeSink object that will receive the code
-        @param wrapper_name: C/C++ identifier of the function/method to generate
-        @param decl_modifiers: list of C/C++ declaration modifiers, e.g. 'static'
+
+        :param code_sink: a CodeSink object that will receive the code
+        :param wrapper_name: C/C++ identifier of the function/method to generate
+        :param decl_modifiers: list of C/C++ declaration modifiers, e.g. 'static'
         """
         assert isinstance(decl_modifiers, (list, tuple))
         assert all([isinstance(mod, str) for mod in decl_modifiers])
@@ -729,13 +732,13 @@ class ForwardWrapperBase(object):
         '''
         Base constructor
 
-        @param return_value: type handler for the return value
-        @param parameters: a list of type handlers for the parameters
-        @param parse_error_return: statement to return an error during parameter parsing
-        @param error_return: statement to return an error after parameter parsing
-        @param force_parse: force generation of code to parse parameters even if there are none
-        @param no_c_retval: force the wrapper to not have a C return value
-        @param unblock_threads: generate code to unblock python threads during the C function call
+        :param return_value: type handler for the return value
+        :param parameters: a list of type handlers for the parameters
+        :param parse_error_return: statement to return an error during parameter parsing
+        :param error_return: statement to return an error after parameter parsing
+        :param force_parse: force generation of code to parse parameters even if there are none
+        :param no_c_retval: force the wrapper to not have a C return value
+        :param unblock_threads: generate code to unblock python threads during the C function call
         '''
         assert isinstance(return_value, ReturnValue) or return_value is None
         assert isinstance(parameters, list)
@@ -991,9 +994,9 @@ class TypeTransformation(object):
         """
         Given a type_handler class, create an instance with proper customization.
 
-        @param type_handler_class: type handler class
-        @param args: arguments
-        @param kwargs: keywords arguments
+        :param type_handler_class: type handler class
+        :param args: arguments
+        :param kwargs: keywords arguments
         """
         raise NotImplementedError
 
@@ -1147,7 +1150,7 @@ class ReturnValue(TypeHandler):
 
         Keywork Arguments:
 
-        @param ctype: actual C/C++ type being used
+        :param ctype: actual C/C++ type being used
         '''
         if type(self) is ReturnValue:
             raise TypeError('ReturnValue is an abstract class; use ReturnValue.new(...)')
@@ -1258,9 +1261,9 @@ class Parameter(TypeHandler):
 
         Keywork Arguments:
 
-        @param ctype: actual C/C++ type being used
-        @param name: parameter name
-        @param direction: direction of the parameter transfer, valid values
+        :param ctype: actual C/C++ type being used
+        :param name: parameter name
+        :param direction: direction of the parameter transfer, valid values
                      are DIRECTION_IN, DIRECTION_OUT, and
                      DIRECTION_IN|DIRECTION_OUT
         '''
@@ -1322,8 +1325,8 @@ class TypeMatcher(object):
 
     def register(self, name, type_handler):
         """Register a new handler class for a given C type
-        @param name: C type name
-        @param type_handler: class to handle this C type
+        :param name: C type name
+        :param type_handler: class to handle this C type
         """
         name = ctypeparser.normalize_type_string(name)
         if name in self._types:
@@ -1361,10 +1364,10 @@ class TypeMatcher(object):
         """
         lookup(name) -> type_handler, type_transformation, type_traits
 
-        Returns a handler with the given ctype name, or raises KeyError.
+        :param name: C type name, possibly transformed (e.g. MySmartPointer<Foo> looks up Foo*)
+        :returns: a handler with the given ctype name, or raises KeyError.
         Supports type transformations.
 
-        @param name: C type name, possibly transformed (e.g. MySmartPointer<Foo> looks up Foo*)
         """
         logger.debug("TypeMatcher.lookup(%r)", name)
         given_type_traits = ctypeparser.TypeTraits(name)
