@@ -1,3 +1,15 @@
+=== pybindgen 0.13 ===
+
+    - Lots of small bug fixes
+
+    - Custodian/ward-style memory management works better now
+
+    - Add 'reference_existing_object' and 'return_interal_reference'
+      options for pointer/reference return values
+
+    - New Sphinx based documentation
+
+
 === pybindgen 0.12 ===
 
     - Now we can catch C++ exceptions and translate them into Python
