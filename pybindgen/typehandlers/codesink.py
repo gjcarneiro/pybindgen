@@ -77,8 +77,7 @@ class FileCodeSink(CodeSink):
     """A code sink that writes to a file-like object"""
     def __init__(self, file_):
         """
-        Keyword Arguments:
-        file_ -- a file like object
+        :param file_: a file like object
         """
         CodeSink.__init__(self)
         self.file = file_
@@ -105,7 +104,7 @@ class MemoryCodeSink(CodeSink):
 
     def flush_to(self, sink):
         """Flushes code to another code sink
-        sink -- another CodeSink instance
+        :param sink: another CodeSink instance
         """
         assert isinstance(sink, CodeSink)
         for line in self.lines:
@@ -135,7 +134,7 @@ class NullCodeSink(CodeSink):
 
     def flush_to(self, sink):
         """Flushes code to another code sink
-        sink -- another CodeSink instance
+        :param sink: another CodeSink instance
         """
         raise TypeError("Cannot flush a NullCodeSink; it has no content!")
 

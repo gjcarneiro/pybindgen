@@ -193,8 +193,8 @@ class CppClassParameterBase(Parameter):
 
     def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False, default_value=None):
         """
-        ctype -- C type, normally 'MyClass*'
-        name -- parameter name
+        :param ctype: C type, normally 'MyClass*'
+        :param name: parameter name
         """
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
@@ -222,7 +222,9 @@ class CppClassReturnValueBase(ReturnValue):
 
 
 class CppClassParameter(CppClassParameterBase):
-    "Class handlers"
+    """
+    Class parameter "by-value" handler
+    """
     CTYPES = []
     cpp_class = cppclass.CppClass('dummy') # CppClass instance
     DIRECTIONS = [Parameter.DIRECTION_IN]
@@ -703,7 +705,9 @@ class CppClassPtrParameter(CppClassParameterBase):
             string); probably, the only default value that makes sense
             here is probably 'NULL'.
 
-        @note: only arguments which are instances of C++ classes
+        .. note::
+
+            Only arguments which are instances of C++ classes
             wrapped by PyBindGen can be used as custodians.
         """
         if ctype == self.cpp_class.name:
@@ -991,7 +995,9 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             (instance the method is bound to) to the lifetime of the
             return value.
 
-        @note: only arguments which are instances of C++ classes
+        .. note::
+
+           Only arguments which are instances of C++ classes
            wrapped by PyBindGen can be used as custodians.
         """
         if ctype == self.cpp_class.name:

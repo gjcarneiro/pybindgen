@@ -34,10 +34,10 @@ class CppInstanceAttributeGetter(PyGetter):
     '''
     def __init__(self, value_type, class_, attribute_name, getter=None):
         """
-        value_type -- a ReturnValue object handling the value type;
-        class_ -- the class (CppClass object)
-        attribute_name -- name of attribute
-        getter -- None, or name of a method of the class used to get the value
+        :param value_type: a ReturnValue object handling the value type;
+        :param class_: the class (CppClass object)
+        :param attribute_name: name of attribute
+        :param getter: None, or name of a method of the class used to get the value
         """
         super(CppInstanceAttributeGetter, self).__init__(
             value_type, [], "return NULL;", "return NULL;", no_c_retval=True)
@@ -57,7 +57,7 @@ class CppInstanceAttributeGetter(PyGetter):
 
     def generate(self, code_sink):
         """
-        code_sink -- a CodeSink instance that will receive the generated code
+        :param code_sink: a CodeSink instance that will receive the generated code
         """
         tmp_sink = codesink.MemoryCodeSink()
         self.generate_body(tmp_sink)
@@ -76,8 +76,8 @@ class CppStaticAttributeGetter(PyGetter):
     '''
     def __init__(self, value_type, class_, attribute_name):
         """
-        value_type -- a ReturnValue object handling the value type;
-        c_value_expression -- C value expression
+        :param value_type: a ReturnValue object handling the value type;
+        :param c_value_expression: C value expression
         """
         super(CppStaticAttributeGetter, self).__init__(
             value_type, [], "return NULL;", "return NULL;", no_c_retval=True)
@@ -93,7 +93,7 @@ class CppStaticAttributeGetter(PyGetter):
 
     def generate(self, code_sink):
         """
-        code_sink -- a CodeSink instance that will receive the generated code
+        :param code_sink: a CodeSink instance that will receive the generated code
         """
         tmp_sink = codesink.MemoryCodeSink()
         self.generate_body(tmp_sink)
@@ -113,10 +113,10 @@ class CppInstanceAttributeSetter(PySetter):
     '''
     def __init__(self, value_type, class_, attribute_name, setter=None):
         """
-        value_type -- a ReturnValue object handling the value type;
-        class_ -- the class (CppClass object)
-        attribute_name -- name of attribute
-        setter -- None, or name of a method of the class used to set the value
+        :param value_type: a ReturnValue object handling the value type;
+        :param class_: the class (CppClass object)
+        :param attribute_name: name of attribute
+        :param setter: None, or name of a method of the class used to set the value
         """
         super(CppInstanceAttributeSetter, self).__init__(
             value_type, [], "return -1;")
@@ -128,7 +128,7 @@ class CppInstanceAttributeSetter(PySetter):
 
     def generate(self, code_sink):
         """
-        code_sink -- a CodeSink instance that will receive the generated code
+        :param code_sink: a CodeSink instance that will receive the generated code
         """
 
         self.declarations.declare_variable('PyObject*', 'py_retval')
@@ -187,9 +187,9 @@ class CppStaticAttributeSetter(PySetter):
     '''
     def __init__(self, value_type, class_, attribute_name):
         """
-        value_type -- a ReturnValue object handling the value type;
-        class_ -- the class (CppClass object)
-        attribute_name -- name of attribute
+        :param value_type: a ReturnValue object handling the value type;
+        :param class_: the class (CppClass object)
+        :param attribute_name: name of attribute
         """
         super(CppStaticAttributeSetter, self).__init__(
             value_type, [], "return -1;")
@@ -202,7 +202,7 @@ class CppStaticAttributeSetter(PySetter):
 
     def generate(self, code_sink):
         """
-        code_sink -- a CodeSink instance that will receive the generated code
+        :param code_sink: a CodeSink instance that will receive the generated code
         """
 
         self.declarations.declare_variable('PyObject*', 'py_retval')
@@ -336,7 +336,7 @@ class PyGetSetDef(object):
     """
     def __init__(self, cname):
         """
-        cname -- C name of the getset table
+        :param cname: C name of the getset table
         """
         self.cname = cname
         self.attributes = [] # (name, getter, setter)
@@ -347,9 +347,9 @@ class PyGetSetDef(object):
     def add_attribute(self, name, getter, setter):
         """
         Add a new attribute
-        name -- attribute name
-        getter -- a PyGetter object, or None
-        setter -- a PySetter object, or None
+        :param name: attribute name
+        :param getter: a PyGetter object, or None
+        :param setter: a PySetter object, or None
         """
         assert getter is None or isinstance(getter, PyGetter)
         assert setter is None or isinstance(setter, PySetter)

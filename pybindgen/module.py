@@ -276,9 +276,11 @@ class ModuleBase(dict):
         the future belong to the section given by that section_name
         parameter, until a matching end_section() is called.
 
-        @note: L{begin_section}/L{end_section} are silently ignored
-        unless a L{MultiSectionFactory} object is used as code
-        generation output.
+        .. note::
+
+          :meth:`begin_section`/:meth:`end_section` are silently ignored
+          unless a :class:`MultiSectionFactory` object is used as code
+          generation output.
         """
         if self.current_section != '__main__':
             raise ValueError("begin_section called while current section not ended")
@@ -293,7 +295,7 @@ class ModuleBase(dict):
         will belong to the main module.
 
         :param section_name: name of section; must match the one in
-        the previous L{begin_section} call.
+           the previous :meth:`begin_section` call.
         """
         assert self.parent is None
         if self._current_section != section_name:
@@ -325,7 +327,7 @@ class ModuleBase(dict):
         raise ValueError("submodule %s not found" % submodule_name)
         
     def get_root(self):
-        ":return: the root L{Module} (even if it is self)"
+        ":return: the root :class:`Module` (even if it is self)"
         root = self
         while root.parent is not None:
             root = root.parent
@@ -385,7 +387,7 @@ class ModuleBase(dict):
     def add_function(self, *args, **kwargs):
         """
         Add a function to the module/namespace. See the documentation for
-        L{Function.__init__} for information on accepted parameters.
+        :meth:`Function.__init__` for information on accepted parameters.
         """
         if len(args) >= 1 and isinstance(args[0], Function):
             func = args[0]
@@ -410,7 +412,7 @@ class ModuleBase(dict):
     def add_custom_function_wrapper(self, *args, **kwargs):
         """
         Add a function, using custom wrapper code, to the module/namespace. See the documentation for
-        L{CustomFunctionWrapper.__init__} for information on accepted parameters.
+        :class:`pybindgen.function.CustomFunctionWrapper` for information on accepted parameters.
         """
         try:
             func = CustomFunctionWrapper(*args, **kwargs)

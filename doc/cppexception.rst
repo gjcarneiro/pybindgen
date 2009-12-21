@@ -1,7 +1,7 @@
 
-==============================================
-cppexceptions: translate C++ exceptions into Python
-==============================================
+==================================================
+cppexception: translate C++ exceptions into Python
+==================================================
 
 
 .. automodule:: pybindgen.cppexception

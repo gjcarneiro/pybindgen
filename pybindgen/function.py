@@ -25,25 +25,26 @@ class Function(ForwardWrapperBase):
         """
         :param function_name: name of the C function
         :param return_value: the function return value
-        @type return_value: L{ReturnValue}
+        :type return_value: L{ReturnValue}
         :param parameters: the function parameters
-        @type parameters: list of L{Parameter}
+        :type parameters: list of L{Parameter}
 
         :param custom_name: an alternative name to give to this
-        function at python-side; if omitted, the name of the function
-        in the python module will be the same name as the function in
-        C++ (minus namespace).
+           function at python-side; if omitted, the name of the
+           function in the python module will be the same name as the
+           function in C++ (minus namespace).
 
         :param deprecated: deprecation state for this API:
           - False: Not deprecated
           - True: Deprecated
           - "message": Deprecated, and deprecation warning contains the given message
-        :param foreign_cpp_namespace: if set, the function is assumed to
-        belong to the given C++ namespace, regardless of the C++
-        namespace of the python module it will be added to.
+
+        :param foreign_cpp_namespace: if set, the function is assumed
+          to belong to the given C++ namespace, regardless of the C++
+          namespace of the python module it will be added to.
 
         :param throw: list of C++ exceptions that the function may throw
-        @type throw: list of L{CppException}
+        :type throw: list of L{CppException}
         """
         self.stack_where_defined = traceback.extract_stack()
 
@@ -207,8 +208,9 @@ class Function(ForwardWrapperBase):
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """
         Generates the wrapper code
-        code_sink -- a CodeSink instance that will receive the generated code
-        wrapper_name -- name of wrapper function
+
+        :param code_sink: a CodeSink instance that will receive the generated code
+        :param wrapper_name: name of wrapper function
         """
         if wrapper_name is None:
             self.wrapper_actual_name = self.wrapper_base_name
@@ -266,7 +268,7 @@ class CustomFunctionWrapper(Function):
     """
     Adds a custom function wrapper.  The custom wrapper must be
     prepared to support overloading, i.e. it must have an additional
-    "PyObject **return_exception" parameter, and raised exceptions
+    "PyObject \\*\\*return_exception" parameter, and raised exceptions
     must be returned by this parameter.
     """
 
@@ -274,6 +276,11 @@ class CustomFunctionWrapper(Function):
 
     def __init__(self, function_name, wrapper_name, wrapper_body=None,
                  flags=('METH_VARARGS', 'METH_KEYWORDS')):
+        """
+        :param function_name: name for function, Python side
+        :param wrapper_name: name of the C wrapper function
+        :param wrapper_body: if not None, the function wrapper is generated containing this parameter value as function body
+        """
         super(CustomFunctionWrapper, self).__init__(function_name, ReturnValue.new('void'), [])
         self.wrapper_base_name = wrapper_name
         self.wrapper_actual_name = wrapper_name

@@ -11,24 +11,25 @@ class CppException(object):
         :param name: exception class name
         :param parent: optional parent class wrapper
 
-        :param custom_name: an alternative name to give to this exception class
-        at python-side; if omitted, the name of the class in the
-        python module will be the same name as the class in C++ (minus
-        namespace).
+        :param custom_name: an alternative name to give to this
+               exception class at python-side; if omitted, the name of
+               the class in the python module will be the same name as
+               the class in C++ (minus namespace).
 
         :param foreign_cpp_namespace: if set, the class is assumed to
-        belong to the given C++ namespace, regardless of the C++
-        namespace of the python module it will be added to.  For
-        instance, this can be useful to wrap std classes, like
-        std::ofstream, without having to create an extra python
-        submodule.
+               belong to the given C++ namespace, regardless of the
+               C++ namespace of the python module it will be added to.
+               For instance, this can be useful to wrap std classes,
+               like std::ofstream, without having to create an extra
+               python submodule.
 
         :param message_rvalue: if not None, this parameter is a string
-        that contains an rvalue C expression that evaluates to the
-        exception message.  The Python % operator will be used to
-        substitute %(EXC)s for the caught exception variable name.  The
-        rvalue expression must return a string of type "char const*",
-        a pointer owned by the exception instance.
+               that contains an rvalue C expression that evaluates to
+               the exception message.  The Python % operator will be
+               used to substitute %(EXC)s for the caught exception
+               variable name.  The rvalue expression must return a
+               string of type "char const*", a pointer owned by the
+               exception instance.
         """
         self.name = name
         self.full_name = None

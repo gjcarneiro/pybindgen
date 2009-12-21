@@ -3,12 +3,14 @@
 
 import Options
 import Build
+
 import Scripting
 Scripting.excludes.remove('Makefile')
 Scripting.dist_format = 'zip'
 
 import Configure
 Configure.autoconfig = True
+
 import Logs
 
 #from Params import fatal

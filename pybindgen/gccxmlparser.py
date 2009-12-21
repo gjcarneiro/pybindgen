@@ -414,21 +414,21 @@ class PygenSection(object):
     def __init__(self, name, code_sink, local_customizations_module=None):
         """
         :param name: section name; this name should be a valid python
-        module name; the special name '__main__' is used to denote the
-        main section, which comprises the main script itself
+            module name; the special name '__main__' is used to denote the
+            main section, which comprises the main script itself
         :type name: str
 
         :param code_sink: code sink that will receive the generated
-        code for the section.  Normally the code sink should write to
-        a file with the name of the section and a .py extension, to
-        allow importing it as module.
+           code for the section.  Normally the code sink should write to
+           a file with the name of the section and a .py extension, to
+           allow importing it as module.
         :type code_sink: L{CodeSink}
 
         :param local_customizations_module: name of the python module
-        that may contain local customizations for the section, or
-        None.  If not None, PyBindGen will generate code that tries to
-        import that module in the respective section and call
-        functions on it, or ignore it if the module does not exist.
+          that may contain local customizations for the section, or
+          None.  If not None, PyBindGen will generate code that tries to
+          import that module in the respective section and call
+          functions on it, or ignore it if the module does not exist.
         :type local_customizations_module: str
         """
         assert isinstance(name, str)
@@ -462,14 +462,14 @@ class PygenClassifier(object):
         :param section_name: the name of the section
 
         :returns: order of precedence of the section.  The lower the
-        number, the sooner the section is to be registered.
+          number, the sooner the section is to be registered.
         """
         raise NotImplementedError
 
 
 class ModuleParser(object):
     """
-    @ivar enable_anonymous_containers: if True, pybindgen will attempt
+    :attr enable_anonymous_containers: if True, pybindgen will attempt
         to scan for all std containers, even the ones that have no
         typedef'ed name.  Enabled by default.
 
@@ -595,27 +595,28 @@ class ModuleParser(object):
         Prepares to parse a set of header files.  The following
         methods should then be called in order to finish the rest of
         scanning process:
-         1. scan_types()
-         2. scan_methods()
-         2. scan_functions()
-         3. parse_finalize()
 
-         :param header_files: header files to parse
-         :type header_files: list of string
+          #. scan_types()
+          #. scan_methods()
+          #. scan_functions()
+          #. parse_finalize()
 
-         :param include_paths: (deprecated, use the parameter gccxml_options) list of include paths
-         :type include_paths: list of string
+        :param header_files: header files to parse
+        :type header_files: list of string
 
-         :param whitelist_paths: additional directories for definitions to be included
+        :param include_paths: (deprecated, use the parameter gccxml_options) list of include paths
+        :type include_paths: list of string
+
+        :param whitelist_paths: additional directories for definitions to be included
            Normally the module parser filters out API definitions that
            have been defined outside one of the header files indicated
            for parsing.  The parameter whitelist_paths instructs the
            module parser to accept definitions defined in another
            header file if such header file is inside one of the
            directories listed by whitelist_paths.
-         :type whitelist_paths: list of string
+        :type whitelist_paths: list of string
 
-         :param pygen_sink: code sink for python script generation.
+        :param pygen_sink: code sink for python script generation.
 
            This parameter activates a mode wherein ModuleParser, in
            addition to building in memory API definitions, creates a
@@ -625,21 +626,19 @@ class ModuleParser(object):
            installed.
 
            The pygen parameter can be either:
-             1. A single code sink: this will become the main and only script file to be generated
-             2. A list of L{PygenSection} objects.  This option
-             requires the pygen_classifier to be given.
+             #. A single code sink: this will become the main and only script file to be generated
+             #. A list of L{PygenSection} objects.  This option
+                requires the pygen_classifier to be given.
 
-         :type pygen_sink: L{CodeSink} or list of L{PygenSection} objects
+        :type pygen_sink: L{CodeSink} or list of L{PygenSection} objects
 
-         :param pygen_classifier: the classifier to use when pygen is given and is a dict
+        :param pygen_classifier: the classifier to use when pygen is given and is a dict
 
+        :param gccxml_options: extra options to pass into the
+            :class:`pygccxml.parser.config.gccxml_configuration_t` object as keyword
+            arguments for more information).
 
-         :param gccxml_options: extra options to pass into
-         the gccxml_configuration_t object as keyword arguments (see 
-         U{pygccxml API documentation<http://www.language-binding.net/pyplusplus/documentation/apidocs/pygccxml.parser.config.gccxml_configuration_t-class.html>}
-         for more information).
-
-         :type gccxml_options: dict
+        :type gccxml_options: dict
 
         """
         assert isinstance(header_files, list)

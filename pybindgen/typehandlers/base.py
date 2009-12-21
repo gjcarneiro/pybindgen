@@ -387,8 +387,8 @@ class BuildValueParameters(object):
         the list being the template string.
 
         :param force_tuple_creation: if True, Py_BuildValue is
-        instructed to always create a tuple, even for zero or 1
-        values.
+           instructed to always create a tuple, even for zero or 1
+           values.
         """
         template = ['"']
         if force_tuple_creation:
@@ -508,27 +508,27 @@ class ReverseWrapperBase(object):
     Reverse wrappers all have the following general structure in common:
 
      1. 'declarations' -- variable declarations; for compatibility with
-       older C compilers it is very important that all declarations
-       come before any simple statement.  Declarations can be added
-       with the add_declaration() method on the 'declarations'
-       attribute.  Two standard declarations are always predeclared:
-       '<return-type> retval', unless return-type is void, and 'PyObject
-       *py_retval';
+        older C compilers it is very important that all declarations
+        come before any simple statement.  Declarations can be added
+        with the add_declaration() method on the 'declarations'
+        attribute.  Two standard declarations are always predeclared:
+        '<return-type> retval', unless return-type is void, and 'PyObject
+        \\*py_retval';
 
      2. 'code before call' -- this is a code block dedicated to contain
-       all code that is needed before calling into Python; code can be
-       freely added to it by accessing the 'before_call' (a CodeBlock
-       instance) attribute;
+        all code that is needed before calling into Python; code can be
+        freely added to it by accessing the 'before_call' (a CodeBlock
+        instance) attribute;
 
      3. 'call into python' -- this is realized by a
-       PyObject_CallMethod(...) or similar Python API call; the list
-       of parameters used in this call can be customized by accessing
-       the 'build_params' (a BuildValueParameters instance) attribute;
+        PyObject_CallMethod(...) or similar Python API call; the list
+        of parameters used in this call can be customized by accessing
+        the 'build_params' (a BuildValueParameters instance) attribute;
 
      4. 'code after call' -- this is a code block dedicated to contain
-       all code that must come after calling into Python; code can be
-       freely added to it by accessing the 'after_call' (a CodeBlock
-       instance) attribute;
+        all code that must come after calling into Python; code can be
+        freely added to it by accessing the 'after_call' (a CodeBlock
+        instance) attribute;
 
      5. A 'return retval' statement (or just 'return' if return_value is void)
 
@@ -676,40 +676,41 @@ class ForwardWrapperBase(object):
 
     Forward wrappers all have the following general structure in common:
 
-     1. 'declarations' -- variable declarations; for compatibility with
-       older C compilers it is very important that all declarations
-       come before any simple statement.  Declarations can be added
-       with the add_declaration() method on the 'declarations'
-       attribute.  Two standard declarations are always predeclared:
-       '<return-type> retval', unless return-type is void, and 'PyObject
-       *py_retval';
+     1. 'declarations' -- variable declarations; for compatibility
+            with older C compilers it is very important that all
+            declarations come before any simple statement.
+            Declarations can be added with the add_declaration()
+            method on the 'declarations' attribute.  Two standard
+            declarations are always predeclared: '<return-type>
+            retval', unless return-type is void, and 'PyObject
+            \\*py_retval';
 
      2. 'code before parse' -- code before the
-       PyArg_ParseTupleAndKeywords call; code can be freely added to
-       it by accessing the 'before_parse' (a CodeBlock instance)
-       attribute;
+         PyArg_ParseTupleAndKeywords call; code can be freely added to
+         it by accessing the 'before_parse' (a CodeBlock instance)
+         attribute;
 
      3. A PyArg_ParseTupleAndKeywords call; uses items from the
-       parse_params object;
+         parse_params object;
 
      4. 'code before call' -- this is a code block dedicated to contain
-       all code that is needed before calling the C function; code can be
-       freely added to it by accessing the 'before_call' (a CodeBlock
-       instance) attribute;
+         all code that is needed before calling the C function; code can be
+         freely added to it by accessing the 'before_call' (a CodeBlock
+         instance) attribute;
 
      5. 'call into C' -- this is realized by a C/C++ call; the list of
-       parameters that should be used is in the 'call_params' wrapper
-       attribute;
+         parameters that should be used is in the 'call_params' wrapper
+         attribute;
 
      6. 'code after call' -- this is a code block dedicated to contain
-       all code that must come after calling into Python; code can be
-       freely added to it by accessing the 'after_call' (a CodeBlock
-       instance) attribute;
+         all code that must come after calling into Python; code can be
+         freely added to it by accessing the 'after_call' (a CodeBlock
+         instance) attribute;
 
      7. A py_retval = Py_BuildValue(...) call; this call can be
-       customized, so that out/inout parameters can add additional
-       return values, by accessing the 'build_params' (a
-       BuildValueParameters instance) attribute;
+        customized, so that out/inout parameters can add additional
+        return values, by accessing the 'build_params' (a
+        BuildValueParameters instance) attribute;
 
      8. Cleanup and return.
 
@@ -986,7 +987,7 @@ class TypeTransformation(object):
         Given a transformed named, get the original C type name.
         E.g., given a smart pointer transformation, MySmartPointer::
 
-          get_untransformed_name('MySmartPointer<Foo>') -> 'Foo*'
+          get_untransformed_name('MySmartPointer<Foo>') -> 'Foo\\*'
         """
         raise NotImplementedError
 
@@ -1006,7 +1007,7 @@ class TypeTransformation(object):
         equivalent value expression in the transformed type.
 
         Example, with the transformation::
-           'T*' -> 'boost::shared_ptr<T>'
+           'T\\*' -> 'boost::shared_ptr<T>'
         Then::
            transform(wrapper, 'foo') -> 'boost::shared_ptr<%s>(foo)' % type_handler.untransformed_ctype
         """
@@ -1018,7 +1019,7 @@ class TypeTransformation(object):
         equivalent value expression in the original type.
 
         Example, with the transformation::
-          'T*' -> 'boost::shared_ptr<T>'
+          'T\\*' -> 'boost::shared_ptr<T>'
         Then::
            untransform(wrapper, 'foo') -> 'foo->get_pointer()'
         """
@@ -1259,8 +1260,6 @@ class Parameter(TypeHandler):
         '''
         Creates a parameter object
 
-        Keywork Arguments:
-
         :param ctype: actual C/C++ type being used
         :param name: parameter name
         :param direction: direction of the parameter transfer, valid values
@@ -1325,7 +1324,9 @@ class TypeMatcher(object):
 
     def register(self, name, type_handler):
         """Register a new handler class for a given C type
+
         :param name: C type name
+
         :param type_handler: class to handle this C type
         """
         name = ctypeparser.normalize_type_string(name)
@@ -1366,6 +1367,7 @@ class TypeMatcher(object):
 
         :param name: C type name, possibly transformed (e.g. MySmartPointer<Foo> looks up Foo*)
         :returns: a handler with the given ctype name, or raises KeyError.
+
         Supports type transformations.
 
         """

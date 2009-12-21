@@ -35,7 +35,7 @@ class CppMethod(ForwardWrapperBase):
         :param method_name: name of the method
 
         :param parameters: the method parameters
-        :type parameters: list of L{Parameter}
+        :type parameters: list of :class:`pybindgen.typehandlers.base.Parameter`
 
         :param is_static: whether it is a static method
 
@@ -47,15 +47,16 @@ class CppMethod(ForwardWrapperBase):
         :param is_const: whether the method has a const modifier on it
 
         :param unblock_threads: whether to release the Python GIL
-        around the method call or not.  If None or omitted, use global
-        settings.  Releasing the GIL has a small performance penalty,
-        but is recommended if the method is expected to take
-        considerable time to complete, because otherwise no other
-        Python thread is allowed to run until the method completes.
+            around the method call or not.  If None or omitted, use
+            global settings.  Releasing the GIL has a small
+            performance penalty, but is recommended if the method is
+            expected to take considerable time to complete, because
+            otherwise no other Python thread is allowed to run until
+            the method completes.
 
         :param is_pure_virtual: whether the method is defined as "pure
-        virtual", i.e. virtual method with no default implementation
-        in the class being wrapped.
+          virtual", i.e. virtual method with no default implementation
+          in the class being wrapped.
 
         :param custom_name: alternate name to give to the method, in python side.
 
@@ -419,7 +420,7 @@ class DummyReturnValue(ReturnValue):
         """
         Accepts either a ReturnValue object or a tuple as sole
         parameter.  In case it's a tuple, it is assumed to be a retval
-        spec (*args, **kwargs).
+        spec (\\*args, \\*\\*kwargs).
         """
         if isinstance(arg, ReturnValue):
             super(DummyReturnValue, self).__init__(arg.ctype)
@@ -445,7 +446,7 @@ class DummyParameter(Parameter):
         """
         Accepts either a Parameter object or a tuple as sole
         parameter.  In case it's a tuple, it is assumed to be a retval
-        spec (*args, **kwargs).
+        spec (\\*args, \\*\\*kwargs).
         """
         if isinstance(arg, ReturnValue):
             super(DummyParameter, self).__init__(arg.ctype)
@@ -642,10 +643,9 @@ class CppConstructor(ForwardWrapperBase):
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """
         Generates the wrapper code
-        code_sink -- a CodeSink instance that will receive the generated code
-        class_ -- the c++ class wrapper the method belongs to
+        :param code_sink: a CodeSink instance that will receive the generated code
+        :returns: the wrapper function name.
 
-        Returns the wrapper function name.
         """
         if self.visibility == 'private':
             raise utils.SkipWrapper("Class %r has a private constructor ->"
@@ -690,9 +690,10 @@ class CppFunctionAsConstructor(CppConstructor):
     """
     def __init__(self, c_function_name, return_value, parameters, unblock_threads=None):
         """
-        :param c_function_name: name of the C/C++ function; FIXME: for now it is
-        implied that this function returns a pointer to the a class
-        instance with caller_owns_return=True semantics.
+        :param c_function_name: name of the C/C++ function; FIXME: for
+           now it is implied that this function returns a pointer to
+           the a class instance with caller_owns_return=True
+           semantics.
 
         :param return_value: function return value type
         :type return_value: L{ReturnValue}
@@ -739,7 +740,7 @@ class CppNoConstructor(ForwardWrapperBase):
 
     def __init__(self, reason):
         """
-        reason -- string indicating reason why the class cannot be constructed.
+        :param reason: string indicating reason why the class cannot be constructed.
         """
         self.stack_where_defined = traceback.extract_stack()
         super(CppNoConstructor, self).__init__(
@@ -754,6 +755,7 @@ class CppNoConstructor(ForwardWrapperBase):
     def generate(self, code_sink, class_):
         """
         Generates the wrapper code
+
         :param code_sink: a CodeSink instance that will receive the generated code
         :param class_: the c++ class wrapper the method belongs to
 
@@ -782,8 +784,6 @@ class CppVirtualMethodParentCaller(CppMethod):
     """
 
     def __init__(self, method, unblock_threads=None):
-        """
-        """
         super(CppVirtualMethodParentCaller, self).__init__(
             method.method_name, method.return_value, method.parameters, unblock_threads=unblock_threads)
         #self.static_decl = False
@@ -896,9 +896,6 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
     """
 
     def __init__(self, method):
-        """
-        xxx
-        """
         self.stack_where_defined = traceback.extract_stack()
         super(CppVirtualMethodProxy, self).__init__(method.return_value, method.parameters)
         self.method_name = method.method_name
@@ -1016,7 +1013,7 @@ class CustomCppMethodWrapper(CppMethod):
     """
     Adds a custom method wrapper.  The custom wrapper must be
     prepared to support overloading, i.e. it must have an additional
-    "PyObject **return_exception" parameter, and raised exceptions
+    "PyObject \\*\\*return_exception" parameter, and raised exceptions
     must be returned by this parameter.
     """
 
@@ -1056,7 +1053,7 @@ class CustomCppConstructorWrapper(CppConstructor):
     """
     Adds a custom constructor wrapper.  The custom wrapper must be
     prepared to support overloading, i.e. it must have an additional
-    "PyObject **return_exception" parameter, and raised exceptions
+    \\"PyObject \\*\\*return_exception\\" parameter, and raised exceptions
     must be returned by this parameter.
     """
 

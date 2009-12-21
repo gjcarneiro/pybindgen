@@ -1,7 +1,3 @@
-"""
-Wrap C++ classes and methods
-"""
-
 import warnings
 import traceback
 
@@ -84,7 +80,7 @@ class ReferenceCountingPolicy(MemoryPolicy):
         Write code to increase the reference code of an object of this
         class (the real C++ class, not the wrapper).  Should only be
         called if the class supports reference counting, as reported
-        by the attribute `has_reference_counting'.
+        by the attribute `CppClass.has_reference_counting`.
         """
         raise NotImplementedError
 
@@ -93,7 +89,7 @@ class ReferenceCountingPolicy(MemoryPolicy):
         Write code to decrease the reference code of an object of this
         class (the real C++ class, not the wrapper).  Should only be
         called if the class supports reference counting, as reported
-        by the attribute `has_reference_counting'.
+        by the attribute `CppClass.has_reference_counting`.
         """
         raise NotImplementedError
 
@@ -183,7 +179,7 @@ class CppHelperClass(object):
 
     def __init__(self, class_):
         """
-        class_ -- original CppClass wrapper object
+        :param class_: original CppClass wrapper object
         """
         self.class_ = class_
         self.name = class_.pystruct + "__PythonHelper"
@@ -464,29 +460,30 @@ class CppClass(object):
         :param free_function: (deprecated in favour of memory_policy) name of C function used to deallocate class instances
         :param incref_function: (deprecated in favour of memory_policy) same as incref_method, but as a function instead of method
         :param decref_function: (deprecated in favour of memory_policy) same as decref_method, but as a function instead of method
+
         :param python_name: name of the class as it will appear from
-        Python side.  This parameter is DEPRECATED in favour of
-        custom_name.
+             Python side.  This parameter is DEPRECATED in favour of
+             custom_name.
 
         :param memory_policy: memory management policy; if None, it
-        inherits from the parent class.  Only root classes can have a
-        memory policy defined.
+            inherits from the parent class.  Only root classes can have a
+            memory policy defined.
         :type memory_policy: L{MemoryPolicy}
         
         :param foreign_cpp_namespace: if set, the class is assumed to
-        belong to the given C++ namespace, regardless of the C++
-        namespace of the python module it will be added to.  For
-        instance, this can be useful to wrap std classes, like
-        std::ofstream, without having to create an extra python
-        submodule.
+            belong to the given C++ namespace, regardless of the C++
+            namespace of the python module it will be added to.  For
+            instance, this can be useful to wrap std classes, like
+            std::ofstream, without having to create an extra python
+            submodule.
 
         :param docstring: None or a string containing the docstring
-        that will be generated for the class
+            that will be generated for the class
 
         :param custom_name: an alternative name to give to this class
-        at python-side; if omitted, the name of the class in the
-        python module will be the same name as the class in C++ (minus
-        namespace).
+            at python-side; if omitted, the name of the class in the
+            python module will be the same name as the class in C++
+            (minus namespace).
 
         """
         assert outer_class is None or isinstance(outer_class, CppClass)
@@ -682,7 +679,7 @@ class CppClass(object):
         of the type of the class, either by reference or by value.
         
         :param operator: string indicating the name of the operator to
-        support, e.g. '=='
+            support, e.g. '=='
         """
         operator = utils.ascii(operator)
         if not isinstance(operator, str):
@@ -694,17 +691,17 @@ class CppClass(object):
     def add_binary_numeric_operator(self, operator, result_cppclass=None,
                                     left_cppclass=None, right=None):
         """
-        Add support for a C++ binary numeric operator, such as +, -, *, or /.
+        Add support for a C++ binary numeric operator, such as +, -, \\*, or /.
 
         :param operator: string indicating the name of the operator to
-        support, e.g. '=='
+           support, e.g. '=='
 
         :param result_cppclass: the CppClass object of the result type, assumed to be this class if omitted
         :param left_cppclass: the CppClass object of the left operand type, assumed to be this class if omitted
 
         :param right: the type of the right parameter. Can be a
-        CppClass, Parameter, or param spec. Assumed to be this class
-        if omitted
+          CppClass, Parameter, or param spec. Assumed to be this class
+          if omitted
         """
         operator = utils.ascii(operator)
         if not isinstance(operator, str):
@@ -740,14 +737,14 @@ class CppClass(object):
 
     def add_inplace_numeric_operator(self, operator, right=None):
         """
-        Add support for a C++ inplace numeric operator, such as +=, -=, *=, or /=.
+        Add support for a C++ inplace numeric operator, such as +=, -=, \\*=, or /=.
 
         :param operator: string indicating the name of the operator to
-        support, e.g. '+='
+           support, e.g. '+='
 
         :param right: the type of the right parameter. Can be a
-        CppClass, Parameter, or param spec. Assumed to be this class
-        if omitted
+          CppClass, Parameter, or param spec. Assumed to be this class
+          if omitted
         """
         operator = utils.ascii(operator)
         if not isinstance(operator, str):
@@ -776,7 +773,7 @@ class CppClass(object):
         Add support for a C++ unary numeric operators, currently only -.
 
         :param operator: string indicating the name of the operator to
-        support, e.g. '-'
+          support, e.g. '-'
 
         :param result_cppclass: the CppClass object of the result type, assumed to be this class if omitted
         :param left_cppclass: the CppClass object of the left operand type, assumed to be this class if omitted
@@ -882,7 +879,7 @@ class CppClass(object):
 
     def is_subclass(self, other):
         """Return True if this CppClass instance represents a class that is a
-        subclass of another class represented by the CppClasss object `other'."""
+        subclass of another class represented by the CppClasss object \\`other\\'."""
         if not isinstance(other, CppClass):
             raise TypeError
         cls = self
