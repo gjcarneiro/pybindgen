@@ -283,6 +283,8 @@ def configure(conf):
             conf.env.append_value('CXXFLAGS_PYEXT', '-fvisibility=hidden')
             conf.env.append_value('CCFLAGS_PYEXT', '-fvisibility=hidden')
 
+    conf.sub_config('benchmarks')
+
 
 def build(bld):
     global g_bld
@@ -295,6 +297,20 @@ def build(bld):
         bld.add_subdirs('examples')
     if Options.commands['check'] or Options.commands['clean']:
         bld.add_subdirs('tests')
+
+    if Options.commands.get('bench', False) or Options.commands['clean']:
+        bld.add_subdirs('benchmarks')
+
+
+check_context = Build.BuildContext
+def bench(bld):
+    "run the benchmarks; requires many tools, used by maintainers only"
+    Scripting.build(bld)
+    env = g_bld.env
+
+    print "Running benchmarks..."
+    retval = subprocess.Popen([env['PYTHON'], '-O', 'benchmarks/bench.py']).wait()
+
 
 check_context = Build.BuildContext
 def check(bld):
