@@ -21,7 +21,11 @@ def my_module_gen(out_file):
     Multiplier.add_constructor([param('double', 'factor')])
 
     Multiplier.add_method('GetFactor', 'double', [], is_const=True)
+    Multiplier.add_method('SetFactor', 'void', [param('double', 'f')], is_const=True)
+    Multiplier.add_method('SetFactor', 'void', [], is_const=True)
     Multiplier.add_method('Multiply', 'double', [param('double', 'value')], is_virtual=True, is_const=True)
+
+    mod.add_function('call_virtual_from_cpp', 'double', [param('Multiplier const *', 'obj'), param('double', 'value')])
     
 
     mod.generate(FileCodeSink(out_file))

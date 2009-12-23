@@ -21,10 +21,23 @@ Multiplier::Multiplier (double factor)
 {
 }
 
+Multiplier::~Multiplier ()
+{
+}
 
 double Multiplier::GetFactor () const
 {
     return m_factor;
+}
+
+void Multiplier::SetFactor (double f)
+{
+    m_factor = f;
+}
+
+void Multiplier::SetFactor ()
+{
+    m_factor = 1.0;
 }
 
 double
@@ -33,4 +46,10 @@ Multiplier::Multiply (double value) const
     return value*m_factor;
 }
 
+
+double
+call_virtual_from_cpp (Multiplier const *obj, double value)
+{
+    return obj->Multiply (value);
+}
 

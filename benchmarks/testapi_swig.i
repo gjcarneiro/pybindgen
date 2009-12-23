@@ -1,6 +1,8 @@
 /* example.i */
 
-%module testapi_swig
+%module(directors="1") testapi_swig
+%feature("director");         
+
 %{
 
 #include "testapi.h"
@@ -16,8 +18,13 @@ class Multiplier
     
 public:
     Multiplier ();
+    virtual ~Multiplier ();
     Multiplier (double factor);
-    
+    void SetFactor (double f);
+    void SetFactor (void);
     double GetFactor () const;
     virtual double Multiply (double value) const;
 };
+
+extern double call_virtual_from_cpp (Multiplier const *obj, double value);
+
