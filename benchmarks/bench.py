@@ -127,7 +127,8 @@ def main():
     env.appendChild(dom.createElement('boost_python')).appendChild(dom.createTextNode(
             subprocess.Popen(["dpkg", "-s", "libboost-python-dev"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]))
     env.appendChild(dom.createElement('pybindgen')).appendChild(dom.createTextNode(
-            subprocess.Popen(["bzr", "revno"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]))
+            subprocess.Popen(["bzr", "version-info", '--check-clean'],
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]))
 
     env.appendChild(dom.createElement('cpu')).appendChild(dom.createTextNode(
             file("/proc/cpuinfo").read()))
