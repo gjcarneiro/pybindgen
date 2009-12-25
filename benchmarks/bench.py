@@ -15,6 +15,7 @@ TIMES1 = TIMES/4
 import testapi_pybindgen
 import testapi_boost
 import testapi_swig
+import testapi_sip
 
 
 def bench(mod, dom, elem):
@@ -81,17 +82,18 @@ def bench(mod, dom, elem):
     if mod is testapi_pybindgen:
         class M(mod.Multiplier):
             def _Multiply(self, value):
-                #print "Multiply", value, " return ", super(M, self)._Multiply(value)
                 return super(M, self)._Multiply(value)
     elif mod is testapi_boost:
         class M(mod.Multiplier):
             def Multiply(self, value):
-                #print "Multiply", value, " return ", super(M, self).Multiply(value)
                 return super(M, self).Multiply(value)
     elif mod is testapi_swig:
         class M(mod.Multiplier):
             def Multiply(self, value):
-                #print "Multiply", value, " return ", super(M, self).Multiply(value)
+                return super(M, self).Multiply(value)
+    elif mod is testapi_sip:
+        class M(mod.Multiplier):
+            def Multiply(self, value):
                 return super(M, self).Multiply(value)
     else:
         raise NotImplementedError
@@ -155,6 +157,11 @@ def main():
     sw.setAttribute("module-file-size", repr(os.stat("build/default/benchmarks/_testapi_swig.so").st_size))
     sw.setAttribute("module-python-file-size", repr(os.stat("build/default/benchmarks/testapi_swig.py").st_size))
     bench(testapi_swig, dom, sw)
+
+    print "sip results:"
+    sip = res.appendChild(dom.createElement('sip'))
+    sip.setAttribute("module-file-size", repr(os.stat("build/default/benchmarks/testapi_sip.so").st_size))
+    bench(testapi_sip, dom, sip)
 
     if len(sys.argv) == 3:
         f = open(sys.argv[1], "wb")

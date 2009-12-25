@@ -312,14 +312,14 @@ def bench(bld):
     retval = subprocess.Popen([env['PYTHON'], '-O', 'benchmarks/bench.py',
                                "build/default/benchmarks/results.xml", ' '.join(env['CXXFLAGS_PYEXT'] + env['CXXFLAGS'])]).wait()
     if retval:
-        raise SystemExit(reval)
+        raise SystemExit(retval)
 
     print "Generating benchmarks report..."
     retval = subprocess.Popen([env['PYTHON'], '-O', 'benchmarks/plotresults.py',
                                "build/default/benchmarks/results.xml",
                                "build/default/benchmarks/results"]).wait()
     if retval:
-        raise SystemExit(reval)
+        raise SystemExit(retval)
 
 
 check_context = Build.BuildContext

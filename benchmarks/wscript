@@ -57,3 +57,27 @@ def build(bld):
     obj.install_path = None # do not install
     obj.includes = '.'
     
+
+    #
+    # SIP
+    #
+    gen = bld.new_task_gen(
+        features='command',
+        source='testapi.sip',
+        target='sipAPItestapi_sip.h  siptestapi_sipcmodule.cpp  siptestapi_sipMultiplier.cpp',
+        command='sip -c default/benchmarks ${SRC[0]}')
+
+    obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
+    obj.source = [
+        'testapi.cc',
+        'siptestapi_sipcmodule.cpp',
+        'siptestapi_sipMultiplier.cpp',
+        ]
+    obj.target = 'testapi_sip'
+    obj.install_path = None # do not install
+    obj.includes = '.'
+
+    # SIP does not like -fvisibility=hidden :-(
+    l = list(obj.env['CXXFLAGS_PYEXT'])
+    l.remove("-fvisibility=hidden")
+    obj.env['CXXFLAGS_PYEXT'] = l
