@@ -1,5 +1,7 @@
 # pylint: disable-msg=W0105
 
+from wrapper_registry import NullWrapperRegistry, StdMapWrapperRegistry
+
 """
 
 Global settings to the code generator.
@@ -31,6 +33,27 @@ run during the call.
 """
 
 
+error_handler = None
+"""
+Custom error handling.
+Error handler, or None.  When it is None, code generation exceptions
+propagate to the caller.  Else it can be a
+:class:`pybindgen.settings.ErrorHandler` subclass instance that handles the error.
+"""
+
+min_python_version=(2, 3)
+"""
+Minimum python version the generated code must support.
+"""
+
+wrapper_registry = NullWrapperRegistry
+"""
+A :class:`WrapperRegistry` subclass to use for creating
+wrapper registries.  A wrapper registry ensures that at most one
+python wrapper exists for each C/C++ object.
+"""
+
+
 class ErrorHandler(object):
     def handle_error(self, wrapper, exception, traceback_):
         """
@@ -41,24 +64,3 @@ class ErrorHandler(object):
         """
         raise NotImplementedError
 
-error_handler = None
-"""
-Custom error handling.
-Error handler, or None.  When it is None, code generation exceptions
-propagate to the caller.  Else it can be a
-pybindgen.utils.ErrorHandler subclass instance that handles the error.
-"""
-
-min_python_version=(2, 3)
-"""
-Minimum python version the generated code must support.
-"""
-
-from wrapper_registry import NullWrapperRegistry, StdMapWrapperRegistry
-
-wrapper_registry = NullWrapperRegistry
-"""
-A L{WrapperRegistry} subclass to use for creating
-wrapper registries.  A wrapper registry ensures that at most one
-python wrapper exists for each C/C++ object.
-"""
