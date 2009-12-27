@@ -53,6 +53,29 @@ wrapper registries.  A wrapper registry ensures that at most one
 python wrapper exists for each C/C++ object.
 """
 
+deprecated_virtuals = None
+"""
+Prior to PyBindGen version 0.14, the code generated to handle C++
+virtual methods required Python user code to define a _foo method in
+order to implement the virtual method foo.  Since 0.14, PyBindGen
+changed so that virtual method foo is implemented in Python by
+defining a method foo, i.e. no underscore prefix is needed anymore.
+Setting deprecated_virtuals to True will force the old virtual method
+behaviour.  But this is really deprecated; newer code should set
+deprecated_virtuals to False.
+"""
+
+def _get_deprecated_virtuals():
+    if deprecated_virtuals is None:
+        import warnings
+        warnings.warn("The option pybindgen.settings.deprecated_virtuals has not been set."
+                      "  I am going to assume the value of True, to preserve backward"
+                      " compatibility, but the default value will change in the future,"
+                      " and the option will eventually disappear.",
+                      DeprecationWarning)
+        return True
+    return deprecated_virtuals
+
 
 class ErrorHandler(object):
     def handle_error(self, wrapper, exception, traceback_):

@@ -204,7 +204,11 @@ class CppHelperClass(object):
         else:
             self.virtual_methods.append(method)
             if not method.is_pure_virtual:
-                if method.visibility in ['public', 'protected']:
+                if settings._get_deprecated_virtuals():
+                    vis = ['public', 'protected']
+                else:
+                    vis = ['protected']
+                if method.visibility in vis:
                     parent_caller = CppVirtualMethodParentCaller(method)
                     #parent_caller.class_ = method.class_
                     parent_caller.helper_class = self
@@ -393,7 +397,11 @@ void set_pyobj(PyObject *pyobj)
                                                (code_sink,), {}, parent_caller)
             except utils.SkipWrapper:
                 continue
-            method_defs.append(parent_caller.get_py_method_def('_' + name))
+            if settings._get_deprecated_virtuals():
+                parent_caller_name = '_'+name
+            else:
+                parent_caller_name = name
+            method_defs.append(parent_caller.get_py_method_def(parent_caller_name))
                 
         ## write the virtual proxies
         for virtual_proxy in self.virtual_proxies:

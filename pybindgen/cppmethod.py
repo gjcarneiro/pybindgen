@@ -238,29 +238,55 @@ class CppMethod(ForwardWrapperBase):
             template_params = '< %s >' % ', '.join(self.template_parameters)
         else:
             template_params = ''
+
+
+        if self.return_value.ctype == 'void':
+            retval_assign = ''
+        else:
+            if self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
+                retval_assign = '%s retval = ' % (self.return_value.ctype,)
+            else:
+                retval_assign = 'retval = '
+
+        if class_.helper_class is not None and self.is_virtual and not self.is_pure_virtual\
+                and not settings._get_deprecated_virtuals():
+            helper = self.before_call.declare_variable(type_="%s *" % class_.helper_class.name,
+                                                       name="helper_class",
+                                                       initializer=(
+                    "dynamic_cast<%s*> (self->obj)" % class_.helper_class.name))
+        else:
+            helper = None
+
         if self.is_static:
             method = '%s::%s%s' % (class_.full_name, self.method_name, template_params)
         else:
             method = 'self->obj->%s%s' % (self.method_name, template_params)
 
-
         if self.throw:
             self.before_call.write_code('try\n{')
             self.before_call.indent()
 
-        if self.return_value.ctype == 'void':
-            self.before_call.write_code(
-                '%s(%s);' %
-                (method, ", ".join(self.call_params)))
+        if self.is_static:
+            self.before_call.write_code(retval_assign + (
+                    '%s::%s%s(%s);' % (class_.full_name,
+                                       self.method_name, template_params,
+                                       ", ".join(self.call_params))))
         else:
-            if self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
-                self.before_call.write_code(
-                    '%s retval = %s(%s);' %
-                    (self.return_value.ctype, method, ", ".join(self.call_params)))
+            if helper is None:
+                self.before_call.write_code(retval_assign + (
+                        'self->obj->%s%s(%s);' % (self.method_name, template_params,
+                                                  ", ".join(self.call_params))))
             else:
-                self.before_call.write_code(
-                    'retval = %s(%s);' %
-                    (method, ", ".join(self.call_params)))
+                self.before_call.write_code(retval_assign + (
+                        '(%s == NULL)? (self->obj->%s%s(%s)) : (self->obj->%s::%s%s(%s));'
+                        % (helper,
+
+                           self.method_name, template_params,
+                           ", ".join(self.call_params),
+                           
+                           class_.full_name, self.method_name, template_params,
+                           ", ".join(self.call_params)
+                           )))
 
         if self.throw:
             for exc in self.throw:
@@ -840,7 +866,16 @@ class CppVirtualMethodParentCaller(CppMethod):
     def generate_call(self, class_=None):
         "virtual method implementation; do not call"
         class_ = self.class_
-        method = 'reinterpret_cast< %s* >(self->obj)->%s__parent_caller' % (self._helper_class.name, self.method_name)
+        helper = self.before_call.declare_variable(
+            type_=('%s*' % self._helper_class.name),
+            name='helper',
+            initializer=("dynamic_cast< %s* >(self->obj)" %  self._helper_class.name))
+        method = '%s->%s__parent_caller' % (helper, self.method_name)
+        self.before_call.write_error_check(
+            "%s == NULL" % helper,
+            'PyErr_SetString(PyExc_TypeError, "Method %s of class %s is protected and can only be called by a subclass");'
+            % (self.method_name, self.class_.name))
+        
         if self.return_value.ctype == 'void':
             self.before_call.write_code(
                 '%s(%s);' %
@@ -919,7 +954,10 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
 
     def generate_python_call(self):
         """code to call the python method"""
-        params = ['m_pyself', '(char *) "_%s"' % self.method_name]
+        if settings._get_deprecated_virtuals():
+            params = ['m_pyself', '(char *) "_%s"' % self.method_name]
+        else:
+            params = ['m_pyself', '(char *) "%s"' % self.method_name]
         build_params = self.build_params.get_parameters()
         if build_params[0][0] == '"':
             build_params[0] = '(char *) ' + build_params[0]
@@ -953,8 +991,12 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         ## just chain to parent class and don't do anything else
         call_params = ', '.join([param.name for param in self.parameters])
         py_method = self.declarations.declare_variable('PyObject*', 'py_method')
-        self.before_call.write_code('%s = PyObject_GetAttrString(m_pyself, (char *) "_%s"); PyErr_Clear();'
-                                    % (py_method, self.method_name))
+        if settings._get_deprecated_virtuals():
+            self.before_call.write_code('%s = PyObject_GetAttrString(m_pyself, (char *) "_%s"); PyErr_Clear();'
+                                        % (py_method, self.method_name))
+        else:
+            self.before_call.write_code('%s = PyObject_GetAttrString(m_pyself, (char *) "%s"); PyErr_Clear();'
+                                        % (py_method, self.method_name))
         self.before_call.add_cleanup_code('Py_XDECREF(%s);' % py_method)
         
         self.before_call.write_code(

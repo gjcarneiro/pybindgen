@@ -199,7 +199,7 @@ class TestFoo(unittest.TestCase):
 
     def test_virtual_subclass(self):
         class Test(foo.SomeObject):
-            def _get_prefix(self):
+            def get_prefix(self):
                 return "yyy"
 
         t = Test("xxx")
@@ -207,8 +207,8 @@ class TestFoo(unittest.TestCase):
 
     def test_virtual_with_chaining_to_parent_class(self):
         class Test(foo.SomeObject):
-            def _get_prefix(self):
-                prefix = super(Test, self)._get_prefix()
+            def get_prefix(self):
+                prefix = super(Test, self).get_prefix()
                 return prefix + "yyy"
 
         t = Test("xxx")
@@ -262,8 +262,8 @@ class TestFoo(unittest.TestCase):
             def __init__(self, prefix, extra_prefix):
                 super(Test, self).__init__(prefix)
                 self.extra_prefix = extra_prefix
-            def _get_prefix(self):
-                prefix = super(Test, self)._get_prefix()
+            def get_prefix(self):
+                prefix = super(Test, self).get_prefix()
                 return prefix + self.extra_prefix
         while gc.collect():
             pass
@@ -523,8 +523,8 @@ class TestFoo(unittest.TestCase):
             def __init__(self, prefix, extra_prefix):
                 super(Test, self).__init__(prefix)
                 self.extra_prefix = extra_prefix
-            def _get_prefix_with_foo_value(self, fooval):
-                prefix = super(Test, self)._get_prefix_with_foo_value(fooval)
+            def get_prefix_with_foo_value(self, fooval):
+                prefix = super(Test, self).get_prefix_with_foo_value(fooval)
                 return prefix + self.extra_prefix + fooval.get_datum()
 
         t = Test("123", "456")
@@ -537,8 +537,8 @@ class TestFoo(unittest.TestCase):
             def __init__(self, prefix, extra_prefix):
                 super(Test, self).__init__(prefix)
                 self.extra_prefix = extra_prefix
-            def _get_prefix_with_foo_ref(self, fooval):
-                prefix = super(Test, self)._get_prefix_with_foo_ref(fooval)
+            def get_prefix_with_foo_ref(self, fooval):
+                prefix = super(Test, self).get_prefix_with_foo_ref(fooval)
                 return prefix + self.extra_prefix + fooval.get_datum()
 
         t = Test("123", "456")
@@ -552,8 +552,8 @@ class TestFoo(unittest.TestCase):
             def __init__(self, prefix, extra_prefix):
                 super(Test, self).__init__(prefix)
                 self.extra_prefix = extra_prefix
-            def _get_prefix_with_foo_ptr(self, fooval):
-                prefix = super(Test, self)._get_prefix_with_foo_ptr(fooval)
+            def get_prefix_with_foo_ptr(self, fooval):
+                prefix = super(Test, self).get_prefix_with_foo_ptr(fooval)
                 return prefix + self.extra_prefix + fooval.get_datum()
 
         t = Test("123", "456")
@@ -632,7 +632,7 @@ class TestFoo(unittest.TestCase):
 
     def test_private_virtual(self):
         class Class(foo.AbstractBaseClass2):
-            def _private_virtual(self, x):
+            def private_virtual(self, x):
                 return x*x
         c = Class()
         x = c.invoke_private_virtual(2)
@@ -640,10 +640,10 @@ class TestFoo(unittest.TestCase):
 
     def test_protected_virtual(self):
         class Class(foo.AbstractBaseClass2):
-            def _private_virtual(self, x):
+            def private_virtual(self, x):
                 return x*x
-            def _protected_virtual(self, x):
-                y = super(Class, self)._protected_virtual(x)
+            def protected_virtual(self, x):
+                y = super(Class, self).protected_virtual(x)
                 return y*y
         c = Class()
         x = c.invoke_protected_virtual(2)
@@ -651,7 +651,7 @@ class TestFoo(unittest.TestCase):
 
     def test_protected_pure_virtual(self):
         class Class(foo.AbstractBaseClass2):
-            def _protected_pure_virtual(self, x):
+            def protected_pure_virtual(self, x):
                 return x*x+1
         c = Class()
         x = c.invoke_protected_pure_virtual(2)
@@ -662,7 +662,7 @@ class TestFoo(unittest.TestCase):
             def __init__(self, y):
                 super(Test, self).__init__("foo")
                 self.y = y
-            def _get_int(self, x):
+            def get_int(self, x):
                 return getattr(self, 'y', 0) + x
                 
         while gc.collect():
@@ -851,7 +851,7 @@ class TestFoo(unittest.TestCase):
                 super(MyTestContainer, self).__init__()
                 self.list_that_was_set = None
 
-            def _get_simple_list(self):
+            def get_simple_list(self):
                 l = []
                 for i in range(5):
                     simple = foo.simple_struct_t()
@@ -860,7 +860,7 @@ class TestFoo(unittest.TestCase):
                 #container = foo.SimpleStructList(l)
                 return l
 
-            def _set_simple_list(self, container):
+            def set_simple_list(self, container):
                 self.list_that_was_set = container
                 return sum([s.xpto for s in container])
 
@@ -1134,7 +1134,7 @@ class TestFoo(unittest.TestCase):
 
     def test_virtual_method_reference_parameter(self):
         class MyReferenceManipulator(foo.ReferenceManipulator):
-            def _do_manipulate_object(self, obj):
+            def do_manipulate_object(self, obj):
                 obj.SetValue(12345)
         manip = MyReferenceManipulator()
         retval = manip.manipulate_object()

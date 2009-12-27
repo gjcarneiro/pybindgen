@@ -79,24 +79,9 @@ def bench(mod, dom, elem):
     tst.setAttribute("time", repr(Timer(bench).timeit(TIMES)))
     print "%s (%s): %s" % (tst.tagName, tst.getAttribute('description'), tst.getAttribute('time'))
 
-    if mod is testapi_pybindgen:
-        class M(mod.Multiplier):
-            def _Multiply(self, value):
-                return super(M, self)._Multiply(value)
-    elif mod is testapi_boost:
-        class M(mod.Multiplier):
-            def Multiply(self, value):
-                return super(M, self).Multiply(value)
-    elif mod is testapi_swig:
-        class M(mod.Multiplier):
-            def Multiply(self, value):
-                return super(M, self).Multiply(value)
-    elif mod is testapi_sip:
-        class M(mod.Multiplier):
-            def Multiply(self, value):
-                return super(M, self).Multiply(value)
-    else:
-        raise NotImplementedError
+    class M(mod.Multiplier):
+        def Multiply(self, value):
+            return super(M, self).Multiply(value)
     obj = M(2.0)
     def bench():
         return obj.Multiply(5.0)

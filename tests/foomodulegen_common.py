@@ -53,6 +53,7 @@ del transf
 
 def customize_module(module):
     pybindgen.settings.wrapper_registry = pybindgen.settings.StdMapWrapperRegistry
+    pybindgen.settings.deprecated_virtuals = False
 
     wrapper_body = '''
 static PyObject *

@@ -3,9 +3,11 @@
 import sys
 
 from pybindgen import Module, retval, param, FileCodeSink
-
+import pybindgen.settings
 
 def my_module_gen(out_file):
+
+    pybindgen.settings.deprecated_virtuals = False
 
     mod = Module('testapi_pybindgen')
     mod.add_include('"testapi.h"')

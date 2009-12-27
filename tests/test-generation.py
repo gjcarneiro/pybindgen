@@ -11,6 +11,9 @@ from pybindgen.module import Module
 from pybindgen import cppclass
 from pybindgen.typehandlers.base import NotSupportedError
 
+import pybindgen.settings
+pybindgen.settings.deprecated_virtuals = False
+
 import re
 
 stdint_rx = re.compile(".*int\\d+_t.*")
