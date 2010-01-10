@@ -268,6 +268,27 @@ class Int16Param(Parameter):
         wrapper.call_params.append(name)
 
 
+class Int16RefParam(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_INOUT, Parameter.DIRECTION_OUT]
+    CTYPES = ['int16_t&', 'short&', 'short int&']
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        if self.direction & self.DIRECTION_IN:
+            wrapper.build_params.add_parameter('h', [self.value])
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.parse_params.add_parameter("h", [self.value], self.name)
+
+    def convert_python_to_c(self, wrapper):
+        name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
+        wrapper.call_params.append(name)
+        if self.direction & self.DIRECTION_IN:
+            wrapper.parse_params.add_parameter('h', ['&'+name], self.name)
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.build_params.add_parameter("h", [name])
+
+
 class UInt8Param(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
