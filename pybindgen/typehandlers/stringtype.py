@@ -114,6 +114,59 @@ class StdStringRefParam(Parameter):
             wrapper.build_params.add_parameter("s#", ['('+name_std+').c_str()', '('+name_std+').size()'])
 
 
+class StdStringPtrParam(PointerParameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN,
+                  Parameter.DIRECTION_OUT,
+                  Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
+    CTYPES = ['std::string*']
+    
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        ptr = None
+        if self.direction & Parameter.DIRECTION_IN:
+            ptr = wrapper.declarations.declare_variable("const char *", self.name + "_ptr")
+            len_ = wrapper.declarations.declare_variable("Py_ssize_t", self.name + "_len")
+            wrapper.before_call.write_code(
+                "%s = %s->c_str();" % (ptr, self.value))
+            wrapper.before_call.write_code(
+                "%s = %s->size();" % (len_, self.value))
+            wrapper.build_params.add_parameter('s#', [ptr, len_])
+
+        if self.direction & Parameter.DIRECTION_OUT:
+            if ptr is None:
+                ptr = wrapper.declarations.declare_variable("const char *", self.name + "_ptr")
+                len_ = wrapper.declarations.declare_variable("Py_ssize_t", self.name + "_len")
+            wrapper.parse_params.add_parameter("s#", ['&'+ptr, '&'+len_], self.value)
+            wrapper.after_call.write_code(
+                "*%s = std::string(%s, %s);" % (self.value, ptr, len_))
+        if self.transfer_ownership:
+            wrapper.after_call.write_code("delete %s;" % (self.value,))
+            
+
+    def convert_python_to_c(self, wrapper):
+        assert isinstance(wrapper, ForwardWrapperBase)
+        assert self.default_value is None, "default_value not implemented yet"
+        name = wrapper.declarations.declare_variable("const char *", self.name)
+        name_len = wrapper.declarations.declare_variable("Py_ssize_t", self.name+'_len')
+        if self.transfer_ownership:
+            name_std = wrapper.declarations.declare_variable("std::string*", self.name + '_std', 'new std::string')
+            wrapper.call_params.append('%s' % name_std)
+            name_std_value = '*' + name_std
+        else:
+            name_std = wrapper.declarations.declare_variable("std::string", self.name + '_std')
+            wrapper.call_params.append('&%s' % name_std)
+            name_std_value = name_std
+
+        if self.direction & Parameter.DIRECTION_IN:
+            wrapper.parse_params.add_parameter('s#', ['&'+name, '&'+name_len], self.value)
+            wrapper.before_call.write_code('%s = std::string(%s, %s);' %
+                                           (name_std_value, name, name_len))
+
+        if self.direction & Parameter.DIRECTION_OUT:
+            wrapper.build_params.add_parameter("s#", ['('+name_std_value+').c_str()', '('+name_std+').size()'])
+
+
 class CharReturn(ReturnValue):
 
     CTYPES = ['char']
