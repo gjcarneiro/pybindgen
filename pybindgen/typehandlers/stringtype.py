@@ -164,7 +164,7 @@ class StdStringPtrParam(PointerParameter):
                                            (name_std_value, name, name_len))
 
         if self.direction & Parameter.DIRECTION_OUT:
-            wrapper.build_params.add_parameter("s#", ['('+name_std_value+').c_str()', '('+name_std+').size()'])
+            wrapper.build_params.add_parameter("s#", ['('+name_std_value+').c_str()', '('+name_std_value+').size()'])
 
 
 class CharReturn(ReturnValue):
