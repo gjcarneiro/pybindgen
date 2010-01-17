@@ -61,8 +61,8 @@ class CppInstanceAttributeGetter(PyGetter):
         """
         tmp_sink = codesink.MemoryCodeSink()
         self.generate_body(tmp_sink)
-        code_sink.writeln("static PyObject* %s(%s *self)" % (self.c_function_name,
-                                                             self.class_.pystruct))
+        code_sink.writeln("static PyObject* %s(%s *self, void * PYBINDGEN_UNUSED(closure))"
+                          % (self.c_function_name, self.class_.pystruct))
         code_sink.writeln('{')
         code_sink.indent()
         tmp_sink.flush_to(code_sink)
@@ -97,7 +97,9 @@ class CppStaticAttributeGetter(PyGetter):
         """
         tmp_sink = codesink.MemoryCodeSink()
         self.generate_body(tmp_sink)
-        code_sink.writeln("static PyObject* %s(void)" % self.c_function_name)
+        code_sink.writeln("static PyObject* %s(PyObject * PYBINDGEN_UNUSED(obj),"
+                          " void * PYBINDGEN_UNUSED(closure))"
+                          % self.c_function_name)
         code_sink.writeln('{')
         code_sink.indent()
         tmp_sink.flush_to(code_sink)
@@ -167,7 +169,7 @@ class CppInstanceAttributeSetter(PySetter):
         self.after_call.write_code('return 0;')
 
         ## now generate the function itself
-        code_sink.writeln("static int %s(%s *self, PyObject *value)"
+        code_sink.writeln("static int %s(%s *self, PyObject *value, void * PYBINDGEN_UNUSED(closure))"
                           % (self.c_function_name, self.class_.pystruct))
         code_sink.writeln('{')
         code_sink.indent()
@@ -223,7 +225,7 @@ class CppStaticAttributeSetter(PySetter):
 
         ## now generate the function itself
         code_sink.writeln(("static int %s(%s * PYBINDGEN_UNUSED(dummy), "
-                           "PyObject *value)")
+                           "PyObject *value, void * PYBINDGEN_UNUSED(closure))")
                           % (self.c_function_name, self.class_.pystruct))
         code_sink.writeln('{')
         code_sink.indent()
