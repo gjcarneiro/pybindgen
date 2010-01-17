@@ -95,6 +95,13 @@ int SomeObject::get_int (double from_float)
     return (int) from_float;
 }
 
+std::string
+SomeObject::protected_method_that_is_not_virtual (std::string arg) const
+{
+    return m_prefix + arg;
+}
+
+
 int SomeObject::instance_count = 0;
 
 class HiddenClass : public Bar

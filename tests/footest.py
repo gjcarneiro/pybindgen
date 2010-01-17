@@ -954,6 +954,9 @@ class TestFoo(unittest.TestCase):
         
 
     def test_refcounting_v2(self):
+        while gc.collect():
+            pass
+
         zbr_count_before = foo.Zbr.instance_count
 
         obj = foo.SomeObject("")
@@ -1321,6 +1324,22 @@ class TestFoo(unittest.TestCase):
 
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1)
         self.assertEqual(foo.Box.instance_count, Box_count1)
+
+    def test_protected_method_no_subclassing(self):
+        some = foo.SomeObject("xxx")
+        self.assert_(hasattr(some, "protected_method_that_is_not_virtual"))
+        self.assertRaises(TypeError, some.protected_method_that_is_not_virtual, "aax")
+        del some
+
+    def test_protected_method_with_subclassing(self):
+        class Test(foo.SomeObject):
+            def __init__(self, prefix):
+                super(Test, self).__init__(prefix)
+        some = Test("foo")
+        v = some.protected_method_that_is_not_virtual("ajax")
+        self.assertEqual(v, "fooajax")
+        del some
+
 
 if __name__ == '__main__':
     unittest.main()

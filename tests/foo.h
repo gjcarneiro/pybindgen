@@ -445,6 +445,9 @@ public:
         delete m_foobar;
         m_foobar = foobar;
     }
+
+protected:
+    std::string protected_method_that_is_not_virtual (std::string arg) const;
 };
 
 

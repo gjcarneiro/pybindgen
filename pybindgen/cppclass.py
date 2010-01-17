@@ -1233,7 +1233,14 @@ public:
         
         method.class_ = self
 
-        if method.visibility == 'public':
+        if method.visibility == 'protected' and not method.is_virtual:
+            helper_class = self.get_helper_class()
+            if helper_class is not None:
+                parent_caller = CppVirtualMethodParentCaller(method)
+                parent_caller.helper_class = helper_class
+                parent_caller.main_wrapper = method
+                helper_class.add_virtual_parent_caller(parent_caller)
+        elif method.visibility == 'public':
             if name == '__call__': # needs special handling
                 method.force_parse = method.PARSE_TUPLE_AND_KEYWORDS
 

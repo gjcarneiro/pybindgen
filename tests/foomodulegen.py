@@ -258,6 +258,11 @@ int %s::custom_method_added_by_a_hook(int x)
                           [Parameter.new('double', 'from_float')],
                           custom_name="get_int")
 
+    # Bug #508577
+    SomeObject.add_method('protected_method_that_is_not_virtual',
+                          ReturnValue.new('std::string'),
+                          [Parameter.new('std::string', 'arg')],
+                          is_const=True, visibility='protected')
 
     mod.add_function('store_some_object', ReturnValue.new('void'),
                      [Parameter.new('SomeObject*', 'obj', transfer_ownership=True)])
