@@ -88,13 +88,21 @@ class Enum(object):
             def __init__(self, ctype, name, *args, **kwargs):
                 super(ThisEnumRefParameter, self).__init__(self.full_type_name, name, *args, **kwargs)
 
+        class ThisEnumPtrParameter(inttype.IntPtrParam):
+            CTYPES = []
+            full_type_name = self.full_name + " *"
+            def __init__(self, ctype, name, *args, **kwargs):
+                super(ThisEnumPtrParameter, self).__init__(self.full_type_name, name, *args, **kwargs)
+
         self.ThisEnumParameter = ThisEnumParameter
         self.ThisEnumReturn = ThisEnumReturn
         self.ThisEnumRefParameter = ThisEnumRefParameter
+        self.ThisEnumPtrParameter = ThisEnumPtrParameter
 
         param_type_matcher.register(self.full_name, self.ThisEnumParameter)
         return_type_matcher.register(self.full_name, self.ThisEnumReturn)
         param_type_matcher.register(self.full_name + ' &', self.ThisEnumRefParameter)
+        param_type_matcher.register(self.full_name + ' *', self.ThisEnumPtrParameter)
 
         if self.name != self.full_name:
             try:
@@ -107,6 +115,10 @@ class Enum(object):
                 pass
             try:
                 param_type_matcher.register(self.name+' &', self.ThisEnumRefParameter)
+            except ValueError:
+                pass
+            try:
+                param_type_matcher.register(self.name+' *', self.ThisEnumPtrParameter)
             except ValueError:
                 pass
 

@@ -500,6 +500,9 @@ namespace xpto
     void set_foo_type (FooType type);
 
     // -#- @type(direction=inout) -#-
+    void set_foo_type_ptr (FooType *type);
+
+    // -#- @type(direction=inout) -#-
     void set_foo_type_inout (FooType &type);
 
     typedef Foo FooXpto;

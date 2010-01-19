@@ -237,6 +237,13 @@ namespace xpto
         type = oldfooType;
     }
 
+    void set_foo_type_ptr (FooType *type)
+    {
+        FooType oldfooType = g_fooType;
+        g_fooType = *type;
+        *type = oldfooType;
+    }
+
 }
 
 

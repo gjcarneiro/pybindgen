@@ -163,7 +163,7 @@ class IntPtrParam(PointerParameter):
             wrapper.parse_params.add_parameter("i", [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
-        name = wrapper.declarations.declare_variable('int', self.name)
+        name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
             wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
