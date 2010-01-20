@@ -1241,6 +1241,26 @@ class TestFoo(unittest.TestCase):
             pass
 
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1)
+
+    def test_reference_existing_object_ptr_attribute(self):
+        while gc.collect():
+            pass
+        Foobar_count1 = foo.Foobar.instance_count
+        box = foo.Box()
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+
+        f1 = box.m_internalFoobar
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+        f2 = box.m_internalFoobar
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
+        self.assert_(f2 is f1)
+        
+        del f1, f2, box
+        
+        while gc.collect():
+            pass
+
+        self.assertEqual(foo.Foobar.instance_count, Foobar_count1)
         
 
     def test_reference_existing_object_ref(self):

@@ -544,6 +544,7 @@ int %s::custom_method_added_by_a_hook(int x)
     Box.add_method('getFoobarInternalRef', ReturnValue.new('Foobar&', reference_existing_object=True), [])
     Box.add_method('getFoobarInternalPtr2', ReturnValue.new('Foobar*', return_internal_reference=True), [])
     Box.add_method('getFoobarInternalRef2', ReturnValue.new('Foobar&', return_internal_reference=True), [])
+    Box.add_instance_attribute('m_internalFoobar', ReturnValue.new('Foobar*', reference_existing_object=True))
 
 
     

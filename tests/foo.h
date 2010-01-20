@@ -1139,7 +1139,10 @@ class Box
 public:
     static int instance_count;
 
-    Box () { ++instance_count;}
+    // -#- return_internal_reference=true -#-
+    Foobar *m_internalFoobar;
+
+    Box () { ++instance_count; m_internalFoobar = &m_foobar; }
     virtual ~Box () { --instance_count;}
 
     // -#- @return(reference_existing_object=true) -#-

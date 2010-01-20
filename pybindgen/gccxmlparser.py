@@ -1914,7 +1914,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                                            NotSupportedWarning, member.location.file_name, member.location.line)
                     continue
 
-                return_type_spec = self.type_registry.lookup_return(member.type)
+                return_type_spec = self.type_registry.lookup_return(member.type, global_annotations)
 
                 ## pygen...
                 if 'pygen_comment' in global_annotations:
