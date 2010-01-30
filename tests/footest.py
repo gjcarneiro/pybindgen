@@ -1364,6 +1364,17 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(v, "fooajax")
         del some
 
+    def test_multiple_inheritance(self):
+        mi = foo.MIMixed()
+        self.assert_(hasattr(mi, "mixed_method"))
+        self.assert_(hasattr(mi, "base1_method"))
+        self.assert_(hasattr(mi, "base2_method"))
+        self.assert_(hasattr(mi, "root_method"))
+        self.assertEqual(mi.root_method(), -1)
+        self.assertEqual(mi.base1_method(), 1)
+        self.assertEqual(mi.base2_method(), 2)
+        self.assertEqual(mi.mixed_method(), 3)
+
 
 if __name__ == '__main__':
     unittest.main()

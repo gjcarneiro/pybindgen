@@ -547,6 +547,23 @@ int %s::custom_method_added_by_a_hook(int x)
     Box.add_instance_attribute('m_internalFoobar', ReturnValue.new('Foobar*', reference_existing_object=True))
 
 
+    # multiple inheritance
+    MIRoot = mod.add_class('MIRoot')
+    MIRoot.add_constructor([])
+    MIRoot.add_method('root_method', 'int', [], is_const=True)
+    
+    MIBase1 = mod.add_class('MIBase1', parent=MIRoot)
+    MIBase1.add_constructor([])
+    MIBase1.add_method('base1_method', 'int', [], is_const=True)
+
+    MIBase2 = mod.add_class('MIBase2', parent=MIRoot)
+    MIBase2.add_constructor([])
+    MIBase2.add_method('base2_method', 'int', [], is_const=True)
+
+    MIMixed = mod.add_class('MIMixed', parent=[MIBase1, MIBase2])
+    MIMixed.add_constructor([])
+    MIMixed.add_method('mixed_method', 'int', [], is_const=True)
+
     
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):

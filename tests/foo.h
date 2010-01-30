@@ -1160,4 +1160,36 @@ public:
 };
 
 
+// multiple inheritance
+class MIRoot
+{
+public:
+    MIRoot () {}
+    int root_method () const { return -1; } 
+};
+
+
+class MIBase1 : public virtual MIRoot
+{
+public:
+    MIBase1 () {}
+    int base1_method () const { return 1; } 
+};
+
+class MIBase2 : public virtual MIRoot
+{
+public:
+    MIBase2 () {}
+    int base2_method () const { return 2; } 
+};
+
+class MIMixed : public MIBase1, public MIBase2
+{
+public:
+    MIMixed () {}
+    int mixed_method () const { return 3; } 
+};
+    
+
+
 #endif 	    /* !FOO_H_ */

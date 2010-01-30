@@ -5,6 +5,8 @@ import re
 
 import pybindgen
 import pybindgen.settings
+pybindgen.settings.deprecated_virtuals = False
+
 from pybindgen.typehandlers import base as typehandlers
 from pybindgen import ReturnValue, Parameter, Module, Function, FileCodeSink
 from pybindgen import CppMethod, CppConstructor, CppClass, Enum
@@ -53,7 +55,6 @@ del transf
 
 def customize_module(module):
     pybindgen.settings.wrapper_registry = pybindgen.settings.StdMapWrapperRegistry
-    pybindgen.settings.deprecated_virtuals = False
 
     wrapper_body = '''
 static PyObject *

@@ -444,7 +444,11 @@ class CppClass(object):
                  ):
         """
         :param name: class name
-        :param parent: optional parent class wrapper
+
+        :param parent: optional parent class wrapper, or list of
+                       parents.  Valid values are None, a CppClass
+                       instance, or a list of CppClass instances.
+
         :param incref_method: (deprecated in favour of memory_policy) if the class supports reference counting, the
                          name of the method that increments the
                          reference count (may be inherited from parent
@@ -557,8 +561,17 @@ class CppClass(object):
         self.instance_attributes = PyGetSetDef("%s__getsets" % self._pystruct)
         self.static_attributes = PyGetSetDef("%s__getsets" % self.metaclass_name)
 
-        self.parent = parent
-        assert parent is None or isinstance(parent, CppClass)
+        if isinstance(parent, list):
+            self.bases = list(parent)
+            self.parent = self.bases[0]
+        elif isinstance(parent, CppClass):
+            self.parent = parent
+            self.bases = [parent]
+        elif parent is None:
+            self.parent = None
+            self.bases = []
+        else:
+            raise TypeError("'parent' must be None, CppClass instance, or a list of CppClass instances")
 
         if free_function:
             warnings.warn("Use FreeFunctionPolicy and memory_policy parameter.", DeprecationWarning)
@@ -573,35 +586,36 @@ class CppClass(object):
             assert memory_policy is None
             memory_policy = ReferenceCountingFunctionsPolicy(incref_function, decref_function)
 
-        if parent is None:
+        if not self.bases:
             assert memory_policy is None or isinstance(memory_policy, MemoryPolicy)
             self.memory_policy = memory_policy
         else:
-            if parent.memory_policy is None:
-                self.memory_policy = memory_policy
+            for base in self.bases:
+                if base.memory_policy is not None:
+                    self.memory_policy = base.memory_policy
+                    assert memory_policy is None, \
+                        "changing memory policy from parent (%s) to child (%s) class not permitted" \
+                        % (base.name, self.name)
+                    break
             else:
-                self.memory_policy = parent.memory_policy
-                assert memory_policy is None, \
-                    "changing memory policy from parent (%s) to child (%s) class not permitted" \
-                    % (parent.name, self.name)
+                self.memory_policy = memory_policy
 
         if automatic_type_narrowing is None:
-            if parent is None:
+            if not self.bases:
                 self.automatic_type_narrowing = settings.automatic_type_narrowing
             else:
-                self.automatic_type_narrowing = parent.automatic_type_narrowing
+                self.automatic_type_narrowing = self.parent.automatic_type_narrowing
         else:
             self.automatic_type_narrowing = automatic_type_narrowing
 
         if allow_subclassing is None:
-            if parent is None:
+            if self.parent is None:
                 self.allow_subclassing = settings.allow_subclassing
             else:
-                self.allow_subclassing = parent.allow_subclassing
+                self.allow_subclassing = self.parent.allow_subclassing
         else:
-            assert allow_subclassing or (self.parent is None or
-                                         not self.parent.allow_subclassing), \
-                "Cannot disable subclassing if the parent class allows it"
+            if any([p.allow_subclassing for p in self.bases]) and not allow_subclassing:
+                raise ValueError("Cannot disable subclassing if a parent class allows it")
             self.allow_subclassing = allow_subclassing
 
         self.typeid_map_name = None
@@ -828,10 +842,15 @@ class CppClass(object):
 
         :return: an iterator that gives CppClass objects, from leaf to root class
         """
-        cls = self
-        while cls is not None:
+        to_visit = [self]
+        visited = set()
+        while to_visit:
+            cls = to_visit.pop(0)
+            visited.add(cls)
             yield cls
-            cls = cls.parent
+            for base in cls.bases:
+                if base not in visited:
+                    to_visit.append(base)
 
     def get_all_methods(self):
         """Returns an iterator to iterate over all methods of the class"""
@@ -890,12 +909,7 @@ class CppClass(object):
         subclass of another class represented by the CppClasss object \\`other\\'."""
         if not isinstance(other, CppClass):
             raise TypeError
-        cls = self
-        while cls is not None:
-            if cls is other:
-                return True
-            cls = cls.parent
-        return False
+        return other in self.get_mro()
 
     def add_helper_class_hook(self, hook):
         """
@@ -914,11 +928,9 @@ class CppClass(object):
         the ones registered with parent classes.  Parent hooks will
         appear first in the list.
         """
-        cls = self
         l = []
-        while cls is not None:
+        for cls in self.get_mro():
             l = cls.helper_class_hooks + l
-            cls = cls.parent
         return l
 
     def set_instance_creation_function(self, instance_creation_function):
@@ -932,13 +944,10 @@ class CppClass(object):
         self.instance_creation_function = instance_creation_function
 
     def get_instance_creation_function(self):
-        if self.instance_creation_function is None:
-            if self.parent is None:
-                return default_instance_creation_function
-            else:
-                return self.parent.get_instance_creation_function()
-        else:
-            return self.instance_creation_function
+        for cls in self.get_mro():
+            if cls.instance_creation_function is not None:
+                return cls.instance_creation_function
+        return default_instance_creation_function
 
     def write_create_instance(self, code_block, lvalue, parameters, construct_type_name=None):
         instance_creation_func = self.get_instance_creation_function()
@@ -1109,14 +1118,13 @@ class CppClass(object):
     def inherit_default_constructors(self):
         """inherit the default constructors from the parentclass according to C++
         language rules"""
-        if self.parent is None:
-            return
-        for cons in self.parent.constructors:
-            if len(cons.parameters) == 0:
-                self.add_constructor([], visibility=cons.visibility)
-            elif (len(cons.parameters) == 1
-                  and isinstance(cons.parameters[0], self.parent.ThisClassRefParameter)):
-                self.add_constructor([self.ThisClassRefParameter()], visibility=cons.visibility)
+        for base in self.bases:
+            for cons in base.constructors:
+                if len(cons.parameters) == 0:
+                    self.add_constructor([], visibility=cons.visibility)
+                elif (len(cons.parameters) == 1
+                      and isinstance(cons.parameters[0], self.parent.ThisClassRefParameter)):
+                    self.add_constructor([self.ThisClassRefParameter()], visibility=cons.visibility)
 
     def get_helper_class(self):
         """gets the "helper class" for this class wrapper, creating it if necessary"""
@@ -1662,6 +1670,12 @@ typedef struct {
             assert isinstance(self.parent, CppClass)
             module.after_init.write_code('%s.tp_base = &%s;' %
                                          (self.pytypestruct, self.parent.pytypestruct))
+            if len(self.bases) > 1:
+                module.after_init.write_code('%s.tp_bases = PyTuple_New(%i);' % (self.pytypestruct, len(self.bases),))
+                for basenum, base in enumerate(self.bases):
+                    module.after_init.write_code('    Py_INCREF((PyObject *) &%s);' % (base.pytypestruct,))
+                    module.after_init.write_code('    PyTuple_SET_ITEM(%s.tp_bases, %i, (PyObject *) &%s);'
+                                                 % (self.pytypestruct, basenum, base.pytypestruct))
 
         if metaclass is not None:
             module.after_init.write_code('%s.ob_type = &%s;' %
