@@ -161,6 +161,8 @@ def _pygen_kwargs(kwargs):
         else:
             if key == 'throw':
                 l.append("throw=[%s]" % (', '.join(["root_module[%r]" % utils.ascii(t.full_name) for t in val])))
+            elif key == 'parent' and isinstance(val, list):
+                l.append("parent=[%s]" % (', '.join(["root_module[%r]" % utils.ascii(cls.full_name) for cls in val])))
             else:
                 l.append("%s=%r" % (key, val))
     return l
@@ -1086,14 +1088,10 @@ pybindgen.settings.error_handler = ErrorHandler()
                 else:
                     typedef = None
                 
-            if len(cls.bases) > 1:
-                warnings.warn_explicit(("Class %s ignored because it uses multiple "
-                                        "inheritance (not yet supported by pybindgen)"
-                                        % cls.partial_decl_string),
-                                       NotSupportedWarning, cls.location.file_name, cls.location.line)
-                continue
-            if cls.bases:
-                base_cls = cls.bases[0].related_class
+            base_class_wrappers = []
+            bases_ok = True
+            for cls_bases_item in cls.bases:
+                base_cls = cls_bases_item.related_class
                 try:
                     base_class_wrapper = self._registered_classes[base_cls]
                 except KeyError:
@@ -1103,11 +1101,17 @@ pybindgen.settings.error_handler = ErrorHandler()
                                                "which is not declared."
                                                % (cls.partial_decl_string, base_cls.partial_decl_string),
                                                ModuleParserWarning, cls.location.file_name, cls.location.line)
-                        continue
+                        bases_ok = False
+                        break
                     postpone_class(cls, "waiting for base class %s to be registered first" % base_cls)
-                    continue
-            else:
-                base_class_wrapper = None
+                    bases_ok = False
+                    break
+                else:
+                    base_class_wrappers.append(base_class_wrapper)
+                    del base_class_wrapper
+                del base_cls
+            if not bases_ok:
+                continue
 
             ## If this class implicitly converts to another class, but
             ## that other class is not yet registered, postpone.
@@ -1176,8 +1180,11 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if postponed:
                     continue
 
-            if base_class_wrapper is not None:
-                kwargs["parent"] = base_class_wrapper
+            if base_class_wrappers:
+                if len(base_class_wrappers) > 1:
+                    kwargs["parent"] = base_class_wrappers
+                else:
+                    kwargs["parent"] = base_class_wrappers[0]
             if outer_class is not None:
                 kwargs["outer_class"] = outer_class
             if template_parameters:
