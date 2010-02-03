@@ -1,3 +1,13 @@
+try:
+    any = any
+except NameError:
+    def any(iterable):
+        for element in iterable:
+            if element:
+                return True
+        return False
+
+
 import sys
 from typehandlers.codesink import CodeSink
 from typehandlers.base import TypeLookupError, TypeConfigurationError, CodeGenerationError, NotSupportedError, \
@@ -230,3 +240,4 @@ def eval_retval(retval_value, wrapper=None):
                                         exceptions_to_handle=(TypeConfigurationError,
                                                               NotSupportedError,
                                                               TypeLookupError))
+
