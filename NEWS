@@ -1,3 +1,43 @@
+=== pybindgen 0.14 ===
+
+    - Multiple inheritance support
+
+    - Virtual methods can now be overridden with Method instead of _Method
+
+    - Add annotation support for instance attributes
+
+    - Benchmarks (vs Boost.Python, SWIG, and SIP)
+
+    - New types supported: int16_t& and std::string* parameter types
+
+    - Non-virtual protected methods are now also wrapped
+    
+    - Wrap enum pointer params
+
+Note: this release marks the beginning of a transition to a minor change
+in the API of the generated bindings.
+
+Prior to PyBindGen version 0.14, the code generated to handle C++
+virtual methods required Python user code to define a _foo method in
+order to implement the virtual method foo.  Since 0.14, PyBindGen
+changed so that virtual method foo is implemented in Python by
+defining a method foo, i.e. no underscore prefix is needed anymore.
+Setting pybindgen.settings.deprecated_virtuals to True will force the
+old virtual method behaviour.  But this is really deprecated; newer
+code should set pybindgen.settings.deprecated_virtuals to False.
+
+In PyBindGen 0.14, if the option
+pybindgen.settings.deprecated_virtuals is not set, PyBindGen emits a
+warning and assumes the value of True in order to preserve backward
+compatibility.  In PyBindGen 0.15, the default value of this option
+will change to False, and in 0.16 the support for deprecated virtuals
+will be removed.
+
+This change was made to make the user code interface more intuitive,
+and to align it with other Python bindings tools such as SIP,
+Boost.Python, and SWIG.
+
+
 === pybindgen 0.13 ===
 
     - Lots of small bug fixes
