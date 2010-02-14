@@ -1083,6 +1083,8 @@ public:
     // returns 1/x, raises DomainError if x == 0
     double my_inverse_method (double x) throw (DomainError);
     double my_inverse_method2 (double x) throw (std::exception);
+
+    virtual int throw_error () const throw (std::exception);
 };
 
 

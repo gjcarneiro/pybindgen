@@ -973,6 +973,9 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         else:
             decl_post_modifiers = ''
 
+        if self.method.throw:
+            decl_post_modifiers += " throw (%s)" % (', '.join([ex.full_name for ex in self.method.throw]),)
+
         params_list = ', '.join([join_ctype_and_name(param.ctype, param.name)
                                  for param in self.parameters])
         code_sink.writeln("virtual %s %s(%s)%s;" %
@@ -986,6 +989,9 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
             decl_post_modifiers = ['const']
         else:
             decl_post_modifiers = []
+
+        if self.method.throw:
+            decl_post_modifiers.append("throw (%s)" % (', '.join([ex.full_name for ex in self.method.throw]),))
 
         ## if the python subclass doesn't define a virtual method,
         ## just chain to parent class and don't do anything else

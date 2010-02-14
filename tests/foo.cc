@@ -490,6 +490,12 @@ ClassThatThrows::ClassThatThrows (double x) throw (DomainError)
     }
 }
 
+int
+ClassThatThrows::throw_error () const throw (std::exception)
+{
+    throw std::runtime_error ("an error");
+}
+
 
 double
 my_inverse_func2 (double x) throw (std::exception)
