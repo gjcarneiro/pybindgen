@@ -35,7 +35,10 @@ blddir = 'build'
 
 
 ## Add the pybindgen dir to PYTHONPATH, so that the examples and tests are properly built before pybindgen is installed.
-os.environ['PYTHONPATH'] = os.getcwd()
+if 'PYTHONPATH' in os.environ:
+    os.environ['PYTHONPATH'] = os.pathsep.join([os.getcwd(), os.environ['PYTHONPATH']])
+else:
+    os.environ['PYTHONPATH'] = os.getcwd()
 
 
 def _get_version_from_bzr_lib(path):
