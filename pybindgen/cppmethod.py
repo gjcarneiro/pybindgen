@@ -506,16 +506,16 @@ class CppConstructor(ForwardWrapperBase):
 
     def __init__(self, parameters, unblock_threads=None, visibility='public', deprecated=False, throw=()):
         """
+
         :param parameters: the constructor parameters
 
-        :param deprecated: deprecation state for this API:
-          - False: Not deprecated
-          - True: Deprecated
-          - "message": Deprecated, and deprecation warning contains the given message
+        :param deprecated: deprecation state for this API: False=Not
+           deprecated; True=Deprecated; "message"=Deprecated, and
+           deprecation warning contains the given message
 
         :param throw: list of C++ exceptions that the constructor may throw
-        :type throw: list of L{CppException}
 
+        :type throw: list of :class:`pybindgen.cppexception.CppException`
         """
         self.stack_where_defined = traceback.extract_stack()
         if unblock_threads is None:
@@ -584,9 +584,10 @@ class CppConstructor(ForwardWrapperBase):
 
 
     def clone(self):
-        """Creates a semi-deep copy of this constructor wrapper.  The returned
-        constructor wrapper clone contains copies of all parameters, so
-        they can be modified at will.
+        """
+        Creates a semi-deep copy of this constructor wrapper.  The
+        returned constructor wrapper clone contains copies of all
+        parameters, so they can be modified at will.
         """
         meth = type(self)([copy(param) for param in self.parameters])
         meth._class = self._class

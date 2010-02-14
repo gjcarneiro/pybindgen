@@ -61,7 +61,12 @@ are several ways that PyBindGen can be used:
 A simple example
 ================
 The best way to get a feel for what PyBindGen looks like is to go through a 
-simple example. Let's assume that we have a simple C API as shown below
+simple example.
+
+Code generation script
+----------------------
+
+Let's assume that we have a simple C API as shown below
 declared in a header my-module.h:
 
   .. code-block:: c++
@@ -111,10 +116,13 @@ The final program is pretty short::
   mod.add_function('MyModuleDoAction', None, [])
   mod.generate(sys.stdout)
 
-This very small example is located in the
-U{tutorial/first-example<http://pybindgen.googlecode.com/svn/trunk/tutorial/>}
-directory together with a small makefile which will build our small C
-library, the bridging code, and a python module::
+Building it (GCC instructions)
+------------------------------
+
+This very small example is located in the :download:`first-example
+directory <first-example.zip>`, together with a small makefile which
+will build our small C library, the bridging code, and a python
+module::
 
   mathieu@ns-test:~/code/pybindgen$ cd tutorial/first-example/
   mathieu@ns-test:~/code/pybindgen/tutorial/first-example$ make
@@ -138,6 +146,35 @@ and linked into a python module::
 
   gcc -fPIC -I/usr/include/python2.5 -c -o my-module-binding.o my-module-binding.c
   gcc -shared -o MyModule.so -L. -lmymodule my-module-binding.o
+
+Building it (MSVC instructions)
+-------------------------------
+
+Change to the :download:`first-example directory <first-example.zip>`,
+make a Release subdirectory, and go to it by doing::
+
+ cd first-example
+ md Release
+ cd Release
+
+Build a Release version of MyModule.pyd by doing::
+
+ cl /LD /O2 /MD /EHsc /W3 /I C:\python26\include /D WIN32 /D NDEBUG /D _CONSOLE ..\my-module.c ..\my-module-binding.c /link /OUT:MyModule.pyd /IMPLIB:MyModule.lib /LIBPATH:"C:\python26\libs"
+
+which creates::
+
+ my-module-binding.obj
+ my-module.obj
+ MyModule.exp
+ MyModule.lib
+ MyModule.pyd
+ MyModule.pyd.manifest
+
+If you wanted to debug your extensions you'd have to first create a
+debug version of Python yourself by compiling the Python sources.
+
+Testing it
+----------
 
 Once all of that code is built, we obviously want to run it. Setting up
 your system to make sure that the python module is found by the python runtime
