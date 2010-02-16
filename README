@@ -22,7 +22,9 @@ PyBindGen is (surprise!) a python bindings generator.  The main features are:
  * Multiple inheritance.
 
 Notable features NOT implemented:
- * Converting exceptions from Python to C++ (only from C++ to Python is supported).
+ * Converting exceptions from Python to C++ (only from C++ to Python
+   is currently supported);
+ * Callbacks.
 
 == Installation ==
 
@@ -43,10 +45,41 @@ shipped with PyBindGen in a single 'waf' script.
 To install PyBindGen, issue the following commands (win32 users should omit the ./ prefix in commands):
 
 1. ./waf configure   # optionally you may add the option --prefix /foo/bar 
+    To select a non-defaul python version, use the PYTHON environment variable, e.g.:
+        PYTHON=/usr/bin/python2.4 ./waf configure
 2. ./waf             # possible options: -jN for parallel build, -p for progress bar
 3. ./waf check       # optional step, runs the unit tests
 4. ./waf --examples  # optional step, compiles the examples
 5. ./waf install     # may require sudo
+
+
+=== Win32 specific notes ===
+
+==== WAF concurrency bugs ====
+WAF automatically detects the number of cores and tries to activate
+multiple build threads accordingly.  However, this concurrency support
+appears to be buggy on win32, therefore you should disable it with the
+-j1 option, if you have multiple CPUs:
+
+   > waf check -j1
+
+==== Compiler selection ====
+Note that if you are compiling on win32, WAF will look for MSVC
+(MicroSoft Visual C) by default and give up on finding a C/C++
+compiler if not found.  If you do not have MSVC installed but instead
+have MinGW or CygWin GCC, you have to tell WAF to look for GCC in the
+configure stage:
+
+1. waf configure --check-c-compiler=gcc --check-cxx-compiler=g++
+
+==== Installation ====
+On win32, `waf install' installs to a Temp folder by default.  To have
+it install for a certain Python version, use the --prefix option to
+waf configure.  For instance:
+   
+> waf configure --prefix C:\Python26
+> waf install
+
 
 
 === Installation failsafe ===
@@ -58,17 +91,6 @@ recursively copy the entire pybindgen folder into Python's
 site-packages directory, and that's it!  PyBindGen is a pure Python
 package and does not actually require a C/C++ compiler; it is only
 used for code generation unit tests and compiling the example modules.
-
-=== Win32 specific notes ===
-
-Note that if you are compiling on win32, WAF will look for MSVC
-(MicroSoft Visual C) by default and give up on finding a C/C++
-compiler if not found.  If you do not have MSVC installed but instead
-have MinGW or CygWin GCC, you have to tell WAF to look for GCC in the
-configure stage:
-
-1. ./waf configure --check-c-compiler=gcc --check-cxx-compiler=g++
-
 
 
 == Documentation ==
