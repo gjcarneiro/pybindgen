@@ -11,6 +11,8 @@
 #include <set>
 #include <exception>
 
+#include <stdint.h>
+
 // Deprecation warnings look ugly and confusing; better to just
 // disable them and change this macro when we want to specifically
 // test them.

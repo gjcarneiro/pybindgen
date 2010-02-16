@@ -63,7 +63,7 @@ def build(bld):
             source='foomodulegen-auto.py foo.h',
             target='foomodule2.cc foomodulegen_generated.py',
             command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[1]} > ${TGT[0]}' % (DEPRECATION_ERRORS,),
-            variables=dict(cpp_path_repr=repr(bindgen.env['CPPPATH_PYEXT'])))
+            variables=dict(cpp_path_repr=repr(bindgen.env['CPPPATH']+bindgen.env['CPPPATH_PYEXT'])))
 
         obj = bld.new_task_gen(features='cxx cshlib pyext')
         obj.source = [
@@ -102,7 +102,7 @@ def build(bld):
             source='foomodulegen-auto-split.py foo.h',
             target='foomodulegen_split.py foomodulegen_module1.py foomodulegen_module2.py',
             command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[0]} ${TGT[1]} ${TGT[2]}' % (DEPRECATION_ERRORS,),
-            variables=dict(cpp_path_repr=repr(bindgen.env['CPPPATH_PYEXT'])))
+            variables=dict(cpp_path_repr=repr(bindgen.env['CPPPATH']+bindgen.env['CPPPATH_PYEXT'])))
 
         bld.new_task_gen(
             features='command',

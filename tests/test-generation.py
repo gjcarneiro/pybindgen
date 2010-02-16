@@ -36,6 +36,7 @@ def test():
     pybindgen.write_preamble(code_out)
     print
     print "#include <string>"
+    print "#include <stdint.h>"
     print
 
     ## Declare a dummy class

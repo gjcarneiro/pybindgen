@@ -286,6 +286,10 @@ def configure(conf):
             conf.env.append_value('CXXFLAGS_PYEXT', '-fvisibility=hidden')
             conf.env.append_value('CCFLAGS_PYEXT', '-fvisibility=hidden')
 
+        # Add include path for our stdint.h replacement, if needed (pstdint.h)
+        if not conf.check(header_name='stdint.h'):
+            conf.env.append_value('CPPPATH', os.path.join(conf.curdir, 'include'))
+
     conf.sub_config('benchmarks')
 
 
