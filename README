@@ -19,10 +19,10 @@ PyBindGen is (surprise!) a python bindings generator.  The main features are:
  * Supports wrapping of simple C++ classes;
  * Supports virtual methods in classes;
  * Supports reference counted classes and smart pointers;
+ * Multiple inheritance.
 
 Notable features NOT implemented:
- * Multiple inheritance; # relatively hard to support, little motivation
- * Exceptions.           # moderate difficulty, likely to be implemented sometime in the future
+ * Converting exceptions from Python to C++ (only from C++ to Python is supported).
 
 == Installation ==
 
@@ -32,22 +32,24 @@ file HACKING for additional instructions.
 Before proceeding make sure the system requirements are met.  PyBindGen requires:
 
 1- Python (http://www.python.org)
-2- Python development files
-3- A C/C++ Compilation tool chain
-4- (optional) GCCXML and PyGCCXML (0.9.5 recommended) (http://www.language-binding.net/pygccxml/download.html)
+2- Python development files (the `python-dev' package in Ubuntu/Debian, for example)
+3- A C/C++ Compilation tool-chain (apt-get install build-essential)
+4- (optional) GCCXML and PyGCCXML (1.0 recommended) (http://www.language-binding.net/pygccxml/download.html)
 
 PyBindGen uses WAF (http://code.google.com/p/waf/) as build system.
 However, WAF does not have to be previously installed, as it is
-shipped with PyBindGen in a single 'waf' script (but note bzr branches
-don't come with WAF; see HACKING for instructions to obtain WAF).
+shipped with PyBindGen in a single 'waf' script.
 
-To install PyBindGen, issue the following commands:
+To install PyBindGen, issue the following commands (win32 users should omit the ./ prefix in commands):
 
 1. ./waf configure   # optionally you may add the option --prefix /foo/bar 
 2. ./waf             # possible options: -jN for parallel build, -p for progress bar
 3. ./waf check       # optional step, runs the unit tests
 4. ./waf --examples  # optional step, compiles the examples
 5. ./waf install     # may require sudo
+
+
+=== Installation failsafe ===
 
 If by any chance you have trouble with WAF and are just looking to
 install PyBindGen, you should know that PyBindGen is entirely
@@ -73,8 +75,7 @@ configure stage:
 
 The following documentation is available:
 
-1. API docs (with introductory tutorial):
-   http://pybindgen.googlecode.com/svn/trunk/apidocs/index.html
+1. API docs (with introductory tutorial): http://packages.python.org/PyBindGen/
 2. Many simple examples, in the 'examples' directory
 3. Advanced examples in the unit tests (tests/)
 4. The source code!
