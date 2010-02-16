@@ -83,7 +83,7 @@ class FloatPtrParam(Parameter):
                         '!PyFloat_Check(element)',
                         'PyErr_SetString(PyExc_TypeError, "Parameter `%s\' must be a list of %i floats");'
                         % (self.name, self.array_length))
-                wrapper.before_call.write_code("%(name)s[%(idx)s] = PyFloat_AsDouble(%(elem)s);" % vars())
+                wrapper.before_call.write_code("%(name)s[%(idx)s] = (float) PyFloat_AsDouble(%(elem)s);" % vars())
 
                 wrapper.before_call.unindent()
                 wrapper.before_call.write_code('}')

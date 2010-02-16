@@ -478,7 +478,7 @@ int %s::custom_method_added_by_a_hook(int x)
 
     Tupl.add_unary_numeric_operator('-')
 
-    Tupl.add_inplace_numeric_operator('+=', right='double')
+    Tupl.add_inplace_numeric_operator('+=', right='int')
 
 
     ManipulatedObject = mod.add_class('ManipulatedObject')
