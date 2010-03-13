@@ -92,6 +92,11 @@ container_traits_list = {
     'map':		ContainerTraits(add_value_method='insert', is_mapping=True),
 }
 
+# from wikipedia: """Deque is sometimes written dequeue, but this use
+# is generally deprecated in technical literature or technical writing
+# because dequeue is also a verb meaning "to remove from a queue" """.
+container_traits_list['dequeue'] = container_traits_list['deque']
+
 class Container(object):
     def __init__(self, name, value_type, container_type, outer_class=None, custom_name=None):
         """
