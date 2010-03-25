@@ -616,7 +616,7 @@ class ModuleBase(dict):
         """
         definition_name = utils.ascii(definition_name)
         if definition_name in self.one_time_definitions:
-            raise KeyError
+            raise KeyError(definition_name)
         self.one_time_definitions[definition_name] = None
 
     def generate_forward_declarations(self, code_sink):
