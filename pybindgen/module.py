@@ -611,7 +611,7 @@ class ModuleBase(dict):
         >>> module.declare_one_time_definition("zbr")
         Traceback (most recent call last):
         ...
-        KeyError
+        KeyError: 'zbr'
         >>> module.declare_one_time_definition("bar")
         """
         definition_name = utils.ascii(definition_name)
