@@ -19,8 +19,13 @@ class CStringParam(PointerParameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype_no_const, self.name)
-        wrapper.parse_params.add_parameter('s', ['&'+name], self.value)
+        if self.default_value is None:
+            name = wrapper.declarations.declare_variable(self.ctype_no_const, self.name)
+            wrapper.parse_params.add_parameter('s', ['&'+name], self.value)
+        else:
+            name = wrapper.declarations.declare_variable(self.ctype_no_const,
+                                                         self.name, self.default_value)
+            wrapper.parse_params.add_parameter('s', ['&'+name], self.value, optional=True)
         wrapper.call_params.append(name)
 
 
