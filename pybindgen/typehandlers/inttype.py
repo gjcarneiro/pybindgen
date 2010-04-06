@@ -197,7 +197,7 @@ class IntRefParam(Parameter):
 
 class UInt16Return(ReturnValue):
 
-    CTYPES = ['uint16_t', 'unsigned short', 'unsigned short int']
+    CTYPES = ['uint16_t', 'unsigned short', 'unsigned short int', 'short unsigned int']
 
     def get_c_error_return(self):
         return "return 0;"
