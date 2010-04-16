@@ -1175,16 +1175,18 @@ public:
 
 class MIBase1 : public virtual MIRoot
 {
+    int m_value;
 public:
-    MIBase1 () {}
-    int base1_method () const { return 1; } 
+    MIBase1 () : m_value (1) {}
+    int base1_method () const { return m_value; } 
 };
 
 class MIBase2 : public virtual MIRoot
 {
+    int m_value;
 public:
-    MIBase2 () {}
-    int base2_method () const { return 2; } 
+    MIBase2 ()  : m_value (2) {}
+    int base2_method () const { return m_value; } 
 };
 
 class MIMixed : public MIBase1, public MIBase2

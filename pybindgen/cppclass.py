@@ -2007,6 +2007,78 @@ static PyObject*\n%s(%s *self)
         code_sink.writeln()
         return copy_wrapper_name
 
+    def _generate_MI_parent_methods(self, code_sink):
+        methods = {}
+        mro = self.get_mro()
+        mro.next()
+        for base in mro:
+            for method_name, parent_overload in base.methods.iteritems():
+
+                # skip methods registered via special type slots, not method table
+                if method_name in ['__call__', "__len__", "__getitem__", "__setitem__"]:
+                    continue
+
+                try:
+                    overload = methods[method_name]
+                except KeyError:
+                    overload = CppOverloadedMethod(method_name)
+                    overload.pystruct = self.pystruct
+                    methods[method_name] = overload
+
+                for parent_wrapper in parent_overload.wrappers:
+                    import sys
+                    print >> sys.stderr, ">>>>>>>>>>>>>>>>> ", method_name, parent_wrapper.visibility
+                    if parent_wrapper.visibility != 'public':
+                        continue
+
+                    # the method may have been re-defined as private in our class
+                    private = False
+                    for leaf_wrapper in self.nonpublic_methods:
+                        if leaf_wrapper.matches_signature(parent_wrapper):
+                            private = True
+                            break
+                    if private:
+                        continue
+
+                    # the method may have already been wrapped in our class
+                    already_wrapped = False
+                    try:
+                        overload = self.methods[method_name]
+                    except KeyError:
+                        pass
+                    else:
+                        for leaf_wrapper in overload.wrappers:
+                            if leaf_wrapper.matches_signature(parent_wrapper):
+                                already_wrapped = True
+                                break
+                    if already_wrapped:
+                        continue
+
+                    wrapper = parent_wrapper.clone()
+                    wrapper.original_class = base
+                    wrapper.class_ = self
+                    overload.add(wrapper)
+
+        method_defs = []
+        for method_name, overload in methods.iteritems():
+            if not overload.wrappers:
+                continue
+
+            classes = []
+            for wrapper in overload.wrappers:
+                if wrapper.original_class not in classes:
+                    classes.append(wrapper.original_class)
+            if len(classes) > 1:
+                continue # overloading with multiple base classes is just too confusing
+
+            try:
+                utils.call_with_error_handling(overload.generate, (code_sink,), {}, overload)
+            except utils.SkipWrapper:
+                continue
+            code_sink.writeln()
+            method_defs.append(overload.get_py_method_def(method_name))
+        return method_defs
+
     def _generate_methods(self, code_sink, parent_caller_methods):
         """generate the method wrappers"""
         method_defs = []
@@ -2023,6 +2095,9 @@ static PyObject*\n%s(%s *self)
                 method_defs.append(overload.get_py_method_def(meth_name))
             code_sink.writeln()
         method_defs.extend(parent_caller_methods)
+
+        if len(self.bases) > 1: # https://bugs.launchpad.net/pybindgen/+bug/563786
+            method_defs.extend(self._generate_MI_parent_methods(code_sink))
 
         if self.has_copy_constructor:
             try:
