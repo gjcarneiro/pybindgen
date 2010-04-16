@@ -2026,8 +2026,7 @@ static PyObject*\n%s(%s *self)
                     methods[method_name] = overload
 
                 for parent_wrapper in parent_overload.wrappers:
-                    import sys
-                    print >> sys.stderr, ">>>>>>>>>>>>>>>>> ", method_name, parent_wrapper.visibility
+
                     if parent_wrapper.visibility != 'public':
                         continue
 
