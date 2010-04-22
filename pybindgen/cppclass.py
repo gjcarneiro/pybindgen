@@ -130,7 +130,7 @@ class ReferenceCountingFunctionsPolicy(ReferenceCountingPolicy):
         code_block.write_code('%s(%s);' % (self.decref_function, obj_expr))
 
     def get_free_code(self, obj_expr):
-        return ('%s(%s);' % (obj_expr, self.decref_function))
+        return ('%s(%s);' % (self.decref_function, obj_expr))
 
     def __repr__(self):
         return 'cppclass.ReferenceCountingFunctionsPolicy(incref_function=%r, decref_function=%r, peekref_function=%r)' \
