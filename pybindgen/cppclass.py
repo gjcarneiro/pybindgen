@@ -531,6 +531,7 @@ class CppClass(object):
         self.slots = self.pytype.slots
         self.helper_class = None
         self.instance_creation_function = None
+        self.post_instance_creation_function = None
         ## set to True when we become aware generating the helper
         ## class is not going to be possible
         self.helper_class_disabled = False
@@ -944,17 +945,40 @@ class CppClass(object):
         """
         self.instance_creation_function = instance_creation_function
 
+    def set_post_instance_creation_function(self, post_instance_creation_function):
+        """Set a custom function to be called to add code after an
+        instance is created (usually by the "instance creation
+        function") and registered with the Python runtime.
+
+        :param post_instance_creation_function: post instance creation function
+        """
+        self.post_instance_creation_function = post_instance_creation_function
+
     def get_instance_creation_function(self):
         for cls in self.get_mro():
             if cls.instance_creation_function is not None:
                 return cls.instance_creation_function
         return default_instance_creation_function
 
+    def get_post_instance_creation_function(self):
+        for cls in self.get_mro():
+            if cls.post_instance_creation_function is not None:
+                return cls.post_instance_creation_function
+        return None
+
     def write_create_instance(self, code_block, lvalue, parameters, construct_type_name=None):
         instance_creation_func = self.get_instance_creation_function()
         if construct_type_name is None:
             construct_type_name = self.get_construct_name()
         instance_creation_func(self, code_block, lvalue, parameters, construct_type_name)
+
+    def write_post_instance_creation_code(self, code_block, lvalue, parameters, construct_type_name=None):
+        post_instance_creation_func = self.get_post_instance_creation_function()
+        if post_instance_creation_func is None:
+            return
+        if construct_type_name is None:
+            construct_type_name = self.get_construct_name()
+        post_instance_creation_func(self, code_block, lvalue, parameters, construct_type_name)
 
     def get_pystruct(self):
         if self._pystruct is None:

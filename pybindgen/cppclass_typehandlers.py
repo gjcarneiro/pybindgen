@@ -73,6 +73,9 @@ def common_shared_object_return(value, py_name, cpp_class, code_block,
                                                          value_value)
                     code_block.write_code(
                         "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
+                    cpp_class.write_post_instance_creation_code(code_block,
+                                                                "%s->obj" % py_name,
+                                                                value_value)
             else:
                 ## The PyObject gets a new reference to the same obj
                 code_block.write_code(
@@ -326,6 +329,9 @@ class CppClassParameter(CppClassParameterBase):
                                              self.value)
         self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.before_call, self.py_name,
                                                                    "%s->obj" % self.py_name)
+        self.cpp_class.write_post_instance_creation_code(wrapper.before_call,
+                                                         "%s->obj" % self.py_name,
+                                                         self.value)
 
         wrapper.build_params.add_parameter("N", [self.py_name])
 
@@ -444,6 +450,9 @@ class CppClassRefParameter(CppClassParameterBase):
                                                  '')
             self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.before_call, self.py_name,
                                                                        "%s->obj" % self.py_name)
+            self.cpp_class.write_post_instance_creation_code(wrapper.before_call,
+                                                             "%s->obj" % self.py_name,
+                                                             '')
             wrapper.call_params.append('*%s->obj' % (self.py_name,))
             wrapper.build_params.add_parameter("N", [self.py_name])
 
@@ -488,6 +497,9 @@ class CppClassRefParameter(CppClassParameterBase):
                                                  self.value)
             self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.before_call, self.py_name,
                                                                        "%s->obj" % self.py_name)
+            self.cpp_class.write_post_instance_creation_code(wrapper.before_call,
+                                                             "%s->obj" % self.py_name,
+                                                             self.value)
             wrapper.build_params.add_parameter("N", [self.py_name])
         else:
             ## out/inout case:
@@ -520,6 +532,9 @@ class CppClassRefParameter(CppClassParameterBase):
                                                      self.value)
                 self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.after_call, self.py_name,
                                                                            "%s->obj" % self.py_name)
+                self.cpp_class.write_post_instance_creation_code(wrapper.after_call,
+                                                                 "%s->obj" % self.py_name,
+                                                                 self.value)
                 wrapper.after_call.unindent()
                 wrapper.after_call.write_code('}')
             else:
@@ -568,6 +583,10 @@ class CppClassReturnValue(CppClassReturnValueBase):
                                              self.value)
         self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.after_call, py_name,
                                                                    "%s->obj" % py_name)
+        self.cpp_class.write_post_instance_creation_code(wrapper.after_call,
+                                                         "%s->obj" % py_name,
+                                                         self.value)
+
         #...
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
@@ -643,6 +662,10 @@ class CppClassRefReturnValue(CppClassReturnValueBase):
                                                  self.value)
             self.cpp_class.wrapper_registry.write_register_new_wrapper(wrapper.after_call, py_name,
                                                                        "%s->obj" % py_name)
+            self.cpp_class.write_post_instance_creation_code(wrapper.after_call,
+                                                             "%s->obj" % py_name,
+                                                             self.value)
+
         #...
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
@@ -849,6 +872,9 @@ class CppClassPtrParameter(CppClassParameterBase):
                         self.cpp_class.write_create_instance(wrapper.before_call,
                                                              "%s->obj" % self.py_name,
                                                              '*'+self.value)
+                        self.cpp_class.write_post_instance_creation_code(wrapper.before_call,
+                                                                         "%s->obj" % self.py_name,
+                                                                         '*'+self.value)
                     else:
                         ## out/inout case:
                         ## the callee receives a "temporary wrapper", which loses
@@ -877,6 +903,9 @@ class CppClassPtrParameter(CppClassParameterBase):
                         self.cpp_class.write_create_instance(wrapper.after_call,
                                                              "%s->obj" % self.py_name,
                                                              '*'+value)
+                        self.cpp_class.write_post_instance_creation_code(wrapper.after_call,
+                                                                         "%s->obj" % self.py_name,
+                                                                         '*'+value)
                         wrapper.after_call.unindent()
                         wrapper.after_call.write_code('}')
                 else:
@@ -1070,6 +1099,9 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                 self.cpp_class.write_create_instance(wrapper.after_call,
                                                      "%s" % self.value,
                                                      '*'+value)
+                self.cpp_class.write_post_instance_creation_code(wrapper.after_call,
+                                                                 "%s" % self.value,
+                                                                 '*'+value)
             else:
                 ## the caller gets a new reference to the same obj
                 self.cpp_class.memory_policy.write_incref(wrapper.after_call, value)
