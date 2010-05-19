@@ -162,17 +162,21 @@ class _MonolithicSinkManager(_SinkManager):
     """
     def __init__(self, code_sink):
         super(_MonolithicSinkManager, self).__init__()
-        self.code_sink = code_sink
+        self.final_code_sink = code_sink
         self.null_sink = NullCodeSink()
+        self.includes = MemoryCodeSink()
+        self.code_sink = MemoryCodeSink()
+
         utils.write_preamble(code_sink)
     def get_code_sink_for_wrapper(self, dummy_wrapper):
         return self.code_sink, self.code_sink
     def get_includes_code_sink(self):
-        return self.code_sink
+        return self.includes
     def get_main_code_sink(self):
         return self.code_sink
     def close(self):
-        pass
+        self.includes.flush_to(self.final_code_sink)
+        self.code_sink.flush_to(self.final_code_sink)
 
 
 class ModuleBase(dict):
