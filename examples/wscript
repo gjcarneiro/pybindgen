@@ -2,4 +2,5 @@
 
 def build(bld):
     bld.add_subdirs('a b c d e f g h')
+    bld.add_subdirs('callback')
 
