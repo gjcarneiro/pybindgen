@@ -68,9 +68,10 @@ class StdMapWrapperRegistry(WrapperRegistry):
         self.map_name = "%s_wrapper_registry" % base_name
 
     def generate_forward_declarations(self, code_sink, module):
-        #module.add_include("<map>")
-        code_sink.writeln("#include <map>")
-        code_sink.writeln("#include <iostream>")
+        module.add_include("<map>")
+        module.add_include("<iostream>")
+        #code_sink.writeln("#include <map>")
+        #code_sink.writeln("#include <iostream>")
         code_sink.writeln("extern std::map<void*, PyObject*> %s;" % self.map_name)
 
     def generate(self, code_sink, dummy_module):

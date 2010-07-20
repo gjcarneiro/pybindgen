@@ -676,14 +676,20 @@ class ModuleBase(dict):
 
         if self.parent is None:
             ## generate the include directives (only the root module)
+
+            forward_declarations_sink = MemoryCodeSink()
+
+            if not self._forward_declarations_declared:
+                self.generate_forward_declarations(forward_declarations_sink)
+                self.after_forward_declarations.flush_to(forward_declarations_sink)
+
             if self.parent is None:
                 for include in self.includes:
                     out.get_includes_code_sink().writeln("#include %s" % include)
+                self.includes = None
 
+            forward_declarations_sink.flush_to(out.get_includes_code_sink())
 
-            if not self._forward_declarations_declared:
-                self.generate_forward_declarations(out.get_includes_code_sink())
-                self.after_forward_declarations.flush_to(out.get_includes_code_sink())
         else:
             assert module_file_base_name is None, "only root modules can generate with alternate module_file_base_name"
 
