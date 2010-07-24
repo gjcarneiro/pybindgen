@@ -1162,7 +1162,7 @@ def _add_ward(code_block, custodian, ward):
         "    PyObject_SetAttrString(%(custodian)s, (char *) \"__wards__\", %(wards)s);\n"
         "}" % vars())
     code_block.write_code(
-        "if (!PySequence_Contains(%(wards)s, %(ward)s))\n"
+        "if (%(ward)s && !PySequence_Contains(%(wards)s, %(ward)s))\n"
         "    PyList_Append(%(wards)s, %(ward)s);" % dict(wards=wards, ward=ward))
     code_block.add_cleanup_code("Py_DECREF(%s);" % wards)
             
