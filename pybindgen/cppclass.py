@@ -288,25 +288,26 @@ class CppHelperClass(object):
         code_sink.indent()
         code_sink.writeln("PyObject *m_pyself;")
 
-        ## replicate the parent constructors in the helper class
-        implemented_constructor_signatures = []
-        for cons in self.class_.constructors:
+        if not self.class_.import_from_module:
+            ## replicate the parent constructors in the helper class
+            implemented_constructor_signatures = []
+            for cons in self.class_.constructors:
 
-            ## filter out duplicated constructors
-            signature = [param.ctype for param in cons.parameters]
-            if signature in implemented_constructor_signatures:
-                continue
-            implemented_constructor_signatures.append(signature)
+                ## filter out duplicated constructors
+                signature = [param.ctype for param in cons.parameters]
+                if signature in implemented_constructor_signatures:
+                    continue
+                implemented_constructor_signatures.append(signature)
 
-            params = [join_ctype_and_name(param.ctype, param.name)
-                      for param in cons.parameters]
-            code_sink.writeln("%s(%s)" % (self.name, ', '.join(params)))
-            code_sink.indent()
-            code_sink.writeln(": %s(%s), m_pyself(NULL)\n{}" %
-                              (self.class_.full_name,
-                               ', '.join([param.name for param in cons.parameters])))
-            code_sink.unindent()
-            code_sink.writeln()
+                params = [join_ctype_and_name(param.ctype, param.name)
+                          for param in cons.parameters]
+                code_sink.writeln("%s(%s)" % (self.name, ', '.join(params)))
+                code_sink.indent()
+                code_sink.writeln(": %s(%s), m_pyself(NULL)\n{}" %
+                                  (self.class_.full_name,
+                                   ', '.join([param.name for param in cons.parameters])))
+                code_sink.unindent()
+                code_sink.writeln()
 
         ## add the set_pyobj method
         code_sink.writeln("""
@@ -325,59 +326,63 @@ void set_pyobj(PyObject *pyobj)
         code_sink.unindent()
         code_sink.writeln("}\n")
             
-        ## write the parent callers (_name)
-        for parent_caller in self.virtual_parent_callers.itervalues():
-            #parent_caller.class_ = self.class_
-            parent_caller.helper_class = self
-            parent_caller.reset_code_generation_state()
-            ## test code generation
-            try:
-                try:
-                    utils.call_with_error_handling(parent_caller.generate,
-                                                   (NullCodeSink(),), {}, parent_caller)
-                except utils.SkipWrapper:
-                    continue
-            finally:
+        if not self.class_.import_from_module:
+            ## write the parent callers (_name)
+            for parent_caller in self.virtual_parent_callers.itervalues():
+                #parent_caller.class_ = self.class_
+                parent_caller.helper_class = self
                 parent_caller.reset_code_generation_state()
-
-            code_sink.writeln()
-            parent_caller.generate_class_declaration(code_sink)
-
-            for parent_caller_wrapper in parent_caller.wrappers:
-                parent_caller_wrapper.generate_parent_caller_method(code_sink)
-
-
-        ## write the virtual proxies
-        for virtual_proxy in self.virtual_proxies:
-            #virtual_proxy.class_ = self.class_
-            virtual_proxy.helper_class = self
-            ## test code generation
-            #virtual_proxy.class_ = self.class_
-            #virtual_proxy.helper_class = self
-            virtual_proxy.reset_code_generation_state()
-            try:
+                ## test code generation
                 try:
-                    utils.call_with_error_handling(virtual_proxy.generate,
-                                                   (NullCodeSink(),), {}, virtual_proxy)
-                except utils.SkipWrapper:
-                    if virtual_proxy.method.is_pure_virtual:
-                        return False
-                    continue
+                    try:
+                        utils.call_with_error_handling(parent_caller.generate,
+                                                       (NullCodeSink(),), {}, parent_caller)
+                    except utils.SkipWrapper:
+                        continue
+                finally:
+                    parent_caller.reset_code_generation_state()
 
-            finally:
+                code_sink.writeln()
+                parent_caller.generate_class_declaration(code_sink)
+
+                for parent_caller_wrapper in parent_caller.wrappers:
+                    parent_caller_wrapper.generate_parent_caller_method(code_sink)
+
+
+            ## write the virtual proxies
+            for virtual_proxy in self.virtual_proxies:
+                #virtual_proxy.class_ = self.class_
+                virtual_proxy.helper_class = self
+                ## test code generation
+                #virtual_proxy.class_ = self.class_
+                #virtual_proxy.helper_class = self
                 virtual_proxy.reset_code_generation_state()
-                
-            code_sink.writeln()
-            virtual_proxy.generate_declaration(code_sink)
+                try:
+                    try:
+                        utils.call_with_error_handling(virtual_proxy.generate,
+                                                       (NullCodeSink(),), {}, virtual_proxy)
+                    except utils.SkipWrapper:
+                        if virtual_proxy.method.is_pure_virtual:
+                            return False
+                        continue
 
-        for custom_declaration, dummy in self.custom_methods:
-            code_sink.writeln(custom_declaration)
+                finally:
+                    virtual_proxy.reset_code_generation_state()
+
+                code_sink.writeln()
+                virtual_proxy.generate_declaration(code_sink)
+
+            for custom_declaration, dummy in self.custom_methods:
+                code_sink.writeln(custom_declaration)
 
         code_sink.unindent()
         code_sink.writeln("};\n")
-        for code in self.post_generation_code:
-            code_sink.writeln(code)
-            code_sink.writeln()
+
+        if not self.class_.import_from_module:
+            for code in self.post_generation_code:
+                code_sink.writeln(code)
+                code_sink.writeln()
+
         return True
 
     def generate(self, code_sink):
@@ -385,6 +390,9 @@ void set_pyobj(PyObject *pyobj)
         Generate the proxy class (virtual method bodies only) to a given code sink.
         returns pymethodef list of parent callers
         """
+        if self.class_.import_from_module:
+            return
+
         ## write the parent callers (_name)
         method_defs = []
         for name, parent_caller in self.virtual_parent_callers.iteritems():
@@ -442,6 +450,7 @@ class CppClass(object):
                  foreign_cpp_namespace=None,
                  docstring=None,
                  custom_name=None,
+                 import_from_module=None,
                  ):
         """
         :param name: class name
@@ -498,6 +507,8 @@ class CppClass(object):
             python module will be the same name as the class in C++
             (minus namespace).
 
+        :param import_from_module: if not None, the type is imported
+                    from a foreign Python module with the given name.
         """
         assert outer_class is None or isinstance(outer_class, CppClass)
         self.incomplete_type = incomplete_type
@@ -509,6 +520,7 @@ class CppClass(object):
         self.mangled_full_name = None
         self.template_parameters = template_parameters
         self.container_traits = None
+        self.import_from_module = import_from_module
 
         self.custom_name = custom_name
         if custom_template_class_name:
@@ -1238,7 +1250,11 @@ public:
 
 }
 ''')
-        code_sink.writeln("\nextern pybindgen::TypeMap %s;\n" % self.typeid_map_name)
+        if self.import_from_module:
+            code_sink.writeln("\nextern pybindgen::TypeMap *_%s;\n" % self.typeid_map_name)
+            code_sink.writeln("#define %s (*_%s)\n" % (self.typeid_map_name, self.typeid_map_name))
+        else:
+            code_sink.writeln("\nextern pybindgen::TypeMap %s;\n" % self.typeid_map_name)
 
     def _add_method_obj(self, method):
         """
@@ -1615,13 +1631,16 @@ typedef struct {
     ''' % (self.full_name, self.pystruct))
 
         code_sink.writeln()
-        code_sink.writeln('extern PyTypeObject %s;' % (self.pytypestruct,))
-        if not self.static_attributes.empty():
-            code_sink.writeln('extern PyTypeObject Py%s_Type;' % (self.metaclass_name,))
-        code_sink.writeln()
 
-        if self.automatic_type_narrowing:
-            self._register_typeid(module)
+        if self.import_from_module:
+            code_sink.writeln('extern PyTypeObject *_%s;' % (self.pytypestruct,))
+            code_sink.writeln('#define %s (*_%s)' % (self.pytypestruct, self.pytypestruct))
+        else:
+            code_sink.writeln('extern PyTypeObject %s;' % (self.pytypestruct,))
+            if not self.static_attributes.empty():
+                code_sink.writeln('extern PyTypeObject Py%s_Type;' % (self.metaclass_name,))
+
+        code_sink.writeln()
 
         if self.helper_class is not None:
             self._inherit_helper_class_parent_virtuals()
@@ -1656,11 +1675,65 @@ typedef struct {
                 class_python_name = self.custom_name
         return class_python_name
 
+    def _generate_import_from_module(self, code_sink, module):
+        # TODO: skip this step if the requested typestructure is never used
+        if ' named ' in self.import_from_module:
+            module_name, type_name = self.import_from_module.split(" named ")
+        else:
+            module_name, type_name = self.import_from_module, self.name
+        code_sink.writeln("PyTypeObject *_%s;" % self.pytypestruct)
+        module.after_init.write_code("/* Import the %r class from module %r */" % (self.full_name, self.import_from_module))
+        module.after_init.write_code("{"); module.after_init.indent()
+        module.after_init.write_code("PyObject *module = PyImport_ImportModule(\"%s\");" % module_name)
+        module.after_init.write_code(
+            "if (module == NULL) {\n"
+            "    _%s = NULL;\n"
+            "    PyErr_Print();\n"
+            "    if (PyErr_WarnEx(PyExc_RuntimeWarning, \"Unable to import type '%s' from module '%s';\", 1))\n"
+            "        return;\n"
+            "} else {\n" % (self.pytypestruct, type_name, module_name))
+        module.after_init.write_code("    _%s = (PyTypeObject*) PyObject_GetAttrString(module, \"%s\");\n"
+                                     "}"
+                                     % (self.pytypestruct, type_name))
+        module.after_init.write_code("PyErr_Clear();")
+        module.after_init.unindent(); module.after_init.write_code("}")
+
+        if self.typeid_map_name is not None:
+            code_sink.writeln("pybindgen::TypeMap *_%s;" % self.typeid_map_name)
+            module.after_init.write_code("/* Import the %r class type map from module %r */" % (self.full_name, self.import_from_module))
+            module.after_init.write_code("{"); module.after_init.indent()
+            module.after_init.write_code("PyObject *module = PyImport_ImportModule(\"%s\");" % module_name)
+            module.after_init.write_code("if (module == NULL) PyErr_Print();")
+            module.after_init.write_code("PyObject *_cobj = PyObject_GetAttrString(module, \"_%s\");"
+                                         % (self.typeid_map_name))
+            module.after_init.write_code("if (_cobj == NULL) {\n"
+                                         "    _%s = new pybindgen::TypeMap;\n"
+                                         "    PyErr_Clear();\n"
+                                         "} else {\n"
+                                         "    _%s = reinterpret_cast<pybindgen::TypeMap*> (PyCObject_AsVoidPtr (_cobj));\n"
+                                         "    Py_DECREF(_cobj);\n"
+                                         "}"
+                                         % (self.typeid_map_name, self.typeid_map_name))
+            module.after_init.unindent(); module.after_init.write_code("}")
+
+        if self.helper_class is not None:
+            self.helper_class.generate(code_sink)
+
+
     def generate(self, code_sink, module):
         """Generates the class to a code sink"""
 
+        if self.import_from_module:
+            self._generate_import_from_module(code_sink, module)
+            return # .......................... RETURN
+
         if self.typeid_map_name is not None:
             code_sink.writeln("\npybindgen::TypeMap %s;\n" % self.typeid_map_name)
+            module.after_init.write_code("PyModule_AddObject(m, (char *) \"_%s\", PyCObject_FromVoidPtr(&%s, NULL));"
+                                         % (self.typeid_map_name, self.typeid_map_name))
+
+        if self.automatic_type_narrowing:
+            self._register_typeid(module)
 
         if self.parent is None:
             self.wrapper_registry.generate(code_sink, module)
@@ -2192,7 +2265,7 @@ static void
             else:
                 peekref_code = " && self->obj->%s() == 1" % self.memory_policy.peekref_method
             visit_self = '''
-    if (self->obj && typeid(*self->obj) == typeid(%s) %s)
+    if (self->obj && typeid(*self->obj).name() == typeid(%s).name() %s)
         Py_VISIT((PyObject *) self);
 ''' % (self.helper_class.name, peekref_code)
 

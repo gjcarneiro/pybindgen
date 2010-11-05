@@ -149,7 +149,7 @@ class Function(ForwardWrapperBase):
     def set_module(self, module):
         """Set the Module object this function belongs to"""
         self._module = module
-        self.wrapper_base_name = "_wrap_%s%s" % (
+        self.wrapper_base_name = "_wrap_%s_%s" % (
             module.prefix, self.mangled_name)
     module = property(get_module, set_module)
     

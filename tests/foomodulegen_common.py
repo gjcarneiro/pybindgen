@@ -130,3 +130,8 @@ _wrap_PyBar_Hooray_lenx(PyBar *PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject
     MapLike.add_container_traits((ReturnValue.new('int'), ReturnValue.new('double')),
                                  begin_method='Begin', end_method='End', iterator_type='Iterator',
                                  is_mapping=True)
+
+    # just a compilation test, this won't actually work in runtime
+    module.add_include('<stdio.h>')
+    module.add_class(name="FILE", foreign_cpp_namespace="", import_from_module="__builtin__ named file")
+    module.add_enum("reg_errcode_t",   ["REG_NOERROR", "REG_NOMATCH"], import_from_module="__builtin__")

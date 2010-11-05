@@ -10,7 +10,8 @@ class Enum(object):
     """
     Class that adds support for a C/C++ enum type
     """
-    def __init__(self, name, values, values_prefix='', cpp_namespace=None, outer_class=None):
+    def __init__(self, name, values, values_prefix='', cpp_namespace=None, outer_class=None,
+                 import_from_module=None):
         """
         Creates a new enum wrapper, which should be added to a module with module.add_enum().
 
@@ -23,7 +24,8 @@ class Enum(object):
                          belongs to.  Typically this parameter is to
                          be used when wrapping enums declared inside
                          C++ classes.
-        
+        :param import_from_module: if not None, the enum is defined in
+            another module, this parameter gives the name of the module
         """
         assert isinstance(name, basestring)
         assert '::' not in name
@@ -43,6 +45,7 @@ class Enum(object):
         self._module = None
         self.ThisEnumParameter = None
         self.ThisEnumReturn = None
+        self.import_from_module = import_from_module
 
     def get_module(self):
         """Get the Module object this class belongs to"""
@@ -126,6 +129,9 @@ class Enum(object):
     module = property(get_module, set_module)
 
     def generate(self, unused_code_sink):
+        if self.import_from_module:
+            return #........ RET
+
         module = self.module
         if self.outer_class is None:
             namespace = []

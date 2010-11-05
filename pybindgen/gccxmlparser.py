@@ -792,6 +792,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                 continue # skip classes not fully defined
             if isinstance(class_wrapper, CppException):
                 continue # exceptions cannot have methods (yet)
+            #if class_wrapper.import_from_module:
+            #    continue # foreign class
             pygen_sink =  self._get_pygen_sink_for_definition(class_wrapper.gccxml_definition)
             if pygen_sink:
                 register_methods_func = "register_%s_methods"  % (class_wrapper.mangled_full_name,)
@@ -823,6 +825,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                 continue # skip classes not fully defined
             if isinstance(class_wrapper, CppException):
                 continue # exceptions cannot have methods (yet)
+            #if class_wrapper.import_from_module:
+            #    continue # this is a foreign class from another module, we don't scan it
             register_methods_func = "register_%s_methods"  % (class_wrapper.mangled_full_name,)
 
             pygen_sink =  self._get_pygen_sink_for_definition(class_wrapper.gccxml_definition)
@@ -894,6 +898,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                 pass
             elif name == 'exception':
                 is_exception = True
+            elif name == 'import_from_module':
+                kwargs.setdefault('import_from_module', value)
             else:
                 warnings.warn_explicit("Class annotation %r ignored" % name,
                                        AnnotationsWarning, cls.location.file_name, cls.location.line)
@@ -995,6 +1001,8 @@ pybindgen.settings.error_handler = ErrorHandler()
             if outer_class is not None:
                 l.append('outer_class=root_module[%r]' % outer_class.full_name)
             pygen_sink = self._get_pygen_sink_for_definition(enum)
+            if 'import_from_module' in global_annotations:
+                l.append("import_from_module=%r" % (global_annotations["import_from_module"],))
             if pygen_sink:
                 if 'pygen_comment' in global_annotations:
                     pygen_sink.writeln('## ' + global_annotations['pygen_comment'])

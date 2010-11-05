@@ -118,8 +118,9 @@ def common_shared_object_return(value, py_name, cpp_class, code_block,
                 code_block.write_code("}")            
     else:
         # since there is a helper class, check if this C++ object is an instance of that class
-        code_block.write_code("if (typeid(%s) == typeid(%s))\n{"
-                                      % (value_value, cpp_class.helper_class.name))
+        # http://stackoverflow.com/questions/579887/how-expensive-is-rtti/1468564#1468564
+        code_block.write_code("if (typeid(%s).name() == typeid(%s).name())\n{"
+                              % (value_value, cpp_class.helper_class.name))
         code_block.indent()
 
         # yes, this is an instance of the helper class; we can get
@@ -936,7 +937,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                 wrapper.before_call.write_code('}')
             wrapper.build_params.add_parameter("N", [py_name])
         else:
-            wrapper.before_call.write_code("if (typeid(*(%s)) == typeid(%s))\n{"
+            wrapper.before_call.write_code("if (typeid(*(%s)).name() == typeid(%s).name())\n{"
                                           % (value, self.cpp_class.helper_class.name))
             wrapper.before_call.indent()
 

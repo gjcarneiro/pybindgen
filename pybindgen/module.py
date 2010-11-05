@@ -314,11 +314,11 @@ class ModuleBase(dict):
         self._name = name
 
         if self.parent is None:
-            self.prefix = self.name
+            self.prefix = self.name.replace('.', '_')
         else:
             self.prefix = self.parent.prefix + "_" + self.name
 
-        self.init_function_name = "init%s" % self.prefix
+        self.init_function_name = "init%s" % (self.name.split('.')[-1],)
 
     
     name = property(get_name, set_name)
@@ -629,8 +629,13 @@ class ModuleBase(dict):
         if self.classes or self.containers or self.exceptions:
             code_sink.writeln('/* --- forward declarations --- */')
             code_sink.writeln()
-        for class_ in self.classes:
+
+        for class_ in [c for c in self.classes if c.import_from_module]:
             class_.generate_forward_declarations(code_sink, self)
+
+        for class_ in [c for c in self.classes if not c.import_from_module]:
+            class_.generate_forward_declarations(code_sink, self)
+
         for container in self.containers:
             container.generate_forward_declarations(code_sink, self)
         for exc in self.exceptions:
@@ -746,7 +751,12 @@ class ModuleBase(dict):
         if self.classes:
             main_sink.writeln('/* --- classes --- */')
             main_sink.writeln()
-            for class_ in self.classes:
+            for class_ in [c for c in self.classes if c.import_from_module]:
+                sink, header_sink = out.get_code_sink_for_wrapper(class_)
+                sink.writeln()
+                class_.generate(sink, self)
+                sink.writeln()
+            for class_ in [c for c in self.classes if not c.import_from_module]:
                 sink, header_sink = out.get_code_sink_for_wrapper(class_)
                 sink.writeln()
                 class_.generate(sink, self)
