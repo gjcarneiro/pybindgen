@@ -621,7 +621,7 @@ class CppConstructor(ForwardWrapperBase):
         else:
             ## We should only create a helper class instance when
             ## being called from a user python subclass.
-            self.before_call.write_code("if (self->ob_type != &%s)" % class_.pytypestruct)
+            self.before_call.write_code("if (Py_TYPE(self) != &%s)" % class_.pytypestruct)
             self.before_call.write_code("{")
             self.before_call.indent()
 
@@ -1011,7 +1011,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
         self.before_call.add_cleanup_code('Py_XDECREF(%s);' % py_method)
         
         self.before_call.write_code(
-            r'if (%s == NULL || %s->ob_type == &PyCFunction_Type) {' % (py_method, py_method))
+            r'if (%s == NULL || Py_TYPE(%s) == &PyCFunction_Type) {' % (py_method, py_method))
         if self.return_value.ctype == 'void':
             if not (self.method.is_pure_virtual or self.method.visibility == 'private'):
                 self.before_call.write_code(r'    %s::%s(%s);'

@@ -160,7 +160,7 @@ class Enum(object):
                     value_str = "%s::%s" % (self.outer_class.full_name, value)
                 module.after_init.write_code(
                     ' // %s\n'
-                    'tmp_value = PyInt_FromLong(%s);\n'
+                    'tmp_value = PyLong_FromLong(%s);\n'
                     'PyDict_SetItemString((PyObject*) %s.tp_dict, \"%s\", tmp_value);\n'
                     'Py_DECREF(tmp_value);'
                     % (

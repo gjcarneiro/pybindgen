@@ -91,7 +91,7 @@ class UnsignedIntPtrParam(PointerParameter):
 
                 wrapper.before_call.write_code("%(elem)s = PyList_GET_ITEM(%(py_list)s, %(idx)s);" % vars())
                 wrapper.before_call.write_error_check(
-                        '!(PyInt_Check(%(elem)s) || PyLong_Check(%(elem)s))',
+                        '!PyNumber_Check(%(elem)s)',
                         'PyErr_SetString(PyExc_TypeError, "Parameter `%s\' must be a list of %i ints / longs");'
                         % (self.name, self.array_length))
                 wrapper.before_call.write_code("%(name)s[%(idx)s] = PyLong_AsUnsignedInt(%(elem)s);" % vars())

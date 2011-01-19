@@ -5,8 +5,7 @@ The class PyTypeObject generates a PyTypeObject structure contents.
 class PyTypeObject(object):
     TEMPLATE = (
         'PyTypeObject %(typestruct)s = {\n'
-        '    PyObject_HEAD_INIT(NULL)\n'
-        '    0,                                 /* ob_size */\n'
+        '    PyVarObject_HEAD_INIT(NULL, 0)\n'
         '    (char *) "%(tp_name)s",            /* tp_name */\n'
         '    %(tp_basicsize)s,                  /* tp_basicsize */\n'
         '    0,                                 /* tp_itemsize */\n'
@@ -216,9 +215,9 @@ static PySequenceMethods %(variable)s = {
     (binaryfunc) %(sq_concat)s,
     (ssizeargfunc) %(sq_repeat)s,
     (ssizeargfunc) %(sq_item)s,
-    (ssizessizeargfunc) %(sq_slice)s,
+    %(sq_slice)s,
     (ssizeobjargproc) %(sq_ass_item)s,
-    (ssizessizeobjargproc) %(sq_ass_slice)s,
+    %(sq_ass_slice)s,
     (objobjproc) %(sq_contains)s,
     /* Added in release 2.0 */
     (binaryfunc) %(sq_inplace_concat)s,
@@ -239,7 +238,7 @@ static Py_ssize_t
     if (py_result == NULL) {
         return -1;
     }
-    result = PyInt_AsSsize_t(py_result);
+    result = PyLong_AsSsize_t(py_result);
     Py_DECREF(py_result);
     return result;
 }
@@ -262,7 +261,7 @@ static Py_ssize_t
     if (py_result == NULL) {
         return -1;
     }
-    result = PyInt_AsSsize_t(py_result);
+    result = PyLong_AsSsize_t(py_result);
     Py_DECREF(py_result);
     return result;
 }
@@ -327,7 +326,7 @@ static int
 	slots.setdefault('sq_repeat', 'NULL')
 	slots.setdefault('sq_item', 'NULL')
 	slots.setdefault('sq_slice', 'NULL')
-	slots.setdefault('sq_ass_item', 'NULL')
+ 	slots.setdefault('sq_ass_item', 'NULL')
 	slots.setdefault('sq_ass_slice', 'NULL')
 	slots.setdefault('sq_contains', 'NULL')
 	slots.setdefault('sq_inplace_concat', 'NULL')

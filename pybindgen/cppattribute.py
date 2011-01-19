@@ -268,8 +268,7 @@ class PyMetaclass(object):
         """
         code_sink.writeln('''
 PyTypeObject %(pytypestruct)s = {
-	PyObject_HEAD_INIT(NULL)
-	0,					/* ob_size */
+        PyVarObject_HEAD_INIT(NULL, 0)
 	(char *) "%(name)s",		        /* tp_name */
 	0,					/* tp_basicsize */
 	0,					/* tp_itemsize */

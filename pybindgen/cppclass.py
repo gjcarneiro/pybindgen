@@ -1760,7 +1760,7 @@ typedef struct {
             else:
                 parent_typestruct = self.parent.pytypestruct
             metaclass = PyMetaclass(self.metaclass_name,
-                                    "%s.ob_type" % parent_typestruct,
+                                    "Py_TYPE(&%s)" % parent_typestruct,
                                     self.static_attributes)
             metaclass.generate(code_sink, module)
 
@@ -1776,7 +1776,7 @@ typedef struct {
                                                  % (self.pytypestruct, basenum, base.pytypestruct))
 
         if metaclass is not None:
-            module.after_init.write_code('%s.ob_type = &%s;' %
+            module.after_init.write_code('Py_TYPE(&%s) = &%s;' %
                                          (self.pytypestruct, metaclass.pytypestruct))
 
         module.after_init.write_error_check('PyType_Ready(&%s)'
@@ -2355,7 +2355,7 @@ static void
         else:
             code_block.write_code(self._get_delete_code())
 
-        code_block.write_code('self->ob_type->tp_free((PyObject*)self);')
+        code_block.write_code('Py_TYPE(self)->tp_free((PyObject*)self);')
 
         code_block.write_cleanup()
         
