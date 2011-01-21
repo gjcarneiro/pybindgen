@@ -2260,7 +2260,7 @@ static void
         if self.helper_class is None:
             visit_self = ''
         else:
-            if not isinstance(self.memory_policy, ReferenceCountingMethodsPolicy):
+            if not isinstance(self.memory_policy, ReferenceCountingMethodsPolicy) or self.memory_policy.peekref_method is None:
                 peekref_code = ''
             else:
                 peekref_code = " && self->obj->%s() == 1" % self.memory_policy.peekref_method
