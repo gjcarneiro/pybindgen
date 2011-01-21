@@ -198,8 +198,7 @@ class CStringReturn(PointerReturnValue):
         return "return NULL;"
 
     def convert_python_to_c(self, wrapper):
-        name = wrapper.declarations.declare_variable(self.ctype_no_const, "retval_ptr")
-        wrapper.parse_params.add_parameter("s", ['&'+name], self.value)
+        wrapper.parse_params.add_parameter("s", ['&'+self.value])
 
     def convert_c_to_python(self, wrapper):
         wrapper.build_params.add_parameter("s", [self.value])

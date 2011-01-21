@@ -448,6 +448,8 @@ public:
         m_foobar = foobar;
     }
 
+    virtual const char* method_returning_cstring() const { return "foobar"; }
+
 protected:
     std::string protected_method_that_is_not_virtual (std::string arg) const;
 };
