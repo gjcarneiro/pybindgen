@@ -1376,5 +1376,17 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(mi.mixed_method(), 3)
 
 
+    def test_cstring_return(self):
+        some = foo.SomeObject("xxx")
+        s = some.method_returning_cstring()
+        self.assertEqual(s, "foobar")
+
+        class Test(foo.SomeObject):
+            def method_returning_cstring(self):
+                return "another string"
+        some = Test("xxx")
+        s = some.method_returning_cstring()
+        self.assertEqual(s, "another string")
+
 if __name__ == '__main__':
     unittest.main()

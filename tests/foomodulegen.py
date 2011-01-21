@@ -264,6 +264,10 @@ int %s::custom_method_added_by_a_hook(int x)
                           [Parameter.new('std::string', 'arg')],
                           is_const=True, visibility='protected')
 
+    SomeObject.add_method('method_returning_cstring', ReturnValue.new('const char *'),
+                          [], is_virtual=True, is_const=True)
+
+
     mod.add_function('store_some_object', ReturnValue.new('void'),
                      [Parameter.new('SomeObject*', 'obj', transfer_ownership=True)])
     mod.add_function('invoke_some_object_get_prefix', ReturnValue.new('std::string'),
