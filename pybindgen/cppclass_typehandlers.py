@@ -689,10 +689,12 @@ class CppClassPtrParameter(CppClassParameterBase):
     "Class* handlers"
     CTYPES = []
     cpp_class = cppclass.CppClass('dummy') # CppClass instance
-    DIRECTIONS = [Parameter.DIRECTION_IN]
+    DIRECTIONS = [Parameter.DIRECTION_IN,
+                  Parameter.DIRECTION_OUT,
+                  Parameter.DIRECTION_INOUT]
     SUPPORTS_TRANSFORMATIONS = True
 
-    def __init__(self, ctype, name, transfer_ownership=None, custodian=None, is_const=False,
+    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, transfer_ownership=None, custodian=None, is_const=False,
                  null_ok=False, default_value=None):
         """
         Type handler for a pointer-to-class parameter (MyClass*)
@@ -737,7 +739,7 @@ class CppClassPtrParameter(CppClassParameterBase):
         if ctype == self.cpp_class.name:
             ctype = self.cpp_class.full_name
         super(CppClassPtrParameter, self).__init__(
-            ctype, name, direction=Parameter.DIRECTION_IN, is_const=is_const)
+            ctype, name, direction, is_const, default_value)
 
         if transfer_ownership is None and self.type_traits.target_is_const:
             transfer_ownership = False
@@ -745,7 +747,6 @@ class CppClassPtrParameter(CppClassParameterBase):
         self.custodian = custodian
         self.transfer_ownership = transfer_ownership
         self.null_ok = null_ok
-        self.default_value = default_value
 
         if transfer_ownership is None:
             raise TypeConfigurationError("Missing transfer_ownership option")
@@ -891,24 +892,30 @@ class CppClassPtrParameter(CppClassParameterBase):
                         wrapper.build_params.add_parameter("O", [self.py_name])
                         wrapper.before_call.add_cleanup_code("Py_DECREF(%s);" % self.py_name)
 
-                        ## if after the call we notice the callee kept a reference
-                        ## to the pyobject, we then swap pywrapper->obj for a copy
-                        ## of the original object.  Else the ->obj pointer is
-                        ## simply erased (we never owned this object in the first
-                        ## place).
-                        wrapper.after_call.write_code(
-                            "if (%s->ob_refcnt == 1)\n"
-                            "    %s->obj = NULL;\n"
-                            "else {\n" % (self.py_name, self.py_name))
-                        wrapper.after_call.indent()
-                        self.cpp_class.write_create_instance(wrapper.after_call,
-                                                             "%s->obj" % self.py_name,
-                                                             '*'+value)
-                        self.cpp_class.write_post_instance_creation_code(wrapper.after_call,
-                                                                         "%s->obj" % self.py_name,
-                                                                         '*'+value)
-                        wrapper.after_call.unindent()
-                        wrapper.after_call.write_code('}')
+                        if self.cpp_class.has_copy_constructor:
+                            ## if after the call we notice the callee kept a reference
+                            ## to the pyobject, we then swap pywrapper->obj for a copy
+                            ## of the original object.  Else the ->obj pointer is
+                            ## simply erased (we never owned this object in the first
+                            ## place).
+
+                            wrapper.after_call.write_code(
+                                "if (%s->ob_refcnt == 1)\n"
+                                "    %s->obj = NULL;\n"
+                                "else {\n" % (self.py_name, self.py_name))
+                            wrapper.after_call.indent()
+                            self.cpp_class.write_create_instance(wrapper.after_call,
+                                                                 "%s->obj" % self.py_name,
+                                                                 '*'+value)
+                            self.cpp_class.write_post_instance_creation_code(wrapper.after_call,
+                                                                             "%s->obj" % self.py_name,
+                                                                             '*'+value)
+                            wrapper.after_call.unindent()
+                            wrapper.after_call.write_code('}')
+                        else:
+                            ## it's not safe for the python wrapper to keep a
+                            ## pointer to the object anymore; just set it to NULL.
+                            wrapper.after_call.write_code("%s->obj = NULL;" % (self.py_name,))
                 else:
                     ## The PyObject gets a new reference to the same obj
                     self.cpp_class.memory_policy.write_incref(wrapper.before_call, value)
