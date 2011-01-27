@@ -116,21 +116,36 @@ public:
                 param_name = 'param_inout'
             elif direction == (Parameter.DIRECTION_OUT):
                 param_name = 'param_out'
-            param = param_handler(param_type, param_name, direction)
 
-            if 'const' in param.ctype and direction&Parameter.DIRECTION_OUT:
-                continue
+                def try_wrapper(param, wrapper_number):
+                    if 'const' in param.ctype and direction&Parameter.DIRECTION_OUT:
+                        return
+                    wrapper = MyReverseWrapper(ReturnValue.new('void'), [param])
+                    try:
+                        wrapper.generate(code_out,
+                                         '_test_wrapper_number_%i' % (wrapper_number,),
+                                         ['static'])
+                    except NotImplementedError:
+                        print >> sys.stderr, ("ReverseWrapper void(%s) could not be generated: not implemented"
+                                              % (param.ctype))
+                    print
 
-            wrapper = MyReverseWrapper(ReturnValue.new('void'), [param])
-            wrapper_number += 1
-            try:
-                wrapper.generate(code_out,
-                                 '_test_wrapper_number_%i' % (wrapper_number,),
-                                 ['static'])
-            except NotImplementedError:
-                print >> sys.stderr, ("ReverseWrapper void(%s) could not be generated: not implemented"
-                                      % (param.ctype))
-            print
+                if issubclass(param_handler, (cppclass.CppClassPtrParameter,
+                                              typehandlers.pyobjecttype.PyObjectParam)):
+                    for transfer_ownership in True, False:
+                        try:
+                            param = param_handler(param_type, param_name, transfer_ownership=transfer_ownership)
+                        except TypeError:
+                            print >> sys.stderr, "ERROR -----> param_handler(param_type=%r, "\
+                                "transfer_ownership=%r, is_const=%r)"\
+                                % (param_type, transfer_ownership, is_const)
+                        wrapper_number += 1
+                        try_wrapper(param, wrapper_number)
+                else:
+                    param = param_handler(param_type, param_name, direction)
+                    wrapper_number += 1
+                    try_wrapper(param, wrapper_number)
+
     
     ## test generic forward wrappers, and module
 
