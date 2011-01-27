@@ -524,7 +524,7 @@ class CppClassRefParameter(CppClassParameterBase):
                 ## simply erased (we never owned this object in the first
                 ## place).
                 wrapper.after_call.write_code(
-                    "if (%s->ob_refcnt == 1)\n"
+                    "if (Py_REFCNT(%s) == 1)\n"
                     "    %s->obj = NULL;\n"
                     "else{\n" % (self.py_name, self.py_name))
                 wrapper.after_call.indent()
@@ -900,7 +900,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                             ## place).
 
                             wrapper.after_call.write_code(
-                                "if (%s->ob_refcnt == 1)\n"
+                                "if (Py_REFCNT(%s) == 1)\n"
                                 "    %s->obj = NULL;\n"
                                 "else {\n" % (self.py_name, self.py_name))
                             wrapper.after_call.indent()
