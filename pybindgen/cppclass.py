@@ -1660,7 +1660,7 @@ typedef struct {
             self.container_traits.generate_forward_declarations(code_sink, module)
 
         if self.parent is None:
-            self.wrapper_registry.generate_forward_declarations(code_sink, module)
+            self.wrapper_registry.generate_forward_declarations(code_sink, module, self.import_from_module)
 
     def get_python_name(self):
         if self.template_parameters:
@@ -1687,23 +1687,16 @@ typedef struct {
         module.after_init.write_code("PyObject *module = PyImport_ImportModule(\"%s\");" % module_name)
         module.after_init.write_code(
             "if (module == NULL) {\n"
-            "    _%s = NULL;\n"
-            "    PyErr_Print();\n"
-            "    if (PyErr_WarnEx(PyExc_RuntimeWarning, \"Unable to import type '%s' from module '%s';\", 1))\n"
-            "        return;\n"
-            "} else {\n" % (self.pytypestruct, type_name, module_name))
-        module.after_init.write_code("    _%s = (PyTypeObject*) PyObject_GetAttrString(module, \"%s\");\n"
-                                     "}"
-                                     % (self.pytypestruct, type_name))
-        module.after_init.write_code("PyErr_Clear();")
-        module.after_init.unindent(); module.after_init.write_code("}")
+            "    return;\n"
+            "}")
+
+        module.after_init.write_code("_%s = (PyTypeObject*) PyObject_GetAttrString(module, \"%s\");\n"
+                                     % (self.pytypestruct, self.get_python_name()))
+        module.after_init.write_code("if (PyErr_Occurred()) PyErr_Clear();")
 
         if self.typeid_map_name is not None:
             code_sink.writeln("pybindgen::TypeMap *_%s;" % self.typeid_map_name)
             module.after_init.write_code("/* Import the %r class type map from module %r */" % (self.full_name, self.import_from_module))
-            module.after_init.write_code("{"); module.after_init.indent()
-            module.after_init.write_code("PyObject *module = PyImport_ImportModule(\"%s\");" % module_name)
-            module.after_init.write_code("if (module == NULL) PyErr_Print();")
             module.after_init.write_code("PyObject *_cobj = PyObject_GetAttrString(module, \"_%s\");"
                                          % (self.typeid_map_name))
             module.after_init.write_code("if (_cobj == NULL) {\n"
@@ -1713,8 +1706,12 @@ typedef struct {
                                          "    _%s = reinterpret_cast<pybindgen::TypeMap*> (PyCObject_AsVoidPtr (_cobj));\n"
                                          "    Py_DECREF(_cobj);\n"
                                          "}"
-                                         % (self.typeid_map_name, self.typeid_map_name))
-            module.after_init.unindent(); module.after_init.write_code("}")
+                                         % (self.typeid_map_name, self.typeid_map_name))        
+
+        if self.parent is None:
+            self.wrapper_registry.generate_import(code_sink, module.after_init, "module")
+
+        module.after_init.unindent(); module.after_init.write_code("}")
 
         if self.helper_class is not None:
             self.helper_class.generate(code_sink)
