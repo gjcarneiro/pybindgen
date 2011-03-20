@@ -315,11 +315,10 @@ class ModuleBase(dict):
 
         if self.parent is None:
             self.prefix = self.name.replace('.', '_')
+            self.init_function_name = "init%s" % (self.name.split('.')[-1],)
         else:
             self.prefix = self.parent.prefix + "_" + self.name
-
-        self.init_function_name = "init%s" % (self.name.split('.')[-1],)
-
+            self.init_function_name = "init%s" % (self.prefix,)
     
     name = property(get_name, set_name)
 
