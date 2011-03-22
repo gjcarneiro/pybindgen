@@ -1,13 +1,14 @@
 ## -*- python -*-
 
 def set_options(opt):
-    opt.tool_options('boost')
+    pass#opt.tool_options('boost')
 
 def build(bld):
     bld.add_subdirs('a b c d e f g h')
     bld.add_subdirs('callback')
-    if bld.env['HAVE_BOOST']:
-        bld.add_subdirs('shared_ptr')
+    #if bld.env['HAVE_BOOST']:
+    #    bld.add_subdirs('shared_ptr')
 
 def configure(conf):
-    conf.env['HAVE_BOOST'] = conf.check_boost()
+    pass
+    #conf.env['HAVE_BOOST'] = conf.check_boost()
