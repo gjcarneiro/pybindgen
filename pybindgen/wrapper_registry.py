@@ -93,7 +93,7 @@ class StdMapWrapperRegistry(WrapperRegistry):
                               % (module_pyobj_var, self.map_name))
         code_block.write_code("if (_cobj == NULL) {\n"
                               "    _%(MAP)s = NULL;\n"
-                              "    PyErr_Print();\n"
+                              "    PyErr_Clear();\n"
                               "} else {\n"
                               "    _%(MAP)s = reinterpret_cast< std::map<void*, PyObject*> *> (PyCObject_AsVoidPtr (_cobj));\n"
                               "    Py_DECREF(_cobj);\n"
