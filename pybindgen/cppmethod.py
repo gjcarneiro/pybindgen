@@ -714,6 +714,28 @@ class CppConstructor(ForwardWrapperBase):
         code_sink.writeln('return 0;')
         self.write_close_wrapper(code_sink)
 
+    def __str__(self):
+        if not hasattr(self, '_class'):
+            return object.__str__(self)
+
+        if self._class is None:
+            cls_name = "???"
+        else:
+            cls_name = self._class.full_name
+        
+        if self.return_value is None:
+            retval = "retval?"
+        else:
+            retval = self.return_value.ctype
+
+        if self.parameters is None:
+            params = 'params?'
+        else:
+            params = ', '.join(["%s %s" % (param.ctype, param.name) for param in self.parameters])
+
+        return ("%s: %s %s::%s (%s);" %
+                (self.visibility, retval, cls_name, cls_name, params))
+
 
 class CppFunctionAsConstructor(CppConstructor):
     """
@@ -738,7 +760,6 @@ class CppFunctionAsConstructor(CppConstructor):
             unblock_threads = settings.unblock_threads
 
         parameters = [utils.eval_param(param, self) for param in parameters]
-
         super(CppFunctionAsConstructor, self).__init__(parameters)
         self.c_function_name = c_function_name
         self.function_return_value = return_value
