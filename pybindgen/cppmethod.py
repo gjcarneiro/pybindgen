@@ -618,6 +618,7 @@ class CppConstructor(ForwardWrapperBase):
         if class_.helper_class is None:
             class_.write_create_instance(self.before_call, "self->obj", ", ".join(self.call_params))
             class_.write_post_instance_creation_code(self.before_call, "self->obj", ", ".join(self.call_params))
+            self.before_call.write_code("self->flags = PYBINDGEN_WRAPPER_FLAG_NONE;")
         else:
             ## We should only create a helper class instance when
             ## being called from a user python subclass.
@@ -627,6 +628,7 @@ class CppConstructor(ForwardWrapperBase):
 
             class_.write_create_instance(self.before_call, "self->obj", ", ".join(self.call_params),
                                          class_.helper_class.name)
+            self.before_call.write_code("self->flags = PYBINDGEN_WRAPPER_FLAG_NONE;")
             self.before_call.write_code('((%s*) self->obj)->set_pyobj((PyObject *)self);'
                                         % class_.helper_class.name)
             class_.write_post_instance_creation_code(self.before_call, "self->obj", ", ".join(self.call_params),
@@ -647,6 +649,7 @@ class CppConstructor(ForwardWrapperBase):
                 self.before_call.write_code('return -1;')
             else:
                 class_.write_create_instance(self.before_call, "self->obj", ", ".join(self.call_params))
+                self.before_call.write_code("self->flags = PYBINDGEN_WRAPPER_FLAG_NONE;")
                 class_.write_post_instance_creation_code(self.before_call, "self->obj", ", ".join(self.call_params))
 
             self.before_call.unindent()
