@@ -1204,16 +1204,19 @@ class CppClass(object):
             code_sink.writeln('''
 
 #include <map>
+#include <string>
 #include <typeinfo>
 #if defined(__GNUC__) && __GNUC__ >= 3
 # include <cxxabi.h>
 #endif
 
+#define PBG_TYPEMAP_DEBUG 0
+
 namespace pybindgen {
 
 class TypeMap
 {
-   std::map<const char *, PyTypeObject *> m_map;
+   std::map<std::string, PyTypeObject *> m_map;
 
 public:
 
@@ -1221,11 +1224,22 @@ public:
 
    void register_wrapper(const std::type_info &cpp_type_info, PyTypeObject *python_wrapper)
    {
-       m_map[cpp_type_info.name()] = python_wrapper;
+
+#if PBG_TYPEMAP_DEBUG
+   std::cerr << "register_wrapper(this=" << this << ", type_name=" << cpp_type_info.name()
+             << ", python_wrapper=" << python_wrapper->tp_name << ")" << std::endl;
+#endif
+
+       m_map[std::string(cpp_type_info.name())] = python_wrapper;
    }
 
    PyTypeObject * lookup_wrapper(const std::type_info &cpp_type_info, PyTypeObject *fallback_wrapper)
    {
+
+#if PBG_TYPEMAP_DEBUG
+   std::cerr << "lookup_wrapper(this=" << this << ", type_name=" << cpp_type_info.name() << ")" << std::endl;
+#endif
+
        PyTypeObject *python_wrapper = m_map[cpp_type_info.name()];
        if (python_wrapper)
            return python_wrapper;
@@ -1236,8 +1250,23 @@ public:
            // registered python wrapper.
            const abi::__si_class_type_info *_typeinfo =
                dynamic_cast<const abi::__si_class_type_info*> (&cpp_type_info);
-           while (_typeinfo && (python_wrapper = m_map[_typeinfo->name()]) == 0)
+#if PBG_TYPEMAP_DEBUG
+          std::cerr << "  -> looking at C++ type " << _typeinfo->name() << std::endl;
+#endif
+           while (_typeinfo && (python_wrapper = m_map[std::string(_typeinfo->name())]) == 0) {
                _typeinfo = dynamic_cast<const abi::__si_class_type_info*> (_typeinfo->__base_type);
+#if PBG_TYPEMAP_DEBUG
+               std::cerr << "  -> looking at C++ type " << _typeinfo->name() << std::endl;
+#endif
+           }
+
+#if PBG_TYPEMAP_DEBUG
+          if (python_wrapper) {
+              std::cerr << "  -> found match " << std::endl;
+          } else {
+              std::cerr << "  -> return fallback wrapper" << std::endl;
+          }
+#endif
 
            return python_wrapper? python_wrapper : fallback_wrapper;
 
