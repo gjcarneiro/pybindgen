@@ -329,7 +329,7 @@ class UInt8Return(ReturnValue):
 class UnsignedLongLongParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['unsigned long long', 'uint64_t']
+    CTYPES = ['unsigned long long', 'uint64_t', 'unsigned long long int']
 
     def get_ctype_without_ref(self):
         return str(self.type_traits.ctype_no_const)
@@ -346,7 +346,7 @@ class UnsignedLongLongParam(Parameter):
 
 class UnsignedLongLongRefParam(UnsignedLongLongParam):
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['unsigned long long&', 'uint64_t&']
+    CTYPES = ['unsigned long long&', 'uint64_t&', 'long long unsigned int &']
 
     def get_ctype_without_ref(self):
         assert self.type_traits.target is not None
@@ -369,7 +369,7 @@ class UnsignedLongLongReturn(ReturnValue):
 class UnsignedLongParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['unsigned long']
+    CTYPES = ['unsigned long', 'unsigned long int', 'long unsigned', 'long unsigned int']
 
     def get_ctype_without_ref(self):
         return str(self.type_traits.ctype_no_const)
@@ -386,7 +386,7 @@ class UnsignedLongParam(Parameter):
 
 class UnsignedLongRefParam(UnsignedLongParam):
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['unsigned long&']
+    CTYPES = ['unsigned long&', 'long unsigned&', 'long unsigned int&', 'unsigned long int&']
 
     def get_ctype_without_ref(self):
         assert self.type_traits.target is not None
@@ -448,7 +448,7 @@ class SizeTParam(Parameter):
 class LongLongParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['long long', 'int64_t']
+    CTYPES = ['long long', 'int64_t', 'long long int']
 
     def get_ctype_without_ref(self):
         return str(self.type_traits.ctype_no_const)
@@ -466,16 +466,15 @@ class LongLongParam(Parameter):
 
 class LongLongRefParam(LongLongParam):
     DIRECTIONS = [Parameter.DIRECTION_IN] # other directions not yet implemented
-    CTYPES = ['long long&', 'int64_t&']
+    CTYPES = ['long long&', 'int64_t&', 'long long int&']
 
     def get_ctype_without_ref(self):
         assert self.type_traits.target is not None
         return str(self.type_traits.target)
 
-
 class LongLongReturn(ReturnValue):
 
-    CTYPES = ['long long', 'int64_t']
+    CTYPES = ['long long', 'int64_t', 'long long int']
 
     def get_c_error_return(self):
         return "return 0;"
