@@ -193,6 +193,27 @@ class IntRefParam(Parameter):
         if self.direction & self.DIRECTION_OUT:
             wrapper.build_params.add_parameter("i", [name])
 
+class UnsignedIntRefParam(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
+                  Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
+    CTYPES = ['unsigned int&', 'unsigned &']
+    
+    def convert_c_to_python(self, wrapper):
+        if self.direction & self.DIRECTION_IN:
+            wrapper.build_params.add_parameter('I', [self.value])
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.parse_params.add_parameter("I", [self.value], self.name)
+
+    def convert_python_to_c(self, wrapper):
+        #assert self.ctype == 'int&'
+        name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
+        wrapper.call_params.append(name)
+        if self.direction & self.DIRECTION_IN:
+            wrapper.parse_params.add_parameter('I', ['&'+name], self.name)
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.build_params.add_parameter("I", [name])
+
 
 
 class UInt16Return(ReturnValue):
@@ -250,6 +271,28 @@ class UInt16Param(Parameter):
                                               'PyErr_SetString(PyExc_ValueError, "Out of range");')
         wrapper.call_params.append(name)
 
+class UInt16RefParam(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_INOUT, Parameter.DIRECTION_OUT]
+    CTYPES = ['uint16_t&', 'unsigned short&', 'unsigned short int&', 'short unsigned&', 'short unsigned int&']
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        if self.direction & self.DIRECTION_IN:
+            wrapper.build_params.add_parameter('H', [self.value])
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.parse_params.add_parameter("H", [self.value], self.name)
+
+    def convert_python_to_c(self, wrapper):
+        name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
+        wrapper.call_params.append(name)
+        if self.direction & self.DIRECTION_IN:
+            wrapper.parse_params.add_parameter('H', ['&'+name], self.name)
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.build_params.add_parameter("H", [name])
+
+
+
 class Int16Param(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
@@ -292,7 +335,7 @@ class Int16RefParam(Parameter):
 class UInt8Param(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['uint8_t']
+    CTYPES = ['uint8_t', 'unsigned char int', 'char unsigned int', 'unsigned char', 'char unsigned']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -306,10 +349,31 @@ class UInt8Param(Parameter):
                                               'PyErr_SetString(PyExc_ValueError, "Out of range");')
         wrapper.call_params.append(name)
 
+class UInt8RefParam(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_INOUT, Parameter.DIRECTION_OUT]
+    CTYPES = ['uint8_t&', 'unsigned char&', 'char unsigned&', 'unsigned char int&', 'char unsigned int&']
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        if self.direction & self.DIRECTION_IN:
+            wrapper.build_params.add_parameter('B', [self.value])
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.parse_params.add_parameter("B", [self.value], self.name)
+
+    def convert_python_to_c(self, wrapper):
+        name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
+        wrapper.call_params.append(name)
+        if self.direction & self.DIRECTION_IN:
+            wrapper.parse_params.add_parameter('B', ['&'+name], self.name)
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.build_params.add_parameter("B", [name])
+
+
 
 class UInt8Return(ReturnValue):
 
-    CTYPES = ['uint8_t']
+    CTYPES = ['uint8_t', 'unsigned char', 'char unsigned', 'unsigned char int', 'char unsigned int']
 
     def get_c_error_return(self):
         return "return 0;"
@@ -325,11 +389,67 @@ class UInt8Return(ReturnValue):
     def convert_c_to_python(self, wrapper):
         wrapper.build_params.add_parameter("i", ['(int)' + self.value], prepend=True)
 
+class Int8Param(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['int8_t', 'signed char int', 'char signed int', 'signed char', 'char signed', 'char int', 'int char']
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        wrapper.build_params.add_parameter('i', ["(int) "+self.value])
+
+    def convert_python_to_c(self, wrapper):
+        assert isinstance(wrapper, ForwardWrapperBase)
+        name = wrapper.declarations.declare_variable("int", self.name, self.default_value)
+        wrapper.parse_params.add_parameter('i', ['&'+name], self.name, optional=bool(self.default_value))
+        wrapper.before_call.write_error_check('%s > 0x7f' % name,
+                                              'PyErr_SetString(PyExc_ValueError, "Out of range");')
+        wrapper.call_params.append(name)
+
+class Int8RefParam(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_INOUT, Parameter.DIRECTION_OUT]
+    CTYPES = ['int8_t&', 'signed char &', 'char signed&', 'signed char int&', 'char signed int&']
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        if self.direction & self.DIRECTION_IN:
+            wrapper.build_params.add_parameter('b', [self.value])
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.parse_params.add_parameter("b", [self.value], self.name)
+
+    def convert_python_to_c(self, wrapper):
+        name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
+        wrapper.call_params.append(name)
+        if self.direction & self.DIRECTION_IN:
+            wrapper.parse_params.add_parameter('b', ['&'+name], self.name)
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.build_params.add_parameter("b", [name])
+
+class Int8Return(ReturnValue):
+
+    CTYPES = ['int8_t', 'char int', 'signed char', 'signed char int']
+
+    def get_c_error_return(self):
+        return "return 0;"
+    
+    def convert_python_to_c(self, wrapper):
+        tmp_var = wrapper.declarations.declare_variable("int", "tmp")
+        wrapper.parse_params.add_parameter("i", ["&"+tmp_var], prepend=True)
+        wrapper.after_call.write_error_check('%s > 128 || %s < -127' % (tmp_var, tmp_var),
+                                             'PyErr_SetString(PyExc_ValueError, "Out of range");')
+        wrapper.after_call.write_code(
+            "%s = %s;" % (self.value, tmp_var))
+
+    def convert_c_to_python(self, wrapper):
+        wrapper.build_params.add_parameter("i", [self.value], prepend=True)
+
+
 
 class UnsignedLongLongParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['unsigned long long', 'uint64_t', 'unsigned long long int']
+    CTYPES = ['unsigned long long', 'uint64_t', 'unsigned long long int', 'long long unsigned int', 'long long unsigned']
 
     def get_ctype_without_ref(self):
         return str(self.type_traits.ctype_no_const)
@@ -346,7 +466,7 @@ class UnsignedLongLongParam(Parameter):
 
 class UnsignedLongLongRefParam(UnsignedLongLongParam):
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['unsigned long long&', 'uint64_t&', 'long long unsigned int &']
+    CTYPES = ['unsigned long long&', 'uint64_t&', 'long long unsigned int&']
 
     def get_ctype_without_ref(self):
         assert self.type_traits.target is not None
@@ -404,6 +524,45 @@ class UnsignedLongReturn(ReturnValue):
 
     def convert_c_to_python(self, wrapper):
         wrapper.build_params.add_parameter("k", [self.value], prepend=True)
+
+class LongParam(Parameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['signed long', 'signed long int', 'long', 'long int', 'long signed', 'long signed int']
+
+    def get_ctype_without_ref(self):
+        return str(self.type_traits.ctype_no_const)
+
+    def convert_c_to_python(self, wrapper):
+        assert isinstance(wrapper, ReverseWrapperBase)
+        wrapper.build_params.add_parameter('l', [self.value])
+
+    def convert_python_to_c(self, wrapper):
+        assert isinstance(wrapper, ForwardWrapperBase)
+        name = wrapper.declarations.declare_variable(self.get_ctype_without_ref(), self.name, self.default_value)
+        wrapper.parse_params.add_parameter('l', ['&'+name], self.name, optional=bool(self.default_value))
+        wrapper.call_params.append(name)
+
+class LongRefParam(LongParam):
+    DIRECTIONS = [Parameter.DIRECTION_IN]
+    CTYPES = ['signed long&', 'long signed&', 'long&', 'long int&', 'long signed int&', 'signed long int&']
+
+    def get_ctype_without_ref(self):
+        assert self.type_traits.target is not None
+        return str(self.type_traits.target)
+
+class LongReturn(ReturnValue):
+
+    CTYPES = ['signed long', 'long signed int', 'long', 'long int']
+
+    def get_c_error_return(self):
+        return "return 0;"
+    
+    def convert_python_to_c(self, wrapper):
+        wrapper.parse_params.add_parameter("l", ["&"+self.value], prepend=True)
+
+    def convert_c_to_python(self, wrapper):
+        wrapper.build_params.add_parameter("l", [self.value], prepend=True)
 
 
 class SizeTReturn(ReturnValue):
