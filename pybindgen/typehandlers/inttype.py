@@ -335,7 +335,7 @@ class Int16RefParam(Parameter):
 class UInt8Param(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['uint8_t', 'unsigned char int', 'char unsigned int', 'unsigned char', 'char unsigned']
+    CTYPES = ['uint8_t', 'unsigned char', 'char unsigned']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -352,7 +352,7 @@ class UInt8Param(Parameter):
 class UInt8RefParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_INOUT, Parameter.DIRECTION_OUT]
-    CTYPES = ['uint8_t&', 'unsigned char&', 'char unsigned&', 'unsigned char int&', 'char unsigned int&']
+    CTYPES = ['uint8_t&', 'unsigned char&', 'char unsigned&']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -373,7 +373,7 @@ class UInt8RefParam(Parameter):
 
 class UInt8Return(ReturnValue):
 
-    CTYPES = ['uint8_t', 'unsigned char', 'char unsigned', 'unsigned char int', 'char unsigned int']
+    CTYPES = ['uint8_t', 'unsigned char', 'char unsigned']
 
     def get_c_error_return(self):
         return "return 0;"
@@ -392,7 +392,7 @@ class UInt8Return(ReturnValue):
 class Int8Param(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['int8_t', 'signed char int', 'char signed int', 'signed char', 'char signed', 'char int', 'int char']
+    CTYPES = ['int8_t', 'signed char', 'char signed']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -409,7 +409,7 @@ class Int8Param(Parameter):
 class Int8RefParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_INOUT, Parameter.DIRECTION_OUT]
-    CTYPES = ['int8_t&', 'signed char &', 'char signed&', 'signed char int&', 'char signed int&']
+    CTYPES = ['int8_t&', 'signed char &', 'char signed&']
 
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
@@ -428,7 +428,7 @@ class Int8RefParam(Parameter):
 
 class Int8Return(ReturnValue):
 
-    CTYPES = ['int8_t', 'char int', 'signed char', 'signed char int']
+    CTYPES = ['int8_t', 'signed char']
 
     def get_c_error_return(self):
         return "return 0;"
