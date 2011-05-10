@@ -1708,6 +1708,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                         kwargs['unblock_threads'] = annotations_scanner.parse_boolean(val)
                     elif key == 'name':
                         kwargs['custom_name'] = val
+                    elif key == 'throw':
+                        kwargs['throw'] = self._get_annotation_exceptions(val)
                     else:
                         warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
                                                % (key, val, member),
@@ -1997,6 +1999,23 @@ pybindgen.settings.error_handler = ErrorHandler()
                                        WrapperWarning, calldef.location.file_name, calldef.location.line)
         return retval
 
+    def _get_annotation_exceptions(self, annotation):
+        retval = []
+        for exc_name in annotation.split(','):
+            traits = ctypeparser.TypeTraits(normalize_name(exc_name))
+            if traits.type_is_reference:
+                name = str(traits.target)
+            else:
+                name = str(traits.ctype)
+            exc = self.type_registry.root_module.get(name, None)
+            if isinstance(exc, CppException):
+                retval.append(exc)
+            else:
+                warnings.warn_explicit("Thrown exception '%s' was not previously detected as an exception class."
+                                       " PyBindGen bug?"
+                                       % (normalize_name(decl.partial_decl_string)),
+                                       WrapperWarning, calldef.location.file_name, calldef.location.line)
+        return retval
 
     def scan_functions(self):
         self._stage = 'scan functions'
@@ -2069,6 +2088,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     pass
                 elif name == 'unblock_threads':
                     kwargs['unblock_threads'] = annotations_scanner.parse_boolean(value)
+                elif name == 'throw':
+                    kwargs['throw'] = self._get_annotation_exceptions(value)
                 else:
                     warnings.warn_explicit("Incorrect annotation %s=%s" % (name, value),
                                            AnnotationsWarning, fun.location.file_name, fun.location.line)

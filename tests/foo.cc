@@ -508,7 +508,27 @@ my_inverse_func2 (double x) throw (std::exception)
 }
 
 double
+my_inverse_func3 (double x)
+{
+    if (x == 0)
+    {
+        throw std::runtime_error ("value must be != 0");
+    }
+    return 1/x;
+}
+
+double
 ClassThatThrows::my_inverse_method2 (double x) throw (std::exception)
+{
+    if (x == 0)
+    {
+        throw std::runtime_error ("value must be != 0");
+    }
+    return 1/x;
+}
+
+double
+ClassThatThrows::my_inverse_method3 (double x)
 {
     if (x == 0)
     {

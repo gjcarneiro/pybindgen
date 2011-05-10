@@ -1212,6 +1212,28 @@ class TestFoo(unittest.TestCase):
             msg = str(ex)
         self.assertEqual(msg, "value must be != 0")
 
+    def test_function_exception3(self):
+        y = foo.my_inverse_func3(2)
+        self.assertEqual(y, 0.5)
+        self.assertRaises(foo.exception, foo.my_inverse_func2, 0)
+        try:
+            foo.my_inverse_func3(0)
+        except foo.exception, ex:
+            msg = str(ex)
+        self.assertEqual(msg, "value must be != 0")
+
+    def test_method_exception3(self):
+        c = foo.ClassThatThrows(1)
+        y = c.my_inverse_method3(2)
+        self.assertEqual(y, 0.5)
+        self.assertRaises(foo.exception, c.my_inverse_method3, 0)
+        try:
+            c.my_inverse_method3(0)
+        except foo.exception, ex:
+            msg = str(ex)
+        self.assertEqual(msg, "value must be != 0")
+
+
     def test_bug436154(self):
         r = foo.Foo.add_sub(1, 2)
         self.assertEqual(r, 3)
@@ -1387,6 +1409,7 @@ class TestFoo(unittest.TestCase):
         some = Test("xxx")
         s = some.method_returning_cstring()
         self.assertEqual(s, "another string")
+
 
 if __name__ == '__main__':
     unittest.main()

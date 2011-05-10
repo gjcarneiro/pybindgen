@@ -531,6 +531,11 @@ int %s::custom_method_added_by_a_hook(int x)
     ClassThatThrows.add_method('my_inverse_method2', 'double', [Parameter.new('double', 'x')],
                                throw=[std_exception])
 
+    mod.add_function('my_inverse_func3', 'double', [Parameter.new('double', 'x')],
+                     throw=[std_exception])
+    ClassThatThrows.add_method('my_inverse_method3', 'double', [Parameter.new('double', 'x')],
+                               throw=[std_exception])
+
     ClassThatThrows.add_method('throw_error', 'int', [], throw=[std_exception], is_const=True, is_virtual=True)
 
     # https://bugs.launchpad.net/pybindgen/+bug/450255

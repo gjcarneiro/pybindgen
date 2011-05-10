@@ -1079,6 +1079,10 @@ struct DomainError : public Error
 double my_inverse_func (double x) throw (DomainError);
 double my_inverse_func2 (double x) throw (std::exception);
 
+// the following function throws an exception but forgets to declare it
+// -#- throw=std::exception -#- 
+double my_inverse_func3 (double x);
+
 class ClassThatThrows
 {
 public:
@@ -1088,7 +1092,12 @@ public:
     double my_inverse_method (double x) throw (DomainError);
     double my_inverse_method2 (double x) throw (std::exception);
 
+    // the following method throws an exception but forgets to declare it
+    // -#- throw=std::exception -#- 
+    double my_inverse_method3 (double x);
+
     virtual int throw_error () const throw (std::exception);
+
 };
 
 
