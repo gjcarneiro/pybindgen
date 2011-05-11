@@ -536,3 +536,12 @@ ClassThatThrows::my_inverse_method3 (double x)
     }
     return 1/x;
 }
+
+
+Tupl
+my_throwing_func () throw (std::exception)
+{
+    Tupl retval;
+    return retval;
+}
+

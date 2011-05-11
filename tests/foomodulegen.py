@@ -575,6 +575,10 @@ int %s::custom_method_added_by_a_hook(int x)
     MIMixed.add_constructor([])
     MIMixed.add_method('mixed_method', 'int', [], is_const=True)
 
+
+    mod.add_function('my_throwing_func', 'Tupl', [], throw=[std_exception])
+
+
     
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):

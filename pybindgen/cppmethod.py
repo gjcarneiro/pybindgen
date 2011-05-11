@@ -365,6 +365,11 @@ class CppMethod(ForwardWrapperBase):
 
         Returns the corresponding PyMethodDef entry string.
         """
+
+        if self.throw: # Bug #780945
+            self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR = False
+            self.reset_code_generation_state()
+
         class_ = self.class_
         #assert isinstance(class_, CppClass)
         tmp_sink = codesink.MemoryCodeSink()
@@ -681,6 +686,7 @@ class CppConstructor(ForwardWrapperBase):
         :returns: the wrapper function name.
 
         """
+
         if self.visibility == 'private':
             raise utils.SkipWrapper("Class %r has a private constructor ->"
                                     " cannot generate a constructor for it" % self._class.full_name)

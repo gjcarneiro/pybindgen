@@ -1208,5 +1208,7 @@ public:
 };
     
 
+Tupl my_throwing_func () throw (std::exception);
+
 
 #endif 	    /* !FOO_H_ */

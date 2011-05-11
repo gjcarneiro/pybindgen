@@ -212,6 +212,11 @@ class Function(ForwardWrapperBase):
         :param code_sink: a CodeSink instance that will receive the generated code
         :param wrapper_name: name of wrapper function
         """
+
+        if self.throw: # Bug #780945
+            self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR = False
+            self.reset_code_generation_state()
+
         if wrapper_name is None:
             self.wrapper_actual_name = self.wrapper_base_name
         else:
