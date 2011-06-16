@@ -907,12 +907,21 @@ pybindgen.settings.error_handler = ErrorHandler()
             if self._class_has_virtual_methods(cls) and not cls.bases:
                 kwargs.setdefault('allow_subclassing', True)
 
-            if not self._has_public_destructor(cls):
-                kwargs.setdefault('is_singleton', True)
-                #print >> sys.stderr, "##### class %s has no public destructor" % cls.decl_string
+            #if not self._has_public_destructor(cls):
+            #    kwargs.setdefault('is_singleton', True)
+            #    #print >> sys.stderr, "##### class %s has no public destructor" % cls.decl_string
+
+            des = self._get_destructor_visibility(cls)
+            #print >> sys.stderr, "##### class %s destructor is %s" % (cls.decl_string, des)
+            if des != 'public':
+                kwargs.setdefault('destructor_visibility', des)
 
         return is_exception
                 
+    def _get_destructor_visibility(self, cls):
+        for member in cls.get_members():
+            if isinstance(member, calldef.destructor_t):
+                return member.access_type
 
     def _has_public_destructor(self, cls):
         for member in cls.get_members():

@@ -451,6 +451,7 @@ class CppClass(object):
                  docstring=None,
                  custom_name=None,
                  import_from_module=None,
+                 destructor_visibility='public'
                  ):
         """
         :param name: class name
@@ -521,6 +522,8 @@ class CppClass(object):
         self.template_parameters = template_parameters
         self.container_traits = None
         self.import_from_module = import_from_module
+        assert destructor_visibility in ['public', 'private', 'protected']
+        self.destructor_visibility = destructor_visibility
 
         self.custom_name = custom_name
         if custom_template_class_name:
@@ -1827,6 +1830,7 @@ typedef struct {
             self._generate_gc_methods(code_sink)
 
         self._generate_destructor(code_sink, have_constructor)
+
         if self.has_output_stream_operator:
             self._generate_str(code_sink)
         
@@ -2255,12 +2259,14 @@ static PyObject*\n%s(%s *self)
                     raise CodeGenerationError("Cannot finish generating class %s: "
                                               "type is incomplete, but no free/unref_function defined"
                                               % self.full_name)
-                delete_code = ("    %s *tmp = self->obj;\n"
-                               "    self->obj = NULL;\n"
-                               "    if (!(self->flags&PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED)) {\n"
-                               "        delete tmp;\n"
-                               "    }"
-                               % (self.full_name,))
+                if self.destructor_visibility == 'public':
+                    delete_code = ("    %s *tmp = self->obj;\n"
+                                   "    self->obj = NULL;\n"
+                                   "    if (!(self->flags&PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED)) {\n"
+                                   "        delete tmp;\n"
+                                   "    }" % (self.full_name,))
+                else:
+                    delete_code = ("    self->obj = NULL;\n")
         return delete_code
 
     def _generate_gc_methods(self, code_sink):

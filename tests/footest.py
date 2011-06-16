@@ -1410,6 +1410,14 @@ class TestFoo(unittest.TestCase):
         s = some.method_returning_cstring()
         self.assertEqual(s, "another string")
 
+    def test_protected_destructor(self):
+        f = foo.IFooImpl()
+        f.DoSomething()
+        del f
+        while gc.collect():
+            pass
+
+
 
 if __name__ == '__main__':
     unittest.main()

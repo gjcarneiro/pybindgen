@@ -1211,4 +1211,21 @@ public:
 Tupl my_throwing_func () throw (std::exception);
 
 
+class IFoo
+{
+public:
+    virtual void DoSomething() = 0;
+protected:
+    virtual ~IFoo() {}
+};
+
+
+class IFooImpl : public IFoo
+{
+public:
+    virtual void DoSomething() {}
+    ~IFooImpl() {}
+};
+
+
 #endif 	    /* !FOO_H_ */

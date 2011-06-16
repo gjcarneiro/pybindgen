@@ -579,6 +579,13 @@ int %s::custom_method_added_by_a_hook(int x)
     mod.add_function('my_throwing_func', 'Tupl', [], throw=[std_exception])
 
 
+    IFoo = mod.add_class("IFoo", destructor_visibility='protected', allow_subclassing=True)
+    IFoo.add_method("DoSomething", None, [], is_pure_virtual=True)
+
+    IFooImpl = mod.add_class("IFooImpl", parent=IFoo, destructor_visibility='public')
+    IFooImpl.add_constructor([])
+    IFooImpl.add_method("DoSomething", None, [], is_virtual=True)
+
     
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):
