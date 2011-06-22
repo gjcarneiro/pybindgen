@@ -362,7 +362,7 @@ public:
     }
 
     // -#- @return(caller_owns_return=false) -#-
-    Foo * get_foo_shared_ptr () {
+    const Foo * get_foo_shared_ptr () {
         return m_foo_shared_ptr;
     }
     
@@ -1161,7 +1161,7 @@ public:
     virtual ~Box () { --instance_count;}
 
     // -#- @return(reference_existing_object=true) -#-
-    Foobar* getFoobarInternalPtr () { return &m_foobar; }
+    const Foobar* getFoobarInternalPtr () { return &m_foobar; }
     
     // -#- @return(reference_existing_object=true) -#-
     Foobar& getFoobarInternalRef () { return m_foobar; }

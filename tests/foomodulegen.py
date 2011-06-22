@@ -201,7 +201,7 @@ int %s::custom_method_added_by_a_hook(int x)
     SomeObject.add_method('set_foo_shared_ptr', ReturnValue.new('void'),
                           [Parameter.new('Foo*', 'foo', transfer_ownership=False)])
 
-    SomeObject.add_method('get_foo_shared_ptr', ReturnValue.new('Foo*', caller_owns_return=False), [])
+    SomeObject.add_method('get_foo_shared_ptr', ReturnValue.new('const Foo*', caller_owns_return=False), [])
     SomeObject.add_method('get_foo_ptr', ReturnValue.new('Foo*', caller_owns_return=True), [])
 
     SomeObject.add_method('set_foo_by_ref', ReturnValue.new('void'),
@@ -551,7 +551,7 @@ int %s::custom_method_added_by_a_hook(int x)
     Box = mod.add_class('Box')
     Box.add_constructor([])
     Box.add_static_attribute('instance_count', ReturnValue.new('int'))
-    Box.add_method('getFoobarInternalPtr', ReturnValue.new('Foobar*', reference_existing_object=True), [])
+    Box.add_method('getFoobarInternalPtr', ReturnValue.new('const Foobar*', reference_existing_object=True), [])
     Box.add_method('getFoobarInternalRef', ReturnValue.new('Foobar&', reference_existing_object=True), [])
     Box.add_method('getFoobarInternalPtr2', ReturnValue.new('Foobar*', return_internal_reference=True), [])
     Box.add_method('getFoobarInternalRef2', ReturnValue.new('Foobar&', return_internal_reference=True), [])
