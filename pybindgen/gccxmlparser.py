@@ -1180,6 +1180,20 @@ pybindgen.settings.error_handler = ErrorHandler()
             template_parameters_decls = [find_declaration_from_name(self.global_ns, templ_param)
                                          for templ_param in template_parameters]
 
+            ignore_class = False
+            for template_param in template_parameters_decls:
+                if not isinstance(template_param, class_t):
+                    continue
+                if not isinstance(template_param.parent, class_t):
+                    continue
+                access = template_param.parent.find_out_member_access_type(template_param)
+                if access != 'public':
+                    # this templated class depends on a private type => we can't wrap it
+                    ignore_class = True
+                    break
+            if ignore_class:
+                continue
+
             if 0: # this is disabled due to ns3
                 ## if any template argument is a class that is not yet
                 ## registered, postpone scanning/registering the template
