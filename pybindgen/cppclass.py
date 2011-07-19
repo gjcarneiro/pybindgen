@@ -633,7 +633,11 @@ class CppClass(object):
         else:
             if any([p.allow_subclassing for p in self.bases]) and not allow_subclassing:
                 raise ValueError("Cannot disable subclassing if a parent class allows it")
-            self.allow_subclassing = allow_subclassing
+            else:
+                self.allow_subclassing = allow_subclassing
+
+        if self.destructor_visibility in ['public', 'protected']:
+            self.allow_subclassing = False
 
         self.typeid_map_name = None
 
