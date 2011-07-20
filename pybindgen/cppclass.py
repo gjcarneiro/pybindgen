@@ -1712,6 +1712,11 @@ typedef struct {
         return class_python_name
 
     def _generate_import_from_module(self, code_sink, module):
+        if module.parent is None:
+            error_retcode = ""
+        else:
+            error_retcode = "NULL"
+        
         # TODO: skip this step if the requested typestructure is never used
         if ' named ' in self.import_from_module:
             module_name, type_name = self.import_from_module.split(" named ")
@@ -1723,8 +1728,8 @@ typedef struct {
         module.after_init.write_code("PyObject *module = PyImport_ImportModule(\"%s\");" % module_name)
         module.after_init.write_code(
             "if (module == NULL) {\n"
-            "    return;\n"
-            "}")
+            "    return %s;\n"
+            "}" % (error_retcode,))
 
         module.after_init.write_code("_%s = (PyTypeObject*) PyObject_GetAttrString(module, \"%s\");\n"
                                      % (self.pytypestruct, self.get_python_name()))
