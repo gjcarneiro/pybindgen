@@ -636,7 +636,7 @@ class CppClass(object):
             else:
                 self.allow_subclassing = allow_subclassing
 
-        if self.destructor_visibility in ['public', 'protected']:
+        if self.destructor_visibility not in ['public', 'protected']:
             self.allow_subclassing = False
 
         self.typeid_map_name = None
