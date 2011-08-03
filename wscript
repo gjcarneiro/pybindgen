@@ -202,6 +202,8 @@ def set_options(opt):
     opt.tool_options('compiler_cc')
     opt.tool_options('compiler_cxx')
     opt.tool_options('cflags')
+    opt.sub_options('examples')
+
 
     optgrp = opt.add_option_group("PyBindGen Options")
 
@@ -291,6 +293,7 @@ def configure(conf):
             conf.env.append_value('CPPPATH', os.path.join(conf.curdir, 'include'))
 
     conf.sub_config('benchmarks')
+    conf.sub_config('examples')
 
 
 def build(bld):

@@ -451,6 +451,7 @@ class CppClass(object):
                  docstring=None,
                  custom_name=None,
                  import_from_module=None,
+                 destructor_visibility='public'
                  ):
         """
         :param name: class name
@@ -521,6 +522,8 @@ class CppClass(object):
         self.template_parameters = template_parameters
         self.container_traits = None
         self.import_from_module = import_from_module
+        assert destructor_visibility in ['public', 'private', 'protected']
+        self.destructor_visibility = destructor_visibility
 
         self.custom_name = custom_name
         if custom_template_class_name:
@@ -630,7 +633,11 @@ class CppClass(object):
         else:
             if any([p.allow_subclassing for p in self.bases]) and not allow_subclassing:
                 raise ValueError("Cannot disable subclassing if a parent class allows it")
-            self.allow_subclassing = allow_subclassing
+            else:
+                self.allow_subclassing = allow_subclassing
+
+        if self.destructor_visibility not in ['public', 'protected']:
+            self.allow_subclassing = False
 
         self.typeid_map_name = None
 
@@ -1204,16 +1211,19 @@ class CppClass(object):
             code_sink.writeln('''
 
 #include <map>
+#include <string>
 #include <typeinfo>
 #if defined(__GNUC__) && __GNUC__ >= 3
 # include <cxxabi.h>
 #endif
 
+#define PBG_TYPEMAP_DEBUG 0
+
 namespace pybindgen {
 
 class TypeMap
 {
-   std::map<const char *, PyTypeObject *> m_map;
+   std::map<std::string, PyTypeObject *> m_map;
 
 public:
 
@@ -1221,11 +1231,22 @@ public:
 
    void register_wrapper(const std::type_info &cpp_type_info, PyTypeObject *python_wrapper)
    {
-       m_map[cpp_type_info.name()] = python_wrapper;
+
+#if PBG_TYPEMAP_DEBUG
+   std::cerr << "register_wrapper(this=" << this << ", type_name=" << cpp_type_info.name()
+             << ", python_wrapper=" << python_wrapper->tp_name << ")" << std::endl;
+#endif
+
+       m_map[std::string(cpp_type_info.name())] = python_wrapper;
    }
 
    PyTypeObject * lookup_wrapper(const std::type_info &cpp_type_info, PyTypeObject *fallback_wrapper)
    {
+
+#if PBG_TYPEMAP_DEBUG
+   std::cerr << "lookup_wrapper(this=" << this << ", type_name=" << cpp_type_info.name() << ")" << std::endl;
+#endif
+
        PyTypeObject *python_wrapper = m_map[cpp_type_info.name()];
        if (python_wrapper)
            return python_wrapper;
@@ -1236,8 +1257,23 @@ public:
            // registered python wrapper.
            const abi::__si_class_type_info *_typeinfo =
                dynamic_cast<const abi::__si_class_type_info*> (&cpp_type_info);
-           while (_typeinfo && (python_wrapper = m_map[_typeinfo->name()]) == 0)
+#if PBG_TYPEMAP_DEBUG
+          std::cerr << "  -> looking at C++ type " << _typeinfo->name() << std::endl;
+#endif
+           while (_typeinfo && (python_wrapper = m_map[std::string(_typeinfo->name())]) == 0) {
                _typeinfo = dynamic_cast<const abi::__si_class_type_info*> (_typeinfo->__base_type);
+#if PBG_TYPEMAP_DEBUG
+               std::cerr << "  -> looking at C++ type " << _typeinfo->name() << std::endl;
+#endif
+           }
+
+#if PBG_TYPEMAP_DEBUG
+          if (python_wrapper) {
+              std::cerr << "  -> found match " << std::endl;
+          } else {
+              std::cerr << "  -> return fallback wrapper" << std::endl;
+          }
+#endif
 
            return python_wrapper? python_wrapper : fallback_wrapper;
 
@@ -1660,7 +1696,7 @@ typedef struct {
             self.container_traits.generate_forward_declarations(code_sink, module)
 
         if self.parent is None:
-            self.wrapper_registry.generate_forward_declarations(code_sink, module)
+            self.wrapper_registry.generate_forward_declarations(code_sink, module, self.import_from_module)
 
     def get_python_name(self):
         if self.template_parameters:
@@ -1676,6 +1712,11 @@ typedef struct {
         return class_python_name
 
     def _generate_import_from_module(self, code_sink, module):
+        if module.parent is None:
+            error_retcode = ""
+        else:
+            error_retcode = "NULL"
+        
         # TODO: skip this step if the requested typestructure is never used
         if ' named ' in self.import_from_module:
             module_name, type_name = self.import_from_module.split(" named ")
@@ -1687,23 +1728,16 @@ typedef struct {
         module.after_init.write_code("PyObject *module = PyImport_ImportModule(\"%s\");" % module_name)
         module.after_init.write_code(
             "if (module == NULL) {\n"
-            "    _%s = NULL;\n"
-            "    PyErr_Print();\n"
-            "    if (PyErr_WarnEx(PyExc_RuntimeWarning, \"Unable to import type '%s' from module '%s';\", 1))\n"
-            "        return;\n"
-            "} else {\n" % (self.pytypestruct, type_name, module_name))
-        module.after_init.write_code("    _%s = (PyTypeObject*) PyObject_GetAttrString(module, \"%s\");\n"
-                                     "}"
-                                     % (self.pytypestruct, type_name))
-        module.after_init.write_code("PyErr_Clear();")
-        module.after_init.unindent(); module.after_init.write_code("}")
+            "    return %s;\n"
+            "}" % (error_retcode,))
+
+        module.after_init.write_code("_%s = (PyTypeObject*) PyObject_GetAttrString(module, \"%s\");\n"
+                                     % (self.pytypestruct, self.get_python_name()))
+        module.after_init.write_code("if (PyErr_Occurred()) PyErr_Clear();")
 
         if self.typeid_map_name is not None:
             code_sink.writeln("pybindgen::TypeMap *_%s;" % self.typeid_map_name)
             module.after_init.write_code("/* Import the %r class type map from module %r */" % (self.full_name, self.import_from_module))
-            module.after_init.write_code("{"); module.after_init.indent()
-            module.after_init.write_code("PyObject *module = PyImport_ImportModule(\"%s\");" % module_name)
-            module.after_init.write_code("if (module == NULL) PyErr_Print();")
             module.after_init.write_code("PyObject *_cobj = PyObject_GetAttrString(module, \"_%s\");"
                                          % (self.typeid_map_name))
             module.after_init.write_code("if (_cobj == NULL) {\n"
@@ -1713,8 +1747,12 @@ typedef struct {
                                          "    _%s = reinterpret_cast<pybindgen::TypeMap*> (PyCObject_AsVoidPtr (_cobj));\n"
                                          "    Py_DECREF(_cobj);\n"
                                          "}"
-                                         % (self.typeid_map_name, self.typeid_map_name))
-            module.after_init.unindent(); module.after_init.write_code("}")
+                                         % (self.typeid_map_name, self.typeid_map_name))        
+
+        if self.parent is None:
+            self.wrapper_registry.generate_import(code_sink, module.after_init, "module")
+
+        module.after_init.unindent(); module.after_init.write_code("}")
 
         if self.helper_class is not None:
             self.helper_class.generate(code_sink)
@@ -1801,6 +1839,7 @@ typedef struct {
             self._generate_gc_methods(code_sink)
 
         self._generate_destructor(code_sink, have_constructor)
+
         if self.has_output_stream_operator:
             self._generate_str(code_sink)
         
@@ -2229,12 +2268,14 @@ static PyObject*\n%s(%s *self)
                     raise CodeGenerationError("Cannot finish generating class %s: "
                                               "type is incomplete, but no free/unref_function defined"
                                               % self.full_name)
-                delete_code = ("    %s *tmp = self->obj;\n"
-                               "    self->obj = NULL;\n"
-                               "    if (!(self->flags&PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED)) {\n"
-                               "        delete tmp;\n"
-                               "    }"
-                               % (self.full_name,))
+                if self.destructor_visibility == 'public':
+                    delete_code = ("    %s *tmp = self->obj;\n"
+                                   "    self->obj = NULL;\n"
+                                   "    if (!(self->flags&PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED)) {\n"
+                                   "        delete tmp;\n"
+                                   "    }" % (self.full_name,))
+                else:
+                    delete_code = ("    self->obj = NULL;\n")
         return delete_code
 
     def _generate_gc_methods(self, code_sink):

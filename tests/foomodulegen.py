@@ -201,7 +201,7 @@ int %s::custom_method_added_by_a_hook(int x)
     SomeObject.add_method('set_foo_shared_ptr', ReturnValue.new('void'),
                           [Parameter.new('Foo*', 'foo', transfer_ownership=False)])
 
-    SomeObject.add_method('get_foo_shared_ptr', ReturnValue.new('Foo*', caller_owns_return=False), [])
+    SomeObject.add_method('get_foo_shared_ptr', ReturnValue.new('const Foo*', caller_owns_return=False), [])
     SomeObject.add_method('get_foo_ptr', ReturnValue.new('Foo*', caller_owns_return=True), [])
 
     SomeObject.add_method('set_foo_by_ref', ReturnValue.new('void'),
@@ -531,6 +531,11 @@ int %s::custom_method_added_by_a_hook(int x)
     ClassThatThrows.add_method('my_inverse_method2', 'double', [Parameter.new('double', 'x')],
                                throw=[std_exception])
 
+    mod.add_function('my_inverse_func3', 'double', [Parameter.new('double', 'x')],
+                     throw=[std_exception])
+    ClassThatThrows.add_method('my_inverse_method3', 'double', [Parameter.new('double', 'x')],
+                               throw=[std_exception])
+
     ClassThatThrows.add_method('throw_error', 'int', [], throw=[std_exception], is_const=True, is_virtual=True)
 
     # https://bugs.launchpad.net/pybindgen/+bug/450255
@@ -546,7 +551,7 @@ int %s::custom_method_added_by_a_hook(int x)
     Box = mod.add_class('Box')
     Box.add_constructor([])
     Box.add_static_attribute('instance_count', ReturnValue.new('int'))
-    Box.add_method('getFoobarInternalPtr', ReturnValue.new('Foobar*', reference_existing_object=True), [])
+    Box.add_method('getFoobarInternalPtr', ReturnValue.new('const Foobar*', reference_existing_object=True), [])
     Box.add_method('getFoobarInternalRef', ReturnValue.new('Foobar&', reference_existing_object=True), [])
     Box.add_method('getFoobarInternalPtr2', ReturnValue.new('Foobar*', return_internal_reference=True), [])
     Box.add_method('getFoobarInternalRef2', ReturnValue.new('Foobar&', return_internal_reference=True), [])
@@ -569,6 +574,17 @@ int %s::custom_method_added_by_a_hook(int x)
     MIMixed = mod.add_class('MIMixed', parent=[MIBase1, MIBase2])
     MIMixed.add_constructor([])
     MIMixed.add_method('mixed_method', 'int', [], is_const=True)
+
+
+    mod.add_function('my_throwing_func', 'Tupl', [], throw=[std_exception])
+
+
+    IFoo = mod.add_class("IFoo", destructor_visibility='protected', allow_subclassing=True)
+    IFoo.add_method("DoSomething", None, [], is_pure_virtual=True)
+
+    IFooImpl = mod.add_class("IFooImpl", parent=IFoo, destructor_visibility='public')
+    IFooImpl.add_constructor([])
+    IFooImpl.add_method("DoSomething", None, [], is_virtual=True)
 
     
     #### --- error handler ---

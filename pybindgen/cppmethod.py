@@ -365,6 +365,11 @@ class CppMethod(ForwardWrapperBase):
 
         Returns the corresponding PyMethodDef entry string.
         """
+
+        if self.throw: # Bug #780945
+            self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR = False
+            self.reset_code_generation_state()
+
         class_ = self.class_
         #assert isinstance(class_, CppClass)
         tmp_sink = codesink.MemoryCodeSink()
@@ -618,6 +623,7 @@ class CppConstructor(ForwardWrapperBase):
         if class_.helper_class is None:
             class_.write_create_instance(self.before_call, "self->obj", ", ".join(self.call_params))
             class_.write_post_instance_creation_code(self.before_call, "self->obj", ", ".join(self.call_params))
+            self.before_call.write_code("self->flags = PYBINDGEN_WRAPPER_FLAG_NONE;")
         else:
             ## We should only create a helper class instance when
             ## being called from a user python subclass.
@@ -627,6 +633,7 @@ class CppConstructor(ForwardWrapperBase):
 
             class_.write_create_instance(self.before_call, "self->obj", ", ".join(self.call_params),
                                          class_.helper_class.name)
+            self.before_call.write_code("self->flags = PYBINDGEN_WRAPPER_FLAG_NONE;")
             self.before_call.write_code('((%s*) self->obj)->set_pyobj((PyObject *)self);'
                                         % class_.helper_class.name)
             class_.write_post_instance_creation_code(self.before_call, "self->obj", ", ".join(self.call_params),
@@ -647,6 +654,7 @@ class CppConstructor(ForwardWrapperBase):
                 self.before_call.write_code('return -1;')
             else:
                 class_.write_create_instance(self.before_call, "self->obj", ", ".join(self.call_params))
+                self.before_call.write_code("self->flags = PYBINDGEN_WRAPPER_FLAG_NONE;")
                 class_.write_post_instance_creation_code(self.before_call, "self->obj", ", ".join(self.call_params))
 
             self.before_call.unindent()
@@ -678,6 +686,7 @@ class CppConstructor(ForwardWrapperBase):
         :returns: the wrapper function name.
 
         """
+
         if self.visibility == 'private':
             raise utils.SkipWrapper("Class %r has a private constructor ->"
                                     " cannot generate a constructor for it" % self._class.full_name)
@@ -714,6 +723,28 @@ class CppConstructor(ForwardWrapperBase):
         code_sink.writeln('return 0;')
         self.write_close_wrapper(code_sink)
 
+    def __str__(self):
+        if not hasattr(self, '_class'):
+            return object.__str__(self)
+
+        if self._class is None:
+            cls_name = "???"
+        else:
+            cls_name = self._class.full_name
+        
+        if self.return_value is None:
+            retval = "retval?"
+        else:
+            retval = self.return_value.ctype
+
+        if self.parameters is None:
+            params = 'params?'
+        else:
+            params = ', '.join(["%s %s" % (param.ctype, param.name) for param in self.parameters])
+
+        return ("%s: %s %s::%s (%s);" %
+                (self.visibility, retval, cls_name, cls_name, params))
+
 
 class CppFunctionAsConstructor(CppConstructor):
     """
@@ -738,7 +769,6 @@ class CppFunctionAsConstructor(CppConstructor):
             unblock_threads = settings.unblock_threads
 
         parameters = [utils.eval_param(param, self) for param in parameters]
-
         super(CppFunctionAsConstructor, self).__init__(parameters)
         self.c_function_name = c_function_name
         self.function_return_value = return_value

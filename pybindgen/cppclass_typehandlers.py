@@ -57,13 +57,19 @@ def common_shared_object_return(value, py_name, cpp_class, code_block,
 
         ## Assign the C++ value to the Python wrapper
         if caller_owns_return:
-            code_block.write_code("%s->obj = %s;" % (py_name, value_ptr))
+            if type_traits.target_is_const:
+                code_block.write_code("%s->obj = (%s *) (%s);" % (py_name, cpp_class.full_name, value_ptr))                
+            else:
+                code_block.write_code("%s->obj = %s;" % (py_name, value_ptr))
             code_block.write_code(
                 "%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
         else:
             if not isinstance(cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
                 if reference_existing_object:
-                    code_block.write_code("%s->obj = %s;" % (py_name, value_ptr))
+                    if type_traits.target_is_const:
+                        code_block.write_code("%s->obj = (%s *) (%s);" % (py_name, cpp_class.full_name, value_ptr))
+                    else:
+                        code_block.write_code("%s->obj = %s;" % (py_name, value_ptr))
                     code_block.write_code(
                         "%s->flags = PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED;" % (py_name,))
                 else:

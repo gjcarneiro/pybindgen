@@ -907,12 +907,21 @@ pybindgen.settings.error_handler = ErrorHandler()
             if self._class_has_virtual_methods(cls) and not cls.bases:
                 kwargs.setdefault('allow_subclassing', True)
 
-            if not self._has_public_destructor(cls):
-                kwargs.setdefault('is_singleton', True)
-                #print >> sys.stderr, "##### class %s has no public destructor" % cls.decl_string
+            #if not self._has_public_destructor(cls):
+            #    kwargs.setdefault('is_singleton', True)
+            #    #print >> sys.stderr, "##### class %s has no public destructor" % cls.decl_string
+
+            des = self._get_destructor_visibility(cls)
+            #print >> sys.stderr, "##### class %s destructor is %s" % (cls.decl_string, des)
+            if des != 'public':
+                kwargs.setdefault('destructor_visibility', des)
 
         return is_exception
                 
+    def _get_destructor_visibility(self, cls):
+        for member in cls.get_members():
+            if isinstance(member, calldef.destructor_t):
+                return member.access_type
 
     def _has_public_destructor(self, cls):
         for member in cls.get_members():
@@ -1170,6 +1179,20 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             template_parameters_decls = [find_declaration_from_name(self.global_ns, templ_param)
                                          for templ_param in template_parameters]
+
+            ignore_class = False
+            for template_param in template_parameters_decls:
+                if not isinstance(template_param, class_t):
+                    continue
+                if not isinstance(template_param.parent, class_t):
+                    continue
+                access = template_param.parent.find_out_member_access_type(template_param)
+                if access != 'public':
+                    # this templated class depends on a private type => we can't wrap it
+                    ignore_class = True
+                    break
+            if ignore_class:
+                continue
 
             if 0: # this is disabled due to ns3
                 ## if any template argument is a class that is not yet
@@ -1708,6 +1731,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                         kwargs['unblock_threads'] = annotations_scanner.parse_boolean(val)
                     elif key == 'name':
                         kwargs['custom_name'] = val
+                    elif key == 'throw':
+                        kwargs['throw'] = self._get_annotation_exceptions(val)
                     else:
                         warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
                                                % (key, val, member),
@@ -1997,6 +2022,23 @@ pybindgen.settings.error_handler = ErrorHandler()
                                        WrapperWarning, calldef.location.file_name, calldef.location.line)
         return retval
 
+    def _get_annotation_exceptions(self, annotation):
+        retval = []
+        for exc_name in annotation.split(','):
+            traits = ctypeparser.TypeTraits(normalize_name(exc_name))
+            if traits.type_is_reference:
+                name = str(traits.target)
+            else:
+                name = str(traits.ctype)
+            exc = self.type_registry.root_module.get(name, None)
+            if isinstance(exc, CppException):
+                retval.append(exc)
+            else:
+                warnings.warn_explicit("Thrown exception '%s' was not previously detected as an exception class."
+                                       " PyBindGen bug?"
+                                       % (normalize_name(decl.partial_decl_string)),
+                                       WrapperWarning, calldef.location.file_name, calldef.location.line)
+        return retval
 
     def scan_functions(self):
         self._stage = 'scan functions'
@@ -2069,6 +2111,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     pass
                 elif name == 'unblock_threads':
                     kwargs['unblock_threads'] = annotations_scanner.parse_boolean(value)
+                elif name == 'throw':
+                    kwargs['throw'] = self._get_annotation_exceptions(value)
                 else:
                     warnings.warn_explicit("Incorrect annotation %s=%s" % (name, value),
                                            AnnotationsWarning, fun.location.file_name, fun.location.line)

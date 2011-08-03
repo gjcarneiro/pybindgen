@@ -17,7 +17,7 @@ class WrapperRegistry(object):
     def generate_forward_declarations(self, code_sink, module):
         raise NotImplementedError
 
-    def generate(self, code_sink, module):
+    def generate(self, code_sink, module, import_from_module):
         raise NotImplementedError
 
     def write_register_new_wrapper(self, code_block, wrapper_lvalue, object_rvalue):
@@ -40,10 +40,12 @@ class NullWrapperRegistry(WrapperRegistry):
     def __init__(self, base_name):
         super(NullWrapperRegistry, self).__init__(base_name)
 
-    def generate_forward_declarations(self, code_sink, module):
+    def generate_forward_declarations(self, code_sink, module, import_from_module):
         pass
 
     def generate(self, code_sink, module):
+        pass
+    def generate_import(self, code_sink, module, import_from_module):
         pass
 
     def write_register_new_wrapper(self, code_block, wrapper_lvalue, object_rvalue):
@@ -63,19 +65,40 @@ class StdMapWrapperRegistry(WrapperRegistry):
     not compile.
     """
 
+
     def __init__(self, base_name):
         super(StdMapWrapperRegistry, self).__init__(base_name)
         self.map_name = "%s_wrapper_registry" % base_name
 
-    def generate_forward_declarations(self, code_sink, module):
+    def generate_forward_declarations(self, code_sink, module, import_from_module):
         module.add_include("<map>")
         module.add_include("<iostream>")
         #code_sink.writeln("#include <map>")
         #code_sink.writeln("#include <iostream>")
-        code_sink.writeln("extern std::map<void*, PyObject*> %s;" % self.map_name)
+        if import_from_module:
+            code_sink.writeln("extern std::map<void*, PyObject*> *_%s;" % self.map_name)
+            code_sink.writeln("#define %s (*_%s)" % (self.map_name, self.map_name))
+        else:
+            code_sink.writeln("extern std::map<void*, PyObject*> %s;" % self.map_name)
 
-    def generate(self, code_sink, dummy_module):
+    def generate(self, code_sink, module):
         code_sink.writeln("std::map<void*, PyObject*> %s;" % self.map_name)
+        # register the map in the module namespace
+        module.after_init.write_code("PyModule_AddObject(m, (char *) \"_%s\", PyCObject_FromVoidPtr(&%s, NULL));"
+                                     % (self.map_name, self.map_name))
+
+    def generate_import(self, code_sink, code_block, module_pyobj_var):
+        code_sink.writeln("std::map<void*, PyObject*> *_%s;" % self.map_name)
+        code_block.write_code("PyObject *_cobj = PyObject_GetAttrString(%s, \"_%s\");"
+                              % (module_pyobj_var, self.map_name))
+        code_block.write_code("if (_cobj == NULL) {\n"
+                              "    _%(MAP)s = NULL;\n"
+                              "    PyErr_Clear();\n"
+                              "} else {\n"
+                              "    _%(MAP)s = reinterpret_cast< std::map<void*, PyObject*> *> (PyCObject_AsVoidPtr (_cobj));\n"
+                              "    Py_DECREF(_cobj);\n"
+                              "}"
+                              % dict(MAP=self.map_name))
 
     def write_register_new_wrapper(self, code_block, wrapper_lvalue, object_rvalue):
         code_block.write_code("%s[(void *) %s] = (PyObject *) %s;" % (self.map_name, object_rvalue, wrapper_lvalue))

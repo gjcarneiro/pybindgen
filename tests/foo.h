@@ -362,7 +362,7 @@ public:
     }
 
     // -#- @return(caller_owns_return=false) -#-
-    Foo * get_foo_shared_ptr () {
+    const Foo * get_foo_shared_ptr () {
         return m_foo_shared_ptr;
     }
     
@@ -1079,6 +1079,10 @@ struct DomainError : public Error
 double my_inverse_func (double x) throw (DomainError);
 double my_inverse_func2 (double x) throw (std::exception);
 
+// the following function throws an exception but forgets to declare it
+// -#- throw=std::exception -#- 
+double my_inverse_func3 (double x);
+
 class ClassThatThrows
 {
 public:
@@ -1088,7 +1092,12 @@ public:
     double my_inverse_method (double x) throw (DomainError);
     double my_inverse_method2 (double x) throw (std::exception);
 
+    // the following method throws an exception but forgets to declare it
+    // -#- throw=std::exception -#- 
+    double my_inverse_method3 (double x);
+
     virtual int throw_error () const throw (std::exception);
+
 };
 
 
@@ -1152,7 +1161,7 @@ public:
     virtual ~Box () { --instance_count;}
 
     // -#- @return(reference_existing_object=true) -#-
-    Foobar* getFoobarInternalPtr () { return &m_foobar; }
+    const Foobar* getFoobarInternalPtr () { return &m_foobar; }
     
     // -#- @return(reference_existing_object=true) -#-
     Foobar& getFoobarInternalRef () { return m_foobar; }
@@ -1198,6 +1207,25 @@ public:
     int mixed_method () const { return 3; } 
 };
     
+
+Tupl my_throwing_func () throw (std::exception);
+
+
+class IFoo
+{
+public:
+    virtual void DoSomething() = 0;
+protected:
+    virtual ~IFoo() {}
+};
+
+
+class IFooImpl : public IFoo
+{
+public:
+    virtual void DoSomething() {}
+    ~IFooImpl() {}
+};
 
 
 #endif 	    /* !FOO_H_ */
