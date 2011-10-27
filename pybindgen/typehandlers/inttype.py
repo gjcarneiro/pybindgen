@@ -567,7 +567,7 @@ class LongReturn(ReturnValue):
 
 class SizeTReturn(ReturnValue):
 
-    CTYPES = ['size_t',]
+    CTYPES = ['size_t', 'std::size_t']
 
     def get_c_error_return(self):
         return "return 0;"
@@ -587,7 +587,7 @@ class SizeTReturn(ReturnValue):
 class SizeTParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    CTYPES = ['size_t']
+    CTYPES = ['size_t', 'std::size_t']
 
     def get_ctype_without_ref(self):
         return str(self.type_traits.ctype_no_const)
