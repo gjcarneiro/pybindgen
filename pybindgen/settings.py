@@ -65,6 +65,16 @@ behaviour.  But this is really deprecated; newer code should set
 deprecated_virtuals to False.
 """
 
+
+gcc_rtti_abi_complete = True
+"""
+If True, and GCC >= 3 is detected at compile time, pybindgen will try
+to use abi::__si_class_type_info to determine the closest registered
+type for pointers to objects of unknown type.  Notably, Mac OS X Lion
+has GCC > 3 but which breaks this internal API, in which case it
+should be disabled (set this option to False).
+"""
+
 def _get_deprecated_virtuals():
     if deprecated_virtuals is None:
         import warnings

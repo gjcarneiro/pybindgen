@@ -1237,6 +1237,10 @@ public:
        m_map[std::string(cpp_type_info.name())] = python_wrapper;
    }
 
+''')
+
+            if settings.gcc_rtti_abi_complete:
+                code_sink.writeln('''
    PyTypeObject * lookup_wrapper(const std::type_info &cpp_type_info, PyTypeObject *fallback_wrapper)
    {
 
@@ -1283,6 +1287,24 @@ public:
 
 }
 ''')
+            else:
+                code_sink.writeln('''
+   PyTypeObject * lookup_wrapper(const std::type_info &cpp_type_info, PyTypeObject *fallback_wrapper)
+   {
+
+#if PBG_TYPEMAP_DEBUG
+   std::cerr << "lookup_wrapper(this=" << this << ", type_name=" << cpp_type_info.name() << ")" << std::endl;
+#endif
+
+       PyTypeObject *python_wrapper = m_map[cpp_type_info.name()];
+       return python_wrapper? python_wrapper : fallback_wrapper;
+   }
+};
+
+}
+''')
+        
+
         if self.import_from_module:
             code_sink.writeln("\nextern pybindgen::TypeMap *_%s;\n" % self.typeid_map_name)
             code_sink.writeln("#define %s (*_%s)\n" % (self.typeid_map_name, self.typeid_map_name))
