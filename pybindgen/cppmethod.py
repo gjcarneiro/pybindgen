@@ -1046,8 +1046,10 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
             if not (self.method.is_pure_virtual or self.method.visibility == 'private'):
                 self.before_call.write_code(r'    %s::%s(%s);'
                                             % (self.class_.full_name, self.method_name, call_params))
+            self.before_call.indent()
             self.before_call.write_cleanup()
-            self.before_call.write_code(r'    return;')
+            self.before_call.write_code('return;')
+            self.before_call.unindent()
         else:
             if self.method.is_pure_virtual or self.method.visibility == 'private':
                 if isinstance(self.return_value, cppclass.CppClassReturnValue) \
