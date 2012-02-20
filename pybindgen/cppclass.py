@@ -1747,20 +1747,20 @@ typedef struct {
         code_sink.writeln("PyTypeObject *_%s;" % self.pytypestruct)
         module.after_init.write_code("/* Import the %r class from module %r */" % (self.full_name, self.import_from_module))
         module.after_init.write_code("{"); module.after_init.indent()
-        module.after_init.write_code("PyObject *module = PyImport_ImportModule(\"%s\");" % module_name)
+        module.after_init.write_code("PyObject *module = PyImport_ImportModule((char*) \"%s\");" % module_name)
         module.after_init.write_code(
             "if (module == NULL) {\n"
             "    return %s;\n"
             "}" % (error_retcode,))
 
-        module.after_init.write_code("_%s = (PyTypeObject*) PyObject_GetAttrString(module, \"%s\");\n"
+        module.after_init.write_code("_%s = (PyTypeObject*) PyObject_GetAttrString(module, (char*) \"%s\");\n"
                                      % (self.pytypestruct, self.get_python_name()))
         module.after_init.write_code("if (PyErr_Occurred()) PyErr_Clear();")
 
         if self.typeid_map_name is not None:
             code_sink.writeln("pybindgen::TypeMap *_%s;" % self.typeid_map_name)
             module.after_init.write_code("/* Import the %r class type map from module %r */" % (self.full_name, self.import_from_module))
-            module.after_init.write_code("PyObject *_cobj = PyObject_GetAttrString(module, \"_%s\");"
+            module.after_init.write_code("PyObject *_cobj = PyObject_GetAttrString(module, (char*) \"_%s\");"
                                          % (self.typeid_map_name))
             module.after_init.write_code("if (_cobj == NULL) {\n"
                                          "    _%s = new pybindgen::TypeMap;\n"

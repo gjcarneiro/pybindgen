@@ -89,7 +89,7 @@ class StdMapWrapperRegistry(WrapperRegistry):
 
     def generate_import(self, code_sink, code_block, module_pyobj_var):
         code_sink.writeln("std::map<void*, PyObject*> *_%s;" % self.map_name)
-        code_block.write_code("PyObject *_cobj = PyObject_GetAttrString(%s, \"_%s\");"
+        code_block.write_code("PyObject *_cobj = PyObject_GetAttrString(%s, (char*) \"_%s\");"
                               % (module_pyobj_var, self.map_name))
         code_block.write_code("if (_cobj == NULL) {\n"
                               "    _%(MAP)s = NULL;\n"
