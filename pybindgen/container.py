@@ -577,7 +577,7 @@ int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
                 PyErr_SetString(PyExc_TypeError, "items must be tuples with two elements");
                 return 0;
             }
-            std::pair<%(KEY_CTYPE)s, %(ITEM_CTYPE)s> item;
+            std::pair< %(KEY_CTYPE)s, %(ITEM_CTYPE)s > item;
             if (!%(KEY_CONVERTER)s(PyTuple_GET_ITEM(tup, 0), &item.first)) {
                 return 0;
             }
