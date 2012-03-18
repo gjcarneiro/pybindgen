@@ -7,7 +7,7 @@ import Task
 import sys
 import os.path
 import os
-import pproc as subprocess
+import subprocess
 
 # uncomment to enable profiling information
 # epydoc uses the profile data to generate call graphs
@@ -45,14 +45,14 @@ def build(bld):
         command='${PYTHON} %s ${SRC[0]} ${TOP_SRCDIR} > ${TGT[0]}' % (DEPRECATION_ERRORS,))
 
     if env['CXX']:
-        obj = bld.new_task_gen(features='cxx cshlib pyext')
+        obj = bld(features='cxx cxxshlib pyext')
         obj.source = [
             'foo.cc',
             'foomodule.cc'
             ]
         obj.target = 'foo'
         obj.install_path = None
-        obj.includes = '.'
+        obj.env.append_value("INCLUDES", '.')
 
     ## automatic code scanning using gccxml
     if env['ENABLE_PYGCCXML']:
@@ -63,16 +63,16 @@ def build(bld):
             source='foomodulegen-auto.py foo.h',
             target='foomodule2.cc foomodulegen_generated.py',
             command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[1]} > ${TGT[0]}' % (DEPRECATION_ERRORS,),
-            variables=dict(cpp_path_repr=repr(bindgen.env['CPPPATH']+bindgen.env['CPPPATH_PYEXT'])))
+            variables=dict(cpp_path_repr=repr(bindgen.env['INCLUDES']+bindgen.env['INCLUDES_PYEXT'])))
 
-        obj = bld.new_task_gen(features='cxx cshlib pyext')
+        obj = bld.new_task_gen(features='cxx cxxshlib pyext')
         obj.source = [
             'foo.cc',
             'foomodule2.cc'
             ]
         obj.target = 'foo2'
         obj.install_path = None
-        obj.includes = '.'
+        obj.env.append_value("INCLUDES", '.')
 
         ### Now using the generated python script
 
@@ -84,16 +84,16 @@ def build(bld):
 
         ## yes, this global manipulation of PYTHONPATH is kind of evil :-/
         ## TODO: add WAF command-output support for customising command OS environment
-        os.environ["PYTHONPATH"] = os.pathsep.join([os.environ.get("PYTHONPATH", ''), bindgen.path.abspath(bindgen.env)])
+        os.environ["PYTHONPATH"] = os.pathsep.join([os.environ.get("PYTHONPATH", ''), bindgen.path.get_bld().abspath()])
 
-        obj = bld.new_task_gen(features='cxx cshlib pyext')
+        obj = bld.new_task_gen(features='cxx cxxshlib pyext')
         obj.source = [
             'foo.cc',
             'foomodule3.cc'
             ]
         obj.target = 'foo3'
         obj.install_path = None # do not install
-        obj.includes = '.'
+        obj.env.append_value("INCLUDES", '.')
 
         ## ---
 
@@ -102,7 +102,7 @@ def build(bld):
             source='foomodulegen-auto-split.py foo.h',
             target='foomodulegen_split.py foomodulegen_module1.py foomodulegen_module2.py',
             command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[0]} ${TGT[1]} ${TGT[2]}' % (DEPRECATION_ERRORS,),
-            variables=dict(cpp_path_repr=repr(bindgen.env['CPPPATH']+bindgen.env['CPPPATH_PYEXT'])))
+            variables=dict(cpp_path_repr=repr(bindgen.env['INCLUDES']+bindgen.env['INCLUDES_PYEXT'])))
 
         bld.new_task_gen(
             features='command',
@@ -121,7 +121,7 @@ def build(bld):
             command='${PYTHON} %s ${SRC[0]} ${TGT[0]}' % (DEPRECATION_ERRORS,))
 
 
-        obj = bld.new_task_gen(features='cxx cshlib pyext')
+        obj = bld.new_task_gen(features='cxx cxxshlib pyext')
         obj.source = [
             'foo.cc',
             'foomodule4.cc',
@@ -130,7 +130,7 @@ def build(bld):
             ]
         obj.target = 'foo4'
         obj.install_path = None # do not install
-        obj.includes = '.'
+        obj.env.append_value("INCLUDES", '.')
 
     ## pure C tests
     bld.add_subdirs('c-hello')

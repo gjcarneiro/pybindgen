@@ -1,6 +1,6 @@
 ## -*- python -*-
 
-def set_options(opt):
+def options(opt):
     pass#opt.tool_options('boost')
 
 def build(bld):

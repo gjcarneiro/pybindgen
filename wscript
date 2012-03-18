@@ -1,22 +1,22 @@
 ## -*- python -*-
-## (C) 2007,2008 Gustavo J. A. M. Carneiro
+## (C) 2007-2012 Gustavo J. A. M. Carneiro
 
-import Options
-import Build
+from waflib import Options
+from waflib import Build
 
 import Scripting
-Scripting.excludes.remove('Makefile')
+# Scripting.excludes.remove('Makefile')
 Scripting.dist_format = 'zip'
 
-import Configure
-Configure.autoconfig = True
+from waflib import Configure
+#Configure.autoconfig = True
 
-import Logs
+from waflib import Logs
 
 #from Params import fatal
 
 import os
-import pproc as subprocess
+import subprocess
 import shutil
 import sys
 import Configure
@@ -24,13 +24,13 @@ import tarfile
 import re
 import types
 
-import Task
-Task.file_deps = Task.extract_deps
+#import Task
+#Task.file_deps = Task.extract_deps
 
 
 APPNAME='pybindgen'
-srcdir = '.'
-blddir = 'build'
+top = '.'
+out = 'build'
 
 
 
@@ -197,11 +197,11 @@ def dist_hook():
         pass
 
 
-def set_options(opt):
+def options(opt):
     opt.tool_options('python')
     opt.tool_options('compiler_cc')
     opt.tool_options('compiler_cxx')
-    opt.tool_options('cflags')
+    opt.tool_options('cflags', tooldir="waf-tools")
     opt.sub_options('examples')
 
 
@@ -230,33 +230,65 @@ def set_options(opt):
                       action="store_true", default=False,
                       dest='valgrind')
 
-def configure(conf):
 
-    def _check_compilation_flag(conf, flag):
-        """
-        Checks if the C++ compiler accepts a certain compilation flag or flags
-        flag: can be a string or a list of strings
-        """
 
-        env = conf.env.copy()
+def _check_compilation_flag(conf, flag, mode='cxx', linkflags=None):
+    """
+    Checks if the C++ compiler accepts a certain compilation flag or flags
+    flag: can be a string or a list of strings
+    """
+    l = []
+    if flag:
+        l.append(flag)
+    if isinstance(linkflags, list):
+        l.extend(linkflags)
+    else:
+        if linkflags:
+            l.append(linkflags)
+    if len(l) > 1:
+        flag_str = 'flags ' + ' '.join(l)
+    else:
+        flag_str = 'flag ' + ' '.join(l)
+    if flag_str > 28:
+        flag_str = flag_str[:28] + "..."
+
+    conf.start_msg('Checking for compilation %s support' % (flag_str,))
+    env = conf.env.copy()
+
+    if mode == 'cc':
+        mode = 'c'
+
+    if mode == 'cxx':
+        fname = 'test.cc'
         env.append_value('CXXFLAGS', flag)
-        try:
-            retval = conf.run_c_code(code='#include <stdio.h>\nint main() { return 0; }\n',
-                                     env=env, compile_filename='test.cc',
-                                     compile_mode='cxx',type='cprogram', execute=False)
-        except Configure.ConfigurationError:
-            ok = False
-        else:
-            ok = (retval == 0)
-        conf.check_message_custom(flag, 'support', (ok and 'yes' or 'no'))
-        return ok
+    else:
+        fname = 'test.c'
+        env.append_value('CFLAGS', flag)
+
+    if linkflags is not None:
+        env.append_value("LINKFLAGS", linkflags)
+
+    try:
+        retval = conf.run_c_code(code='#include <stdio.h>\nint main() { return 0; }\n',
+                                 env=env, compile_filename=fname,
+                                 features=[mode, mode+'program'], execute=False)
+    except Configure.ConfigurationError:
+        ok = False
+    else:
+        ok = (retval == 0)
+    conf.end_msg(ok)
+    return ok
+
+
+
+def configure(conf):
 
     conf.check_compilation_flag = types.MethodType(_check_compilation_flag, conf)
 
     ## Write a pybindgen/version.py file containing the project version
     generate_version_py()
 
-    conf.check_tool('command')
+    conf.check_tool('command', tooldir="waf-tools")
     conf.check_tool('python')
     conf.check_python_version((2,3))
 
@@ -297,19 +329,23 @@ def configure(conf):
 
 
 def build(bld):
-    global g_bld
-    g_bld = bld
+    #global g_bld
+    #g_bld = bld
     if getattr(Options.options, 'generate_version', False):
         generate_version_py(force=True)
 
     bld.add_subdirs('pybindgen')
-    if Options.options.examples:
-        bld.add_subdirs('examples')
-    if Options.commands['check'] or Options.commands['clean']:
+
+    if bld.cmd == 'check':
         bld.add_subdirs('tests')
 
-    if Options.commands.get('bench', False) or Options.commands['clean']:
-        bld.add_subdirs('benchmarks')
+
+    if 0: # FIXME
+        if Options.options.examples:
+            bld.add_subdirs('examples')
+
+        if Options.commands.get('bench', False) or Options.commands['clean']:
+            bld.add_subdirs('benchmarks')
 
 
 check_context = Build.BuildContext
@@ -332,55 +368,65 @@ def bench(bld):
         raise SystemExit(retval)
 
 
-check_context = Build.BuildContext
-def check(bld):
-    "run the unit tests; add option -v for verbose mode"
-    Scripting.build(bld)
+from waflib import Context, Build
+class CheckContext(Context.Context):
+    """run the unit tests"""
+    cmd = 'check'
 
-    if Options.options.verbose:
-        verbosity = ['-v']
-    else:
-        verbosity = []
+    def execute(self):
 
-    if Options.options.valgrind:
-        valgrind = ['valgrind', '--leak-check=full', '--leak-resolution=low']
-    else:
-        valgrind = []
+        # first we execute the build
+	bld = Context.create_context("build")
+	bld.options = Options.options # provided for convenience
+	bld.cmd = "check"
+	bld.execute()
 
-    print "Running pure python unit tests..."
-    retval1 = subprocess.Popen([Build.bld.env['PYTHON'], 'tests/test.py'] + verbosity).wait()
 
-    env = g_bld.env
+        if Options.options.verbose:
+            verbosity = ['-v']
+        else:
+            verbosity = []
 
-    if env['CXX']:
-        print "Running manual module generation unit tests (module foo)..."
-        retval2 = subprocess.Popen(valgrind + [env['PYTHON'], 'tests/footest.py', '1'] + verbosity).wait()
-    else:
-        print "Skipping manual module generation unit tests (no C/C++ compiler)..."
-        retval2 = 0
+        if Options.options.valgrind:
+            valgrind = ['valgrind', '--leak-check=full', '--leak-resolution=low']
+        else:
+            valgrind = []
 
-    if env['ENABLE_PYGCCXML']:
-        print "Running automatically scanned module generation unit tests (module foo2)..."
-        retval3 = subprocess.Popen(valgrind + [env['PYTHON'], 'tests/footest.py', '2'] + verbosity).wait()
+        print "Running pure python unit tests..."
+        python = bld.env['PYTHON'][0]
+        retval1 = subprocess.Popen([python, 'tests/test.py'] + verbosity).wait()
 
-        print "Running module generated by automatically generated python script unit tests (module foo3)..."
-        retval3b = subprocess.Popen(valgrind + [env['PYTHON'], 'tests/footest.py', '3'] + verbosity).wait()
+        env = bld.env
 
-        print "Running module generated by generated and split python script unit tests  (module foo4)..."
-        retval3c = subprocess.Popen(valgrind + [env['PYTHON'], 'tests/footest.py', '4'] + verbosity).wait()
+        if env['CXX']:
+            print "Running manual module generation unit tests (module foo)..."
+            retval2 = subprocess.Popen(valgrind + [python, 'tests/footest.py', '1'] + verbosity).wait()
+        else:
+            print "Skipping manual module generation unit tests (no C/C++ compiler)..."
+            retval2 = 0
 
-        print "Running semi-automatically scanned c-hello module ('hello')..."
-        retval4 = subprocess.Popen(valgrind + [env['PYTHON'], 'tests/c-hello/hellotest.py'] + verbosity).wait()
-    else:
-        print "Skipping automatically scanned module generation unit tests (pygccxml missing)..."
-        print "Skipping module generated by automatically generated python script unit tests (pygccxml missing)..."
-        print "Skipping module generated by generated and split python script unit tests  (pygccxml missing)..."
-        print "Skipping semi-automatically scanned c-hello module (pygccxml missing)..."
-        retval3 = retval3b = retval3c = retval4 = 0
+        if env['ENABLE_PYGCCXML']:
+            print "Running automatically scanned module generation unit tests (module foo2)..."
+            retval3 = subprocess.Popen(valgrind + [python, 'tests/footest.py', '2'] + verbosity).wait()
 
-    if retval1 or retval2 or retval3 or retval3b or retval3c or retval4:
-        Logs.error("Unit test failures")
-        raise SystemExit(2)
+            print "Running module generated by automatically generated python script unit tests (module foo3)..."
+            retval3b = subprocess.Popen(valgrind + [python, 'tests/footest.py', '3'] + verbosity).wait()
+
+            print "Running module generated by generated and split python script unit tests  (module foo4)..."
+            retval3c = subprocess.Popen(valgrind + [python, 'tests/footest.py', '4'] + verbosity).wait()
+
+            print "Running semi-automatically scanned c-hello module ('hello')..."
+            retval4 = subprocess.Popen(valgrind + [python, 'tests/c-hello/hellotest.py'] + verbosity).wait()
+        else:
+            print "Skipping automatically scanned module generation unit tests (pygccxml missing)..."
+            print "Skipping module generated by automatically generated python script unit tests (pygccxml missing)..."
+            print "Skipping module generated by generated and split python script unit tests  (pygccxml missing)..."
+            print "Skipping semi-automatically scanned c-hello module (pygccxml missing)..."
+            retval3 = retval3b = retval3c = retval4 = 0
+
+        if retval1 or retval2 or retval3 or retval3b or retval3c or retval4:
+            Logs.error("Unit test failures")
+            raise SystemExit(2)
 
 
 def docs(ctx):
@@ -391,3 +437,29 @@ def docs(ctx):
         Logs.error("make returned with code %i" % retval)
         raise SystemExit(2)
 
+
+#
+# FIXME: Remove this when upgrading beyond WAF 1.6.11; this here is
+# only to fix a bug in WAF...
+#
+from waflib.Tools import python
+from waflib import TaskGen
+@TaskGen.feature('pyext')
+@TaskGen.before_method('propagate_uselib_vars', 'apply_link')
+@TaskGen.after_method('apply_bundle')
+def init_pyext(self):
+    """
+    Change the values of *cshlib_PATTERN* and *cxxshlib_PATTERN* to remove the
+    *lib* prefix from library names.
+    """
+    self.uselib = self.to_list(getattr(self, 'uselib', []))
+    if not 'PYEXT' in self.uselib:
+        self.uselib.append('PYEXT')
+    # override shlib_PATTERN set by the osx module
+    self.env['cshlib_PATTERN'] = self.env['cxxshlib_PATTERN'] = self.env['macbundle_PATTERN'] = self.env['pyext_PATTERN']
+
+    try:
+        if not self.install_path:
+            return
+    except AttributeError:
+        self.install_path = '${PYTHONARCHDIR}'

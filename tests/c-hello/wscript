@@ -3,6 +3,7 @@
 #import Object
 #import Params
 #import Task
+import os
 
 if 0:
     DEPRECATION_ERRORS = '-Werror::DeprecationWarning' # deprecations become errors
@@ -20,13 +21,15 @@ def build(bld):
         target='hellomodule.c',
         command='${PYTHON} %s ${SRC[0]} ${SRC[1]} > ${TGT[0]}' % (DEPRECATION_ERRORS,))
 
+    os.environ["PYTHONPATH"] = os.pathsep.join([os.environ.get("PYTHONPATH", ''), bindgen.path.get_bld().abspath()])
+
     if bld.env['CXX']:
-        obj = bld.new_task_gen(features='cc cshlib pyext')
+        obj = bld.new_task_gen(features='c cshlib pyext')
         obj.source = [
             'hello.c',
             'hellomodule.c'
             ]
         obj.target = 'hello'
         obj.install_path = None # do not install
-        obj.includes = '.'
+        obj.env.append_value("INCLUDES", '.')
 
