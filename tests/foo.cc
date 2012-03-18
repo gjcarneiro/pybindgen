@@ -545,3 +545,9 @@ my_throwing_func () throw (std::exception)
     return retval;
 }
 
+int
+test_args_kwargs(const char *args, const char *kwargs)
+{
+    return (int) (kwargs - args);
+}
+

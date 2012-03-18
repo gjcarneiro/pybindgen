@@ -1228,4 +1228,6 @@ public:
 };
 
 
+int test_args_kwargs(const char *args, const char *kwargs);
+
 #endif 	    /* !FOO_H_ */

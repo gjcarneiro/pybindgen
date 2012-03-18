@@ -12,6 +12,8 @@ from pybindgen.function import CustomFunctionWrapper
 from pybindgen.cppmethod import CustomCppMethodWrapper
 from pybindgen import cppclass
 
+from pybindgen import param
+
 import foomodulegen_common
 
 
@@ -585,6 +587,9 @@ int %s::custom_method_added_by_a_hook(int x)
     IFooImpl = mod.add_class("IFooImpl", parent=IFoo, destructor_visibility='public')
     IFooImpl.add_constructor([])
     IFooImpl.add_method("DoSomething", None, [], is_virtual=True)
+
+
+    mod.add_function("test_args_kwargs", "int", [param("const char *", "args"), param("const char *", "kwargs")])
 
     
     #### --- error handler ---

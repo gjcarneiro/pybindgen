@@ -769,12 +769,18 @@ class ForwardWrapperBase(object):
         self.wrapper_return = None # C type expression for the wrapper return
         self.wrapper_args = None # list of arguments to the wrapper function
         
-        if return_value is not None:
+        self._init_code_generation_state()
+
+    def _init_code_generation_state(self):
+        if self.return_value is not None or self.HAVE_RETURN_VALUE:
             self.declarations.declare_variable('PyObject*', 'py_retval')
-        if (not no_c_retval and return_value is not None
-            and return_value.ctype != 'void'
-            and not return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR):
-            self.declarations.declare_variable(return_value.ctype_no_const, 'retval')
+        if (not self.no_c_retval and (self.return_value is not None or self.HAVE_RETURN_VALUE)
+            and self.return_value.ctype != 'void'
+            and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR):
+            self.declarations.declare_variable(self.return_value.ctype_no_const, 'retval')
+
+        self.declarations.reserve_variable('args')
+        self.declarations.reserve_variable('kwargs')
 
     def reset_code_generation_state(self):
         self.declarations.clear()
@@ -786,12 +792,7 @@ class ForwardWrapperBase(object):
         self.call_params = []
         self.meth_flags = []
 
-        if self.return_value is not None or self.HAVE_RETURN_VALUE:
-            self.declarations.declare_variable('PyObject*', 'py_retval')
-        if (not self.no_c_retval and (self.return_value is not None or self.HAVE_RETURN_VALUE)
-            and self.return_value.ctype != 'void'
-            and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR):
-            self.declarations.declare_variable(self.return_value.ctype_no_const, 'retval')
+        self._init_code_generation_state()
 
     def set_parse_error_return(self, parse_error_return):
         self.before_parse.error_return = parse_error_return
