@@ -1,11 +1,5 @@
 == Needed tools ==
 
-PyBindGen uses a unofficial branch of WAF.  A copy of it is included,
-but the original can be obtained via bazaar from launchpad:
-
-  $ bzr clone lp:~gjc/waf/cmd waf-cmd
-
-
 You need to install python, with development headers, and a C/C++ compiler.
 
 
