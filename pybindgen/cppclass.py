@@ -1,4 +1,4 @@
-from utils import any
+from utils import any, mangle_name
 import warnings
 import traceback
 
@@ -1076,11 +1076,8 @@ class CppClass(object):
             else:
                 return s
 
-        def mangle(s):
-            "make a name Like<This,and,That> look Like__lt__This_and_That__gt__"
-            s = s.replace('<', '__lt__').replace('>', '__gt__').replace(',', '_')
-            s = s.replace(' ', '_').replace('&', '__amp__').replace('*', '__star__')
-            return s
+        def mangle(name):
+            return mangle_name(name)
         
         def flatten(name):
             "make a name like::This look LikeThis"
