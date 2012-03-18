@@ -1,12 +1,12 @@
 import sys
-sys.path.insert(0, "../../build/default/examples/f")
+sys.path.insert(0, "../../build/examples/f")
 from f import *
 
 
 class FDerived(FBase):
-    def _DoA (self):
+    def DoA (self):
         print "FDerived::DoA"
-    def _PrivDoB (self):
+    def PrivDoB (self):
         print "FDerived::PrivDoB"
 
 f = FDerived ()

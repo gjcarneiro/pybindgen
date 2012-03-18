@@ -6,6 +6,9 @@ import pybindgen
 from pybindgen import ReturnValue, Parameter, Module, Function, FileCodeSink
 from pybindgen import CppMethod, CppConstructor, CppClass, Enum
 
+import pybindgen.settings
+pybindgen.settings.deprecated_virtuals = False
+
 
 def my_module_gen(out_file):
     mod = Module('f')

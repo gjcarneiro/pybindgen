@@ -339,10 +339,10 @@ def build(bld):
     if bld.cmd == 'check':
         bld.add_subdirs('tests')
 
+    if Options.options.examples:
+        bld.add_subdirs('examples')
 
     if 0: # FIXME
-        if Options.options.examples:
-            bld.add_subdirs('examples')
 
         if Options.commands.get('bench', False) or Options.commands['clean']:
             bld.add_subdirs('benchmarks')

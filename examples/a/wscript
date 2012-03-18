@@ -9,7 +9,7 @@ def build(bld):
         command='${PYTHON} ${SRC[0]} > ${TGT[0]}')
 
     if bld.env['CXX']:
-        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
+        obj = bld.new_task_gen(features=['cxx', 'cxxshlib', 'pyext'])
         obj.source = [
             'a.cc',
             'amodule.cc'
@@ -27,7 +27,7 @@ def build(bld):
             target='a1module.cc',
             command='${PYTHON} ${SRC[0]} ${SRC[1]} > ${TGT[0]}')
 
-        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
+        obj = bld.new_task_gen(features=['cxx', 'cxxshlib', 'pyext'])
         obj.source = [
             'a.cc',
             'a1module.cc'
@@ -50,7 +50,7 @@ def build(bld):
             target='a2module.cc',
             command='${PYTHON} ${SRC[0]} > ${TGT[0]}')
 
-        obj = bld.new_task_gen('cxx', 'shlib', 'pyext')
+        obj = bld.new_task_gen(features=['cxx', 'cxxshlib', 'pyext'])
         obj.source = [
             'a.cc',
             'a2module.cc'
