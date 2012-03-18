@@ -79,11 +79,10 @@ def _get_deprecated_virtuals():
     if deprecated_virtuals is None:
         import warnings
         warnings.warn("The option pybindgen.settings.deprecated_virtuals has not been set."
-                      "  I am going to assume the value of True, to preserve backward"
-                      " compatibility, but the default value will change in the future,"
-                      " and the option will eventually disappear.",
+                      "  I am going to assume the value of False, change it to True if it breaks your APIs."
+                      " The option will eventually disappear (the deprecated behaviour will eventually disappear).",
                       DeprecationWarning)
-        return True
+        return False
     return deprecated_virtuals
 
 
