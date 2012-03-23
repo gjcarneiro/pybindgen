@@ -124,7 +124,7 @@ def generate_version_py(force=False, path=None):
         return
 
     if path is None:
-        path = srcdir
+        path = top
     version = get_version_from_bzr(path)
     dest = open(filename, 'w')
     if isinstance(version, list):
