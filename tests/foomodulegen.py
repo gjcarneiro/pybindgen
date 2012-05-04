@@ -12,7 +12,7 @@ from pybindgen.function import CustomFunctionWrapper
 from pybindgen.cppmethod import CustomCppMethodWrapper
 from pybindgen import cppclass
 
-from pybindgen import param
+from pybindgen import param, retval
 
 import foomodulegen_common
 
@@ -298,6 +298,10 @@ int %s::custom_method_added_by_a_hook(int x)
 
     typehandlers.add_type_alias('uint32_t', 'xpto::FlowId')    
     xpto.add_function('get_flow_id', 'xpto::FlowId', [Parameter.new('xpto::FlowId', 'flowId')])
+
+    # bug #798383
+    XptoClass = xpto.add_struct('XptoClass')
+    XptoClass.add_method("GetSomeClass", retval("xpto::SomeClass*", caller_owns_return=True), [])
     
 
     ## ---- some implicity conversion APIs
