@@ -29,6 +29,12 @@ class MyReverseWrapper(typehandlers.base.ReverseWrapperBase):
         self.before_call.write_error_check('py_retval == NULL')
         self.before_call.add_cleanup_code('Py_DECREF(py_retval);')
 
+
+def type_blacklisted(type_name):
+    if type_name.startswith('Glib::'):
+        return True
+    return False
+
         
 
 def test():
@@ -68,6 +74,8 @@ public:
 
     ## test return type handlers of reverse wrappers
     for return_type, return_handler in typehandlers.base.return_type_matcher.items():
+        if type_blacklisted(return_type):
+            continue
         if os.name == 'nt':
             if stdint_rx.search(return_type):
                 continue # win32 does not support the u?int\d+_t types (defined in <stdint.h>)
@@ -106,6 +114,8 @@ public:
 
     ## test parameter type handlers of reverse wrappers
     for param_type, param_handler in typehandlers.base.param_type_matcher.items():
+        if type_blacklisted(param_type):
+            continue
         if os.name == 'nt':
             if stdint_rx.search(param_type):
                 continue # win32 does not support the u?int\d+_t types (defined in <stdint.h>)
@@ -150,6 +160,8 @@ public:
     ## test generic forward wrappers, and module
 
     for return_type, return_handler in typehandlers.base.return_type_matcher.items():
+        if type_blacklisted(return_type):
+            continue
         if os.name == 'nt':
             if stdint_rx.search(return_type):
                 continue # win32 does not support the u?int\d+_t types (defined in <stdint.h>)
@@ -168,6 +180,8 @@ public:
         module.add_function(function_name, retval, [])
     
     for param_type, param_handler in typehandlers.base.param_type_matcher.items():
+        if type_blacklisted(param_type):
+            continue
         if os.name == 'nt':
             if stdint_rx.search(param_type):
                 continue # win32 does not support the u?int\d+_t types (defined in <stdint.h>)
