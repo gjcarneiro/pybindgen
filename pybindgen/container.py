@@ -710,14 +710,15 @@ class ContainerRefParameter(ContainerParameterBase):
         assert isinstance(wrapper, ForwardWrapperBase)
         assert isinstance(self.container_type, Container)
 
-        assert self.default_value is None, "default value not implemented for containers"
+        #assert self.default_value is None, "default value not implemented for containers"
 
         #self.py_name = wrapper.declarations.declare_variable('PyObject*', self.name)
         container_tmp_var = wrapper.declarations.declare_variable(
-            self.container_type.full_name, self.name + '_value')
+            self.container_type.full_name, self.name + '_value', self.default_value)
 
         if self.direction & Parameter.DIRECTION_IN:
-            wrapper.parse_params.add_parameter('O&', [self.container_type.python_to_c_converter, '&'+container_tmp_var], self.name)
+            wrapper.parse_params.add_parameter('O&', [self.container_type.python_to_c_converter, '&'+container_tmp_var], self.name,
+                                               optional=(self.default_value is not None))
 
         wrapper.call_params.append(container_tmp_var)
 
