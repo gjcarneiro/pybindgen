@@ -1109,13 +1109,26 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         ## now the hairy part :)
         if self.caller_owns_return:
             if not isinstance(self.cpp_class.memory_policy, cppclass.ReferenceCountingPolicy):
-                ## the caller receives a copy
-                self.cpp_class.write_create_instance(wrapper.after_call,
-                                                     "%s" % self.value,
-                                                     '*'+value)
-                self.cpp_class.write_post_instance_creation_code(wrapper.after_call,
-                                                                 "%s" % self.value,
-                                                                 '*'+value)
+                ## the caller receives a copy, if possible
+                try:
+                    self.cpp_class.write_create_instance(wrapper.after_call,
+                                                         "%s" % self.value,
+                                                         '*'+value)
+                except CodeGenerationError:
+                    copy_possible = False
+                else:
+                    copy_possible = True
+
+                if copy_possible:
+                    self.cpp_class.write_post_instance_creation_code(wrapper.after_call,
+                                                                     "%s" % self.value,
+                                                                     '*'+value)
+                else:
+                    # value = pyobj->obj; pyobj->obj = NULL;
+                    wrapper.after_call.write_code(
+                        "%s = %s;" % (self.value, value))
+                    wrapper.after_call.write_code(
+                        "%s = NULL;" % (value,))
             else:
                 ## the caller gets a new reference to the same obj
                 self.cpp_class.memory_policy.write_incref(wrapper.after_call, value)
