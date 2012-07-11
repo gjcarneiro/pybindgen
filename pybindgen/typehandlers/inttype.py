@@ -702,3 +702,31 @@ class UInt8PtrParam(PointerParameter):
             wrapper.parse_params.add_parameter('B', ['&'+name], self.name)
         if self.direction & self.DIRECTION_OUT:
             wrapper.build_params.add_parameter("B", [name])
+
+
+
+class UnsignedInt16PtrParam(PointerParameter):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT, Parameter.DIRECTION_INOUT]
+    CTYPES = ['unsigned short int*', 'uint16_t*']
+
+    def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False,
+                 default_value=None, transfer_ownership=False):
+        super(UnsignedInt16PtrParam, self).__init__(ctype, name, direction, is_const, default_value, transfer_ownership)
+        if transfer_ownership:
+            raise NotSupportedError("%s: transfer_ownership=True not yet implemented." % ctype)
+
+    def convert_c_to_python(self, wrapper):
+        if self.direction & self.DIRECTION_IN:
+            wrapper.build_params.add_parameter('H', ['*'+self.value])
+
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.parse_params.add_parameter('H', [self.value], self.name)
+
+    def convert_python_to_c(self, wrapper):
+        name = wrapper.declarations.declare_variable(str(self.type_traits.target), self.name)
+        wrapper.call_params.append('&'+name)
+        if self.direction & self.DIRECTION_IN:
+            wrapper.parse_params.add_parameter('H', ['&'+name], self.name)
+        if self.direction & self.DIRECTION_OUT:
+            wrapper.build_params.add_parameter('H', [name])
