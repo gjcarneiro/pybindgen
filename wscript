@@ -435,7 +435,7 @@ class DistContext(Scripting.Dist):
         super(DistContext, self).execute() # -----------------------------
 
     def get_excl(self):
-        return super(DistContext, self).get_excl() + ' *.zip doc/_build .shelf'
+        return super(DistContext, self).get_excl() + ' *.zip doc/_build .shelf *.pstat'
 
 
 
