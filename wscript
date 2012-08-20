@@ -50,24 +50,26 @@ def _get_version_from_bzr_lib(path):
     branch = bzrlib.branch.Branch.open('file://' + fullpath)
     tags = bzrlib.tag.BasicTags(branch)
     #print "Getting version information from bzr branch..."
-    history = branch.revision_history()
-    history.reverse()
-    ## find closest tag
-    version = None
-    extra_version = []
-    for revid in history:
-        #print revid
-        for tag_name, tag_revid in tags.get_tag_dict().iteritems():
-            if tag_revid == revid:
-                #print "%s matches tag %s" % (revid, tag_name)
-                version = [int(s) for s in tag_name.split('.')]
-                ## if the current revision does not match the last
-                ## tag, we append current revno to the version
-                if tag_revid != branch.last_revision():
-                    extra_version = [branch.revno()]
+    branch.lock_read()
+    try:
+        history = branch.iter_merge_sorted_revisions(direction="reverse")
+        version = None
+        extra_version = []
+        for revid, depth, revno, end_of_merge in history:
+            for tag_name, tag_revid in tags.get_tag_dict().iteritems():
+                #print tag_revid, "<==>", revid
+                if tag_revid == revid:
+                    #print "%s matches tag %s" % (revid, tag_name)
+                    version = [int(s) for s in tag_name.split('.')]
+                    ## if the current revision does not match the last
+                    ## tag, we append current revno to the version
+                    if tag_revid != branch.last_revision():
+                        extra_version = [branch.revno()]
+                    break
+            if version:
                 break
-        if version:
-            break
+    finally:
+        branch.unlock()
     assert version is not None
     _version = version + extra_version
     return _version
