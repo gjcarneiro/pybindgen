@@ -4,7 +4,7 @@ import gc
 import os.path
 import copy
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                '..', 'build', 'default', 'tests'))
+                                '..', 'build', 'tests'))
 which = int(sys.argv[1])
 del sys.argv[1]
 if which == 1:
