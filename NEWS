@@ -1,3 +1,15 @@
+=== pybindgen 0.16 ===
+
+ - Add API to allow importing classes and enumerations from external modules
+ - Add new destructor_visibility CppClass option
+ - Add setting to disable usage of the internal GCC abi to check rtti stuff (for Mac OS X GCC)
+ - pybindgen.settings.deprecated_virtuals default value changed to False
+ - Bug fixes.
+
+=== pybindgen 0.15 ===
+
+ - Bug fixes
+
 === pybindgen 0.14 ===
 
     - Multiple inheritance support
