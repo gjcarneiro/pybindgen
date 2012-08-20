@@ -156,46 +156,6 @@ def zipper(dir, zip_file, archive_main_folder=None):
     zip.close()
 
 
-def dist_hook():
-    blddir = '../build'
-    srcdir = '..'
-    version = get_version(srcdir)
-    subprocess.Popen([os.path.join(srcdir, "generate-ChangeLog")],  shell=True).wait()
-    try:
-        os.chmod(os.path.join(srcdir, "ChangeLog"), 0644)
-    except OSError:
-        pass
-    try:
-        os.unlink("ChangeLog")
-    except OSError:
-        pass
-    shutil.copy(os.path.join(srcdir, "ChangeLog"), '.')
-
-    ## Write a pybindgen/version.py file containing the project version
-    generate_version_py(force=True, path=srcdir)
-
-    ## Copy it to the source dir
-    shutil.copy(os.path.join('pybindgen', 'version.py'), os.path.join(srcdir, "pybindgen"))
-
-    ## Package the api docs in a separate tarball
-    apidocs = 'apidocs'
-    if not os.path.isdir('doc/_build/html'):
-        Logs.warn("Not creating docs archive: the `doc/_build/html' directory does not exist")
-    else:
-        zipper('doc/_build/html', os.path.join("..", "pybindgen-%s-docs.zip" % version))
-
-    # clean up the docs dir
-    r = subprocess.Popen(["make", "clean"], cwd='doc').wait()
-    if r:
-        raise SystemExit(r)
-
-    shutil.rmtree('.shelf', True)
-
-    try:
-        os.unlink('waf-light')
-    except OSError:
-        pass
-
 
 def options(opt):
     opt.tool_options('python')
@@ -368,7 +328,7 @@ def bench(bld):
         raise SystemExit(retval)
 
 
-from waflib import Context, Build
+from waflib import Context, Build, Scripting
 class CheckContext(Context.Context):
     """run the unit tests"""
     cmd = 'check'
@@ -427,6 +387,56 @@ class CheckContext(Context.Context):
         if retval1 or retval2 or retval3 or retval3b or retval3c or retval4:
             Logs.error("Unit test failures")
             raise SystemExit(2)
+
+
+
+class DistContext(Scripting.Dist):
+
+    cmd = 'dist'
+    def get_base_name(self):
+        srcdir = '.'
+        version = get_version(srcdir)
+        return "pybindgen-" + version
+
+
+    def execute(self):
+        blddir = './build'
+        srcdir = '.'
+        version = get_version(srcdir)
+        subprocess.Popen([os.path.join(srcdir, "generate-ChangeLog")],  shell=True).wait()
+        try:
+            os.chmod(os.path.join(srcdir, "ChangeLog"), 0644)
+        except OSError:
+            pass
+
+        ## Write a pybindgen/version.py file containing the project version
+        generate_version_py(force=True, path=srcdir)
+
+
+        ## Package the api docs in a separate tarball
+
+        # generate the docs first
+        r = subprocess.Popen(["make", "html"], cwd='doc').wait()
+        if r:
+            raise SystemExit(r)
+
+        apidocs = 'apidocs'
+        if not os.path.isdir('doc/_build/html'):
+            Logs.warn("Not creating docs archive: the `doc/_build/html' directory does not exist")
+        else:
+            zipper('doc/_build/html', "pybindgen-%s-docs.zip" % version)
+
+
+        try:
+            os.unlink('waf-light')
+        except OSError:
+            pass
+
+        super(DistContext, self).execute() # -----------------------------
+
+    def get_excl(self):
+        return super(DistContext, self).get_excl() + ' *.zip doc/_build .shelf'
+
 
 
 def docs(ctx):
