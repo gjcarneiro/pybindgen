@@ -74,6 +74,15 @@ class MemoryPolicy(object):
         """
         raise NotImplementedError
 
+    def get_pointer_type(self, class_full_name):
+        return "%s *" % (class_full_name,)
+
+    def get_instance_creation_function(self):
+        return default_instance_creation_function
+
+    def get_delete_code(self, cpp_class):
+        raise NotImplementedError
+        
 
 class ReferenceCountingPolicy(MemoryPolicy):
     def write_incref(self, code_block, obj_expr):
@@ -108,8 +117,14 @@ class ReferenceCountingMethodsPolicy(ReferenceCountingPolicy):
     def write_decref(self, code_block, obj_expr):
         code_block.write_code('%s->%s();' % (obj_expr, self.decref_method))
 
-    def get_free_code(self, obj_expr):
-        return ('%s->%s();' % (obj_expr, self.decref_method))
+    def get_delete_code(self, cpp_class):
+        delete_code = ("if (self->obj) {\n"
+                       "    %s *tmp = self->obj;\n"
+                       "    self->obj = NULL;\n"
+                       "    tmp->%s();\n"
+                       "}"
+                       % (cpp_class.full_name, self.decref_method))
+        return delete_code
 
     def __repr__(self):
         return 'cppclass.ReferenceCountingMethodsPolicy(incref_method=%r, decref_method=%r, peekref_method=%r)' \
@@ -129,8 +144,14 @@ class ReferenceCountingFunctionsPolicy(ReferenceCountingPolicy):
     def write_decref(self, code_block, obj_expr):
         code_block.write_code('%s(%s);' % (self.decref_function, obj_expr))
 
-    def get_free_code(self, obj_expr):
-        return ('%s(%s);' % (self.decref_function, obj_expr))
+    def get_delete_code(self, cpp_class):
+        delete_code = ("if (self->obj) {\n"
+                       "    %s *tmp = self->obj;\n"
+                       "    self->obj = NULL;\n"
+                       "    %s(tmp);\n"
+                       "}"
+                       % (cpp_class.full_name, self.decref_function))
+        return delete_code
 
     def __repr__(self):
         return 'cppclass.ReferenceCountingFunctionsPolicy(incref_function=%r, decref_function=%r, peekref_function=%r)' \
@@ -141,11 +162,42 @@ class FreeFunctionPolicy(MemoryPolicy):
         super(FreeFunctionPolicy, self).__init__()
         self.free_function = free_function
 
-    def get_free_code(self, obj_expr):
-        return ('%s(%s);' % (self.free_function, obj_expr))
+
+    def get_delete_code(self, cpp_class):
+        delete_code = ("if (self->obj) {\n"
+                       "    %s *tmp = self->obj;\n"
+                       "    self->obj = NULL;\n"
+                       "    %s(tmp);\n"
+                       "}"
+                       % (cpp_class.full_name, self.free_function))
+        return delete_code
 
     def __repr__(self):
         return 'cppclass.FreeFunctionPolicy(%r)' % self.free_function
+
+
+
+class SmartPointerPolicy(MemoryPolicy):
+    pointer_name = None # class should fill this or create descriptor/getter
+
+class BoostSharedPtr(SmartPointerPolicy):
+    def __init__(self, class_name):
+        """
+        Create a memory policy for using boost::shared_ptr<> to manage instances of this object.
+
+        :param class_name: the full name of the class, e.g. foo::Bar
+        """
+        self.class_name = class_name
+        self.pointer_name = '::boost::shared_ptr< %s >' % (self.class_name,)
+
+    def get_delete_code(self, cpp_class):
+        return "self->obj.reset ();"
+
+    def get_pointer_type(self, class_full_name):
+        return self.pointer_name + ' '
+
+    def get_instance_creation_function(self):
+        return boost_shared_ptr_instance_creation_function
 
 
 def default_instance_creation_function(cpp_class, code_block, lvalue,
@@ -170,6 +222,30 @@ def default_instance_creation_function(cpp_class, code_block, lvalue,
                                   % cpp_class.full_name)
     code_block.write_code(
         "%s = new %s(%s);" % (lvalue, construct_type_name, parameters))
+
+
+def boost_shared_ptr_instance_creation_function(cpp_class, code_block, lvalue,
+                                                parameters, construct_type_name):
+    """
+    boost::shared_ptr "instance creation function"; it is called whenever a new
+    C++ class instance needs to be created
+
+    :param cpp_class: the CppClass object whose instance is to be created
+    :param code_block: CodeBlock object on which the instance creation code should be generated
+    :param lvalue: lvalue expression that should hold the result in the end
+    :param parameters: stringified list of parameters
+    :param construct_type_name: actual name of type to be constructed (it is
+                          not always the class name, sometimes it's
+                          the python helper class)
+    """
+    assert lvalue
+    assert not lvalue.startswith('None')
+    if cpp_class.incomplete_type:
+        raise CodeGenerationError("%s cannot be constructed (incomplete type)"
+                                  % cpp_class.full_name)
+    code_block.write_code(
+        "%s.reset (new %s(%s));" % (lvalue, construct_type_name, parameters))
+
 
 
 class CppHelperClass(object):
@@ -677,25 +753,50 @@ class CppClass(object):
             except ValueError:
                 pass
 
-            class ThisClassPtrParameter(CppClassPtrParameter):
-                """Register this C++ class as pass-by-pointer parameter"""
-                CTYPES = []
-                cpp_class = self
-            self.ThisClassPtrParameter = ThisClassPtrParameter
-            try:
-                param_type_matcher.register(name+'*', self.ThisClassPtrParameter)
-            except ValueError:
-                pass
+            if isinstance(self.memory_policy, BoostSharedPtr): # boost::shared_ptr<Class>
 
-            class ThisClassPtrReturn(CppClassPtrReturnValue):
-                """Register this C++ class as pointer return"""
-                CTYPES = []
-                cpp_class = self
-            self.ThisClassPtrReturn = ThisClassPtrReturn
-            try:
-                return_type_matcher.register(name+'*', self.ThisClassPtrReturn)
-            except ValueError:
-                pass
+                class ThisClassSharedPtrParameter(CppClassSharedPtrParameter):
+                    """Register this C++ class as pass-by-pointer parameter"""
+                    CTYPES = []
+                    cpp_class = self
+                self.ThisClassSharedPtrParameter = ThisClassSharedPtrParameter
+                try:
+                    param_type_matcher.register(self.memory_policy.pointer_name, self.ThisClassSharedPtrParameter)
+                except ValueError:
+                    pass
+
+                class ThisClassSharedPtrReturn(CppClassSharedPtrReturnValue):
+                    """Register this C++ class as pointer return"""
+                    CTYPES = []
+                    cpp_class = self
+                self.ThisClassSharedPtrReturn = ThisClassSharedPtrReturn
+                try:
+                    return_type_matcher.register(self.memory_policy.pointer_name, self.ThisClassSharedPtrReturn)
+                except ValueError:
+                    pass
+
+            else: # Regular pointer
+
+                class ThisClassPtrParameter(CppClassPtrParameter):
+                    """Register this C++ class as pass-by-pointer parameter"""
+                    CTYPES = []
+                    cpp_class = self
+                self.ThisClassPtrParameter = ThisClassPtrParameter
+                try:
+                    param_type_matcher.register(name+'*', self.ThisClassPtrParameter)
+                except ValueError:
+                    pass
+
+                class ThisClassPtrReturn(CppClassPtrReturnValue):
+                    """Register this C++ class as pointer return"""
+                    CTYPES = []
+                    cpp_class = self
+                self.ThisClassPtrReturn = ThisClassPtrReturn
+                try:
+                    return_type_matcher.register(name+'*', self.ThisClassPtrReturn)
+                except ValueError:
+                    pass
+
 
             class ThisClassRefReturn(CppClassRefReturnValue):
                 """Register this C++ class as reference return"""
@@ -977,6 +1078,8 @@ class CppClass(object):
         for cls in self.get_mro():
             if cls.instance_creation_function is not None:
                 return cls.instance_creation_function
+        if cls.memory_policy is not None:
+            return cls.memory_policy.get_instance_creation_function()
         return default_instance_creation_function
 
     def get_post_instance_creation_function(self):
@@ -1128,15 +1231,27 @@ class CppClass(object):
             return_type_matcher.register(alias, self.ThisClassReturn)
         except ValueError: pass
         
-        self.ThisClassPtrParameter.CTYPES.append(alias+'*')
-        try:
-            param_type_matcher.register(alias+'*', self.ThisClassPtrParameter)
-        except ValueError: pass
-        
-        self.ThisClassPtrReturn.CTYPES.append(alias+'*')
-        try:
-            return_type_matcher.register(alias+'*', self.ThisClassPtrReturn)
-        except ValueError: pass
+        if isinstance(self.memory_policy, BoostSharedPtr):
+            alias_ptr = 'boost::shared_ptr< %s >' % alias
+            self.ThisClassSharedPtrParameter.CTYPES.append(alias_ptr)
+            try:
+                param_type_matcher.register(alias_ptr, self.ThisClassSharedPtrParameter)
+            except ValueError: pass
+
+            self.ThisClassSharedPtrReturn.CTYPES.append(alias_ptr)
+            try:
+                return_type_matcher.register(alias_ptr, self.ThisClassSharedPtrReturn)
+            except ValueError: pass
+        else:
+            self.ThisClassPtrParameter.CTYPES.append(alias+'*')
+            try:
+                param_type_matcher.register(alias+'*', self.ThisClassPtrParameter)
+            except ValueError: pass
+
+            self.ThisClassPtrReturn.CTYPES.append(alias+'*')
+            try:
+                return_type_matcher.register(alias+'*', self.ThisClassPtrReturn)
+            except ValueError: pass
 
         self.ThisClassRefReturn.CTYPES.append(alias)
         try:
@@ -1665,25 +1780,30 @@ public:
         structures.
         """
 
+        if self.memory_policy is not None:
+            pointer_type = self.memory_policy.get_pointer_type(self.full_name)
+        else:
+            pointer_type = self.full_name + " *"
+
         if self.allow_subclassing:
             code_sink.writeln('''
 typedef struct {
     PyObject_HEAD
-    %s *obj;
+    %sobj;
     PyObject *inst_dict;
     PyBindGenWrapperFlags flags:8;
 } %s;
-    ''' % (self.full_name, self.pystruct))
+    ''' % (pointer_type, self.pystruct))
 
         else:
 
             code_sink.writeln('''
 typedef struct {
     PyObject_HEAD
-    %s *obj;
+    %sobj;
     PyBindGenWrapperFlags flags:8;
 } %s;
-    ''' % (self.full_name, self.pystruct))
+    ''' % (pointer_type, self.pystruct))
 
         code_sink.writeln()
 
@@ -2276,12 +2396,7 @@ static PyObject*\n%s(%s *self)
             delete_code = ''
         else:
             if self.memory_policy is not None:
-                delete_code = ("if (self->obj) {\n"
-                               "    %s *tmp = self->obj;\n"
-                               "    self->obj = NULL;\n"
-                               "    %s\n"
-                               "}"
-                               % (self.full_name, self.memory_policy.get_free_code('tmp')))
+                delete_code = self.memory_policy.get_delete_code(self)
             else:
                 if self.incomplete_type:
                     raise CodeGenerationError("Cannot finish generating class %s: "
@@ -2489,7 +2604,9 @@ if (!PyObject_IsInstance((PyObject*) other, (PyObject*) &%s)) {
 
 
 from cppclass_typehandlers import CppClassParameter, CppClassRefParameter, \
-    CppClassReturnValue, CppClassRefReturnValue, CppClassPtrParameter, CppClassPtrReturnValue, CppClassParameterBase
+    CppClassReturnValue, CppClassRefReturnValue, CppClassPtrParameter, CppClassPtrReturnValue, CppClassParameterBase, \
+    CppClassSharedPtrParameter, CppClassSharedPtrReturnValue
+
 import function
 
 from cppmethod import CppMethod, CppConstructor, CppNoConstructor, CppFunctionAsConstructor, \

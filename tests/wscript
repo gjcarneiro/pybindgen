@@ -135,3 +135,5 @@ def build(bld):
     ## pure C tests
     bld.add_subdirs('c-hello')
 
+    ## boost tests
+    bld.add_subdirs('boost')
