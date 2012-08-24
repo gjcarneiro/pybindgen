@@ -43,13 +43,7 @@ def common_shared_object_return(value, py_name, cpp_class, code_block,
             wrapper_type = '&'+cpp_class.pytypestruct
 
         ## Create the Python wrapper object
-        if cpp_class.allow_subclassing:
-            new_func = 'PyObject_GC_New'
-        else:
-            new_func = 'PyObject_New'
-        code_block.write_code(
-            "%s = %s(%s, %s);" %
-            (py_name, new_func, cpp_class.pystruct, wrapper_type))
+        cpp_class.write_allocate_pystruct(code_block, py_name, wrapper_type)
 
         if cpp_class.allow_subclassing:
             code_block.write_code(
@@ -319,13 +313,7 @@ class CppClassParameter(CppClassParameterBase):
 
         self.py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
-        if self.cpp_class.allow_subclassing:
-            new_func = 'PyObject_GC_New'
-        else:
-            new_func = 'PyObject_New'
-        wrapper.before_call.write_code(
-            "%s = %s(%s, %s);" %
-            (self.py_name, new_func, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+        self.cpp_class.write_allocate_pystruct(wrapper.before_call, self.py_name)
         if self.cpp_class.allow_subclassing:
             wrapper.before_call.write_code(
                 "%s->inst_dict = NULL;" % (self.py_name,))
@@ -439,14 +427,7 @@ class CppClassRefParameter(CppClassParameterBase):
             self.py_name = wrapper.declarations.declare_variable(
                 self.cpp_class.pystruct+'*', self.name)
 
-            if self.cpp_class.allow_subclassing:
-                new_func = 'PyObject_GC_New'
-            else:
-                new_func = 'PyObject_New'
-            wrapper.before_call.write_code(
-                "%s = %s(%s, %s);" %
-                (self.py_name, new_func, self.cpp_class.pystruct,
-                 '&'+self.cpp_class.pytypestruct))
+            self.cpp_class.write_allocate_pystruct(wrapper.before_call, self.py_name)
             if self.cpp_class.allow_subclassing:
                 wrapper.after_call.write_code(
                     "%s->inst_dict = NULL;" % (self.py_name,))
@@ -486,13 +467,7 @@ class CppClassRefParameter(CppClassParameterBase):
 
         self.py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
-        if self.cpp_class.allow_subclassing:
-            new_func = 'PyObject_GC_New'
-        else:
-            new_func = 'PyObject_New'
-        wrapper.before_call.write_code(
-            "%s = %s(%s, %s);" %
-            (self.py_name, new_func, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+        self.cpp_class.write_allocate_pystruct(wrapper.before_call, self.py_name)
         if self.cpp_class.allow_subclassing:
             wrapper.before_call.write_code(
                 "%s->inst_dict = NULL;" % (self.py_name,))
@@ -573,13 +548,7 @@ class CppClassReturnValue(CppClassReturnValueBase):
         py_name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', 'py_'+self.cpp_class.name)
         self.py_name = py_name
-        if self.cpp_class.allow_subclassing:
-            new_func = 'PyObject_GC_New'
-        else:
-            new_func = 'PyObject_New'
-        wrapper.after_call.write_code(
-            "%s = %s(%s, %s);" %
-            (py_name, new_func, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
+        self.cpp_class.write_allocate_pystruct(wrapper.after_call, self.py_name)
         if self.cpp_class.allow_subclassing:
             wrapper.after_call.write_code(
                 "%s->inst_dict = NULL;" % (py_name,))
@@ -652,16 +621,8 @@ class CppClassRefReturnValue(CppClassReturnValueBase):
                                         type_is_pointer=False)
         else:
 
-            if self.cpp_class.allow_subclassing:
-                new_func = 'PyObject_GC_New'
-            else:
-                new_func = 'PyObject_New'
-            wrapper.after_call.write_code(
-                "%s = %s(%s, %s);" %
-                (py_name, new_func, self.cpp_class.pystruct, '&'+self.cpp_class.pytypestruct))
-            if self.cpp_class.allow_subclassing:
-                wrapper.after_call.write_code(
-                    "%s->inst_dict = NULL;" % (py_name,))
+            self.cpp_class.write_allocate_pystruct(wrapper.after_call, py_name)
+
             wrapper.after_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
 
             self.cpp_class.write_create_instance(wrapper.after_call,
@@ -852,19 +813,9 @@ class CppClassPtrParameter(CppClassParameterBase):
                 wrapper_type = '&'+self.cpp_class.pytypestruct
 
             ## Create the Python wrapper object
-            if self.cpp_class.allow_subclassing:
-                new_func = 'PyObject_GC_New'
-            else:
-                new_func = 'PyObject_New'
-            wrapper.before_call.write_code(
-                "%s = %s(%s, %s);" %
-                (py_name, new_func, self.cpp_class.pystruct, wrapper_type))
-            self.py_name = py_name
-
-            if self.cpp_class.allow_subclassing:
-                wrapper.before_call.write_code(
-                    "%s->inst_dict = NULL;" % (py_name,))
+            self.cpp_class.write_allocate_pystruct(wrapper.before_call, py_name, wrapper_type)
             wrapper.before_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % py_name)
+            self.py_name = py_name
 
             ## Assign the C++ value to the Python wrapper
             if self.transfer_ownership:
@@ -1249,9 +1200,7 @@ class CppClassSharedPtrParameter(CppClassParameterBase):
             ## Find out what Python wrapper to use, in case
             ## automatic_type_narrowing is active and we are not forced to
             ## make a copy of the object
-            if (self.cpp_class.automatic_type_narrowing
-                and (self.transfer_ownership or isinstance(self.cpp_class.memory_policy,
-                                                           cppclass.ReferenceCountingPolicy))):
+            if self.cpp_class.automatic_type_narrowing:
 
                 typeid_map_name = self.cpp_class.get_type_narrowing_root().typeid_map_name
                 wrapper_type = wrapper.declarations.declare_variable(
@@ -1263,18 +1212,9 @@ class CppClassSharedPtrParameter(CppClassParameterBase):
                 wrapper_type = '&'+self.cpp_class.pytypestruct
 
             ## Create the Python wrapper object
-            if self.cpp_class.allow_subclassing:
-                new_func = 'PyObject_GC_New'
-            else:
-                new_func = 'PyObject_New'
-            wrapper.before_call.write_code(
-                "%s = %s(%s, %s);" %
-                (py_name, new_func, self.cpp_class.pystruct, wrapper_type))
+            self.cpp_class.write_allocate_pystruct(wrapper.before_call, py_name, wrapper_type)
             self.py_name = py_name
 
-            if self.cpp_class.allow_subclassing:
-                wrapper.before_call.write_code(
-                    "%s->inst_dict = NULL;" % (py_name,))
             wrapper.before_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % py_name)
 
             ## Assign the C++ value to the Python wrapper

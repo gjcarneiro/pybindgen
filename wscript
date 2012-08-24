@@ -402,6 +402,8 @@ class CheckContext(Context.Context):
         if env['ENABLE_BOOST_SHARED_PTR']:
             print "Running boost::shared_ptr unit tests..."
             retvals.append(subprocess.Popen(valgrind + [python, 'tests/boost/bartest.py'] + verbosity).wait())
+        else:
+            print "Skipping boost::shared_ptr unit tests (boost headers not found)..."
 
         if any(retvals):
             Logs.error("Unit test failures")

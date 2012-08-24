@@ -82,6 +82,9 @@ class MemoryPolicy(object):
 
     def get_delete_code(self, cpp_class):
         raise NotImplementedError
+
+    def get_pystruct_init_code(self, cpp_class, obj):
+        return ''
         
 
 class ReferenceCountingPolicy(MemoryPolicy):
@@ -191,13 +194,16 @@ class BoostSharedPtr(SmartPointerPolicy):
         self.pointer_name = '::boost::shared_ptr< %s >' % (self.class_name,)
 
     def get_delete_code(self, cpp_class):
-        return "self->obj.reset ();"
+        return "self->obj.~shared_ptr< %s >();" % (self.class_name,)
 
     def get_pointer_type(self, class_full_name):
         return self.pointer_name + ' '
 
     def get_instance_creation_function(self):
         return boost_shared_ptr_instance_creation_function
+
+    def get_pystruct_init_code(self, cpp_class, obj):
+        return "new(&%s->obj) %s;" % (obj, self.pointer_name,)
 
 
 def default_instance_creation_function(cpp_class, code_block, lvalue,
@@ -2255,14 +2261,8 @@ static PyObject*\n%s(%s *self)
         declarations = DeclarationsScope()
         code_block = CodeBlock("return NULL;", declarations)
 
-        if self.allow_subclassing:
-            new_func = 'PyObject_GC_New'
-        else:
-            new_func = 'PyObject_New'
-
         py_copy = declarations.declare_variable("%s*" % self.pystruct, "py_copy")
-        code_block.write_code("%s = %s(%s, %s);" %
-                              (py_copy, new_func, self.pystruct, '&'+self.pytypestruct))
+        self.write_allocate_pystruct(code_block, py_copy)
         code_block.write_code("%s->obj = new %s(*self->obj);" % (py_copy, construct_name))
         if self.allow_subclassing:
             code_block.write_code("%s->inst_dict = NULL;" % py_copy)
@@ -2601,7 +2601,26 @@ if (!PyObject_IsInstance((PyObject*) other, (PyObject*) &%s)) {
             'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) &%s);' % (
                 alias, self.pytypestruct))
         
-
+    def write_allocate_pystruct(self, code_block, lvalue, wrapper_type=None):
+        """
+        Generates code to allocate a python wrapper structure, using
+        PyObject_New or PyObject_GC_New, plus some additional strcture
+        initialization that may be needed.
+        """
+        if self.allow_subclassing:
+            new_func = 'PyObject_GC_New'
+        else:
+            new_func = 'PyObject_New'
+        if wrapper_type is None:
+            wrapper_type = '&'+self.pytypestruct
+        code_block.write_code("%s = %s(%s, %s);" %
+                              (lvalue, new_func, self.pystruct, wrapper_type))
+        if self.allow_subclassing:
+            code_block.write_code(
+                "%s->inst_dict = NULL;" % (lvalue,))
+        if self.memory_policy is not None:
+            code_block.write_code(self.memory_policy.get_pystruct_init_code(self, lvalue))
+        
 
 from cppclass_typehandlers import CppClassParameter, CppClassRefParameter, \
     CppClassReturnValue, CppClassRefReturnValue, CppClassPtrParameter, CppClassPtrReturnValue, CppClassParameterBase, \

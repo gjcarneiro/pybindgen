@@ -14,7 +14,8 @@ from pybindgen import cppclass
 
 from pybindgen import param, retval
 
-
+import pybindgen.settings
+pybindgen.settings.deprecated_virtuals = False
 
 
 def my_module_gen(out_file):
@@ -38,9 +39,12 @@ def my_module_gen(out_file):
                                [param('boost::shared_ptr<Foo>', 'foo')])
     mod.add_function('function_that_returns_foo', retval('boost::shared_ptr<Foo>'), [])
     
-    cls = mod.add_class('ClassThatTakesFoo')
+    cls = mod.add_class('ClassThatTakesFoo', allow_subclassing=True)
     cls.add_constructor([Parameter.new('boost::shared_ptr<Foo>', 'foo')])
     cls.add_method('get_foo', ReturnValue.new('boost::shared_ptr<Foo>'), [])
+    cls.add_method('get_modified_foo', retval('boost::shared_ptr<Foo>'),
+                   [param('boost::shared_ptr<Foo>', 'foo')],
+                   is_virtual=True, is_const=True)
 
 
     
