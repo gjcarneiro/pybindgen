@@ -576,7 +576,7 @@ class SizeTReturn(ReturnValue):
         # using the intermediate variable is not always necessary but
         # it's safer this way in case of weird platforms where
         # sizeof(size_t) != sizeof(unsigned PY_LONG_LONG).
-        name = wrapper.declarations.declare_variable("unsigned PY_LONG_LONG", "retval_tmp", self.value)
+        name = wrapper.declarations.declare_variable("unsigned PY_LONG_LONG", "retval_tmp")
         wrapper.parse_params.add_parameter("K", ["&"+name], prepend=True)
         wrapper.after_call.write_code("retval = %s;" % (name))
 
