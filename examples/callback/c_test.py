@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "../../build/default/examples/callback")
+sys.path.insert(0, "../../build/examples/callback")
 import c
 
 def visitor(value):

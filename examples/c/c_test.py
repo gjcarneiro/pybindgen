@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "../../build/default/examples/c")
+sys.path.insert(0, "../../build/examples/c")
 from c import *
 
 c = C (10)

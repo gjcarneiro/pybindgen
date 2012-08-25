@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "../../build/default/examples/a")
+sys.path.insert(0, "../../build/examples/a")
 from a import *
 
 ADoA ()

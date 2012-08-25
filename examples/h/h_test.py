@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "../../build/default/examples/h")
+sys.path.insert(0, "../../build/examples/h")
 from h import *
 
 h = H()

@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "../../build/default/examples/e")
+sys.path.insert(0, "../../build/examples/e")
 from e import *
 
 e = E ()

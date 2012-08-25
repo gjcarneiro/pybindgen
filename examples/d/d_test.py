@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "../../build/default/examples/d")
+sys.path.insert(0, "../../build/examples/d")
 from d import *
 
 

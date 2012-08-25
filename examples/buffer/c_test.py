@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "../../build/default/examples/buffer")
+sys.path.insert(0, "../../build/examples/buffer")
 import c
 
 print c.GetBufferLen()
