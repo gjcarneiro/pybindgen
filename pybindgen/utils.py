@@ -89,6 +89,21 @@ typedef intobjargproc ssizeobjargproc;
 #endif
 ''')
 
+    if min_python_version < (2, 6):
+        code_sink.writeln(r'''
+#ifndef PyVarObject_HEAD_INIT
+#define PyVarObject_HEAD_INIT(type, size) \
+        PyObject_HEAD_INIT(type) size,
+#endif
+''')
+
+    code_sink.writeln(r'''
+#if PY_VERSION_HEX >= 0x03000000
+typedef void* cmpfunc;
+#endif
+''')
+
+
     code_sink.writeln(r'''
 #if     __GNUC__ > 2
 # define PYBINDGEN_UNUSED(param) param __attribute__((__unused__))

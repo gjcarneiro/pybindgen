@@ -300,7 +300,7 @@ class CppClassParameter(CppClassParameterBase):
                 wrapper.before_call.write_code("} else {\n")
                 wrapper.before_call.indent()
                 possible_type_names = ", ".join([cls.name for cls in [self.cpp_class] + implicit_conversion_sources])
-                wrapper.before_call.write_code("PyErr_Format(PyExc_TypeError, \"parameter must an instance of one of the types (%s), not %%s\", %s->ob_type->tp_name);" % (possible_type_names, self.py_name))
+                wrapper.before_call.write_code("PyErr_Format(PyExc_TypeError, \"parameter must an instance of one of the types (%s), not %%s\", Py_TYPE(%s)->tp_name);" % (possible_type_names, self.py_name))
                 wrapper.before_call.write_error_return()
                 wrapper.before_call.unindent()
                 wrapper.before_call.write_code("}")
@@ -414,7 +414,7 @@ class CppClassRefParameter(CppClassParameterBase):
                     wrapper.before_call.write_code("} else {\n")
                     wrapper.before_call.indent()
                     possible_type_names = ", ".join([cls.name for cls in [self.cpp_class] + implicit_conversion_sources])
-                    wrapper.before_call.write_code("PyErr_Format(PyExc_TypeError, \"parameter must an instance of one of the types (%s), not %%s\", %s->ob_type->tp_name);" % (possible_type_names, self.py_name))
+                    wrapper.before_call.write_code("PyErr_Format(PyExc_TypeError, \"parameter must an instance of one of the types (%s), not %%s\", Py_TYPE(%s)->tp_name);" % (possible_type_names, self.py_name))
                     wrapper.before_call.write_error_return()
                     wrapper.before_call.unindent()
                     wrapper.before_call.write_code("}")
@@ -505,7 +505,7 @@ class CppClassRefParameter(CppClassParameterBase):
                 ## simply erased (we never owned this object in the first
                 ## place).
                 wrapper.after_call.write_code(
-                    "if (%s->ob_refcnt == 1)\n"
+                    "if (Py_REFCNT(%s) == 1)\n"
                     "    %s->obj = NULL;\n"
                     "else{\n" % (self.py_name, self.py_name))
                 wrapper.after_call.indent()
@@ -857,7 +857,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                             ## place).
 
                             wrapper.after_call.write_code(
-                                "if (%s->ob_refcnt == 1)\n"
+                                "if (Py_REFCNT(%s) == 1)\n"
                                 "    %s->obj = NULL;\n"
                                 "else {\n" % (self.py_name, self.py_name))
                             wrapper.after_call.indent()
