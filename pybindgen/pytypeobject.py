@@ -228,6 +228,7 @@ static PySequenceMethods %(variable)s = {
 '''
 
     FUNCTION_TEMPLATES = {
+        # __len__
         "sq_length" : '''
 static Py_ssize_t
 %(wrapper_name)s (%(py_struct)s *py_self)
@@ -237,6 +238,7 @@ static Py_ssize_t
 
     py_result = %(method_name)s(py_self);
     if (py_result == NULL) {
+        Py_XDECREF(py_result);
         return -1;
     }
     result = PyInt_AsSsize_t(py_result);
@@ -246,6 +248,7 @@ static Py_ssize_t
 
 ''',
 
+        # __len__
         # This hacky version is necessary 'cause if we're calling a function rather than a method
         # or an overloaded wrapper the args parameter gets tacked into the call sequence.
         "sq_length_ARGS" : '''
@@ -260,6 +263,7 @@ static Py_ssize_t
     py_result = %(method_name)s(py_self, args, NULL);
     Py_DECREF(args);
     if (py_result == NULL) {
+        Py_XDECREF(py_result);
         return -1;
     }
     result = PyInt_AsSsize_t(py_result);
@@ -269,6 +273,39 @@ static Py_ssize_t
 
 ''',
 
+        # __add__ (concatenation)
+        "sq_concat" : '''
+static PyObject*
+%(wrapper_name)s (%(py_struct)s *py_self, %(py_struct)s *py_rhs)
+{
+    PyObject *result;
+    PyObject *args;
+
+    args = Py_BuildValue("(O)", py_rhs);
+    result = %(method_name)s(py_self, args, NULL);
+    Py_DECREF(args);
+    return result;
+}
+
+''',
+
+        # __mul__ (repeat)
+        "sq_repeat" : '''
+static PyObject*
+%(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i)
+{
+    PyObject *result;
+    PyObject *args;
+
+    args = Py_BuildValue("(i)", py_i);
+    result = %(method_name)s(py_self, args, NULL);
+    Py_DECREF(args);
+    return result;
+}
+
+''',
+
+        # __getitem__
         "sq_item" : '''
 static PyObject*
 %(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i)
@@ -291,6 +328,29 @@ static PyObject*
 
 ''',
 
+        # __getslice__
+        "sq_slice" : '''
+static PyObject*
+%(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i1, Py_ssize_t py_i2)
+{
+    PyObject *result;
+    PyObject *args;
+
+    args = Py_BuildValue("(ii)", py_i1, py_i2);
+    result = %(method_name)s(py_self, args, NULL);
+    Py_DECREF(args);
+    if (PyErr_ExceptionMatches(PyExc_IndexError) ||
+        PyErr_ExceptionMatches(PyExc_StopIteration)) {
+        Py_XDECREF(result);
+        return NULL;
+    } else {
+        return result;
+    }
+}
+
+''',
+
+        # __setitem__
         "sq_ass_item" : '''
 static int
 %(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i, PyObject *py_val)
@@ -301,15 +361,96 @@ static int
     args = Py_BuildValue("(iO)", py_i, py_val);
     result = %(method_name)s(py_self, args, NULL);
     Py_DECREF(args);
-    if (result == NULL) {
+    if (result == NULL or PyInt_Check(result) == 0) {
+        Py_XDECREF(result);
         return -1;
     } else {
+        int iresult = int(PyInt_AS_LONG(result));
         Py_DECREF(result);
-        return 0;
+        return iresult;
     }
 }
 
 ''',
+
+        # __setslice__
+        "sq_ass_slice" : '''
+static int
+%(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i1, Py_ssize_t py_i2, %(py_struct)s *py_vals)
+{
+    PyObject *result;
+    PyObject *args;
+
+    args = Py_BuildValue("(iiO)", py_i1, py_i2, py_vals);
+    result = %(method_name)s(py_self, args, NULL);
+    Py_DECREF(args);
+    if (result == NULL or PyInt_Check(result) == 0) {
+        Py_XDECREF(result);
+        return -1;
+    } else {
+        int iresult = int(PyInt_AS_LONG(result));
+        Py_DECREF(result);
+        return iresult;
+    }
+}
+
+''',
+
+        # __contains__
+        "sq_contains" : '''
+static int
+%(wrapper_name)s (%(py_struct)s *py_self, PyObject *py_val)
+{
+    PyObject* result;
+    PyObject *args;
+
+    args = Py_BuildValue("(O)", py_val);
+    result = %(method_name)s(py_self, args, NULL);
+    Py_DECREF(args);
+    if (result == NULL or PyInt_Check(result) == 0) {
+        Py_XDECREF(result);
+        return -1;
+    } else {
+        int iresult = int(PyInt_AS_LONG(result));
+        Py_DECREF(result);
+        return iresult;
+    }
+}
+
+''',
+
+        # __iadd__ (in-place concatenation)
+        "sq_inplace_concat" : '''
+static PyObject*
+%(wrapper_name)s (%(py_struct)s *py_self, %(py_struct)s *py_rhs)
+{
+    PyObject *result;
+    PyObject *args;
+
+    args = Py_BuildValue("(O)", py_rhs);
+    result = %(method_name)s(py_self, args, NULL);
+    Py_DECREF(args);
+    return result;
+}
+
+''',
+
+        # __imul__ (in-place repeat)
+        "sq_inplace_repeat" : '''
+static PyObject*
+%(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i)
+{
+    PyObject *result;
+    PyObject *args;
+
+    args = Py_BuildValue("(i)", py_i);
+    result = %(method_name)s(py_self, args, NULL);
+    Py_DECREF(args);
+    return result;
+}
+
+''',
+
         }
 
     def __init__(self):

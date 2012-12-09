@@ -98,10 +98,13 @@ typedef intobjargproc ssizeobjargproc;
 # define PYBINDGEN_UNUSED(param) param
 #endif  /* !__GNUC__ */
 
+#ifndef _PyBindGenWrapperFlags_defined_
+#define _PyBindGenWrapperFlags_defined_
 typedef enum _PyBindGenWrapperFlags {
    PYBINDGEN_WRAPPER_FLAG_NONE = 0,
    PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED = (1<<0),
 } PyBindGenWrapperFlags;
+#endif
 
 ''')
     
