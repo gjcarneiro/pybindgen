@@ -238,6 +238,7 @@ static Py_ssize_t
 
     py_result = %(method_name)s(py_self);
     if (py_result == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Unknown error in attempting to determine __len__.");
         Py_XDECREF(py_result);
         return -1;
     }
@@ -263,6 +264,7 @@ static Py_ssize_t
     py_result = %(method_name)s(py_self, args, NULL);
     Py_DECREF(args);
     if (py_result == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Unknown error in attempting to determine __len__.");
         Py_XDECREF(py_result);
         return -1;
     }
@@ -362,6 +364,7 @@ static int
     result = %(method_name)s(py_self, args, NULL);
     Py_DECREF(args);
     if (result == NULL or PyInt_Check(result) == 0) {
+        PyErr_SetString(PyExc_IndexError, "Error trying to parse index to container.");
         Py_XDECREF(result);
         return -1;
     } else {
@@ -385,6 +388,7 @@ static int
     result = %(method_name)s(py_self, args, NULL);
     Py_DECREF(args);
     if (result == NULL or PyInt_Check(result) == 0) {
+        PyErr_SetString(PyExc_IndexError, "Error trying to parse index to container.");
         Py_XDECREF(result);
         return -1;
     } else {
@@ -408,6 +412,7 @@ static int
     result = %(method_name)s(py_self, args, NULL);
     Py_DECREF(args);
     if (result == NULL or PyInt_Check(result) == 0) {
+        PyErr_SetString(PyExc_RuntimeError, "Unknown error in attempting to test __contains__.");
         Py_XDECREF(result);
         return -1;
     } else {
