@@ -1148,14 +1148,78 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(retval, 12345)
 
     def test_sequence_protocol(self):
-        vec = foo.VectorLike()
-        vec.append(1)
-        vec.append(2)
-        vec.append(3)
-        self.assertEqual(len(vec), 3)
-        self.assertEqual(vec[2], 3)
-        vec[2] = 6
-        self.assertEqual(vec[2], 6)
+        vec1 = foo.VectorLike()
+        vec1.append(1)
+        vec1.append(2)
+        vec1.append(3)
+        self.assertEqual(len(vec1), 3)
+        self.assertEqual(vec1[2], 3)
+        vec1[2] = 6
+        self.assertEqual(vec1[2], 6)
+
+        # add
+        vec2 = foo.VectorLike()
+        for i in xrange(10):
+            vec2.append(i)
+        vec3 = vec2 + vec1
+        self.assertEqual(len(vec3), len(vec1) + len(vec2))
+        for (x, xcheck) in zip(list(vec3), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 6]):
+            self.assertEqual(x, xcheck)
+        
+        # iadd
+        vec2 = foo.VectorLike()
+        for i in xrange(10):
+            vec2.append(i)
+        vec2 += vec1
+        self.assertEqual(len(vec2), 13)
+        for (x, xcheck) in zip(list(vec3), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 6]):
+            self.assertEqual(x, xcheck)
+        
+        # mul
+        vec2 = 2 * vec1
+        self.assertEqual(len(vec2), 2*len(vec1))
+        for (x, xcheck) in zip(list(vec2), 2*[1, 2, 6]):
+            self.assertEqual(x, xcheck)
+
+        # imul
+        vec2 = foo.VectorLike()
+        for i in xrange(10):
+            vec2.append(i)
+        vec2 *= 3
+        self.assertEqual(len(vec2), 30)
+        for (x, xcheck) in zip(list(vec2), 3*range(10)):
+            self.assertEqual(x, xcheck)
+
+        # setslice
+        vec2 = foo.VectorLike()
+        for i in xrange(10):
+            vec2.append(i)
+        vec3 = foo.VectorLike()
+        for i in xrange(3):
+            vec3.append(3*i)
+        vec2[2:5] = vec3
+        ans = range(10)
+        ans[2:5] = [0, 3, 6]
+        self.assertEqual(len(vec2), len(ans))
+        for (x, xcheck) in zip(list(vec2), ans):
+            self.assertEqual(x, xcheck)
+
+        # getslice
+        vec2 = foo.VectorLike()
+        for i in xrange(10):
+            vec2.append(i)
+        vec3 = vec2[5:8]
+        ans = range(5,8)
+        self.assertEqual(len(vec3), len(ans))
+        for (x, xcheck) in zip(list(vec3), ans):
+            self.assertEqual(x, xcheck)
+
+        # contains
+        vec2 = foo.VectorLike()
+        for i in xrange(10):
+            vec2.append(i)
+        self.assertTrue(2.0 in vec2)
+        self.assertFalse(20.0 in vec2)
 
     def test_class_with_iterator_protocol(self):
         vec = foo.VectorLike2()

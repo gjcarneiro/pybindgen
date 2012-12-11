@@ -363,9 +363,11 @@ static int
     args = Py_BuildValue("(iO)", py_i, py_val);
     result = %(method_name)s(py_self, args, NULL);
     Py_DECREF(args);
-    if (result == NULL or PyInt_Check(result) == 0) {
-        PyErr_SetString(PyExc_IndexError, "Error trying to parse index to container.");
-        Py_XDECREF(result);
+    if (result == NULL) {
+        PyErr_SetString(PyExc_IndexError, "Unknown error trying to set value in container.");
+        return -1;
+    } else if (PyInt_Check(result) == 0) {
+        PyErr_SetString(PyExc_IndexError, "Error trying to set value in container -- wrapped method should return integer status.");
         return -1;
     } else {
         int iresult = int(PyInt_AS_LONG(result));
@@ -387,9 +389,11 @@ static int
     args = Py_BuildValue("(iiO)", py_i1, py_i2, py_vals);
     result = %(method_name)s(py_self, args, NULL);
     Py_DECREF(args);
-    if (result == NULL or PyInt_Check(result) == 0) {
-        PyErr_SetString(PyExc_IndexError, "Error trying to parse index to container.");
-        Py_XDECREF(result);
+    if (result == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Unknown error trying to set slice in container.");
+        return -1;
+    } else if (PyInt_Check(result) == 0) {
+        PyErr_SetString(PyExc_RuntimeError, "Error trying to set slice in container -- wrapped method should return integer status.");
         return -1;
     } else {
         int iresult = int(PyInt_AS_LONG(result));

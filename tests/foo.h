@@ -10,6 +10,8 @@
 #include <map>
 #include <set>
 #include <exception>
+#include <algorithm>
+#include <stdexcept>
 
 #include <stdint.h>
 
@@ -1014,15 +1016,110 @@ public:
         {
             return m_vec.size ();
         }
-    // -#- name=__setitem__ -#-
-    void set_item (std::vector<double>::size_type index, double value)
+    // -#- name=__add__-#-
+    VectorLike add_VectorLike(const VectorLike& rhs)
         {
+            VectorLike result(*this);
+            std::copy(rhs.m_vec.begin(), rhs.m_vec.end(), std::back_inserter(result.m_vec));
+            return result;
+        }
+    // -#- name=__iadd__-#-
+    VectorLike& iadd_VectorLike(const VectorLike& rhs)
+        {
+            std::copy(rhs.m_vec.begin(), rhs.m_vec.end(), std::back_inserter(m_vec));
+            return *this;
+        }
+    // -#- name=__mul__-#-
+    VectorLike mul_VectorLike(const unsigned n)
+        {
+            VectorLike result;
+            if (n > 0)
+            {
+                result.m_vec.reserve(n * m_vec.size());
+                for (unsigned i = 0; i != n; ++i)
+                {
+                    std::copy(m_vec.begin(), m_vec.end(), std::back_inserter(result.m_vec));
+                }
+            }
+            return result;
+        }
+    // -#- name=__imul__-#-
+    VectorLike& imul_VectorLike(const unsigned n)
+        {
+            if (n > 0)
+            {
+                const unsigned n0 = m_vec.size();
+                m_vec.reserve(n * n0);
+                for (unsigned i = 0; i < n - 1; ++i)
+                {
+                    std::copy(m_vec.begin(), m_vec.begin() + n0, std::back_inserter(m_vec));
+                }
+            } 
+            else 
+            {
+                *this = VectorLike();
+            }
+            return *this;
+        }
+    // -#- name=__setitem__ -#-
+    int set_item (int index, double value)
+        {
+            const int n = this->get_len();
+            index = (index < 0 ? (n + 1 + index) : index);
+            if (index >= n) return -1;
             m_vec[index] = value;
+            return 0;
         }
     // -#- name=__getitem__ -#-
-    double get_item (std::vector<double>::size_type index) const
+    double get_item (int index) const
         {
-            return m_vec[index];
+            const int n = this->get_len();
+            index = (index < 0 ? (n + 1 + index) : index);
+            try 
+            {
+                return m_vec.at(index);
+            }
+            catch (std::out_of_range)
+            {
+                PyErr_SetString(PyExc_IndexError, "Container index out of range");
+                return 0.0;
+            }
+        }
+    // -#- name=__setslice__ -#-
+    int set_slice (int index1,
+                   int index2,
+                   const VectorLike& values)
+        {
+            const int n = this->get_len();
+            index1 = (index1 < 0 ? (n + 1 + index1) : index1);
+            index2 = (index2 < 0 ? (n + 1 + index2) : index2);
+            if (index1 >= n or index2 > n) return -1;
+            for (int i = index1; i < index2; ++i) 
+            {
+                if (this->set_item(i, values.get_item(i - index1)) != 0) return -1;
+            }
+            return 0;
+        }
+    // -#- name=__getslice__ -#-
+    VectorLike get_slice (int index1,
+                          int index2) const
+        {
+            VectorLike result;
+            const int n = this->get_len();
+            index1 = (index1 < 0 ? (n + 1 + index1) : index1);
+            index2 = (index2 < 0 ? (n + 1 + index2) : index2);
+            for (int i = index1; i < index2; ++i) 
+            {
+                result.m_vec.push_back(this->get_item(i));
+            }
+            return result;
+        }
+    // -#- name=__contains__ -#-
+    int contains_value (double value) const
+        {
+            return ((std::find(m_vec.begin(), m_vec.end(), value) == m_vec.end()) ?
+                    0 :
+                    1);
         }
 
     void append (double value)

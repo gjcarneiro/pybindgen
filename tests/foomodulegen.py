@@ -506,11 +506,21 @@ int %s::custom_method_added_by_a_hook(int x)
 
     VectorLike = mod.add_class('VectorLike')
     VectorLike.add_constructor([])
-    VectorLike.add_method('append', 'void', [Parameter.new('double', 'value')])
-    VectorLike.add_method('get_item', 'double', [Parameter.new('size_t', 'index')], custom_name='__getitem__')
-    VectorLike.add_method('set_item', 'void', [Parameter.new('size_t', 'index'), Parameter.new('double', 'value')],
-                          custom_name='__setitem__')
     VectorLike.add_method('get_len', 'size_t', [], custom_name='__len__')
+    VectorLike.add_method('add_VectorLike', 'VectorLike', [Parameter.new('VectorLike', 'rhs')], custom_name='__add__')
+    VectorLike.add_method('iadd_VectorLike', 'VectorLike', [Parameter.new('VectorLike', 'rhs')], custom_name='__iadd__')
+    VectorLike.add_method('mul_VectorLike', 'VectorLike', [Parameter.new('unsigned int', 'n')], custom_name='__mul__')
+    VectorLike.add_method('imul_VectorLike', 'VectorLike', [Parameter.new('unsigned int', 'n')], custom_name='__imul__')
+    VectorLike.add_method('set_item', 'int', [Parameter.new('int', 'index'), Parameter.new('double', 'value')],
+                          custom_name='__setitem__')
+    VectorLike.add_method('get_item', 'double', [Parameter.new('int', 'index')], custom_name='__getitem__')
+    VectorLike.add_method('set_slice', 'int', [Parameter.new('int', 'index1'), 
+                                               Parameter.new('int', 'index2'), 
+                                               Parameter.new('VectorLike', 'values')], custom_name='__setslice__')
+    VectorLike.add_method('get_slice', 'VectorLike', [Parameter.new('int', 'index1'),
+                                                      Parameter.new('int', 'index2')], custom_name='__getslice__')
+    VectorLike.add_method('contains_value', 'int', [Parameter.new('double', 'value')], custom_name='__contains__')
+    VectorLike.add_method('append', 'void', [Parameter.new('double', 'value')])
 
     VectorLike2 = mod.add_class('VectorLike2')
     VectorLike2.add_constructor([])

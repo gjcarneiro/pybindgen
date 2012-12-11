@@ -2037,8 +2037,8 @@ typedef struct {
         #self._generate_tp_hash(code_sink)
         #self._generate_tp_compare(code_sink)
 
-        if self.slots.get("tp_hash", "NULL") == "NULL":
-            self.slots["tp_hash"] = self._generate_tp_hash(code_sink)
+        #if self.slots.get("tp_hash", "NULL") == "NULL":
+        #    self.slots["tp_hash"] = self._generate_tp_hash(code_sink)
 
         if self.slots.get("tp_richcompare", "NULL") == "NULL":
             self.slots["tp_richcompare"] = self._generate_tp_richcompare(code_sink)
