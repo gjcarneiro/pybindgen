@@ -2,18 +2,33 @@
 
 def build(bld):
 
-    gen = bld.new_task_gen(
-        features='command',
-        source='Agen.py',
-        target='A.C',
-        command='${PYTHON} ${SRC[0]} > ${TGT[0]}')
+    for src, tgt in (('Agen.py', 'Amodule.cc'),
+                     ('Bgen.py', 'Bmodule.cc')):
+        gen = bld.new_task_gen(
+            features='command',
+            source=src,
+            target=tgt,
+            command='${PYTHON} ${SRC[0]} ${TGT[0]}')
 
     if bld.env['CXX']:
+        # bld.shlib(source = 'Amodule.cc',
+        #           target = 'A',
+        #           features = 'pyext',
+        #           use = ['PYTHON'])
+        # bld.shlib(source = 'Bmodule.cc',
+        #           target = 'B',
+        #           features = 'pyext',
+        #           use = ['PYTHON', 'A'])
+
         obj = bld.new_task_gen(features=['cxx', 'cxxshlib', 'pyext'])
-        obj.source = [
-            'A.C',
-            ]
+        obj.source = ['Amodule.cc']
         obj.target = 'A'
         obj.install_path = None # do not install
         obj.includes = '.'
 
+        obj = bld.new_task_gen(features=['cxx', 'cxxshlib', 'pyext'])
+        obj.source = ['Bmodule.cc']
+        obj.target = 'B'
+        obj.install_path = None # do not install
+        obj.includes = '.'
+        obj.links = ['A']
