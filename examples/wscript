@@ -9,6 +9,7 @@ def build(bld):
     bld.add_subdirs('buffer')
     if bld.env['ENABLE_BOOST_SHARED_PTR']:
         bld.add_subdirs('boost_shared_ptr')
+    bld.add_subdirs('cross_module_inheritance')
 
 def configure(conf):
     pass

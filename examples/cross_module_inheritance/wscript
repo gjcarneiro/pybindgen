@@ -1,0 +1,19 @@
+## -*- python -*-
+
+def build(bld):
+
+    gen = bld.new_task_gen(
+        features='command',
+        source='Agen.py',
+        target='A.C',
+        command='${PYTHON} ${SRC[0]} > ${TGT[0]}')
+
+    if bld.env['CXX']:
+        obj = bld.new_task_gen(features=['cxx', 'cxxshlib', 'pyext'])
+        obj.source = [
+            'A.C',
+            ]
+        obj.target = 'A'
+        obj.install_path = None # do not install
+        obj.includes = '.'
+
