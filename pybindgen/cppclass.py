@@ -1342,7 +1342,7 @@ class CppClass(object):
 #include <map>
 #include <string>
 #include <typeinfo>
-#if defined(__GNUC__) && __GNUC__ >= 3
+#if defined(__GNUC__) && __GNUC__ >= 3 && !defined(__clang__)
 # include <cxxabi.h>
 #endif
 
@@ -1384,7 +1384,7 @@ public:
        if (python_wrapper)
            return python_wrapper;
        else {
-#if defined(__GNUC__) && __GNUC__ >= 3
+#if defined(__GNUC__) && __GNUC__ >= 3 && !defined(__clang__)
 
            // Get closest (in the single inheritance tree provided by cxxabi.h)
            // registered python wrapper.
