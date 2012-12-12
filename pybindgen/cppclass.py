@@ -13,6 +13,8 @@ from cppattribute import CppInstanceAttributeGetter, CppInstanceAttributeSetter,
     CppStaticAttributeGetter, CppStaticAttributeSetter, \
     PyGetSetDef, PyMetaclass
 
+from cppcustomattribute import CppCustomInstanceAttributeGetter, CppCustomInstanceAttributeSetter
+
 from pytypeobject import PyTypeObject, PyNumberMethods, PySequenceMethods
 
 import settings
