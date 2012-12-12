@@ -42,6 +42,7 @@ def my_module_gen(out_file):
             Parameter.new('int', 'b', default_value='3'),
             Parameter.new('bool', 'subtract', default_value='false')
             ], is_static=True)
+    Foo.add_custom_instance_attribute("is_unique", "bool", getter="is_unique", is_const=True)
 
     Zoo = mod.add_class('Zoo', automatic_type_narrowing=True)
     Zoo.add_constructor([Parameter.new('std::string', 'datum')])

@@ -134,6 +134,12 @@ class TestFoo(unittest.TestCase):
 
         self.assertRaises(TypeError, obj.get_int, [123])
         
+    def test_custom_instance_attribute(self):
+        obj = foo.Foo()
+        if foo.Foo.instance_count == 1:
+            self.assertTrue(obj.is_unique)
+        else:
+            self.assertFalse(obj.is_unique)
 
     def test_overloaded_constructors(self):
         obj1 = foo.SomeObject("zbr")

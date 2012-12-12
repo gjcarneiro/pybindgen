@@ -87,6 +87,11 @@ inline std::ostream & operator << (std::ostream &os, Foo const &foo)
     return os;
 }
 
+inline bool is_unique(const Foo& foo)
+{
+    return foo.instance_count == 1;
+}
+
 class Zoo
 // -#- automatic_type_narrowing=True -#-
 {
