@@ -286,14 +286,11 @@ def configure(conf):
                 else:
                     conf.env['ENABLE_PYGCCXML'] = True
 
-        # This breaks the ability to use cross-module dependencies (such as shown in 
-        # examples/cross_module_inheritance), so I'm turning off the hidden flag for 
-        # now.  I welcome a better solution!
-        # # -fvisibility=hidden optimization
-        # if (conf.env['CXX_NAME'] == 'gcc' and [int(x) for x in conf.env['CC_VERSION']] >= [4,0,0]
-        #     and conf.check_compilation_flag('-fvisibility=hidden')):
-        #     conf.env.append_value('CXXFLAGS_PYEXT', '-fvisibility=hidden')
-        #     conf.env.append_value('CCFLAGS_PYEXT', '-fvisibility=hidden')
+        # -fvisibility=hidden optimization
+        if (conf.env['CXX_NAME'] == 'gcc' and [int(x) for x in conf.env['CC_VERSION']] >= [4,0,0]
+            and conf.check_compilation_flag('-fvisibility=hidden')):
+            conf.env.append_value('CXXFLAGS_PYEXT', '-fvisibility=hidden')
+            conf.env.append_value('CCFLAGS_PYEXT', '-fvisibility=hidden')
 
         # Add include path for our stdint.h replacement, if needed (pstdint.h)
         if not conf.check_nonfatal(header_name='stdint.h'):
