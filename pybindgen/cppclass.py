@@ -13,6 +13,8 @@ from cppattribute import CppInstanceAttributeGetter, CppInstanceAttributeSetter,
     CppStaticAttributeGetter, CppStaticAttributeSetter, \
     PyGetSetDef, PyMetaclass
 
+from cppcustomattribute import CppCustomInstanceAttributeGetter, CppCustomInstanceAttributeSetter
+
 from pytypeobject import PyTypeObject, PyNumberMethods, PySequenceMethods
 
 import settings
@@ -642,7 +644,16 @@ class CppClass(object):
         self.binary_numeric_operators = dict()
         self.inplace_numeric_operators = dict()
         self.unary_numeric_operators = dict()
-        self.valid_sequence_methods = ("__len__", "__getitem__", "__setitem__")
+        self.valid_sequence_methods = {"__len__"       : "sq_length",
+                                       "__add__"       : "sq_concat",
+                                       "__mul__"       : "sq_repeat",
+                                       "__getitem__"   : "sq_item",
+                                       "__getslice__"  : "sq_slice",
+                                       "__setitem__"   : "sq_ass_item",
+                                       "__setslice__"  : "sq_ass_slice",
+                                       "__contains__"  : "sq_contains",
+                                       "__iadd__"      : "sq_inplace_concat",
+                                       "__imul__"      : "sq_inplace_repeat"}
 
         ## list of CppClasses from which a value of this class can be
         ## implicitly generated; corresponds to a
@@ -1331,7 +1342,7 @@ class CppClass(object):
 #include <map>
 #include <string>
 #include <typeinfo>
-#if defined(__GNUC__) && __GNUC__ >= 3
+#if defined(__GNUC__) && __GNUC__ >= 3 && !defined(__clang__)
 # include <cxxabi.h>
 #endif
 
@@ -1373,7 +1384,7 @@ public:
        if (python_wrapper)
            return python_wrapper;
        else {
-#if defined(__GNUC__) && __GNUC__ >= 3
+#if defined(__GNUC__) && __GNUC__ >= 3 && !defined(__clang__)
 
            // Get closest (in the single inheritance tree provided by cxxabi.h)
            // registered python wrapper.
@@ -1722,6 +1733,43 @@ public:
             setter.stack_where_defined = traceback.extract_stack()
         self.static_attributes.add_attribute(name, getter, setter)
 
+    def add_custom_instance_attribute(self, name, value_type, getter, is_const=False, setter=None,
+                                      getter_template_parameters=[],
+                                      setter_template_parameters=[]):
+        """
+        :param value_type: a ReturnValue object
+        :param name: attribute name (i.e. the name of the class member variable)
+        :param is_const: True if the attribute is const, i.e. cannot be modified
+        :param getter: None, or name of a method of this class used to get the value
+        :param setter: None, or name of a method of this class used to set the value
+        :param getter_template_parameters: optional list of template parameters for getter function
+        :param setter_template_parameters: optional list of template parameters for setter function
+        """
+
+        ## backward compatibility check
+        if isinstance(value_type, str) and isinstance(name, ReturnValue):
+            warnings.warn("add_custom_instance_attribute has changed API; see the API documentation (but trying to correct...)",
+                          DeprecationWarning, stacklevel=2)
+            value_type, name = name, value_type
+
+        try:
+            value_type = utils.eval_retval(value_type, None)
+        except utils.SkipWrapper:
+            return
+
+        assert isinstance(value_type, ReturnValue)
+        getter_wrapper = CppCustomInstanceAttributeGetter(value_type, self, name, getter=getter,
+                                                          template_parameters = getter_template_parameters)
+        getter_wrapper.stack_where_defined = traceback.extract_stack()
+        if is_const:
+            setter_wrapper = None
+            assert setter is None
+        else:
+            setter_wrapper = CppCustomInstanceAttributeSetter(value_type, self, name, setter=setter,
+                                                              template_parameters = setter_template_parameters)
+            setter_wrapper.stack_where_defined = traceback.extract_stack()
+        self.instance_attributes.add_attribute(name, getter_wrapper, setter_wrapper)
+
     def add_instance_attribute(self, name, value_type, is_const=False,
                                getter=None, setter=None):
         """
@@ -1991,6 +2039,9 @@ typedef struct {
         #self._generate_tp_hash(code_sink)
         #self._generate_tp_compare(code_sink)
 
+        #if self.slots.get("tp_hash", "NULL") == "NULL":
+        #    self.slots["tp_hash"] = self._generate_tp_hash(code_sink)
+
         if self.slots.get("tp_richcompare", "NULL") == "NULL":
             self.slots["tp_richcompare"] = self._generate_tp_richcompare(code_sink)
 
@@ -2151,11 +2202,9 @@ typedef struct {
                                               'method_name'    : meth_wrapper_actual_name})
                 return
 
-        for (py_name, slot_name) in [("__len__", "sq_length"),
-                                     ("__getitem__", "sq_item"),
-                                     ("__setitem__", "sq_ass_item")]:
+        for py_name in self.valid_sequence_methods:
+            slot_name = self.valid_sequence_methods[py_name]
             try_wrap_sequence_method(py_name, slot_name)
-            
 
         pysequencemethods.generate(code_sink)
         return '&' + sequence_methods_var_name
@@ -2290,7 +2339,7 @@ static PyObject*\n%s(%s *self)
             for method_name, parent_overload in base.methods.iteritems():
 
                 # skip methods registered via special type slots, not method table
-                if method_name in ['__call__', "__len__", "__getitem__", "__setitem__"]:
+                if method_name in (['__call__'] + list(self.valid_sequence_methods)):
                     continue
 
                 try:
@@ -2364,8 +2413,7 @@ static PyObject*\n%s(%s *self)
             except utils.SkipWrapper:
                 continue
             # skip methods registered via special type slots, not method table
-            if meth_name not in ['__call__', "__len__",
-                                 "__getitem__", "__setitem__"]:
+            if meth_name not in (['__call__'] + list(self.valid_sequence_methods)):
                 method_defs.append(overload.get_py_method_def(meth_name))
             code_sink.writeln()
         method_defs.extend(parent_caller_methods)
@@ -2487,6 +2535,7 @@ static long
 }
 
 ''' % (tp_hash_function_name, self.pystruct))
+        return tp_hash_function_name
 
     def _generate_tp_compare(self, code_sink):
         """generates a tp_compare function, which compares the ->obj pointers"""

@@ -27,7 +27,7 @@ def build(bld):
         target='barmodule.cc',
         command='${PYTHON} %s ${SRC[0]} ${TOP_SRCDIR} > ${TGT[0]}' % (DEPRECATION_ERRORS,))
 
-    if env['CXX']:
+    if env['CXX'] and env['ENABLE_BOOST_SHARED_PTR'] == True:
         obj = bld(features='cxx cxxshlib pyext')
         obj.source = [
             'bar.cc',
