@@ -1209,6 +1209,7 @@ public:
 
     virtual int throw_error () const throw (std::exception);
 
+    virtual ~ClassThatThrows () {}
 };
 
 
