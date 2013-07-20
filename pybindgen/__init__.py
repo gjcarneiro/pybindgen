@@ -6,8 +6,8 @@ from typehandlers.codesink import CodeSink, FileCodeSink
 from cppclass import CppMethod, CppClass, CppConstructor
 from enum import Enum
 from utils import write_preamble, param, retval
-import version
+try:
+    import version
+except ImportError: # the version.py file is generated and may not exist
+    pass
 
-import logging
-#logging.basicConfig(level=logging.DEBUG)
-del logging
