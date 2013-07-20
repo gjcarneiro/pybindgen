@@ -12,7 +12,12 @@ import sys
 from typehandlers.codesink import CodeSink
 from typehandlers.base import TypeLookupError, TypeConfigurationError, CodeGenerationError, NotSupportedError, \
     Parameter, ReturnValue
-import version
+try:
+    from version import __version__
+except ImportError:
+    __version__ = [0, 0, 0, 0]
+
+
 import settings
 import warnings
 
@@ -44,7 +49,7 @@ def write_preamble(code_sink, min_python_version=None):
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <stddef.h>
-''' % '.'.join([str(x) for x in version.__version__]))
+''' % '.'.join([str(x) for x in __version__]))
 
     if min_python_version < (2, 4):
         code_sink.writeln(r'''
