@@ -12,7 +12,11 @@ import sys
 from pybindgen.typehandlers.codesink import CodeSink
 from pybindgen.typehandlers.base import TypeLookupError, TypeConfigurationError, CodeGenerationError, NotSupportedError, \
     Parameter, ReturnValue
-from pybindgen import version
+try:
+    from pybindgen.version import __version__
+except ImportError:
+    __version__ = [0, 0, 0, 0]
+
 from pybindgen import settings
 import warnings
 
@@ -44,7 +48,7 @@ def write_preamble(code_sink, min_python_version=None):
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <stddef.h>
-''' % '.'.join([str(x) for x in version.__version__]))
+''' % '.'.join([str(x) for x in __version__]))
 
     if min_python_version < (2, 4):
         code_sink.writeln(r'''
@@ -117,10 +121,13 @@ typedef void* cmpfunc;
 # define PYBINDGEN_UNUSED(param) param
 #endif  /* !__GNUC__ */
 
+#ifndef _PyBindGenWrapperFlags_defined_
+#define _PyBindGenWrapperFlags_defined_
 typedef enum _PyBindGenWrapperFlags {
    PYBINDGEN_WRAPPER_FLAG_NONE = 0,
    PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED = (1<<0),
 } PyBindGenWrapperFlags;
+#endif
 
 ''')
 
