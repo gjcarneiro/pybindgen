@@ -44,7 +44,7 @@ class MyMultiSectionFactory(MultiSectionFactory):
     def close(self):
         self.header_sink.file.close()
         self.main_sink.file.close()
-        for sink in self.section_sinks.itervalues():
+        for sink in self.section_sinks.values():
             sink.file.close()
 
 def my_module_gen():
@@ -69,6 +69,6 @@ if __name__ == '__main__':
     except ImportError:
         my_module_gen()
     else:
-        print >> sys.stderr, "** running under profiler"
+        print("** running under profiler", file=sys.stderr)
         profile.run('my_module_gen()', 'foomodulegen4.pstat')
 

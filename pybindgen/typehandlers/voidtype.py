@@ -1,7 +1,7 @@
 # docstrings not neede here (the type handler interfaces are fully
 # documented in base.py) pylint: disable-msg=C0111
 
-from base import ReturnValue
+from pybindgen.typehandlers.base import ReturnValue
 
 
 class VoidReturn(ReturnValue):

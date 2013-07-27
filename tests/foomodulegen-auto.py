@@ -19,7 +19,7 @@ def my_module_gen():
     module_parser = ModuleParser('foo2', '::')
     module_parser.enable_anonymous_containers = True
 
-    print >> sys.stderr, "PYTHON_INCLUDES:", repr(sys.argv[2])
+    print("PYTHON_INCLUDES:", repr(sys.argv[2]), file=sys.stderr)
     gccxml_options = dict(
         include_paths=eval(sys.argv[2]),
         )
@@ -54,7 +54,7 @@ def main():
             except ImportError:
                 my_module_gen()
             else:
-                print >> sys.stderr, "** running under profiler"
+                print("** running under profiler", file=sys.stderr)
                 profile.run('my_module_gen()', 'foomodulegen-auto.pstat')
         else:
             my_module_gen()            

@@ -2,10 +2,10 @@
 Wraps C++ class instance/static attributes.
 """
 
-from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase
-from typehandlers import codesink
-import settings
-import utils
+from pybindgen.typehandlers.base import ForwardWrapperBase, ReverseWrapperBase
+from pybindgen.typehandlers import codesink
+from pybindgen import settings
+from pybindgen import utils
 
 
 class PyGetter(ForwardWrapperBase):
@@ -253,8 +253,8 @@ class PyMetaclass(object):
         :param getsets: name of a PyGetSetDef C array variable, or None
         """
         assert getsets is None or isinstance(getsets, PyGetSetDef)
-        assert isinstance(name, basestring)
-        assert isinstance(parent_metaclass_expr, basestring)
+        assert isinstance(name, str)
+        assert isinstance(parent_metaclass_expr, str)
 
         self.name = name
         prefix = settings.name_prefix.capitalize()
@@ -391,7 +391,7 @@ class PyGetSetDef(object):
         
         code_sink.writeln("static PyGetSetDef %s[] = {" % self.cname)
         code_sink.indent()
-        for name, (getter_c_name, setter_c_name) in getsets.iteritems():
+        for name, (getter_c_name, setter_c_name) in getsets.items():
             code_sink.writeln('{')
             code_sink.indent()
             code_sink.writeln('(char*) "%s", /* attribute name */' % name)

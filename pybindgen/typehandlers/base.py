@@ -6,9 +6,12 @@ Base classes for all parameter/return type handlers,
 and base interfaces for wrapper generators.
 """
 
-import codesink
+from pybindgen.typehandlers import codesink
 import warnings
-import ctypeparser
+from pybindgen.typehandlers import ctypeparser
+import sys
+import six
+
 import logging
 logger = logging.getLogger("pybindgen.typehandlers")
 
@@ -192,7 +195,7 @@ class CodeBlock(object):
         ones from predecessor code blocks; Note: cleanup actions are
         executed in reverse order than when they were added.'''
         cleanup = []
-        items = self._cleanup_actions.items()
+        items = list(self._cleanup_actions.items())
         items.sort()
         for dummy, code in items:
             cleanup.append(code)
@@ -862,7 +865,7 @@ class ForwardWrapperBase(object):
                     % (param.ctype,))
 
         if self.deprecated:
-            if isinstance(self.deprecated, basestring):
+            if isinstance(self.deprecated, str):
                 msg = self.deprecated
             else:
                 msg = "Deprecated"
@@ -1061,7 +1064,7 @@ class TypeHandler(object):
                         self.type_traits.make_target_const()
                     else:
                         self.type_traits.make_const()
-            elif isinstance(ctype, basestring):
+            elif isinstance(ctype, str):
                 if is_const:
                     warnings.warn("is_const is deprecated, put a 'const' in the C type instead.", DeprecationWarning)
                     self.type_traits = ctypeparser.TypeTraits('const %s' % ctype)
@@ -1093,7 +1096,23 @@ class TypeHandler(object):
         self.untransformed_ctype = untransformed_ctype
 
 
-class ReturnValue(TypeHandler):
+
+class ReturnValueMeta(type):
+    "Metaclass for automatically registering parameter type handlers"
+    def __init__(mcs, name, bases, dict_):
+        "metaclass __init__"
+        type.__init__(mcs, name, bases, dict_)
+        if __debug__:
+            try:
+                iter(mcs.CTYPES)
+            except (TypeError, AttributeError):
+                sys.stderr.write("ERROR: missing CTYPES on class %s.%s\n" % (mcs.__module__, mcs.__name__))
+                
+        for ctype in mcs.CTYPES:
+            return_type_matcher.register(ctype, mcs)
+
+
+class ReturnValue(TypeHandler, metaclass=ReturnValueMeta):
     '''Abstract base class for all classes dedicated to handle
     specific return value types'''
 
@@ -1104,19 +1123,6 @@ class ReturnValue(TypeHandler):
     SUPPORTS_TRANSFORMATIONS = False
     
     REQUIRES_ASSIGNMENT_CONSTRUCTOR = False
-
-    class __metaclass__(type):
-        "Metaclass for automatically registering parameter type handlers"
-        def __init__(mcs, name, bases, dict_):
-            "metaclass __init__"
-            type.__init__(mcs, name, bases, dict_)
-            if __debug__:
-                try:
-                    iter(mcs.CTYPES)
-                except TypeError:
-                    print "ERROR: missing CTYPES on class ", mcs
-            for ctype in mcs.CTYPES:
-                return_type_matcher.register(ctype, mcs)
 
     #@classmethod
     def new(cls, *args, **kwargs):
@@ -1136,7 +1142,8 @@ class ReturnValue(TypeHandler):
                 args = tuple(args)
                 try:
                     return type_handler_class(*args, **kwargs)
-                except TypeError, ex:
+                except TypeError:
+                    ex = sys.exc_info()[1]
                     warnings.warn("Exception %r in type handler %s constructor" % (str(ex), type_handler_class))
                     raise
             else:
@@ -1189,7 +1196,21 @@ class PointerReturnValue(ReturnValue):
 PointerReturnValue.CTYPES = NotImplemented
 
 
-class Parameter(TypeHandler):
+class ParameterMeta(type):
+    "Metaclass for automatically registering parameter type handlers"
+    def __init__(mcs, name, bases, dict_):
+        "metaclass __init__"
+        type.__init__(mcs, name, bases, dict_)
+        if __debug__:
+            try:
+                iter(mcs.CTYPES)
+            except TypeError:
+                sys.stderr.write("ERROR: missing CTYPES on class %s\n" % mcs)
+        for ctype in mcs.CTYPES:
+            param_type_matcher.register(ctype, mcs)
+
+
+class Parameter(TypeHandler, metaclass=ParameterMeta):
     '''Abstract base class for all classes dedicated to handle specific parameter types'''
 
     ## bit mask values
@@ -1215,18 +1236,6 @@ class Parameter(TypeHandler):
             return "(invalid %r)" % value
     _direction_value_to_name = classmethod(_direction_value_to_name)
 
-    class __metaclass__(type):
-        "Metaclass for automatically registering parameter type handlers"
-        def __init__(mcs, name, bases, dict_):
-            "metaclass __init__"
-            type.__init__(mcs, name, bases, dict_)
-            if __debug__:
-                try:
-                    iter(mcs.CTYPES)
-                except TypeError:
-                    print "ERROR: missing CTYPES on class ", mcs
-            for ctype in mcs.CTYPES:
-                param_type_matcher.register(ctype, mcs)
 
     #@classmethod
     def new(cls, *args, **kwargs):
@@ -1247,7 +1256,8 @@ class Parameter(TypeHandler):
                 args = tuple(args)
                 try:
                     return type_handler_class(*args, **kwargs)
-                except TypeError, ex:
+                except TypeError:
+                    _, ex, _ = sys.exc_info()
                     warnings.warn("Exception %r in type handler %s constructor" % (str(ex), type_handler_class))
                     raise
             else:
@@ -1409,7 +1419,7 @@ class TypeMatcher(object):
     
     def items(self):
         "Returns an iterator over all registered items"
-        return self._types.iteritems()
+        return iter(self._types.items())
 
     def add_type_alias(self, from_type_name, to_type_name):
         from_type_name_normalized = str(ctypeparser.TypeTraits(from_type_name).ctype)

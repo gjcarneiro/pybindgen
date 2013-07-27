@@ -42,7 +42,7 @@ class CodeSink(object):
     def _format_code(self, code):
         """Utility method for subclasses to use for formatting code
         (splits lines and indents them)"""
-        assert isinstance(code, basestring)
+        assert isinstance(code, str)
         l = []
         for line in code.split('\n'):
             l.append(' '*self.indent_level + line)

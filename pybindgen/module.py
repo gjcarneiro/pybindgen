@@ -45,15 +45,15 @@ to create sub-modules for wrapping nested namespaces.  For instance::
 
 """
 
-from function import Function, OverloadedFunction, CustomFunctionWrapper
-from typehandlers.base import CodeBlock, DeclarationsScope, ReturnValue, TypeHandler
-from typehandlers.codesink import MemoryCodeSink, CodeSink, FileCodeSink, NullCodeSink
-from cppclass import CppClass
-from cppexception import CppException
-from enum import Enum
-from container import Container
-from converter_functions import PythonToCConverter, CToPythonConverter
-import utils
+from pybindgen.function import Function, OverloadedFunction, CustomFunctionWrapper
+from pybindgen.typehandlers.base import CodeBlock, DeclarationsScope, ReturnValue, TypeHandler
+from pybindgen.typehandlers.codesink import MemoryCodeSink, CodeSink, FileCodeSink, NullCodeSink
+from pybindgen.cppclass import CppClass
+from pybindgen.cppexception import CppException
+from pybindgen.enum import Enum
+from pybindgen.container import Container
+from pybindgen.converter_functions import PythonToCConverter, CToPythonConverter
+from pybindgen import utils
 import warnings
 import traceback
 
@@ -726,7 +726,7 @@ class ModuleBase(dict):
         if self.functions:
             main_sink.writeln('/* --- module functions --- */')
             main_sink.writeln()
-            for func_name, overload in self.functions.iteritems():
+            for func_name, overload in self.functions.items():
                 sink, header_sink = out.get_code_sink_for_wrapper(overload)
                 sink.writeln()
                 try:
@@ -838,17 +838,21 @@ class ModuleBase(dict):
             main_sink.writeln('''
 #if PY_VERSION_HEX >= 0x03000000
     #define MOD_ERROR NULL
-    #define MOD_INIT(name) PyInit_##name(void)
+    #define MOD_INIT(name) PyObject* PyInit_##name(void)
     #define MOD_RETURN(val) val
 #else
     #define MOD_ERROR
-    #define MOD_INIT(name) init##name(void)
+    #define MOD_INIT(name) void init##name(void)
     #define MOD_RETURN(val)
 #endif
-PyMODINIT_FUNC
+#if defined(__cplusplus)
+extern "C"
+#endif
 #if defined(__GNUC__) && __GNUC__ >= 4
 __attribute__ ((visibility("default")))
-#endif''')
+#endif
+
+''')
         else:
             main_sink.writeln("static PyObject *")
         if self.parent is None:
@@ -913,7 +917,7 @@ class Module(ModuleBase):
         be imported into a foo module, to avoid making all types
         docstrings contain _foo.Xpto instead of foo.Xpto.
         """
-        if isinstance(out, file):
+        if hasattr(out, 'write'):
             out = FileCodeSink(out)
         if isinstance(out, CodeSink):
             sink_manager = _MonolithicSinkManager(out)

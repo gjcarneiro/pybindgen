@@ -6,7 +6,7 @@ def options(opt):
 def build(bld):
     bld.add_subdirs('a b c d e f g h')
     bld.add_subdirs('callback')
-    bld.add_subdirs('buffer')
+    #bld.add_subdirs('buffer') # doesn't work on python3
     if bld.env['ENABLE_BOOST_SHARED_PTR']:
         bld.add_subdirs('boost_shared_ptr')
 

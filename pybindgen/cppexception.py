@@ -1,7 +1,7 @@
 
 
-import settings
-import utils
+from pybindgen import settings
+from pybindgen import utils
 
 
 class CppException(object):

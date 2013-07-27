@@ -2,10 +2,10 @@
 Add container iteration powers to wrapped C++ classes
 """
 
-from typehandlers.base import ForwardWrapperBase
-from typehandlers import codesink
-from pytypeobject import PyTypeObject
-import utils
+from pybindgen.typehandlers.base import ForwardWrapperBase
+from pybindgen.typehandlers import codesink
+from pybindgen.pytypeobject import PyTypeObject
+from pybindgen import utils
 
 
 class IterNextWrapper(ForwardWrapperBase):

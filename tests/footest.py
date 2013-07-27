@@ -721,7 +721,7 @@ class TestFoo(unittest.TestCase):
         self.assertRaises(TypeError, foo.AbstractXpto)
         try:
             foo.AbstractXptoImpl()
-        except TypeError, ex:
+        except TypeError as ex:
             self.fail(str(ex))
 
     def test_parameter_default_value(self):
@@ -772,7 +772,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(udpsock.Bind(), 0)
         try:
             self.assertEqual(udpsock.Bind(123), 123)
-        except TypeError, ex:
+        except TypeError as ex:
             pass
         else:
             self.fail("UdpSocket.Bind(int) was not supposed to work")
@@ -1197,7 +1197,7 @@ class TestFoo(unittest.TestCase):
         self.assertRaises(foo.exception, foo.my_inverse_func2, 0)
         try:
             foo.my_inverse_func2(0)
-        except foo.exception, ex:
+        except foo.exception as ex:
             msg = str(ex)
         self.assertEqual(msg, "value must be != 0")
 
@@ -1208,7 +1208,7 @@ class TestFoo(unittest.TestCase):
         self.assertRaises(foo.exception, c.my_inverse_method2, 0)
         try:
             c.my_inverse_method2(0)
-        except foo.exception, ex:
+        except foo.exception as ex:
             msg = str(ex)
         self.assertEqual(msg, "value must be != 0")
 
@@ -1218,7 +1218,7 @@ class TestFoo(unittest.TestCase):
         self.assertRaises(foo.exception, foo.my_inverse_func2, 0)
         try:
             foo.my_inverse_func3(0)
-        except foo.exception, ex:
+        except foo.exception as ex:
             msg = str(ex)
         self.assertEqual(msg, "value must be != 0")
 
@@ -1229,7 +1229,7 @@ class TestFoo(unittest.TestCase):
         self.assertRaises(foo.exception, c.my_inverse_method3, 0)
         try:
             c.my_inverse_method3(0)
-        except foo.exception, ex:
+        except foo.exception as ex:
             msg = str(ex)
         self.assertEqual(msg, "value must be != 0")
 

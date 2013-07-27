@@ -6,7 +6,7 @@ import struct
 assert struct.calcsize('i') == 4 # assumption is made that sizeof(int) == 4 for all platforms pybindgen runs on
 
 
-from base import ReturnValue, Parameter, PointerParameter, PointerReturnValue, \
+from pybindgen.typehandlers.base import ReturnValue, Parameter, PointerParameter, PointerReturnValue, \
      ReverseWrapperBase, ForwardWrapperBase, TypeConfigurationError, NotSupportedError
 
 

@@ -40,11 +40,10 @@ def type_blacklisted(type_name):
 def test():
     code_out = codesink.FileCodeSink(sys.stdout)
     pybindgen.write_preamble(code_out)
-    print
-    print "#include <string>"
-    print "#include <stdint.h>"
-    print
-
+    sys.stdout.write("""
+#include <string>
+#include <stdint.h>
+""")
     ## Declare a dummy class
     sys.stdout.write('''
 class Foo
@@ -73,7 +72,7 @@ public:
     wrapper_number = 0
 
     ## test return type handlers of reverse wrappers
-    for return_type, return_handler in typehandlers.base.return_type_matcher.items():
+    for return_type, return_handler in list(typehandlers.base.return_type_matcher.items()):
         if type_blacklisted(return_type):
             continue
         if os.name == 'nt':
@@ -90,11 +89,10 @@ public:
                                      '_test_wrapper_number_%i' % (wrapper_number,),
                                      ['static'])
                 except NotImplementedError:
-                    print >> sys.stderr, \
-                        ("ReverseWrapper %s(void) (caller_owns_return=%r)"
-                         " could not be generated: not implemented"
-                         % (retval.ctype, caller_owns_return))
-                print
+                    sys.stderr.write("ReverseWrapper %s(void) (caller_owns_return=%r)"
+                                     " could not be generated: not implemented\n"
+                                     % (retval.ctype, caller_owns_return))
+                sys.stdout.write("\n")
         else:
             retval = return_handler(return_type)
             try:
@@ -107,13 +105,13 @@ public:
                                  '_test_wrapper_number_%i' % (wrapper_number,),
                                  ['static'])
             except NotImplementedError:
-                print >> sys.stderr, ("ReverseWrapper %s(void) could not be generated: not implemented"
-                                      % (retval.ctype,))
-            print
+                sys.stderr.write("ReverseWrapper %s(void) could not be generated: not implemented\n"
+                                 % (retval.ctype,))
+            sys.stdout.write("\n")
 
 
     ## test parameter type handlers of reverse wrappers
-    for param_type, param_handler in typehandlers.base.param_type_matcher.items():
+    for param_type, param_handler in list(typehandlers.base.param_type_matcher.items()):
         if type_blacklisted(param_type):
             continue
         if os.name == 'nt':
@@ -136,9 +134,9 @@ public:
                                          '_test_wrapper_number_%i' % (wrapper_number,),
                                          ['static'])
                     except NotImplementedError:
-                        print >> sys.stderr, ("ReverseWrapper void(%s) could not be generated: not implemented"
-                                              % (param.ctype))
-                    print
+                        sys.stderr.write("ReverseWrapper void(%s) could not be generated: not implemented"
+                                         % (param.ctype))
+                    sys.stdout.write("\n")
 
                 if issubclass(param_handler, (cppclass.CppClassPtrParameter,
                                               typehandlers.pyobjecttype.PyObjectParam)):
@@ -146,9 +144,9 @@ public:
                         try:
                             param = param_handler(param_type, param_name, transfer_ownership=transfer_ownership)
                         except TypeError:
-                            print >> sys.stderr, "ERROR -----> param_handler(param_type=%r, "\
-                                "transfer_ownership=%r, is_const=%r)"\
-                                % (param_type, transfer_ownership, is_const)
+                            sys.stderr.write("ERROR -----> param_handler(param_type=%r, "
+                                             "transfer_ownership=%r, is_const=%r)\n"
+                                             % (param_type, transfer_ownership, is_const))
                         wrapper_number += 1
                         try_wrapper(param, wrapper_number)
                 else:
@@ -159,7 +157,7 @@ public:
     
     ## test generic forward wrappers, and module
 
-    for return_type, return_handler in typehandlers.base.return_type_matcher.items():
+    for return_type, return_handler in list(typehandlers.base.return_type_matcher.items()):
         if type_blacklisted(return_type):
             continue
         if os.name == 'nt':
@@ -168,8 +166,7 @@ public:
         wrapper_number += 1
         function_name = 'foo_function_%i' % (wrapper_number,)
         ## declare a fake prototype
-        print "%s %s(void);" % (return_type, function_name)
-        print
+        sys.stdout.write("%s %s(void);\n\n" % (return_type, function_name))
 
         if issubclass(return_handler, (cppclass.CppClassPtrReturnValue,
                                        typehandlers.pyobjecttype.PyObjectReturnValue)):
@@ -179,7 +176,7 @@ public:
 
         module.add_function(function_name, retval, [])
     
-    for param_type, param_handler in typehandlers.base.param_type_matcher.items():
+    for param_type, param_handler in list(typehandlers.base.param_type_matcher.items()):
         if type_blacklisted(param_type):
             continue
         if os.name == 'nt':
@@ -212,22 +209,20 @@ public:
                         try:
                             param = param_handler(param_type, name, transfer_ownership=transfer_ownership)
                         except TypeError:
-                            print >> sys.stderr, "ERROR -----> param_handler(param_type=%r, "\
-                                "name=%r, transfer_ownership=%r, is_const=%r)"\
-                                % (param_type, name, transfer_ownership, is_const)
+                            sys.stderr.write("ERROR -----> param_handler(param_type=%r, "
+                                             "name=%r, transfer_ownership=%r, is_const=%r)\n"
+                                             % (param_type, name, transfer_ownership, is_const))
                         wrapper_number += 1
                         function_name = 'foo_function_%i' % (wrapper_number,)
                         ## declare a fake prototype
-                        print "void %s(%s %s);" % (function_name, param_type_with_const, name)
-                        print
+                        sys.stdout.write("void %s(%s %s);\n\n" % (function_name, param_type_with_const, name))
                         module.add_function(function_name, ReturnValue.new('void'), [param])
                 else:
                     param = param_handler(param_type, param_name, direction)
                     wrapper_number += 1
                     function_name = 'foo_function_%i' % (wrapper_number,)
                     ## declare a fake prototype
-                    print "void %s(%s);" % (function_name, param_type_with_const)
-                    print
+                    sys.stdout.write("void %s(%s);\n\n" % (function_name, param_type_with_const))
                     module.add_function(function_name, ReturnValue.new('void'), [param])
 
     module.generate(code_out)

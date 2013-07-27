@@ -4,14 +4,14 @@ Wrap C++ STL containers
 
 #import warnings
 
-from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
+from .typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
     Parameter, ReturnValue, param_type_matcher, return_type_matcher, \
     TypeConfigurationError, NotSupportedError
 
-from typehandlers import codesink
-from pytypeobject import PyTypeObject
-import settings
-import utils
+from pybindgen.typehandlers import codesink
+from pybindgen.pytypeobject import PyTypeObject
+from . import settings
+from . import utils
 
 
 class IterNextWrapper(ForwardWrapperBase):

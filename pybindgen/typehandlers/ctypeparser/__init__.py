@@ -1,4 +1,4 @@
-import tokenizer
+from pybindgen.typehandlers.ctypeparser import tokenizer
 
 
 MODIFIERS = ['const', 'volatile'] # XXX: are there others?

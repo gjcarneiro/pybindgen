@@ -10,14 +10,14 @@ import re
 import pygccxml
 from pygccxml import parser
 from pygccxml import declarations
-from module import Module
-from typehandlers.codesink import FileCodeSink, CodeSink, NullCodeSink
-import typehandlers.base
-from typehandlers.base import ctypeparser
-from typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
+from .module import Module
+from .typehandlers.codesink import FileCodeSink, CodeSink, NullCodeSink
+from . import typehandlers.base
+from .typehandlers.base import ctypeparser
+from .typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
 from pygccxml.declarations.enumeration import enumeration_t
-from cppclass import CppClass, ReferenceCountingMethodsPolicy, FreeFunctionPolicy, ReferenceCountingFunctionsPolicy
-from cppexception import CppException
+from .cppclass import CppClass, ReferenceCountingMethodsPolicy, FreeFunctionPolicy, ReferenceCountingFunctionsPolicy
+from .cppexception import CppException
 from pygccxml.declarations import type_traits
 from pygccxml.declarations import cpptypes
 from pygccxml.declarations import calldef
@@ -25,12 +25,13 @@ from pygccxml.declarations import templates
 from pygccxml.declarations import container_traits
 from pygccxml.declarations.declaration import declaration_t
 from pygccxml.declarations.class_declaration import class_declaration_t, class_t
-import settings
-import utils
+from . import settings
+from . import utils
 
 #from pygccxml.declarations.calldef import \
 #    destructor_t, constructor_t, member_function_t
 from pygccxml.declarations.variable import variable_t
+import collections
 
 
 ###
@@ -133,7 +134,7 @@ class ErrorHandler(settings.ErrorHandler):
             definition = None
 
         if definition is None:
-            print >> sys.stderr, "exception %r in wrapper %s" % (exception, wrapper)
+            print("exception %r in wrapper %s" % (exception, wrapper), file=sys.stderr)
         else:
             warnings.warn_explicit("exception %r in wrapper for %s"
                                    % (exception, definition),
@@ -155,7 +156,7 @@ def normalize_class_name(class_name, module_namespace):
 
 def _pygen_kwargs(kwargs):
     l = []
-    for key, val in kwargs.iteritems():
+    for key, val in kwargs.items():
         if isinstance(val, (CppClass, CppException)):
             l.append("%s=root_module[%r]" % (key, utils.ascii(val.full_name)))
         else:
@@ -256,7 +257,7 @@ class GccXmlTypeRegistry(object):
         
     def lookup_return(self, type_info, annotations={}):
         kwargs = {}
-        for name, value in annotations.iteritems():
+        for name, value in annotations.items():
             if name == 'caller_owns_return':
                 kwargs['caller_owns_return'] = annotations_scanner.parse_boolean(value)
             elif name == 'reference_existing_object':
@@ -274,7 +275,7 @@ class GccXmlTypeRegistry(object):
 
     def lookup_parameter(self, type_info, param_name, annotations={}, default_value=None):
         kwargs = {}
-        for name, value in annotations.iteritems():
+        for name, value in annotations.items():
             if name == 'transfer_ownership':
                 kwargs['transfer_ownership'] = annotations_scanner.parse_boolean(value)
             elif name == 'direction':
@@ -381,7 +382,7 @@ class AnnotationsScanner(object):
         return global_annotations, parameter_annotations
 
     def parse_boolean(self, value):
-        if isinstance(value, (int, long)):
+        if isinstance(value, int):
             return bool(value)
         if value.lower() in ['false', 'off']:
             return False
@@ -391,7 +392,7 @@ class AnnotationsScanner(object):
             raise ValueError("bad boolean value %r" % value)
 
     def warn_unused_annotations(self):
-        for file_name, lines in self.files.iteritems():
+        for file_name, lines in self.files.items():
             try:
                 used_annotations = self.used_annotations[file_name]
             except KeyError:
@@ -538,7 +539,7 @@ class ModuleParser(object):
                                     methods are denoted by a annotation for a
                                     parameter named 'return'.
         """
-        if not callable(hook):
+        if not isinstance(hook, collections.Callable):
             raise TypeError("hook must be callable")
         self._pre_scan_hooks.append(hook)
 
@@ -557,7 +558,7 @@ class ModuleParser(object):
            - pybindgen_wrapper -- a pybindgen object that generates a wrapper,
                                 such as CppClass, Function, or CppMethod.
         """
-        if not callable(hook):
+        if not isinstance(hook, collections.Callable):
             raise TypeError("hook must be callable")
         self._post_scan_hooks.append(hook)
 
@@ -866,7 +867,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 
     def _apply_class_annotations(self, cls, annotations, kwargs):
         is_exception = False
-        for name, value in annotations.iteritems():
+        for name, value in annotations.items():
             if name == 'allow_subclassing':
                 kwargs.setdefault('allow_subclassing', annotations_scanner.parse_boolean(value))
             elif name == 'is_singleton':
@@ -1068,13 +1069,13 @@ pybindgen.settings.error_handler = ErrorHandler()
                                      % (cls, count, cls._pybindgen_postpone_reason, reason))
             cls._pybindgen_postpone_reason = reason
             if DEBUG:
-                print >> sys.stderr, ">>> class %s is being postponed (%s)" % (str(cls), reason)
+                print(">>> class %s is being postponed (%s)" % (str(cls), reason), file=sys.stderr)
             unregistered_classes.append(cls)
 
         while unregistered_classes:
             cls = unregistered_classes.pop(0)
             if DEBUG:
-                print >> sys.stderr, ">>> looking at class ", str(cls)
+                print(">>> looking at class ", str(cls), file=sys.stderr)
             typedef = None
 
             kwargs = {}
@@ -1523,7 +1524,7 @@ pybindgen.settings.error_handler = ErrorHandler()
         ## convert the return value
         try:
             return_type_elem = ReturnValue.new(*elem_type_spec[0], **elem_type_spec[1])
-        except (TypeLookupError, TypeConfigurationError), ex:
+        except (TypeLookupError, TypeConfigurationError) as ex:
             warnings.warn("Return value '%s' error (used in %s): %r"
                           % (definition.partial_decl_string, definition, ex),
                           WrapperWarning)
@@ -1532,7 +1533,7 @@ pybindgen.settings.error_handler = ErrorHandler()
         if key_type is not None:
             try:
                 return_type_key = ReturnValue.new(*key_type_spec[0], **key_type_spec[1])
-            except (TypeLookupError, TypeConfigurationError), ex:
+            except (TypeLookupError, TypeConfigurationError) as ex:
                 warnings.warn("Return value '%s' error (used in %s): %r"
                               % (definition.partial_decl_string, definition, ex),
                               WrapperWarning)
@@ -1615,7 +1616,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 
                 try:
                     param = Parameter.new(*arg_spec[0], **arg_spec[1])
-                except (TypeLookupError, TypeConfigurationError), ex:
+                except (TypeLookupError, TypeConfigurationError) as ex:
                     warnings.warn_explicit("Parameter '%s' error (used in %s): %r"
                                            % (argument_types[1].partial_decl_string, op, ex),
                                            WrapperWarning, op.location.file_name, op.location.line)
@@ -1721,7 +1722,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 
                 kwargs = {} # kwargs passed into the add_method call
 
-                for key, val in global_annotations.iteritems():
+                for key, val in global_annotations.items():
                     if key == 'template_instance_names' \
                             and templates.is_instantiation(member.demangled_name):
                         pass
@@ -1820,7 +1821,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 ## --- realize the return type and parameters
                 try:
                     return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
-                except (TypeLookupError, TypeConfigurationError), ex:
+                except (TypeLookupError, TypeConfigurationError) as ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                            % (member.return_type.partial_decl_string, member, ex),
                                            WrapperWarning, member.location.file_name, member.location.line)
@@ -1835,7 +1836,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 for arg in argument_specs:
                     try:
                         arguments.append(Parameter.new(*arg[0], **arg[1]))
-                    except (TypeLookupError, TypeConfigurationError), ex:
+                    except (TypeLookupError, TypeConfigurationError) as ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                                % (arg[0][0], arg[0][1], member, ex),
                                                WrapperWarning, member.location.file_name, member.location.line)
@@ -1852,7 +1853,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 try:
                     method_wrapper = class_wrapper.add_method(member.name, return_type, arguments, **kwargs)
                     method_wrapper.gccxml_definition = member
-                except NotSupportedError, ex:
+                except NotSupportedError as ex:
                     if pure_virtual:
                         class_wrapper.set_cannot_be_constructed("pure virtual method %r not wrapped" % member.name)
                         class_wrapper.set_helper_class_disabled(True)
@@ -1863,7 +1864,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     warnings.warn_explicit("Error adding method %s: %r"
                                            % (member, ex),
                                            WrapperWarning, member.location.file_name, member.location.line)
-                except ValueError, ex:
+                except ValueError as ex:
                     warnings.warn_explicit("Error adding method %s: %r"
                                            % (member, ex),
                                            WrapperWarning, member.location.file_name, member.location.line)
@@ -1913,7 +1914,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 for a, kw in argument_specs:
                     try:
                         arguments.append(Parameter.new(*a, **kw))
-                    except (TypeLookupError, TypeConfigurationError), ex:
+                    except (TypeLookupError, TypeConfigurationError) as ex:
                         warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                                % (arg.type.partial_decl_string, arg.name, member, ex),
                                                WrapperWarning, member.location.file_name, member.location.line)
@@ -1971,7 +1972,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 ## convert the return value
                 try:
                     return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
-                except (TypeLookupError, TypeConfigurationError), ex:
+                except (TypeLookupError, TypeConfigurationError) as ex:
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                            % (member.type.partial_decl_string, member, ex),
                                            WrapperWarning, member.location.file_name, member.location.line)
@@ -2094,7 +2095,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             ignore = False
             kwargs = {}
 
-            for name, value in global_annotations.iteritems():
+            for name, value in global_annotations.items():
                 if name == 'as_method':
                     as_method = value
                 elif name == 'of_class':
@@ -2129,12 +2130,12 @@ pybindgen.settings.error_handler = ErrorHandler()
             return_type_spec = self.type_registry.lookup_return(fun.return_type, return_annotations)
             try:
                 return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
-            except (TypeLookupError, TypeConfigurationError), ex:
+            except (TypeLookupError, TypeConfigurationError) as ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                        % (fun.return_type.partial_decl_string, fun, ex),
                                        WrapperWarning, fun.location.file_name, fun.location.line)
                 params_ok = False
-            except TypeError, ex:
+            except TypeError as ex:
                 warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                        % (fun.return_type.partial_decl_string, fun, ex),
                                        WrapperWarning, fun.location.file_name, fun.location.line)
@@ -2153,13 +2154,13 @@ pybindgen.settings.error_handler = ErrorHandler()
                 argument_specs.append(spec)
                 try:
                     arguments.append(Parameter.new(*spec[0], **spec[1]))
-                except (TypeLookupError, TypeConfigurationError), ex:
+                except (TypeLookupError, TypeConfigurationError) as ex:
                     warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                            % (arg.type.partial_decl_string, arg.name, fun, ex),
                                            WrapperWarning, fun.location.file_name, fun.location.line)
 
                     params_ok = False
-                except TypeError, ex:
+                except TypeError as ex:
                     warnings.warn_explicit("Parameter '%s %s' error (used in %s): %r"
                                            % (arg.type.partial_decl_string, arg.name, fun, ex),
                                            WrapperWarning, fun.location.file_name, fun.location.line)

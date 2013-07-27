@@ -45,6 +45,6 @@ if __name__ == '__main__':
     except ImportError:
         my_module_gen()
     else:
-        print >> sys.stderr, "** running under profiler"
+        print("** running under profiler", file=sys.stderr)
         profile.run('my_module_gen()', 'foomodulegen3.pstat')
 

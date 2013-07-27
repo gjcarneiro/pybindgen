@@ -54,7 +54,7 @@ def my_module_gen(out_file):
             super(MyErrorHandler, self).__init__()
             self.num_errors = 0
         def handle_error(self, wrapper, exception, traceback_):
-            print >> sys.stderr, "exception %s in wrapper %s" % (exception, wrapper)
+            print("exception %s in wrapper %s" % (exception, wrapper), file=sys.stderr)
             self.num_errors += 1
             if 0: # verbose?
                 import traceback
@@ -74,7 +74,7 @@ if __name__ == '__main__':
         except ImportError:
             my_module_gen(sys.stdout)
         else:
-            print >> sys.stderr, "** running under profiler"
+            print("** running under profiler", file=sys.stderr)
             profile.run('my_module_gen(sys.stdout)', 'foomodulegen.pstat')
     else:
         my_module_gen(sys.stdout)

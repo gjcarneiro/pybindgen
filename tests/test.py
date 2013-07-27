@@ -7,6 +7,7 @@ from pybindgen import module, cppclass, overloading, utils
 import unittest
 import doctest
 import re
+import sys
 
 
 class SmartPointerTransformation(typehandlers.TypeTransformation):
@@ -63,17 +64,19 @@ class ParamLookupTests(unittest.TestCase):
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    for mod in [
-        typehandlers,
-        codesink,
-        module,
-        cppclass,
-        overloading,
-        #utils,
-        stringtype,
-        ctypeparser,
-        ]:
-        suite.addTest(doctest.DocTestSuite(mod))
+
+    if sys.version_info[0] < 3: # the doctests only work in Python 2
+        for mod in [
+            typehandlers,
+            codesink,
+            module,
+            cppclass,
+            overloading,
+            #utils,
+            stringtype,
+            ctypeparser,
+            ]:
+            suite.addTest(doctest.DocTestSuite(mod))
 
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(ParamLookupTests))
     runner = unittest.TextTestRunner()
