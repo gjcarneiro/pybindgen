@@ -445,42 +445,6 @@ class Int8Return(ReturnValue):
         wrapper.build_params.add_parameter("i", [self.value], prepend=True)
 
 
-class UInt8PtrReturn(PointerReturnValue):
-
-    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
-                  Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
-    CTYPES = ['uint8_t*','unsigned char *']
-
-    def __init__(self, ctype,
-        is_const=None, default_value=None, transfer_ownership=None,
-        array_length=None):
-        self.array_length = array_length
-        if is_const:
-            direction = Parameter.DIRECTION_IN
-        
-        super(UInt8PtrReturn, self).__init__(ctype, is_const)
-    
-    def convert_python_to_c(self, wrapper):
-        name = wrapper.declarations.declare_variable('uint8_t*',"tmp")
-        if self.array_length is None:
-            wrapper.parse_params.add_parameter("B", [name])
-        else:
-            wrapper.parse_params.add_parameter(
-                '['+'B'*self.array_length+']',
-                ['%s+%d'%(self.value,i) for i in range(self.array_length)],
-                prepend=True
-            )
-
-    def convert_c_to_python(self, wrapper):
-        if self.array_length is None:
-            wrapper.build_params.add_parameter("B", [self.value], self.name)
-        else:
-            wrapper.build_params.add_parameter(
-                '['+'B'*self.array_length+']',
-                ['%s[%d]'%(self.value,i) for i in range(self.array_length)],
-                prepend=True
-                )
-
 
 
 class UnsignedLongLongParam(Parameter):
