@@ -6,7 +6,7 @@ import struct
 assert struct.calcsize('i') == 4 # assumption is made that sizeof(int) == 4 for all platforms pybindgen runs on
 
 
-from pybindgen.typehandlers.base import ReturnValue, Parameter, PointerParameter, PointerReturnValue, \
+from .base import ReturnValue, Parameter, PointerParameter, PointerReturnValue, \
      ReverseWrapperBase, ForwardWrapperBase, TypeConfigurationError, NotSupportedError
 
 
@@ -445,6 +445,43 @@ class Int8Return(ReturnValue):
         wrapper.build_params.add_parameter("i", [self.value], prepend=True)
 
 
+class UInt8PtrReturn(PointerReturnValue):
+
+    DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
+                  Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
+    CTYPES = ['uint8_t*','unsigned char *']
+
+    def __init__(self, ctype,
+        is_const=None, default_value=None, transfer_ownership=None,
+        array_length=None):
+        self.array_length = array_length
+        if is_const:
+            direction = Parameter.DIRECTION_IN
+        
+        super(UInt8PtrReturn, self).__init__(ctype, is_const)
+    
+    def convert_python_to_c(self, wrapper):
+        name = wrapper.declarations.declare_variable('uint8_t*',"tmp")
+        if self.array_length is None:
+            wrapper.parse_params.add_parameter("B", [name])
+        else:
+            wrapper.parse_params.add_parameter(
+                '['+'B'*self.array_length+']',
+                ['%s+%d'%(self.value,i) for i in range(self.array_length)],
+                prepend=True
+            )
+
+    def convert_c_to_python(self, wrapper):
+        if self.array_length is None:
+            wrapper.build_params.add_parameter("B", [self.value], self.name)
+        else:
+            wrapper.build_params.add_parameter(
+                '['+'B'*self.array_length+']',
+                ['%s[%d]'%(self.value,i) for i in range(self.array_length)],
+                prepend=True
+                )
+
+
 
 class UnsignedLongLongParam(Parameter):
 
@@ -724,7 +761,7 @@ class UnsignedInt16PtrParam(PointerParameter):
             wrapper.parse_params.add_parameter('H', [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
-        name = wrapper.declarations.declare_variable(str(self.type_traits.target), self.name)
+        name = wrapper.declarations.declare_variable(str(self.type_traits.target), self.name, self.default_value)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
             wrapper.parse_params.add_parameter('H', ['&'+name], self.name)
