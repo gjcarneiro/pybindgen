@@ -78,6 +78,8 @@ public:
         if os.name == 'nt':
             if stdint_rx.search(return_type):
                 continue # win32 does not support the u?int\d+_t types (defined in <stdint.h>)
+
+        code_out.writeln("/* Test %s (%s) return type  */" % (return_type, return_handler))
         if issubclass(return_handler, (cppclass.CppClassPtrReturnValue,
                                        typehandlers.pyobjecttype.PyObjectReturnValue)):
             for caller_owns_return in True, False:
@@ -99,6 +101,10 @@ public:
                 wrapper = MyReverseWrapper(retval, [])
             except NotSupportedError:
                 continue
+            except NotImplementedError:
+                sys.stderr.write("ReverseWrapper %s(void) could not be generated: not implemented\n"
+                                 % (retval.ctype))
+
             wrapper_number += 1
             try:
                 wrapper.generate(code_out,
@@ -128,6 +134,7 @@ public:
                 def try_wrapper(param, wrapper_number):
                     if 'const' in param.ctype and direction&Parameter.DIRECTION_OUT:
                         return
+                    code_out.writeln("/* Test %s (%s) param type  */" % (param_type, param_handler))
                     wrapper = MyReverseWrapper(ReturnValue.new('void'), [param])
                     try:
                         wrapper.generate(code_out,

@@ -259,9 +259,17 @@ static PySequenceMethods %(variable)s = {
     (binaryfunc) %(sq_concat)s,
     (ssizeargfunc) %(sq_repeat)s,
     (ssizeargfunc) %(sq_item)s,
+#if PY_MAJOR_VERSION < 3
     %(sq_slice)s,
+#else
+    NULL,
+#endif
     (ssizeobjargproc) %(sq_ass_item)s,
+#if PY_MAJOR_VERSION < 3
     %(sq_ass_slice)s,
+#else
+    NULL,
+#endif
     (objobjproc) %(sq_contains)s,
     /* Added in release 2.0 */
     (binaryfunc) %(sq_inplace_concat)s,
@@ -375,6 +383,7 @@ static PyObject*
 
         # __getslice__
         "sq_slice" : '''
+#if PY_MAJOR_VERSION < 3
 static PyObject*
 %(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i1, Py_ssize_t py_i2)
 {
@@ -392,7 +401,7 @@ static PyObject*
         return result;
     }
 }
-
+#endif
 ''',
 
         # __setitem__
@@ -409,11 +418,19 @@ static int
     if (result == NULL) {
         PyErr_SetString(PyExc_IndexError, "Unknown error trying to set value in container.");
         return -1;
+#if PY_MAJOR_VERSION >= 3
+    } else if (PyLong_Check(result) == 0) {
+#else
     } else if (PyInt_Check(result) == 0) {
+#endif
         PyErr_SetString(PyExc_IndexError, "Error trying to set value in container -- wrapped method should return integer status.");
         return -1;
     } else {
+#if PY_MAJOR_VERSION >= 3
+        int iresult = int(PyLong_AS_LONG(result));
+#else
         int iresult = int(PyInt_AS_LONG(result));
+#endif
         Py_DECREF(result);
         return iresult;
     }
@@ -423,6 +440,7 @@ static int
 
         # __setslice__
         "sq_ass_slice" : '''
+#if PY_MAJOR_VERSION < 3
 static int
 %(wrapper_name)s (%(py_struct)s *py_self, Py_ssize_t py_i1, Py_ssize_t py_i2, %(py_struct)s *py_vals)
 {
@@ -444,7 +462,7 @@ static int
         return iresult;
     }
 }
-
+#endif
 ''',
 
         # __contains__
@@ -458,12 +476,20 @@ static int
     args = Py_BuildValue("(O)", py_val);
     result = %(method_name)s(py_self, args, NULL);
     Py_DECREF(args);
-    if (result == NULL or PyInt_Check(result) == 0) {
+#if PY_MAJOR_VERSION >= 3
+    if (result == NULL || PyLong_Check(result) == 0) {
+#else
+    if (result == NULL || PyInt_Check(result) == 0) {
+#endif
         PyErr_SetString(PyExc_RuntimeError, "Unknown error in attempting to test __contains__.");
         Py_XDECREF(result);
         return -1;
     } else {
+#if PY_MAJOR_VERSION >= 3
+        int iresult = int(PyLong_AS_LONG(result));
+#else
         int iresult = int(PyInt_AS_LONG(result));
+#endif
         Py_DECREF(result);
         return iresult;
     }

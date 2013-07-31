@@ -308,7 +308,7 @@ class TestFoo(unittest.TestCase):
         ## now get the object back from the C side..
         obj2 = foo.take_some_object()
 
-        self.assert_(obj2 is obj1)
+        self.assertTrue(obj2 is obj1)
         self.assertEqual(obj2.attribute, 123)
         self.assertEqual(obj2.get_prefix(), "xxx")
 
@@ -322,7 +322,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(foo.xpto.some_function(), "hello")
 
     def test_namespaced_class(self):
-        self.assert_(hasattr(foo.xpto, 'SomeClass'))
+        self.assertTrue(hasattr(foo.xpto, 'SomeClass'))
 
     def test_implicit_conversion_method_value(self):
         obj = foo.SomeObject("xxx")
@@ -638,7 +638,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(f.get_datum(), "hello")
 
     def test_nested_enum(self):
-        self.assert_(hasattr(foo.SomeObject, "FOO_TYPE_BBB"))
+        self.assertTrue(hasattr(foo.SomeObject, "FOO_TYPE_BBB"))
 
     def test_private_virtual(self):
         class Class(foo.AbstractBaseClass2):
@@ -718,10 +718,10 @@ class TestFoo(unittest.TestCase):
 
     def test_instance_creation_function(self):
         f = foo.Foo()
-        self.assert_(f.is_initialized())
+        self.assertTrue(f.is_initialized())
 
         b = foo.Bar()
-        self.assert_(b.is_initialized())
+        self.assertTrue(b.is_initialized())
 
     def test_pure_virtual(self):
         self.assertRaises(TypeError, foo.AbstractXpto)
@@ -973,7 +973,7 @@ class TestFoo(unittest.TestCase):
         z1 = obj.get_internal_zbr()
         z2 = obj.get_internal_zbr()
 
-        self.assert_(z1 is z2)
+        self.assertTrue(z1 is z2)
 
         del obj, z1, z2
 
@@ -996,7 +996,7 @@ class TestFoo(unittest.TestCase):
         
         z1 = obj.get_zbr()
         z2 = obj.get_zbr()
-        self.assert_(z1 is z2)
+        self.assertTrue(z1 is z2)
         del obj, z1, z2
 
         while gc.collect():
@@ -1018,7 +1018,7 @@ class TestFoo(unittest.TestCase):
         
         z1 = obj.peek_zbr()
         z2 = obj.peek_zbr()
-        self.assert_(z1 is z2)
+        self.assertTrue(z1 is z2)
         del obj, z1, z2
 
         while gc.collect():
@@ -1064,16 +1064,16 @@ class TestFoo(unittest.TestCase):
         t3.x = 1
         t3.y = 2
 
-        self.assert_(t1 == t2)
-        self.assert_(not (t1 != t2))
-        self.assert_(t1 <= t2)
-        self.assert_(t1 >= t2)
-        self.assert_(t3 >= t2)
-        self.assert_(t3 > t2)
-        self.assert_(t2 <= t3)
-        self.assert_(t2 < t3)
-        self.assert_(t2 != t3)
-        self.assert_(not(t2 == t3))
+        self.assertTrue(t1 == t2)
+        self.assertTrue(not (t1 != t2))
+        self.assertTrue(t1 <= t2)
+        self.assertTrue(t1 >= t2)
+        self.assertTrue(t3 >= t2)
+        self.assertTrue(t3 > t2)
+        self.assertTrue(t2 <= t3)
+        self.assertTrue(t2 < t3)
+        self.assertTrue(t2 != t3)
+        self.assertTrue(not(t2 == t3))
         
     def test_numeric_operators(self):
         t1 = foo.Tupl()
@@ -1165,7 +1165,7 @@ class TestFoo(unittest.TestCase):
 
         # add
         vec2 = foo.VectorLike()
-        for i in xrange(10):
+        for i in range(10):
             vec2.append(i)
         vec3 = vec2 + vec1
         self.assertEqual(len(vec3), len(vec1) + len(vec2))
@@ -1174,7 +1174,7 @@ class TestFoo(unittest.TestCase):
         
         # iadd
         vec2 = foo.VectorLike()
-        for i in xrange(10):
+        for i in range(10):
             vec2.append(i)
         vec2 += vec1
         self.assertEqual(len(vec2), 13)
@@ -1189,40 +1189,46 @@ class TestFoo(unittest.TestCase):
 
         # imul
         vec2 = foo.VectorLike()
-        for i in xrange(10):
+        for i in range(10):
             vec2.append(i)
         vec2 *= 3
         self.assertEqual(len(vec2), 30)
-        for (x, xcheck) in zip(list(vec2), 3*range(10)):
+        for (x, xcheck) in zip(list(vec2), 3*list(range(10))):
             self.assertEqual(x, xcheck)
 
         # setslice
-        vec2 = foo.VectorLike()
-        for i in xrange(10):
-            vec2.append(i)
-        vec3 = foo.VectorLike()
-        for i in xrange(3):
-            vec3.append(3*i)
-        vec2[2:5] = vec3
-        ans = range(10)
-        ans[2:5] = [0, 3, 6]
-        self.assertEqual(len(vec2), len(ans))
-        for (x, xcheck) in zip(list(vec2), ans):
-            self.assertEqual(x, xcheck)
+        # not supported (by pybindgen) in python 3, see
+        # http://mail.python.org/pipermail/python-dev/2012-March/117289.html
+        if sys.version_info[0] < 3:
+            vec2 = foo.VectorLike()
+            for i in range(10):
+                vec2.append(i)
+            vec3 = foo.VectorLike()
+            for i in range(3):
+                vec3.append(3*i)
+            vec2[2:5] = vec3
+            ans = list(range(10))
+            ans[2:5] = [0, 3, 6]
+            self.assertEqual(len(vec2), len(ans))
+            for (x, xcheck) in zip(list(vec2), ans):
+                self.assertEqual(x, xcheck)
 
         # getslice
-        vec2 = foo.VectorLike()
-        for i in xrange(10):
-            vec2.append(i)
-        vec3 = vec2[5:8]
-        ans = range(5,8)
-        self.assertEqual(len(vec3), len(ans))
-        for (x, xcheck) in zip(list(vec3), ans):
-            self.assertEqual(x, xcheck)
+        # not supported (by pybindgen) in python 3, see
+        # http://mail.python.org/pipermail/python-dev/2012-March/117289.html
+        if sys.version_info[0] < 3:
+            vec2 = foo.VectorLike()
+            for i in range(10):
+                vec2.append(i)
+            vec3 = vec2[5:8]
+            ans = list(range(5,8))
+            self.assertEqual(len(vec3), len(ans))
+            for (x, xcheck) in zip(list(vec3), ans):
+                self.assertEqual(x, xcheck)
 
         # contains
         vec2 = foo.VectorLike()
-        for i in xrange(10):
+        for i in range(10):
             vec2.append(i)
         self.assertTrue(2.0 in vec2)
         self.assertFalse(20.0 in vec2)
@@ -1325,7 +1331,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
         f2 = box.getFoobarInternalPtr()
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
-        self.assert_(f2 is f1)
+        self.assertTrue(f2 is f1)
         
         del f1, f2, box
         
@@ -1345,7 +1351,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
         f2 = box.m_internalFoobar
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
-        self.assert_(f2 is f1)
+        self.assertTrue(f2 is f1)
         
         del f1, f2, box
         
@@ -1366,7 +1372,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
         f2 = box.getFoobarInternalRef()
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
-        self.assert_(f2 is f1)
+        self.assertTrue(f2 is f1)
         
         del f1, f2, box
         
@@ -1390,7 +1396,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
         f2 = box.getFoobarInternalPtr2()
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
-        self.assert_(f2 is f1)
+        self.assertTrue(f2 is f1)
         
         del f2, box
         while gc.collect():
@@ -1423,7 +1429,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
         f2 = box.getFoobarInternalRef2()
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
-        self.assert_(f2 is f1)
+        self.assertTrue(f2 is f1)
         
         del f2, box
         while gc.collect():
@@ -1443,7 +1449,7 @@ class TestFoo(unittest.TestCase):
 
     def test_protected_method_no_subclassing(self):
         some = foo.SomeObject("xxx")
-        self.assert_(hasattr(some, "protected_method_that_is_not_virtual"))
+        self.assertTrue(hasattr(some, "protected_method_that_is_not_virtual"))
         self.assertRaises(TypeError, some.protected_method_that_is_not_virtual, "aax")
         del some
 
@@ -1458,10 +1464,10 @@ class TestFoo(unittest.TestCase):
 
     def test_multiple_inheritance(self):
         mi = foo.MIMixed()
-        self.assert_(hasattr(mi, "mixed_method"))
-        self.assert_(hasattr(mi, "base1_method"))
-        self.assert_(hasattr(mi, "base2_method"))
-        self.assert_(hasattr(mi, "root_method"))
+        self.assertTrue(hasattr(mi, "mixed_method"))
+        self.assertTrue(hasattr(mi, "base1_method"))
+        self.assertTrue(hasattr(mi, "base2_method"))
+        self.assertTrue(hasattr(mi, "root_method"))
         self.assertEqual(mi.root_method(), -1)
         self.assertEqual(mi.base1_method(), 1)
         self.assertEqual(mi.base2_method(), 2)
