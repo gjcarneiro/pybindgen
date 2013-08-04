@@ -3,7 +3,7 @@
 # pylint: disable-msg=C0111
 
 import struct
-assert struct.calcsize('i') == 4 # assumption is made that sizeof(int) == 4 for all platforms pybindgen runs on
+assert struct.calcsize(b'i') == 4 # assumption is made that sizeof(int) == 4 for all platforms pybindgen runs on
 
 
 from .base import ReturnValue, Parameter, PointerParameter, PointerReturnValue, \
