@@ -260,13 +260,13 @@ static PySequenceMethods %(variable)s = {
     (ssizeargfunc) %(sq_repeat)s,
     (ssizeargfunc) %(sq_item)s,
 #if PY_MAJOR_VERSION < 3
-    %(sq_slice)s,
+    (ssizessizeargfunc) %(sq_slice)s,
 #else
     NULL,
 #endif
     (ssizeobjargproc) %(sq_ass_item)s,
 #if PY_MAJOR_VERSION < 3
-    %(sq_ass_slice)s,
+    (ssizessizeobjargproc) %(sq_ass_slice)s,
 #else
     NULL,
 #endif
