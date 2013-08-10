@@ -10,7 +10,6 @@ from pybindgen.typehandlers import codesink
 import warnings
 from pybindgen.typehandlers import ctypeparser
 import sys
-import six
 
 import logging
 logger = logging.getLogger("pybindgen.typehandlers")
