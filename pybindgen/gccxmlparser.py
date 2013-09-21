@@ -1375,13 +1375,19 @@ pybindgen.settings.error_handler = ErrorHandler()
                     ## Handle "typedef ClassName OtherName;"
                     elif isinstance(cls, class_t):
                         #print >> sys.stderr, "***** typedef", cls, "=>", alias.name
-                        cls_wrapper = self._registered_classes[cls]
-                        module.add_typedef(cls_wrapper, alias.name)
+                        try:
+                            cls_wrapper = self._registered_classes[cls]
+                        except KeyError:
+                            warnings.warn("typedef %s %s: wrapper for class %s not know"
+                                          % (cls, alias.name, cls),
+                                          WrapperWarning)
+                        else:
+                            module.add_typedef(cls_wrapper, alias.name)
 
-                        pygen_sink = self._get_pygen_sink_for_definition(cls)
-                        if pygen_sink:
-                            pygen_sink.writeln("module.add_typedef(root_module[%r], %r)" %
-                                               (cls_wrapper.full_name, utils.ascii(alias.name)))
+                            pygen_sink = self._get_pygen_sink_for_definition(cls)
+                            if pygen_sink:
+                                pygen_sink.writeln("module.add_typedef(root_module[%r], %r)" %
+                                                   (cls_wrapper.full_name, utils.ascii(alias.name)))
 
 
             ## scan nested namespaces (mapped as python submodules)
