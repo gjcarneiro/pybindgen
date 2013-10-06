@@ -1,9 +1,19 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals, print_function, absolute_import
 
 DEBUG = False
 
+
 import sys
+
+PY3 = (sys.version_info[0] >= 3)
+if PY3:
+    string_types = str,
+else:
+    string_types = basestring,
+
+
 import os.path
 import warnings
 import re
@@ -12,7 +22,8 @@ from pygccxml import parser
 from pygccxml import declarations
 from .module import Module
 from .typehandlers.codesink import FileCodeSink, CodeSink, NullCodeSink
-from . import typehandlers.base
+from .typehandlers import base
+from . import typehandlers
 from .typehandlers.base import ctypeparser
 from .typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConfigurationError, NotSupportedError
 from pygccxml.declarations.enumeration import enumeration_t
@@ -434,11 +445,11 @@ class PygenSection(object):
           functions on it, or ignore it if the module does not exist.
         :type local_customizations_module: str
         """
-        assert isinstance(name, str)
+        assert isinstance(name, string_types)
         self.name = name
         assert isinstance(code_sink, CodeSink)
         self.code_sink = code_sink
-        assert local_customizations_module is None or isinstance(local_customizations_module, str)
+        assert local_customizations_module is None or isinstance(local_customizations_module, string_types)
         self.local_customizations_module = local_customizations_module
 
 

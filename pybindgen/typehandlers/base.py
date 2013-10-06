@@ -11,6 +11,13 @@ import warnings
 from pybindgen.typehandlers import ctypeparser
 import sys
 
+PY3 = (sys.version_info[0] >= 3)
+if PY3:
+    import types
+    string_types = str,
+else:
+    string_types = basestring
+
 import logging
 logger = logging.getLogger("pybindgen.typehandlers")
 
@@ -285,7 +292,7 @@ class ParseTupleParameters(object):
                     parameters must also be optional
         """
         assert isinstance(param_values, list)
-        assert isinstance(param_template, str)
+        assert isinstance(param_template, string_types)
         item = (param_template, param_values, param_name, optional)
         if prepend:
             self._parse_tuple_items.insert(0, item)
@@ -605,7 +612,7 @@ class ReverseWrapperBase(object):
         :param decl_modifiers: list of C/C++ declaration modifiers, e.g. 'static'
         """
         assert isinstance(decl_modifiers, (list, tuple))
-        assert all([isinstance(mod, str) for mod in decl_modifiers])
+        assert all([isinstance(mod, string_types) for mod in decl_modifiers])
 
         self.declarations.declare_variable('PyObject*', 'py_retval')
         if self.return_value.ctype != 'void' \
@@ -864,7 +871,7 @@ class ForwardWrapperBase(object):
                     % (param.ctype,))
 
         if self.deprecated:
-            if isinstance(self.deprecated, str):
+            if isinstance(self.deprecated, string_types):
                 msg = self.deprecated
             else:
                 msg = "Deprecated"
@@ -1063,7 +1070,7 @@ class TypeHandler(object):
                         self.type_traits.make_target_const()
                     else:
                         self.type_traits.make_const()
-            elif isinstance(ctype, str):
+            elif isinstance(ctype, string_types):
                 if is_const:
                     warnings.warn("is_const is deprecated, put a 'const' in the C type instead.", DeprecationWarning)
                     self.type_traits = ctypeparser.TypeTraits('const %s' % ctype)
@@ -1111,7 +1118,7 @@ class ReturnValueMeta(type):
             return_type_matcher.register(ctype, mcs)
 
 
-class ReturnValue(TypeHandler, metaclass=ReturnValueMeta):
+class _ReturnValue(TypeHandler):
     '''Abstract base class for all classes dedicated to handle
     specific return value types'''
 
@@ -1162,7 +1169,7 @@ class ReturnValue(TypeHandler, metaclass=ReturnValueMeta):
         '''
         if type(self) is ReturnValue:
             raise TypeError('ReturnValue is an abstract class; use ReturnValue.new(...)')
-        super(ReturnValue, self).__init__(ctype, is_const)
+        super(_ReturnValue, self).__init__(ctype, is_const)
         self.value = 'retval'
 
     def get_c_error_return(self):
@@ -1183,7 +1190,16 @@ class ReturnValue(TypeHandler, metaclass=ReturnValueMeta):
         raise NotImplementedError
         #assert isinstance(wrapper, ReverseWrapperBase)
 
+if PY3:
+    ReturnValue = types.new_class("ReturnValue", (_ReturnValue,), dict(metaclass=ReturnValueMeta))
+else:
+    class ReturnValue(_ReturnValue):
+        __metaclass__ = ReturnValueMeta
+
 ReturnValue.CTYPES = NotImplemented
+
+
+
 
 class PointerReturnValue(ReturnValue):
     """Base class for all pointer-to-something handlers"""
@@ -1209,7 +1225,7 @@ class ParameterMeta(type):
             param_type_matcher.register(ctype, mcs)
 
 
-class Parameter(TypeHandler, metaclass=ParameterMeta):
+class _Parameter(TypeHandler):
     '''Abstract base class for all classes dedicated to handle specific parameter types'''
 
     ## bit mask values
@@ -1278,7 +1294,7 @@ class Parameter(TypeHandler, metaclass=ParameterMeta):
         '''
         if type(self) is Parameter:
             raise TypeError('Parameter is an abstract class; use Parameter.new(...)')
-        super(Parameter, self).__init__(ctype, is_const)
+        super(_Parameter, self).__init__(ctype, is_const)
         self.name = name
         assert direction in self.DIRECTIONS, \
             "Error: requested direction %s for type handler %r (ctype=%r), but it only supports directions %r"\
@@ -1297,6 +1313,13 @@ class Parameter(TypeHandler, metaclass=ParameterMeta):
         '''Write some code before calling the C method.'''
         #assert isinstance(wrapper, ReverseWrapperBase)
         raise NotImplementedError
+
+if PY3:
+    Parameter = types.new_class("Parameter", (_Parameter,), dict(metaclass=ParameterMeta))
+else:
+    class Parameter(_Parameter):
+        __metaclass__ = ParameterMeta
+
 
 Parameter.CTYPES = NotImplemented
 

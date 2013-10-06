@@ -1,3 +1,12 @@
+
+import sys
+PY3 = (sys.version_info[0] >= 3)
+
+if PY3:
+    string_types = str,
+else:
+    string_types = basestring,
+
 try:
     any = any
 except NameError:
@@ -8,7 +17,6 @@ except NameError:
         return False
 
 
-import sys
 from pybindgen.typehandlers.codesink import CodeSink
 from pybindgen.typehandlers.base import TypeLookupError, TypeConfigurationError, CodeGenerationError, NotSupportedError, \
     Parameter, ReturnValue
@@ -144,7 +152,7 @@ def mangle_name(name):
 
 def get_mangled_name(base_name, template_args):
     """for internal pybindgen use"""
-    assert isinstance(base_name, str)
+    assert isinstance(base_name, string_types)
     assert isinstance(template_args, (tuple, list))
 
     if template_args:
@@ -191,9 +199,9 @@ def ascii(value):
     """
     if value is None:
         return value
-    elif isinstance(value, str):
+    elif isinstance(value, string_types):
         return value
-    elif isinstance(value, str):
+    elif isinstance(value, string_types):
         return value.encode('ascii')
     else:
         raise TypeError("value must be str or ascii string contained in a unicode object")
@@ -240,7 +248,7 @@ def parse_retval_spec(retval_spec):
         else:
             kwargs = dict()
             args = retval_spec
-    elif isinstance(retval_spec, str):
+    elif isinstance(retval_spec, string_types):
         kwargs = dict()
         args = (retval_spec,)
     else:

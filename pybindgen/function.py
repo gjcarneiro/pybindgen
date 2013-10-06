@@ -2,6 +2,15 @@
 C function wrapper
 """
 
+import sys
+PY3 = (sys.version_info[0] >= 3)
+if PY3:
+    import types
+    string_types = str,
+else:
+    string_types = basestring,
+
+
 from copy import copy
 
 from pybindgen.typehandlers.base import ForwardWrapperBase, ReturnValue
@@ -53,7 +62,7 @@ class Function(ForwardWrapperBase):
             unblock_threads = settings.unblock_threads
         
         ## backward compatibility check
-        if isinstance(return_value, str) and isinstance(function_name, ReturnValue):
+        if isinstance(return_value, string_types) and isinstance(function_name, ReturnValue):
             warnings.warn("Function has changed API; see the API documentation (but trying to correct...)",
                           DeprecationWarning, stacklevel=2)
             function_name, return_value = return_value, function_name
@@ -251,8 +260,8 @@ class Function(ForwardWrapperBase):
         ## result) only in order to obtain correct method signature.
         self.reset_code_generation_state()
         self.generate(codesink.NullCodeSink(), extra_wrapper_params=extra_wrapper_parameters)
-        assert isinstance(self.wrapper_return, str)
-        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_return, string_types)
+        assert isinstance(self.wrapper_actual_name, string_types)
         assert isinstance(self.wrapper_args, list)
         code_sink.writeln('%s %s(%s);' % (self.wrapper_return, self.wrapper_actual_name, ', '.join(self.wrapper_args)))
         self.reset_code_generation_state()
@@ -265,8 +274,8 @@ class Function(ForwardWrapperBase):
         :param name: python function/method name
         """
         flags = self.get_py_method_def_flags()
-        assert isinstance(self.wrapper_return, str)
-        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_return, string_types)
+        assert isinstance(self.wrapper_actual_name, string_types)
         assert isinstance(self.wrapper_args, list)
         return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
                (name, self.wrapper_actual_name, '|'.join(flags),

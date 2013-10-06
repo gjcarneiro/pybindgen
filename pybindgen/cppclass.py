@@ -1,3 +1,13 @@
+
+import sys
+
+PY3 = (sys.version_info[0] >= 3)
+if PY3:
+    string_types = str,
+else:
+    string_types = basestring,
+
+
 from pybindgen.utils import any, mangle_name
 import warnings
 import traceback
@@ -5,7 +15,8 @@ import traceback
 from pybindgen.typehandlers.base import Parameter, ReturnValue, \
     join_ctype_and_name, CodeGenerationError, \
     param_type_matcher, return_type_matcher, CodegenErrorBase, \
-    DeclarationsScope, CodeBlock, NotSupportedError, ForwardWrapperBase, ReverseWrapperBase
+    DeclarationsScope, CodeBlock, NotSupportedError, ForwardWrapperBase, ReverseWrapperBase, \
+    TypeConfigurationError
 
 from pybindgen.typehandlers.codesink import NullCodeSink, MemoryCodeSink
 
@@ -845,7 +856,7 @@ class CppClass(object):
             support, e.g. '=='
         """
         operator = utils.ascii(operator)
-        if not isinstance(operator, str):
+        if not isinstance(operator, string_types):
             raise TypeError("expected operator name as string")
         if operator not in ['==', '!=', '<', '<=', '>', '>=']:
             raise ValueError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
@@ -867,7 +878,7 @@ class CppClass(object):
           if omitted
         """
         operator = utils.ascii(operator)
-        if not isinstance(operator, str):
+        if not isinstance(operator, string_types):
             raise TypeError("expected operator name as string")
         if operator not in ['+', '-', '*', '/']:
             raise ValueError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
@@ -886,7 +897,7 @@ class CppClass(object):
         elif isinstance(right, CppClass):
             pass
         else:
-            if isinstance(right, str):
+            if isinstance(right, string_types):
                 right = utils.param(right, 'right')
             try:
                 right = utils.eval_param(right, None)
@@ -910,7 +921,7 @@ class CppClass(object):
           if omitted
         """
         operator = utils.ascii(operator)
-        if not isinstance(operator, str):
+        if not isinstance(operator, string_types):
             raise TypeError("expected operator name as string")
         if operator not in ['+=', '-=', '*=', '/=']:
             raise ValueError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
@@ -922,7 +933,7 @@ class CppClass(object):
         if right is None:
             right = self
         else:
-            if isinstance(right, str):
+            if isinstance(right, string_types):
                 right = utils.param(right, 'right')
             try:
                 right = utils.eval_param(right, None)
@@ -942,7 +953,7 @@ class CppClass(object):
         :param left_cppclass: the CppClass object of the left operand type, assumed to be this class if omitted
         """
         operator = utils.ascii(operator)
-        if not isinstance(operator, str):
+        if not isinstance(operator, string_types):
             raise TypeError("expected operator name as string")
         if operator not in ['-']:
             raise ValueError("The operator %r is invalid or not yet supported by PyBindGen" % (operator,))
@@ -1623,7 +1634,7 @@ public:
             self.helper_class = None
 
     def set_cannot_be_constructed(self, reason):
-        assert isinstance(reason, str)
+        assert isinstance(reason, string_types)
         self.cannot_be_constructed = reason
 
     def _add_constructor_obj(self, wrapper):
@@ -1715,7 +1726,7 @@ public:
         """
 
         ## backward compatibility check
-        if isinstance(value_type, str) and isinstance(name, ReturnValue):
+        if isinstance(value_type, string_types) and isinstance(name, ReturnValue):
             warnings.warn("add_static_attribute has changed API; see the API documentation (but trying to correct...)",
                           DeprecationWarning, stacklevel=2)
             value_type, name = name, value_type
@@ -1749,7 +1760,7 @@ public:
         """
 
         ## backward compatibility check
-        if isinstance(value_type, str) and isinstance(name, ReturnValue):
+        if isinstance(value_type, string_types) and isinstance(name, ReturnValue):
             warnings.warn("add_custom_instance_attribute has changed API; see the API documentation (but trying to correct...)",
                           DeprecationWarning, stacklevel=2)
             value_type, name = name, value_type
@@ -1783,7 +1794,7 @@ public:
         """
 
         ## backward compatibility check
-        if isinstance(value_type, str) and isinstance(name, ReturnValue):
+        if isinstance(value_type, string_types) and isinstance(name, ReturnValue):
             warnings.warn("add_static_attribute has changed API; see the API documentation (but trying to correct...)",
                           DeprecationWarning, stacklevel=2)
             value_type, name = name, value_type

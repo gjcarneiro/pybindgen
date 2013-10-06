@@ -55,5 +55,5 @@ if __name__ == '__main__':
     except ImportError:
         my_module_gen(sys.stdout)
     else:
-        print("** running under profiler", file=sys.stderr)
+        sys.stderr.write("** running under profiler\n")
         profile.run('my_module_gen(sys.stdout)', 'hellomodulegen.pstat')

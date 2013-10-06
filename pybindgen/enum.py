@@ -2,6 +2,14 @@
 Wraps enumerations
 """
 
+import sys
+PY3 = (sys.version_info[0] >= 3)
+if PY3:
+    string_types = str,
+else:
+    string_types = basestring,
+
+
 from pybindgen.typehandlers import inttype
 from pybindgen.typehandlers.base import return_type_matcher, param_type_matcher
 from pybindgen.cppclass import CppClass
@@ -27,12 +35,12 @@ class Enum(object):
         :param import_from_module: if not None, the enum is defined in
             another module, this parameter gives the name of the module
         """
-        assert isinstance(name, str)
+        assert isinstance(name, string_types)
         assert '::' not in name
         assert outer_class is None or isinstance(outer_class, CppClass)
         self.outer_class = outer_class
         for val in values:
-            if not isinstance(val, (str, tuple)):
+            if not isinstance(val, string_types + (tuple,)):
                 raise TypeError
 
         #if not name:
