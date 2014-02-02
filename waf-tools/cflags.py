@@ -1,6 +1,6 @@
-import Logs
-import Options
-import Utils
+from waflib import Logs
+from waflib import Options
+from waflib import Utils
 
 
 class CompilerTraits(object):

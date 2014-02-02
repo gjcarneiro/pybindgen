@@ -6,7 +6,7 @@ from wutils import get_version, generate_version_py
 from waflib import Options
 from waflib import Build
 
-import Scripting
+from waflib import Scripting
 # Scripting.excludes.remove('Makefile')
 Scripting.dist_format = 'zip'
 
@@ -21,7 +21,6 @@ import os
 import subprocess
 import shutil
 import sys
-import Configure
 import tarfile
 import re
 import types
@@ -65,11 +64,10 @@ def zipper(dir, zip_file, archive_main_folder=None):
 
 
 def options(opt):
-    opt.tool_options('python1711', tooldir="waf-tools")
-    opt.tool_options('compiler_cc')
-    opt.tool_options('compiler_cxx')
-    opt.tool_options('cflags', tooldir="waf-tools")
-    opt.sub_options('examples')
+    opt.load('compiler_cc')
+    opt.load('compiler_cxx')
+    opt.load('cflags', tooldir="waf-tools")
+    opt.recurse('examples')
 
 
     optgrp = opt.add_option_group("PyBindGen Options")
@@ -120,7 +118,7 @@ def _check_compilation_flag(conf, flag, mode='cxx', linkflags=None):
         flag_str = flag_str[:28] + "..."
 
     conf.start_msg('Checking for compilation %s support' % (flag_str,))
-    env = conf.env.copy()
+    env = conf.env.derive()
 
     if mode == 'cc':
         mode = 'c'
@@ -165,18 +163,18 @@ def configure(conf):
     ## Write a pybindgen/version.py file containing the project version
     generate_version_py()
 
-    conf.check_tool('command', tooldir="waf-tools")
-    conf.check_tool('python')
+    conf.load('command', tooldir="waf-tools")
+    conf.load('python')
     conf.check_python_version((2,3))
 
     try:
-        conf.check_tool('compiler_cc')
-        conf.check_tool('compiler_cxx')
+        conf.load('compiler_cc')
+        conf.load('compiler_cxx')
     except Configure.ConfigurationError:
         Logs.warn("C/C++ compiler not detected.  Unit tests and examples will not be compiled.")
         conf.env['CXX'] = ''
     else:
-        conf.check_tool('cflags')
+        conf.load('cflags')
         conf.check_python_headers()
 
         if not Options.options.disable_pygccxml:
@@ -204,8 +202,8 @@ def configure(conf):
     if conf.check_nonfatal(header_name='boost/shared_ptr.hpp'):
         conf.env['ENABLE_BOOST_SHARED_PTR'] = True
 
-    conf.sub_config('benchmarks')
-    conf.sub_config('examples')
+    conf.recurse('benchmarks')
+    conf.recurse('examples')
 
 
 def build(bld):
@@ -214,18 +212,18 @@ def build(bld):
     if getattr(Options.options, 'generate_version', False):
         generate_version_py(force=True)
 
-    bld.add_subdirs('pybindgen')
+    bld.recurse('pybindgen')
 
     if bld.cmd == 'check':
-        bld.add_subdirs('tests')
+        bld.recurse('tests')
 
     if Options.options.examples:
-        bld.add_subdirs('examples')
+        bld.recurse('examples')
 
     if 0: # FIXME
 
         if Options.commands.get('bench', False) or Options.commands['clean']:
-            bld.add_subdirs('benchmarks')
+            bld.recurse('benchmarks')
 
 
 check_context = Build.BuildContext

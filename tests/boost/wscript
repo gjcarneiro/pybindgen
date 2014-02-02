@@ -1,5 +1,5 @@
 ## -*- python -*-
-import Task
+#from waflib import Task
 
 import sys
 import os.path
@@ -21,7 +21,7 @@ def build(bld):
 
     env['TOP_SRCDIR'] = bld.srcnode.abspath()
 
-    bindgen = bld.new_task_gen(
+    bindgen = bld(
         features='command',
         source='barmodulegen.py',
         target='barmodule.cc',

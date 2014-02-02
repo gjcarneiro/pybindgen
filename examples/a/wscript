@@ -2,14 +2,14 @@
 
 def build(bld):
     ## manual code generation using simple pybindgen API calls
-    gen = bld.new_task_gen(
+    gen = bld(
         features='command',
         source='modulegen.py',
         target='amodule.cc',
         command='${PYTHON} ${SRC[0]} > ${TGT[0]}')
 
     if bld.env['CXX']:
-        obj = bld.new_task_gen(features=['cxx', 'cxxshlib', 'pyext'])
+        obj = bld(features=['cxx', 'cxxshlib', 'pyext'])
         obj.source = [
             'a.cc',
             'amodule.cc'
@@ -21,13 +21,13 @@ def build(bld):
 
     if bld.env['ENABLE_PYGCCXML']:
         ## gccxml direct generation method
-        bld.new_task_gen(
+        bld(
             features='command',
             source='module-autogen.py a.h',
             target='a1module.cc',
             command='${PYTHON} ${SRC[0]} ${SRC[1]} > ${TGT[0]}')
 
-        obj = bld.new_task_gen(features=['cxx', 'cxxshlib', 'pyext'])
+        obj = bld(features=['cxx', 'cxxshlib', 'pyext'])
         obj.source = [
             'a.cc',
             'a1module.cc'
@@ -38,19 +38,19 @@ def build(bld):
 
 
         ## gccxml indirect generation method
-        bld.new_task_gen(
+        bld(
             features='command',
             source='module-autoscan.py a.h',
             target='a2modulegen.py',
             command='${PYTHON} ${SRC[0]} ${SRC[1]} > ${TGT[0]}')
 
-        bld.new_task_gen(
+        bld(
             features='command',
             source='a2modulegen.py',
             target='a2module.cc',
             command='${PYTHON} ${SRC[0]} > ${TGT[0]}')
 
-        obj = bld.new_task_gen(features=['cxx', 'cxxshlib', 'pyext'])
+        obj = bld(features=['cxx', 'cxxshlib', 'pyext'])
         obj.source = [
             'a.cc',
             'a2module.cc'

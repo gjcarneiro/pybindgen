@@ -2,7 +2,7 @@
 #import Action
 #import Object
 #import Params
-import Task
+#from waflib import Task
 
 import sys
 import os.path
@@ -25,20 +25,20 @@ def build(bld):
 
     env['TOP_SRCDIR'] = bld.srcnode.abspath()
 
-    gen = bld.new_task_gen(
+    gen = bld(
         features='command',
         source='test-generation.py',
         target='test.cc',
         command='${PYTHON} ${SRC[0]} ${TOP_SRCDIR} > ${TGT[0]}')
 
     if env['CXX']:
-        obj = bld.new_task_gen(features='cxx pyext')
+        obj = bld(features='cxx pyext')
         obj.source = 'test.cc'
         if env['CXX_NAME'] == 'gcc':
             obj.env.append_value('CXXFLAGS', ['-Werror', '-Wno-unused'])
     
     ## manual code generation using simple pybindgen API calls
-    bindgen = bld.new_task_gen(
+    bindgen = bld(
         features='command',
         source='foomodulegen.py',
         target='foomodule.cc',
@@ -58,14 +58,14 @@ def build(bld):
     if env['ENABLE_PYGCCXML']:
         ### Same thing, but using gccxml autoscanning
 
-        bld.new_task_gen(
+        bld(
             features='command',
             source='foomodulegen-auto.py foo.h',
             target='foomodule2.cc foomodulegen_generated.py',
             command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[1]} > ${TGT[0]}' % (DEPRECATION_ERRORS,),
             variables=dict(cpp_path_repr=repr(bindgen.env['INCLUDES']+bindgen.env['INCLUDES_PYEXT'])))
 
-        obj = bld.new_task_gen(features='cxx cxxshlib pyext')
+        obj = bld(features='cxx cxxshlib pyext')
         obj.source = [
             'foo.cc',
             'foomodule2.cc'
@@ -76,7 +76,7 @@ def build(bld):
 
         ### Now using the generated python script
 
-        bld.new_task_gen(
+        bld(
             features='command',
             source='foomodulegen3.py foomodulegen_generated.py',
             target='foomodule3.cc',
@@ -86,7 +86,7 @@ def build(bld):
         ## TODO: add WAF command-output support for customising command OS environment
         os.environ["PYTHONPATH"] = os.pathsep.join([os.environ.get("PYTHONPATH", ''), bindgen.path.get_bld().abspath()])
 
-        obj = bld.new_task_gen(features='cxx cxxshlib pyext')
+        obj = bld(features='cxx cxxshlib pyext')
         obj.source = [
             'foo.cc',
             'foomodule3.cc'
@@ -97,14 +97,14 @@ def build(bld):
 
         ## ---
 
-        bld.new_task_gen(
+        bld(
             features='command',
             source='foomodulegen-auto-split.py foo.h',
             target='foomodulegen_split.py foomodulegen_module1.py foomodulegen_module2.py',
             command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[0]} ${TGT[1]} ${TGT[2]}' % (DEPRECATION_ERRORS,),
             variables=dict(cpp_path_repr=repr(bindgen.env['INCLUDES']+bindgen.env['INCLUDES_PYEXT'])))
 
-        bld.new_task_gen(
+        bld(
             features='command',
             source=[
                 'foomodulegen4.py',
@@ -121,7 +121,7 @@ def build(bld):
             command='${PYTHON} %s ${SRC[0]} ${TGT[0]}' % (DEPRECATION_ERRORS,))
 
 
-        obj = bld.new_task_gen(features='cxx cxxshlib pyext')
+        obj = bld(features='cxx cxxshlib pyext')
         obj.source = [
             'foo.cc',
             'foomodule4.cc',
@@ -133,7 +133,7 @@ def build(bld):
         obj.env.append_value("INCLUDES", '.')
 
     ## pure C tests
-    bld.add_subdirs('c-hello')
+    bld.recurse('c-hello')
 
     ## boost tests
-    bld.add_subdirs('boost')
+    bld.recurse('boost')

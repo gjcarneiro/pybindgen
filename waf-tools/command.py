@@ -1,15 +1,15 @@
-import TaskGen# import feature, taskgen_method, before_method, task_gen
-import Node, Task, Utils, Build
+from waflib import TaskGen# import feature, taskgen_method, before_method, task_gen
+from waflib import Node, Task, Utils, Build
 import subprocess
-import Options
+from waflib import Options
 
 import shellcmd
 #shellcmd.subprocess = pproc # the WAF version of the subprocess module is supposedly less buggy
 
-from Logs import debug, error
+from waflib.Logs import debug, error
 shellcmd.debug = debug
 
-import Task
+from waflib import Task
 
 import re
 

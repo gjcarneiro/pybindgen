@@ -2,14 +2,14 @@
 
 def build(bld):
 
-    gen = bld.new_task_gen(
+    gen = bld(
         features='command',
         source='modulegen.py',
         target='bspmodule.cc',
         command='${PYTHON} ${SRC[0]} > ${TGT[0]}')
 
     if bld.env['CXX']:
-        obj = bld.new_task_gen(features=['cxx', 'cxxshlib', 'pyext'])
+        obj = bld(features=['cxx', 'cxxshlib', 'pyext'])
         obj.source = [
             'bsp.cc',
             'bspmodule.cc'

@@ -4,14 +4,14 @@ def build(bld):
 
 	# ---- Module A ----
 
-    gen = bld.new_task_gen(
+    gen = bld(
         features='command',
         source='amodulegen.py',
         target='amodule.cc',
         command='${PYTHON} ${SRC[0]} > ${TGT[0]}')
 
     if bld.env['CXX']:
-        obj = bld.new_task_gen(features=['cxx', 'cxxshlib', 'pyext'])
+        obj = bld(features=['cxx', 'cxxshlib', 'pyext'])
         obj.source = [
             'amodule.cc'
             ]
@@ -21,14 +21,14 @@ def build(bld):
 
 	# ---- Module B ----
 
-    gen = bld.new_task_gen(
+    gen = bld(
         features='command',
         source='bmodulegen.py',
         target='bmodule.cc',
         command='${PYTHON} ${SRC[0]} > ${TGT[0]}')
 
     if bld.env['CXX']:
-        obj = bld.new_task_gen(features=['cxx', 'cxxshlib', 'pyext'])
+        obj = bld(features=['cxx', 'cxxshlib', 'pyext'])
         obj.source = [
             'bmodule.cc'
             ]
