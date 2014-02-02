@@ -1,13 +1,11 @@
-
-from typehandlers.base import ReturnValue, Parameter
-from module import Module
-from function import Function
-from typehandlers.codesink import CodeSink, FileCodeSink
-from cppclass import CppMethod, CppClass, CppConstructor
-from enum import Enum
-from utils import write_preamble, param, retval
+from pybindgen.typehandlers.base import ReturnValue, Parameter
+from pybindgen.module import Module
+from pybindgen.function import Function
+from pybindgen.typehandlers.codesink import CodeSink, FileCodeSink
+from pybindgen.cppclass import CppMethod, CppClass, CppConstructor
+from pybindgen.enum import Enum
+from pybindgen.utils import write_preamble, param, retval
 try:
-    import version
+    from pybindgen import version
 except ImportError: # the version.py file is generated and may not exist
     pass
-

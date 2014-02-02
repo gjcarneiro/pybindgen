@@ -55,7 +55,7 @@ PREPROCESSOR = 'PREPROCESSOR'
 
 # Where the token originated from.  This can be used for backtracking.
 # It is always set to WHENCE_STREAM in this code.
-WHENCE_STREAM, WHENCE_QUEUE = range(2)
+WHENCE_STREAM, WHENCE_QUEUE = list(range(2))
 
 
 class Token(object):
@@ -270,13 +270,12 @@ def GetTokens(source):
             # exception and  return the bogus char.
             i += 1
         else:
-            print >>sys.stderr, \
-                  ('Got invalid token in %s @ %d token:%s: %r' %
-                   ('?', i, c, source[i-10:i+10]))
+            sys.stderr.write('Got invalid token in %s @ %d token:%s: %r\n' %
+                             ('?', i, c, source[i-10:i+10]))
             raise RuntimeError('unexpected token')
 
         if i <= 0:
-            print 'Invalid index, exiting now.'
+            print('Invalid index, exiting now.')
             return
         yield Token(token_type, source[start:i], start, i)
 

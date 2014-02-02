@@ -5,5 +5,5 @@ from a import *
 ADoA ()
 ADoB (1)
 a = ADoC ()
-print a
+print(a)
 

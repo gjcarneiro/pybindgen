@@ -3,7 +3,7 @@ The class that generates code to keep track of existing python
 wrappers for a given root class.
 """
 
-from typehandlers.base import NotSupportedError
+from pybindgen.typehandlers.base import NotSupportedError
 
 
 class WrapperRegistry(object):

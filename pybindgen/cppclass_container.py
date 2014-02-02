@@ -2,10 +2,10 @@
 Add container iteration powers to wrapped C++ classes
 """
 
-from typehandlers.base import ForwardWrapperBase
-from typehandlers import codesink
-from pytypeobject import PyTypeObject
-import utils
+from pybindgen.typehandlers.base import ForwardWrapperBase
+from pybindgen.typehandlers import codesink
+from pybindgen.pytypeobject import PyTypeObject
+from pybindgen import utils
 
 
 class IterNextWrapper(ForwardWrapperBase):
@@ -212,7 +212,7 @@ static void
 {
     Py_CLEAR(self->container);
     %s
-    self->ob_type->tp_free((PyObject*)self);
+    Py_TYPE(self)->tp_free((PyObject*)self);
 }
 ''' % (iter_tp_dealloc_function_name, self.iter_pystruct, self._get_iter_delete_code()))
 

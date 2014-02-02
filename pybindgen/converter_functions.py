@@ -4,8 +4,8 @@ python to C or C to python.  These can be useful in certain
 specialized contexts, such as converting list elements.
 """
 
-from typehandlers.base import ReverseWrapperBase, ForwardWrapperBase
-from typehandlers import ctypeparser
+from pybindgen.typehandlers.base import ReverseWrapperBase, ForwardWrapperBase
+from pybindgen.typehandlers import ctypeparser
 
 class PythonToCConverter(ReverseWrapperBase):
     '''

@@ -1,7 +1,7 @@
 # docstrings not neede here (the type handler doubleerfaces are fully
 # documented in base.py) pylint: disable-msg=C0111
 
-from base import ReturnValue, Parameter, \
+from .base import ReturnValue, Parameter, \
      ReverseWrapperBase, ForwardWrapperBase
 
 

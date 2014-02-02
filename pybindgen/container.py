@@ -4,14 +4,14 @@ Wrap C++ STL containers
 
 #import warnings
 
-from typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
+from .typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
     Parameter, ReturnValue, param_type_matcher, return_type_matcher, \
     TypeConfigurationError, NotSupportedError
 
-from typehandlers import codesink
-from pytypeobject import PyTypeObject
-import settings
-import utils
+from pybindgen.typehandlers import codesink
+from pybindgen.pytypeobject import PyTypeObject
+from . import settings
+from . import utils
 
 
 class IterNextWrapper(ForwardWrapperBase):
@@ -437,7 +437,7 @@ static void
 %s(%s *self)
 {
     %s
-    self->ob_type->tp_free((PyObject*)self);
+    Py_TYPE(self)->tp_free((PyObject*)self);
 }
 ''' % (container_tp_dealloc_function_name, self.pystruct,
        self._get_container_delete_code()))
@@ -453,7 +453,7 @@ static void
 {
     Py_CLEAR(self->container);
     %s
-    self->ob_type->tp_free((PyObject*)self);
+    Py_TYPE(self)->tp_free((PyObject*)self);
 }
 ''' % (iter_tp_dealloc_function_name, self.iter_pystruct, self._get_iter_delete_code()))
 

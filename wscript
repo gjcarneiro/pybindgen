@@ -65,7 +65,7 @@ def zipper(dir, zip_file, archive_main_folder=None):
 
 
 def options(opt):
-    opt.tool_options('python')
+    opt.tool_options('python1711', tooldir="waf-tools")
     opt.tool_options('compiler_cc')
     opt.tool_options('compiler_cxx')
     opt.tool_options('cflags', tooldir="waf-tools")

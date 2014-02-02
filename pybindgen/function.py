@@ -2,15 +2,25 @@
 C function wrapper
 """
 
+import sys
+PY3 = (sys.version_info[0] >= 3)
+if PY3:
+    import types
+    string_types = str,
+else:
+    string_types = basestring,
+
+
 from copy import copy
 
-from typehandlers.base import ForwardWrapperBase, ReturnValue
-from typehandlers import codesink
-from cppexception import CppException
+from pybindgen.typehandlers.base import ForwardWrapperBase, ReturnValue
+from pybindgen.typehandlers import codesink
+from pybindgen.cppexception import CppException
 
-import overloading
-import settings
-import utils
+from pybindgen import overloading
+from pybindgen import settings
+from pybindgen import utils
+
 import warnings
 import traceback
 
@@ -52,7 +62,7 @@ class Function(ForwardWrapperBase):
             unblock_threads = settings.unblock_threads
         
         ## backward compatibility check
-        if isinstance(return_value, str) and isinstance(function_name, ReturnValue):
+        if isinstance(return_value, string_types) and isinstance(function_name, ReturnValue):
             warnings.warn("Function has changed API; see the API documentation (but trying to correct...)",
                           DeprecationWarning, stacklevel=2)
             function_name, return_value = return_value, function_name
@@ -84,7 +94,8 @@ class Function(ForwardWrapperBase):
             assert isinstance(t, CppException)
         self.throw = list(throw)
         self.custodians_and_wards = [] # list of (custodian, ward, postcall)
-        cppclass_typehandlers.scan_custodians_and_wards(self)
+        from pybindgen import cppclass
+        cppclass.scan_custodians_and_wards(self)
         
 
     def clone(self):
@@ -199,11 +210,13 @@ class Function(ForwardWrapperBase):
 
     def _before_call_hook(self):
         "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
-        cppclass_typehandlers.implement_parameter_custodians_precall(self)
+        from . import cppclass
+        cppclass.implement_parameter_custodians_precall(self)
 
     def _before_return_hook(self):
         "hook that post-processes parameters and check for custodian=<n> CppClass parameters"
-        cppclass_typehandlers.implement_parameter_custodians_postcall(self)
+        from . import cppclass
+        cppclass.implement_parameter_custodians_postcall(self)
 
     def generate(self, code_sink, wrapper_name=None, extra_wrapper_params=()):
         """
@@ -247,8 +260,8 @@ class Function(ForwardWrapperBase):
         ## result) only in order to obtain correct method signature.
         self.reset_code_generation_state()
         self.generate(codesink.NullCodeSink(), extra_wrapper_params=extra_wrapper_parameters)
-        assert isinstance(self.wrapper_return, str)
-        assert isinstance(self.wrapper_actual_name, str)
+        assert isinstance(self.wrapper_return, string_types)
+        assert isinstance(self.wrapper_actual_name, string_types)
         assert isinstance(self.wrapper_args, list)
         code_sink.writeln('%s %s(%s);' % (self.wrapper_return, self.wrapper_actual_name, ', '.join(self.wrapper_args)))
         self.reset_code_generation_state()
@@ -261,8 +274,8 @@ class Function(ForwardWrapperBase):
         :param name: python function/method name
         """
         flags = self.get_py_method_def_flags()
-        assert isinstance(self.wrapper_return, basestring)
-        assert isinstance(self.wrapper_actual_name, basestring)
+        assert isinstance(self.wrapper_return, string_types)
+        assert isinstance(self.wrapper_actual_name, string_types)
         assert isinstance(self.wrapper_args, list)
         return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
                (name, self.wrapper_actual_name, '|'.join(flags),
@@ -313,4 +326,4 @@ class OverloadedFunction(overloading.OverloadedWrapper):
     RETURN_TYPE = 'PyObject *'
     ERROR_RETURN = 'return NULL;'
 
-import cppclass_typehandlers
+#import cppclass_typehandlers

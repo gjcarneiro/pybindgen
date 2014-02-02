@@ -45,15 +45,15 @@ to create sub-modules for wrapping nested namespaces.  For instance::
 
 """
 
-from function import Function, OverloadedFunction, CustomFunctionWrapper
-from typehandlers.base import CodeBlock, DeclarationsScope, ReturnValue, TypeHandler
-from typehandlers.codesink import MemoryCodeSink, CodeSink, FileCodeSink, NullCodeSink
-from cppclass import CppClass
-from cppexception import CppException
-from enum import Enum
-from container import Container
-from converter_functions import PythonToCConverter, CToPythonConverter
-import utils
+from pybindgen.function import Function, OverloadedFunction, CustomFunctionWrapper
+from pybindgen.typehandlers.base import CodeBlock, DeclarationsScope, ReturnValue, TypeHandler
+from pybindgen.typehandlers.codesink import MemoryCodeSink, CodeSink, FileCodeSink, NullCodeSink
+from pybindgen.cppclass import CppClass
+from pybindgen.cppexception import CppException
+from pybindgen.enum import Enum
+from pybindgen.container import Container
+from pybindgen.converter_functions import PythonToCConverter, CToPythonConverter
+from pybindgen import utils
 import warnings
 import traceback
 
@@ -230,7 +230,7 @@ class ModuleBase(dict):
 
         self.cpp_namespace = cpp_namespace
         if self.parent is None:
-            error_return = 'return;'
+            error_return = 'return MOD_ERROR;'
             self.after_forward_declarations = MemoryCodeSink()
         else:
             self.after_forward_declarations = None
@@ -707,10 +707,16 @@ class ModuleBase(dict):
             mod_init_name = '.'.join(self.get_module_path())
         else:
             mod_init_name = module_file_base_name
+        self.before_init.write_code('#if PY_VERSION_HEX >= 0x03000000')
+        self.before_init.write_code(
+            "m = PyModule_Create(&%s_moduledef);"
+            % (self.name))
+        self.before_init.write_code('#else')
         self.before_init.write_code(
             "m = Py_InitModule3((char *) \"%s\", %s_functions, %s);"
             % (mod_init_name, self.prefix,
                self.docstring and '"'+self.docstring+'"' or 'NULL'))
+        self.before_init.write_code('#endif')
         self.before_init.write_error_check("m == NULL")
 
         main_sink = out.get_main_code_sink()
@@ -720,7 +726,7 @@ class ModuleBase(dict):
         if self.functions:
             main_sink.writeln('/* --- module functions --- */')
             main_sink.writeln()
-            for func_name, overload in self.functions.iteritems():
+            for func_name, overload in self.functions.items():
                 sink, header_sink = out.get_code_sink_for_wrapper(overload)
                 sink.writeln()
                 try:
@@ -816,16 +822,42 @@ class ModuleBase(dict):
         self.body.flush_to(main_sink)
 
         ## now generate the module init function itself
+        main_sink.writeln('#if PY_VERSION_HEX >= 0x03000000\n'
+            'static struct PyModuleDef %s_moduledef = {\n'
+            '    PyModuleDef_HEAD_INIT,\n'
+            '    "%s",\n'
+            '    %s,\n'
+            '    -1,\n'
+            '    %s_functions,\n'
+            '};\n'
+            '#endif' % (self.name, mod_init_name,
+                        self.docstring and '"'+self.docstring+'"' or 'NULL',
+                        self.prefix))
         main_sink.writeln()
         if self.parent is None:
             main_sink.writeln('''
-PyMODINIT_FUNC
+#if PY_VERSION_HEX >= 0x03000000
+    #define MOD_ERROR NULL
+    #define MOD_INIT(name) PyObject* PyInit_##name(void)
+    #define MOD_RETURN(val) val
+#else
+    #define MOD_ERROR
+    #define MOD_INIT(name) void init##name(void)
+    #define MOD_RETURN(val)
+#endif
+#if defined(__cplusplus)
+extern "C"
+#endif
 #if defined(__GNUC__) && __GNUC__ >= 4
 __attribute__ ((visibility("default")))
-#endif''')
+#endif
+
+''')
         else:
             main_sink.writeln("static PyObject *")
-        if module_file_base_name is None:
+        if self.parent is None:
+            main_sink.writeln("MOD_INIT(%s)" % (self.name,))
+        elif module_file_base_name is None:
             main_sink.writeln("%s(void)" % (self.init_function_name,))
         else:
             main_sink.writeln("init%s(void)" % (module_file_base_name,))
@@ -837,6 +869,8 @@ __attribute__ ((visibility("default")))
         self.after_init.sink.flush_to(main_sink)
         if self.parent is not None:
             main_sink.writeln("return m;")
+        else:
+            main_sink.writeln("return MOD_RETURN(m);")
         main_sink.unindent()
         main_sink.writeln('}')
 
@@ -883,7 +917,7 @@ class Module(ModuleBase):
         be imported into a foo module, to avoid making all types
         docstrings contain _foo.Xpto instead of foo.Xpto.
         """
-        if isinstance(out, file):
+        if hasattr(out, 'write'):
             out = FileCodeSink(out)
         if isinstance(out, CodeSink):
             sink_manager = _MonolithicSinkManager(out)

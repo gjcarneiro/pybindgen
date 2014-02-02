@@ -1,14 +1,14 @@
 
-import base
+from pybindgen.typehandlers import base
 
-import voidtype
-import inttype
-import stringtype
-import booltype
-import doubletype
-import floattype
-import pyobjecttype
+from pybindgen.typehandlers import voidtype
+from pybindgen.typehandlers import inttype
+from pybindgen.typehandlers import stringtype
+from pybindgen.typehandlers import booltype
+from pybindgen.typehandlers import doubletype
+from pybindgen.typehandlers import floattype
+from pybindgen.typehandlers import pyobjecttype
 
 
-from base import add_type_alias
+from pybindgen.typehandlers.base import add_type_alias
 

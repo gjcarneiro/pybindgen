@@ -1,3 +1,12 @@
+
+import sys
+PY3 = (sys.version_info[0] >= 3)
+
+if PY3:
+    string_types = str,
+else:
+    string_types = basestring,
+
 try:
     any = any
 except NameError:
@@ -8,17 +17,15 @@ except NameError:
         return False
 
 
-import sys
-from typehandlers.codesink import CodeSink
-from typehandlers.base import TypeLookupError, TypeConfigurationError, CodeGenerationError, NotSupportedError, \
+from pybindgen.typehandlers.codesink import CodeSink
+from pybindgen.typehandlers.base import TypeLookupError, TypeConfigurationError, CodeGenerationError, NotSupportedError, \
     Parameter, ReturnValue
 try:
-    from version import __version__
+    from pybindgen.version import __version__
 except ImportError:
     __version__ = [0, 0, 0, 0]
 
-
-import settings
+from pybindgen import settings
 import warnings
 
 
@@ -94,6 +101,25 @@ typedef intobjargproc ssizeobjargproc;
 #endif
 ''')
 
+    if min_python_version < (2, 6):
+        code_sink.writeln(r'''
+#ifndef PyVarObject_HEAD_INIT
+#define PyVarObject_HEAD_INIT(type, size) \
+        PyObject_HEAD_INIT(type) size,
+#endif
+''')
+
+    code_sink.writeln(r'''
+#if PY_VERSION_HEX >= 0x03000000
+typedef void* cmpfunc;
+#define PyCObject_FromVoidPtr(a, b) PyCapsule_New(a, NULL, b)
+#define PyCObject_AsVoidPtr(a) PyCapsule_GetPointer(a, NULL)
+#define PyString_FromString(a) PyBytes_FromString(a)
+#define Py_TPFLAGS_CHECKTYPES 0 /* this flag doesn't exist in python 3 */
+#endif
+''')
+
+
     code_sink.writeln(r'''
 #if     __GNUC__ > 2
 # define PYBINDGEN_UNUSED(param) param __attribute__((__unused__))
@@ -112,6 +138,7 @@ typedef enum _PyBindGenWrapperFlags {
 #endif
 
 ''')
+
     
 
 def mangle_name(name):
@@ -125,7 +152,7 @@ def mangle_name(name):
 
 def get_mangled_name(base_name, template_args):
     """for internal pybindgen use"""
-    assert isinstance(base_name, basestring)
+    assert isinstance(base_name, string_types)
     assert isinstance(template_args, (tuple, list))
 
     if template_args:
@@ -150,7 +177,8 @@ def call_with_error_handling(callback, args, kwargs, wrapper,
     else:
         try:
             return callback(*args, **kwargs)
-        except Exception, ex:
+        except Exception:
+            _, ex, _ = sys.exc_info()
             if isinstance(ex, exceptions_to_handle):
                 dummy1, dummy2, traceback = sys.exc_info()
                 if settings.error_handler.handle_error(wrapper, ex, traceback):
@@ -171,9 +199,9 @@ def ascii(value):
     """
     if value is None:
         return value
-    elif isinstance(value, str):
+    elif isinstance(value, string_types):
         return value
-    elif isinstance(value, unicode):
+    elif isinstance(value, string_types):
         return value.encode('ascii')
     else:
         raise TypeError("value must be str or ascii string contained in a unicode object")
@@ -220,7 +248,7 @@ def parse_retval_spec(retval_spec):
         else:
             kwargs = dict()
             args = retval_spec
-    elif isinstance(retval_spec, str):
+    elif isinstance(retval_spec, string_types):
         kwargs = dict()
         args = (retval_spec,)
     else:

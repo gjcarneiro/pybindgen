@@ -1,7 +1,7 @@
-from cppattribute import PyGetter, PySetter
-from typehandlers import codesink
-import settings
-import utils
+from .cppattribute import PyGetter, PySetter
+from .typehandlers import codesink
+from . import settings
+from . import utils
 
 class CppCustomInstanceAttributeGetter(PyGetter):
     '''

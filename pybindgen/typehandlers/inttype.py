@@ -3,10 +3,10 @@
 # pylint: disable-msg=C0111
 
 import struct
-assert struct.calcsize('i') == 4 # assumption is made that sizeof(int) == 4 for all platforms pybindgen runs on
+assert struct.calcsize(b'i') == 4 # assumption is made that sizeof(int) == 4 for all platforms pybindgen runs on
 
 
-from base import ReturnValue, Parameter, PointerParameter, PointerReturnValue, \
+from .base import ReturnValue, Parameter, PointerParameter, PointerReturnValue, \
      ReverseWrapperBase, ForwardWrapperBase, TypeConfigurationError, NotSupportedError
 
 
@@ -91,7 +91,7 @@ class UnsignedIntPtrParam(PointerParameter):
 
                 wrapper.before_call.write_code("%(elem)s = PyList_GET_ITEM(%(py_list)s, %(idx)s);" % vars())
                 wrapper.before_call.write_error_check(
-                        '!(PyInt_Check(%(elem)s) || PyLong_Check(%(elem)s))',
+                        '!PyNumber_Check(%(elem)s)',
                         'PyErr_SetString(PyExc_TypeError, "Parameter `%s\' must be a list of %i ints / longs");'
                         % (self.name, self.array_length))
                 wrapper.before_call.write_code("%(name)s[%(idx)s] = PyLong_AsUnsignedInt(%(elem)s);" % vars())
@@ -446,6 +446,7 @@ class Int8Return(ReturnValue):
 
 
 
+
 class UnsignedLongLongParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
@@ -724,7 +725,7 @@ class UnsignedInt16PtrParam(PointerParameter):
             wrapper.parse_params.add_parameter('H', [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
-        name = wrapper.declarations.declare_variable(str(self.type_traits.target), self.name)
+        name = wrapper.declarations.declare_variable(str(self.type_traits.target), self.name, self.default_value)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
             wrapper.parse_params.add_parameter('H', ['&'+name], self.name)
