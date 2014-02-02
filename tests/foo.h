@@ -1091,9 +1091,7 @@ public:
             }
         }
     // -#- name=__setslice__ -#-
-    int set_slice (int index1,
-                   int index2,
-                   const VectorLike& values)
+    int set_slice (int index1, int index2, const VectorLike& values)
         {
             const int n = this->get_len();
             index1 = (index1 < 0 ? (n + 1 + index1) : index1);
@@ -1106,8 +1104,7 @@ public:
             return 0;
         }
     // -#- name=__getslice__ -#-
-    VectorLike get_slice (int index1,
-                          int index2) const
+    VectorLike get_slice (int index1, int index2) const
         {
             VectorLike result;
             const int n = this->get_len();
