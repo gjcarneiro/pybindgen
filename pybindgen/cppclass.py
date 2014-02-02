@@ -3292,8 +3292,8 @@ class CppClassRefReturnValue(CppClassReturnValueBase):
 
     def get_c_error_return(self): # only used in reverse wrappers
         """See ReturnValue.get_c_error_return"""
-        if self.type_traits.type_is_reference:
-            raise NotSupportedError
+        #if self.type_traits.type_is_reference:
+        #    raise NotSupportedError
         return "return %s();" % (self.cpp_class.full_name,)
 
     def convert_c_to_python(self, wrapper):

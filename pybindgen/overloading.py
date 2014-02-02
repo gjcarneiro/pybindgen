@@ -119,6 +119,10 @@ class OverloadedWrapper(object):
                         modified = True
                         self.wrappers.remove(wrapper)
                         tb = traceback.extract_stack()
+                        ex = utils.SkipWrapper(
+                            "overloading: removed the wrapper %s because its"
+                            " method flags are different from existing ones."
+                            % (wrapper,))
                         settings.error_handler.handle_error(wrapper, ex, tb)
                         break
 
