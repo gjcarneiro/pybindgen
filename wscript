@@ -64,6 +64,7 @@ def zipper(dir, zip_file, archive_main_folder=None):
 
 
 def options(opt):
+    opt.load('python_patched', tooldir="waf-tools")
     opt.load('compiler_cc')
     opt.load('compiler_cxx')
     opt.load('cflags', tooldir="waf-tools")
@@ -137,7 +138,7 @@ def _check_compilation_flag(conf, flag, mode='cxx', linkflags=None):
         retval = conf.run_c_code(code='#include <stdio.h>\nint main() { return 0; }\n',
                                  env=env, compile_filename=fname,
                                  features=[mode, mode+'program'], execute=False)
-    except Configure.ConfigurationError:
+    except conf.errors.ConfigurationError:
         ok = False
     else:
         ok = (retval == 0)
@@ -164,13 +165,13 @@ def configure(conf):
     generate_version_py()
 
     conf.load('command', tooldir="waf-tools")
-    conf.load('python')
+    conf.load('python_patched', tooldir="waf-tools")
     conf.check_python_version((2,3))
 
     try:
         conf.load('compiler_cc')
         conf.load('compiler_cxx')
-    except Configure.ConfigurationError:
+    except conf.errors.ConfigurationError:
         Logs.warn("C/C++ compiler not detected.  Unit tests and examples will not be compiled.")
         conf.env['CXX'] = ''
     else:
@@ -184,7 +185,7 @@ def configure(conf):
             else:
                 try:
                     conf.check_python_module('pygccxml')
-                except Configure.ConfigurationError:
+                except conf.errors.ConfigurationError:
                     conf.env['ENABLE_PYGCCXML'] = False
                 else:
                     conf.env['ENABLE_PYGCCXML'] = True
