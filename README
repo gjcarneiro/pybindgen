@@ -38,13 +38,15 @@ Before proceeding make sure the system requirements are met.  PyBindGen requires
 3- A C/C++ Compilation tool-chain (apt-get install build-essential)
 4- (optional) GCCXML and PyGCCXML (1.0 recommended) (http://www.language-binding.net/pygccxml/download.html)
 
-You can install PyBindGen using either the setup.py or WAF.
+You can install PyBindGen using either the setup.py or WAF.  Note: to
+be able to run all tests, which involve code generation, and
+subsequent compilation, you need to use WAF.
 
-Installation using setup.py:
+=== Installation using setup.py: ===
 
 1. python setup.py install
 
-Installation using WAF:
+=== Installation using WAF: ===
 
 PyBindGen uses WAF (http://code.google.com/p/waf/) as build system.
 However, WAF does not have to be previously installed, as it is
@@ -105,7 +107,7 @@ used for code generation unit tests and compiling the example modules.
 
 The following documentation is available:
 
-1. API docs (with introductory tutorial): http://packages.python.org/PyBindGen/
+1. API docs (with introductory tutorial): http://pybindgen.readthedocs.org/en/latest/
 2. Many simple examples, in the 'examples' directory
 3. Advanced examples in the unit tests (tests/)
 4. The source code!
