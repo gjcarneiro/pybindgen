@@ -12,7 +12,7 @@ else:
 
 def build(bld):
     if not bld.env['ENABLE_PYGCCXML']:
-        print "gccxml not available; skipping the C hello demo"
+        print("gccxml not available; skipping the C hello demo")
         return
 
     bindgen = bld(
