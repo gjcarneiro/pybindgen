@@ -74,6 +74,15 @@ def get_version_from_bzr(path):
 
     
 def get_version(path=None):
+    filename = os.path.join(os.path.dirname(__file__), 'pybindgen', 'version.py')
+    if os.path.exists(filename):
+        # Read the version.py from the version file
+        with open(filename, "rt") as versionpy:
+            version_data = versionpy.read().strip().split("\n")[0]
+            version = eval(version_data.split("=", 1)[1])
+            version_str = '.'.join(str(x) for x in version)
+            #print version_str
+            return version_str
     if path is None:
         path = os.path.dirname(__file__)
     try:
@@ -84,7 +93,7 @@ def get_version(path=None):
 def generate_version_py(force=False, path=None):
     """generates pybindgen/version.py, unless it already exists"""
 
-    filename = os.path.join('pybindgen', 'version.py')
+    filename = os.path.join(os.path.dirname(__file__), 'pybindgen', 'version.py')
     if not force and os.path.exists(filename):
         return
 

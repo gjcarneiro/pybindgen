@@ -1,5 +1,5 @@
 ## -*- python -*-
-## (C) 2007-2013 Gustavo J. A. M. Carneiro
+## (C) 2007-2014 Gustavo J. A. M. Carneiro
 
 from wutils import get_version, generate_version_py
 
@@ -7,15 +7,11 @@ from waflib import Options
 from waflib import Build
 
 from waflib import Scripting
-# Scripting.excludes.remove('Makefile')
 Scripting.dist_format = 'zip'
 
 from waflib import Configure
-#Configure.autoconfig = True
 
 from waflib import Logs
-
-#from Params import fatal
 
 import os
 import subprocess
@@ -24,9 +20,6 @@ import sys
 import tarfile
 import re
 import types
-
-#import Task
-#Task.file_deps = Task.extract_deps
 
 
 APPNAME='pybindgen'
@@ -208,8 +201,6 @@ def configure(conf):
 
 
 def build(bld):
-    #global g_bld
-    #g_bld = bld
     if getattr(Options.options, 'generate_version', False):
         generate_version_py(force=True)
 
@@ -372,29 +363,3 @@ def docs(ctx):
         Logs.error("make returned with code %i" % retval)
         raise SystemExit(2)
 
-
-#
-# FIXME: Remove this when upgrading beyond WAF 1.6.11; this here is
-# only to fix a bug in WAF...
-#
-from waflib.Tools import python
-from waflib import TaskGen
-@TaskGen.feature('pyext')
-@TaskGen.before_method('propagate_uselib_vars', 'apply_link')
-@TaskGen.after_method('apply_bundle')
-def init_pyext(self):
-    """
-    Change the values of *cshlib_PATTERN* and *cxxshlib_PATTERN* to remove the
-    *lib* prefix from library names.
-    """
-    self.uselib = self.to_list(getattr(self, 'uselib', []))
-    if not 'PYEXT' in self.uselib:
-        self.uselib.append('PYEXT')
-    # override shlib_PATTERN set by the osx module
-    self.env['cshlib_PATTERN'] = self.env['cxxshlib_PATTERN'] = self.env['macbundle_PATTERN'] = self.env['pyext_PATTERN']
-
-    try:
-        if not self.install_path:
-            return
-    except AttributeError:
-        self.install_path = '${PYTHONARCHDIR}'
