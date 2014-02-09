@@ -108,7 +108,7 @@ def _check_compilation_flag(conf, flag, mode='cxx', linkflags=None):
         flag_str = 'flags ' + ' '.join(l)
     else:
         flag_str = 'flag ' + ' '.join(l)
-    if flag_str > 28:
+    if len(flag_str) > 28:
         flag_str = flag_str[:28] + "..."
 
     conf.start_msg('Checking for compilation %s support' % (flag_str,))
