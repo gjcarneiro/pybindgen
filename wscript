@@ -246,10 +246,10 @@ class CheckContext(Context.Context):
     def execute(self):
 
         # first we execute the build
-	bld = Context.create_context("build")
-	bld.options = Options.options # provided for convenience
-	bld.cmd = "check"
-	bld.execute()
+        bld = Context.create_context("build")
+        bld.options = Options.options # provided for convenience
+        bld.cmd = "check"
+        bld.execute()
 
 
         if Options.options.verbose:
