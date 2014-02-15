@@ -10,7 +10,7 @@ from distutils.core import setup
 
 generate_version_py(force=False)
 
-setup(name='PyBindGen',
+setup(name='pybindgen',
       version=get_version(),
       description='Python Bindings Generator',
       author='Gustavo Carneiro',
