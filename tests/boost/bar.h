@@ -49,6 +49,7 @@ public:
     boost::shared_ptr<Foo> get_foo () const { return m_foo; }
 
     virtual boost::shared_ptr<Foo> get_modified_foo (boost::shared_ptr<Foo> foo) const { return m_foo; }
+    virtual ~ClassThatTakesFoo() {}
 };
 
 
