@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from wutils import get_version, generate_version_py
 generate_version_py(force=False)
 
-setup(name='pybindgen',
+setup(name='PyBindGen',
       version=get_version(),
       description='Python Bindings Generator',
       author='Gustavo Carneiro',
