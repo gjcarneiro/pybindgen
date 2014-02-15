@@ -9,3 +9,5 @@ try:
     from pybindgen import version
 except ImportError: # the version.py file is generated and may not exist
     pass
+else:
+    __version__ = '.'.join(str(x) for x in version.__version__)
