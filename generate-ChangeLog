@@ -1,8 +1,6 @@
 #!/bin/sh
 
-## Requires the GNU ChangeLog formatter plugin:
-##   http://telecom.inescporto.pt/~gjc/gnulog.py
-
+export BZR_PLUGIN_PATH=$(dirname $0)/bzr-plugins
 ChangeLog=$(dirname $0)/ChangeLog
 	
 chmod u+w $ChangeLog 2> /dev/null
