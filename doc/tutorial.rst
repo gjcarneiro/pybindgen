@@ -133,62 +133,41 @@ The final program is pretty short::
   mod.add_function('MyModuleDoAction', None, [])
   mod.generate(sys.stdout)
 
-Building it (GCC instructions)
-------------------------------
+Building it using Python setup.py (distutils)
+---------------------------------------------
 
 This very small example is located in the :download:`first-example
-directory <first-example.zip>`, together with a small makefile which
-will build our small C library, the bridging code, and a python
-module::
+directory <_static/first-example.zip>`, together with a small makefile which
+will build our extension module::
 
-  mathieu@ns-test:~/code/pybindgen$ cd tutorial/first-example/
-  mathieu@ns-test:~/code/pybindgen/tutorial/first-example$ make
-  gcc -fPIC -c -o my-module.o my-module.c
-  gcc -shared -o libmymodule.so my-module.o
-  PYTHONPATH=$PYTHONPATH:../../ python my-module.py > my-module-binding.c
-  gcc -fPIC -I/usr/include/python2.5 -c -o my-module-binding.o my-module-binding.c
-  gcc -shared -o MyModule.so -L. -lmymodule my-module-binding.o
-  mathieu@ns-test:~/code/pybindgen/tutorial/first-example$ 
+  $ cd first-example/
+  $ python setup.py build
 
-The first two lines are simply used to build our example C library in 
-libmymodule.so so, these are not very interesting. The more interesting bit
-starts with::
+The `setup.py` is mostly a standard Python distutils driver script.
+Please refer to the `Python documentation
+<http://docs.python.org/3/extending/building.html>`_ for more
+information.
 
-  PYTHONPATH=$PYTHONPATH:../../ python my-module.py > my-module-binding.c
+The unusual part about this `setup.py` is that it imports
+`mymodulegen` and calls the generate function, with the
+`build/my-module-binding.c` as argument::
 
-which is just a fancy way to run our binding generator program while
-ensuring that it will find the pybindgen module and while dumping the output
-of the program to the file named my-module-binding.c. This file is then build
-and linked into a python module::
+ from mymodulegen import generate
+ module_fname = os.path.join("build", "my-module-binding.c")
+ with open(module_fname, "wt") as file_:
+     print("Generating file {}".format(module_fname))
+     generate(file_)
 
-  gcc -fPIC -I/usr/include/python2.5 -c -o my-module-binding.o my-module-binding.c
-  gcc -shared -o MyModule.so -L. -lmymodule my-module-binding.o
+After `build/my-module-binding.c` having been generated, with the help
+of PyBindGen (as seen in the previous section), we can use it as one
+of the source files for our extension module::
 
-Building it (MSVC instructions)
--------------------------------
+ mymodule = Extension('mymodule',
+                      sources = [module_fname, 'my-module.c'],
+                      include_dirs=['.'])
 
-Change to the :download:`first-example directory <first-example.zip>`,
-make a Release subdirectory, and go to it by doing::
+The rest is standard setup.py code.
 
- cd first-example
- md Release
- cd Release
-
-Build a Release version of MyModule.pyd by doing::
-
- cl /LD /O2 /MD /EHsc /W3 /I C:\python26\include /D WIN32 /D NDEBUG /D _CONSOLE ..\my-module.c ..\my-module-binding.c /link /OUT:MyModule.pyd /IMPLIB:MyModule.lib /LIBPATH:"C:\python26\libs"
-
-which creates::
-
- my-module-binding.obj
- my-module.obj
- MyModule.exp
- MyModule.lib
- MyModule.pyd
- MyModule.pyd.manifest
-
-If you wanted to debug your extensions you'd have to first create a
-debug version of Python yourself by compiling the Python sources.
 
 Testing it
 ----------
@@ -198,15 +177,25 @@ your system to make sure that the python module is found by the python runtime
 is outside the scope of this tutorial but, for most people, the following session
 should be self-explanatory::
 
-  mathieu@ns-test:~/code/pybindgen/tutorial/first-example$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.
-  mathieu@ns-test:~/code/pybindgen/tutorial/first-example$ export PYTHONPATH=$PYTHONPATH:.
-  mathieu@ns-test:~/code/pybindgen/tutorial/first-example$ python
-  Python 2.5.1 (r251:54863, Mar  7 2008, 03:39:23) 
-  [GCC 4.1.3 20070929 (prerelease) (Ubuntu 4.1.2-16ubuntu2)] on linux2
-  Type "help", "copyright", "credits" or "license" for more information.
-  >>> import MyModule
-  >>> MyModule.MyModuleDoAction ()
-  You called MyModuleDoAction !
+ $ cd first-example/
+ $ python setup.py buid
+ Generating file build/my-module-binding.c
+ running build
+ running build_ext
+ building 'mymodule' extension
+ creating build/temp.linux-x86_64-2.7
+ creating build/temp.linux-x86_64-2.7/build
+ [...]
+ $ export PYTHONPATH=build/lib.linux-x86_64-2.7/
+ $ python
+ Python 2.7.5+ (default, Sep 19 2013, 13:48:49) 
+ [GCC 4.8.1] on linux2
+ Type "help", "copyright", "credits" or "license" for more information.
+ >>> import mymodule
+ >>> mymodule.MyModuleDoAction ()
+ You called MyModuleDoAction !
+ >>> 
+
 
 Wrapping types by value
 =======================
