@@ -710,7 +710,7 @@ class ModuleBase(dict):
         self.before_init.write_code('#if PY_VERSION_HEX >= 0x03000000')
         self.before_init.write_code(
             "m = PyModule_Create(&%s_moduledef);"
-            % (self.name))
+            % (self.prefix))
         self.before_init.write_code('#else')
         self.before_init.write_code(
             "m = Py_InitModule3((char *) \"%s\", %s_functions, %s);"
@@ -830,7 +830,7 @@ class ModuleBase(dict):
             '    -1,\n'
             '    %s_functions,\n'
             '};\n'
-            '#endif' % (self.name, mod_init_name,
+            '#endif' % (self.prefix, mod_init_name,
                         self.docstring and '"'+self.docstring+'"' or 'NULL',
                         self.prefix))
         main_sink.writeln()
