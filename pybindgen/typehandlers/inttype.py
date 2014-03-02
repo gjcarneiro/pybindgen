@@ -646,6 +646,10 @@ class LongLongReturn(ReturnValue):
         wrapper.build_params.add_parameter("L", [self.value], prepend=True)
 
 
+class LongLongRefReturn(LongLongReturn):
+    CTYPES = ['long long&', 'int64_t&', 'long long int&']
+
+
 class Int8PtrParam(PointerParameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT,
