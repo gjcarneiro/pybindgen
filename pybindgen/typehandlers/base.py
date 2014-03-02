@@ -1421,8 +1421,8 @@ class TypeMatcher(object):
                 untransformed_name = str(untransformed_type_traits.ctype_no_modifiers)
                 try:
                     rv = self._raw_lookup_with_alias_support(untransformed_name), transf, untransformed_type_traits
-                except KeyError:
-                    logger.debug("try to lookup type handler for %r => failure (%r)", untransformed_name)
+                except KeyError as ex:
+                    logger.debug("try to lookup type handler for %r => failure (%r)", untransformed_name, str(ex))
                     tried_names.append(untransformed_name)
                     continue
                 else:
