@@ -52,12 +52,14 @@ def get_python_to_c_converter(value, root_module, code_sink):
         val_converter = root_module.generate_python_to_c_type_converter(value.ThisClassReturn(value.full_name), code_sink)
         val_name = value.full_name
     elif isinstance(value, ReturnValue):
+        val_name = _type_no_ref(value)
+        if val_name != value.ctype:
+            value = ReturnValue.new(val_name)
         val_converter = root_module.generate_python_to_c_type_converter(value, code_sink)
-        val_name = _type_no_ref(value)
     elif isinstance(value, Parameter):
-        val_return_type = ReturnValue.new(value.ctype)
-        val_converter = root_module.generate_python_to_c_type_converter(val_return_type, code_sink)
         val_name = _type_no_ref(value)
+        val_return_type = ReturnValue.new(val_name)
+        val_converter = root_module.generate_python_to_c_type_converter(val_return_type, code_sink)
     else:
         raise ValueError("Don't know how to convert %r" % (value,))
     return val_converter, val_name
