@@ -192,13 +192,19 @@ class CppMethod(ForwardWrapperBase):
             return False
         return True
 
+    def get_custom_name(self):
+        if self.mangled_name != utils.get_mangled_name(self.method_name, self.template_parameters):
+            return self.mangled_name
+        else:
+            return None
+
     def set_custom_name(self, custom_name):
         if custom_name is None:
             self.mangled_name = utils.get_mangled_name(self.method_name, self.template_parameters)
         else:
             self.mangled_name = custom_name
 
-    custom_name = property(None, set_custom_name)
+    custom_name = property(get_custom_name, set_custom_name)
 
     def clone(self):
         """Creates a semi-deep copy of this method wrapper.  The returned
@@ -213,7 +219,8 @@ class CppMethod(ForwardWrapperBase):
                          is_virtual=self.is_virtual,
                          is_pure_virtual=self.is_pure_virtual,
                          is_const=self.is_const,
-                         visibility=self.visibility)
+                         visibility=self.visibility,
+                         custom_name=self.custom_name)
         meth._class = self._class
         meth.docstring = self.docstring
         meth.wrapper_base_name = self.wrapper_base_name
