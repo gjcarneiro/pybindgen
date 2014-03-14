@@ -89,14 +89,25 @@ class Function(ForwardWrapperBase):
         self.self_parameter_pystruct = None
         self.template_parameters = template_parameters
         self.custom_name = custom_name
-        self.mangled_name = utils.get_mangled_name(function_name, self.template_parameters)
         for t in throw:
             assert isinstance(t, CppException)
         self.throw = list(throw)
         self.custodians_and_wards = [] # list of (custodian, ward, postcall)
         from pybindgen import cppclass
         cppclass.scan_custodians_and_wards(self)
-        
+
+    def get_custom_name(self):
+        if self.mangled_name != utils.get_mangled_name(self.function_name, self.template_parameters):
+            return self.mangled_name
+        else:
+            return None
+
+    def set_custom_name(self, custom_name):
+        if custom_name is None:
+            self.mangled_name = utils.get_mangled_name(self.function_name, self.template_parameters)
+        else:
+            self.mangled_name = custom_name
+    custom_name = property(get_custom_name, set_custom_name)
 
     def clone(self):
         """Creates a semi-deep copy of this function wrapper.  The returned
@@ -106,7 +117,8 @@ class Function(ForwardWrapperBase):
         func = Function(self.function_name,
                         self.return_value,
                         [copy(param) for param in self.parameters],
-                        docstring=self.docstring)
+                        docstring=self.docstring,
+                        custom_name=self.custom_name)
         func._module = self._module
         func.wrapper_base_name = self.wrapper_base_name
         func.wrapper_actual_name = self.wrapper_actual_name
