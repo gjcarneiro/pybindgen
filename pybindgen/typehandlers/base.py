@@ -614,7 +614,12 @@ class ReverseWrapperBase(object):
         assert isinstance(decl_modifiers, (list, tuple))
         assert all([isinstance(mod, string_types) for mod in decl_modifiers])
 
-        self.declarations.declare_variable('PyObject*', 'py_retval')
+        #import sys
+        #print("generate", self, file=sys.stderr)
+        py_retval = self.declarations.declare_variable('PyObject*', 'py_retval')
+        assert py_retval == "py_retval", "py_retval already declared: "\
+          "generating the same wrapper twice without a reset() in between?"
+
         if self.return_value.ctype != 'void' \
                 and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
             self.declarations.declare_variable(self.return_value.ctype, 'retval')
