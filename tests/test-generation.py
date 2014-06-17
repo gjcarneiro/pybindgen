@@ -105,17 +105,21 @@ public:
             except NotImplementedError:
                 sys.stderr.write("ReverseWrapper %s(void) could not be generated: not implemented\n"
                                  % (retval.ctype))
-
+                continue
             wrapper_number += 1
+            memsink = codesink.MemoryCodeSink()
             try:
-                wrapper.generate(code_out,
+                wrapper.generate(memsink,
                                  '_test_wrapper_number_%i' % (wrapper_number,),
                                  ['static'])
             except NotImplementedError:
                 sys.stderr.write("ReverseWrapper %s xxx (void) could not be generated: not implemented\n"
                                  % (retval.ctype,))
+                continue
             except NotSupportedError:
                 continue
+            else:
+                memsink.flush_to(code_out)
             sys.stdout.write("\n")
 
 
