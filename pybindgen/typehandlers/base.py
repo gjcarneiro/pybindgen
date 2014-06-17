@@ -791,7 +791,7 @@ class ForwardWrapperBase(object):
         if (not self.no_c_retval and (self.return_value is not None or self.HAVE_RETURN_VALUE)
             and self.return_value.ctype != 'void'
             and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR):
-            self.declarations.declare_variable(self.return_value.ctype_no_const, 'retval')
+            self.declarations.declare_variable(str(self.return_value.type_traits.ctype_no_const_no_ref), 'retval')
 
         self.declarations.reserve_variable('args')
         self.declarations.reserve_variable('kwargs')
