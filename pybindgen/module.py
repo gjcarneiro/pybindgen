@@ -934,7 +934,7 @@ class Module(ModuleBase):
         """
         assert isinstance(value_type, TypeHandler)
         ctype = value_type.ctype
-        mangled_ctype = utils.mangle_name(ctype)
+        mangled_ctype = utils.mangle_name(str(ctype))
         converter_function_name = "_wrap_convert_py2c__%s" % mangled_ctype
         return converter_function_name
 
@@ -973,7 +973,7 @@ class Module(ModuleBase):
         """
         assert isinstance(value_type, TypeHandler)
         ctype = value_type.ctype
-        mangled_ctype = utils.mangle_name(ctype)
+        mangled_ctype = utils.mangle_name(str(ctype))
         converter_function_name = "_wrap_convert_c2py__%s" % mangled_ctype
         return converter_function_name
 
