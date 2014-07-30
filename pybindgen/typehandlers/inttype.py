@@ -146,7 +146,7 @@ class IntPtrParam(PointerParameter):
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
     CTYPES = ['int*']
 
-    def __init__(self, ctype, name, direction=None, is_const=None, transfer_ownership=None):
+    def __init__(self, ctype, name, direction=None, is_const=None, transfer_ownership=None, default_value=None):
         if direction is None:
             if is_const:
                 direction = Parameter.DIRECTION_IN
@@ -154,7 +154,7 @@ class IntPtrParam(PointerParameter):
                 raise TypeConfigurationError("direction not given")
         
         super(IntPtrParam, self).__init__(ctype, name, direction, is_const, transfer_ownership)
-
+        self.default_value = default_value
     
     def convert_c_to_python(self, wrapper):
         if self.direction & self.DIRECTION_IN:
@@ -163,13 +163,43 @@ class IntPtrParam(PointerParameter):
             wrapper.parse_params.add_parameter("i", [self.value], self.name)
 
     def convert_python_to_c(self, wrapper):
-        name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
-        wrapper.call_params.append('&'+name)
-        if self.direction & self.DIRECTION_IN:
-            wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
-        if self.direction & self.DIRECTION_OUT:
-            wrapper.build_params.add_parameter("i", [name])
-        
+        #import sys
+        #sys.stderr.write("***************"  +self.default_value + "\n")
+        optional = bool(self.default_value in ['NULL', '0'])
+        if optional:
+            name_int = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name+"_int")
+            name_obj = wrapper.declarations.declare_variable("PyObject*", self.name+"_obj", "NULL")
+            name_ptr = wrapper.declarations.declare_variable(self.ctype_no_const, self.name+"_ptr")
+            wrapper.call_params.append(name_ptr)
+            if self.direction & self.DIRECTION_IN:
+                wrapper.parse_params.add_parameter('O', ['&'+name_obj], self.name, optional=True)
+                wrapper.before_call.write_code(
+                    "if (%(name_obj)s) {\n"
+                    "    %(name_int)s = PyInt_AsLong(%(name_obj)s);\n"
+                    "    %(name_ptr)s = &%(name_obj)s;\n"
+                    "} else {\n"
+                    "    %(name_ptr)s = NULL;\n"
+                    "}\n"
+                    % vars())
+                wrapper.before_call.write_error_check("PyErr_Occurred()")
+            if self.direction & self.DIRECTION_OUT:
+                wrapper.after_call.write_code(
+                    "if (%(name_obj)s) {\n"
+                    "    %(name_obj)s = PyInt_FromLong(%(name_int)s);\n"
+                    "} else {\n"
+                    "    %(name_obj)s = Py_None;\n"
+                    "    Py_INCREC(%(name_obj)s);\n"
+                    "}\n"
+                    % vars())
+                wrapper.build_params.add_parameter("N", [name_obj])
+        else:
+            name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
+            wrapper.call_params.append('&'+name)
+            if self.direction & self.DIRECTION_IN:
+                wrapper.parse_params.add_parameter('i', ['&'+name], self.name)
+            if self.direction & self.DIRECTION_OUT:
+                wrapper.build_params.add_parameter("i", [name])
+            
 
 
 class IntRefParam(Parameter):
