@@ -65,8 +65,8 @@ public:
     module = Module("foo")
 
     ## Register type handlers for the class
-    Foo = cppclass.CppClass('Foo')
-    Foo.module = module
+    Foo = module.add_class('Foo')
+    Foo.add_constructor([Parameter.new("const Foo&", "foo")])
     #Foo.full_name = Foo.name # normally adding the class to a module would take care of this
     Foo.generate_forward_declarations(code_out, module)
 

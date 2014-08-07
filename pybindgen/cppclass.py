@@ -1312,7 +1312,11 @@ class CppClass(object):
                     self.add_constructor([], visibility=cons.visibility)
                 elif (len(cons.parameters) == 1
                       and isinstance(cons.parameters[0], self.parent.ThisClassRefParameter)):
-                    self.add_constructor([self.ThisClassRefParameter()], visibility=cons.visibility)
+                    self.add_constructor([self.ThisClassRefParameter(
+                        self.full_name + "&",
+                        "obj",
+                        cons.parameters[0].direction)],
+                        visibility=cons.visibility)
 
     def get_helper_class(self):
         """gets the "helper class" for this class wrapper, creating it if necessary"""
@@ -2758,6 +2762,8 @@ def common_shared_object_return(value, py_name, cpp_class, code_block,
                         "%s->flags = PYBINDGEN_WRAPPER_FLAG_OBJECT_NOT_OWNED;" % (py_name,))
                 else:
                     # The PyObject creates its own copy
+                    if not cpp_class.has_copy_constructor:
+                        raise CodeGenerationError("Class {0} cannot be copied".format(cpp_class.full_name))
                     cpp_class.write_create_instance(code_block,
                                                          "%s->obj" % py_name,
                                                          value_value)
@@ -3164,6 +3170,8 @@ class CppClassRefParameter(CppClassParameterBase):
         wrapper.before_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (self.py_name,))
 
         if self.direction == Parameter.DIRECTION_IN:
+            if not self.cpp_class.has_copy_constructor:
+                raise CodeGenerationError("Class {0} cannot be copied".format(self.cpp_class.full_name))
             self.cpp_class.write_create_instance(wrapper.before_call,
                                                  "%s->obj" % self.py_name,
                                                  self.value)
@@ -3244,6 +3252,8 @@ class CppClassReturnValue(CppClassReturnValueBase):
                 "%s->inst_dict = NULL;" % (py_name,))
         wrapper.after_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
 
+        if not self.cpp_class.has_copy_constructor:
+            raise CodeGenerationError("Class {0} cannot be copied".format(self.cpp_class.full_name))
         self.cpp_class.write_create_instance(wrapper.after_call,
                                              "%s->obj" % py_name,
                                              self.value)
@@ -3315,6 +3325,8 @@ class CppClassRefReturnValue(CppClassReturnValueBase):
 
             wrapper.after_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (py_name,))
 
+            if not self.cpp_class.has_copy_constructor:
+                raise CodeGenerationError("Class {0} cannot be copied".format(self.cpp_class.full_name))
             self.cpp_class.write_create_instance(wrapper.after_call,
                                                  "%s->obj" % py_name,
                                                  self.value)
@@ -3518,6 +3530,8 @@ class CppClassPtrParameter(CppClassParameterBase):
                     ## the object after the call.
 
                     if self.direction == Parameter.DIRECTION_IN:
+                        if not self.cpp_class.has_copy_constructor:
+                            raise CodeGenerationError("Class {0} cannot be copied".format(self.cpp_class.full_name))
                         self.cpp_class.write_create_instance(wrapper.before_call,
                                                              "%s->obj" % self.py_name,
                                                              '*'+self.value)
@@ -3752,6 +3766,8 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             if not isinstance(self.cpp_class.memory_policy, ReferenceCountingPolicy):
                 ## the caller receives a copy, if possible
                 try:
+                    if not self.cpp_class.has_copy_constructor:
+                        raise CodeGenerationError("Class {0} cannot be copied".format(self.cpp_class.full_name))
                     self.cpp_class.write_create_instance(wrapper.after_call,
                                                          "%s" % self.value,
                                                          '*'+value)
