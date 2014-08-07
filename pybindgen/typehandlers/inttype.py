@@ -609,7 +609,7 @@ class SizeTReturn(ReturnValue):
         # sizeof(size_t) != sizeof(unsigned PY_LONG_LONG).
         name = wrapper.declarations.declare_variable("unsigned PY_LONG_LONG", "retval_tmp")
         wrapper.parse_params.add_parameter("K", ["&"+name], prepend=True)
-        wrapper.after_call.write_code("retval = %s;" % (name))
+        wrapper.after_call.write_code("%s = %s;" % (self.value, name))
 
     def convert_c_to_python(self, wrapper):
         wrapper.build_params.add_parameter("K", ["((unsigned PY_LONG_LONG) %s)" % self.value], prepend=True)
