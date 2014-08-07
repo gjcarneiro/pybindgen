@@ -66,7 +66,8 @@ class BoolPtrParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         #assert self.ctype == 'bool*'
-        name = wrapper.declarations.declare_variable(self.ctype_no_const[:-1], self.name)
+        base_ctype = self.type_traits.target or self.ctype_no_const
+        name = wrapper.declarations.declare_variable(str(base_ctype), self.name)
         wrapper.call_params.append('&'+name)
         if self.direction & self.DIRECTION_IN:
             py_name = wrapper.declarations.declare_variable("PyObject*", 'py_'+self.name)
