@@ -222,6 +222,28 @@ class BoostSharedPtr(SmartPointerPolicy):
     def get_pystruct_init_code(self, cpp_class, obj):
         return "new(&%s->obj) %s;" % (obj, self.pointer_name,)
 
+class SharedPtr(SmartPointerPolicy):
+    def __init__(self, class_name):
+        """
+        Create a memory policy for using std::shared_ptr<> to manage instances of this object.
+
+        :param class_name: the full name of the class, e.g. foo::Bar
+        """
+        self.class_name = class_name
+        self.pointer_name = '::std::shared_ptr< %s >' % (self.class_name,)
+
+    def get_delete_code(self, cpp_class):
+        return "self->obj.~shared_ptr< %s >();" % (self.class_name,)
+
+    def get_pointer_type(self, class_full_name):
+        return self.pointer_name + ' '
+
+    def get_instance_creation_function(self):
+        return std_shared_ptr_instance_creation_function
+
+    def get_pystruct_init_code(self, cpp_class, obj):
+        return "new(&%s->obj) %s;" % (obj, self.pointer_name,)
+
 
 def default_instance_creation_function(cpp_class, code_block, lvalue,
                                        parameters, construct_type_name):
@@ -268,6 +290,28 @@ def boost_shared_ptr_instance_creation_function(cpp_class, code_block, lvalue,
                                   % cpp_class.full_name)
     code_block.write_code(
         "%s.reset (new %s(%s));" % (lvalue, construct_type_name, parameters))
+
+def std_shared_ptr_instance_creation_function(cpp_class, code_block, lvalue,
+                                              parameters, construct_type_name):
+    """
+    std::shared_ptr "instance creation function"; it is called whenever a new
+    C++ class instance needs to be created
+
+    :param cpp_class: the CppClass object whose instance is to be created
+    :param code_block: CodeBlock object on which the instance creation code should be generated
+    :param lvalue: lvalue expression that should hold the result in the end
+    :param parameters: stringified list of parameters
+    :param construct_type_name: actual name of type to be constructed (it is
+                          not always the class name, sometimes it's
+                          the python helper class)
+    """
+    assert lvalue
+    assert not lvalue.startswith('None')
+    if cpp_class.incomplete_type:
+        raise CodeGenerationError("%s cannot be constructed (incomplete type)"
+                                  % cpp_class.full_name)
+    code_block.write_code(
+        "%s = std::make_shared<%s>(%s);" % (lvalue, construct_type_name, parameters))
 
 
 
@@ -785,7 +829,7 @@ class CppClass(object):
             except ValueError:
                 pass
 
-            if isinstance(self.memory_policy, BoostSharedPtr): # boost::shared_ptr<Class>
+            if isinstance(self.memory_policy, SmartPointerPolicy): # boost::shared_ptr<Class> or std::shared_ptr<Class>
 
                 class ThisClassSharedPtrParameter(CppClassSharedPtrParameter):
                     """Register this C++ class as pass-by-pointer parameter"""
@@ -1263,8 +1307,9 @@ class CppClass(object):
             return_type_matcher.register(alias, self.ThisClassReturn)
         except ValueError: pass
         
-        if isinstance(self.memory_policy, BoostSharedPtr):
-            alias_ptr = 'boost::shared_ptr< %s >' % alias
+        if isinstance(self.memory_policy, SmartPointerPolicy):
+            alias_ptr = self.memory_policy.__class__(alias).pointer_name
+            #alias_ptr = 'boost::shared_ptr< %s >' % alias
             self.ThisClassSharedPtrParameter.CTYPES.append(alias_ptr)
             try:
                 param_type_matcher.register(alias_ptr, self.ThisClassSharedPtrParameter)
