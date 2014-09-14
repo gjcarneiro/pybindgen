@@ -10,8 +10,10 @@ def build(bld):
     if bld.env['ENABLE_BOOST_SHARED_PTR']:
         bld.recurse('boost_shared_ptr')
     bld.recurse('import_from_module')
-    bld.recurse('std_shared_ptr')
+
+    if bld.env["ENABLE_CXX11"]:
+    	bld.recurse('std_shared_ptr')
 
 def configure(conf):
-    pass
-    #conf.env['HAVE_BOOST'] = conf.check_boost()
+	if conf.check_compilation_flag('-std=c++11'):
+		conf.env["ENABLE_CXX11"] = True
