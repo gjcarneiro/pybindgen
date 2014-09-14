@@ -1272,6 +1272,10 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(y, 0.5)
         self.assertRaises(foo.DomainError, c.my_inverse_method, 0)
 
+    def test_python_exception(self):
+        c = foo.ClassThatThrows(6)
+        self.assertRaises(IndexError, c.throw_out_of_range)
+
     def test_constructor_exceptions(self):
         c = foo.ClassThatThrows(1)
         self.assertRaises(foo.DomainError, foo.ClassThatThrows, 0)

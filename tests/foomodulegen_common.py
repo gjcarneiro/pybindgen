@@ -52,6 +52,9 @@ typehandlers.return_type_matcher.register_transformation(transf)
 typehandlers.param_type_matcher.register_transformation(transf)
 del transf
 
+def customize_module_pre(module):
+    standard_error = module.add_exception('out_of_range', foreign_cpp_namespace='std',
+                                          custom_name='IndexError', is_standard_error=True)
 
 
 def customize_module(module):
@@ -138,3 +141,4 @@ _wrap_PyBar_Hooray_lenx(PyBar *PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject
     #module.add_include('<stdio.h>')
     #module.add_class(name="FILE", foreign_cpp_namespace="", import_from_module="__builtin__ named file")
     #module.add_enum("reg_errcode_t",   ["REG_NOERROR", "REG_NOMATCH"], import_from_module="__builtin__")
+

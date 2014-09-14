@@ -6,7 +6,7 @@ from pybindgen import utils
 
 class CppException(object):
     def __init__(self, name, parent=None, outer_class=None, custom_name=None,
-                 foreign_cpp_namespace=None, message_rvalue=None):
+                 foreign_cpp_namespace=None, message_rvalue=None, is_standard_error=False):
         """
         :param name: exception class name
         :param parent: optional parent class wrapper
@@ -15,6 +15,11 @@ class CppException(object):
                exception class at python-side; if omitted, the name of
                the class in the python module will be the same name as
                the class in C++ (minus namespace).
+
+        :param is_standard_error: if True (default false), throws a
+               standard Python Exception with the same name instead
+               of creating anew exception. If custom_name is set,
+               it uses the standard exception with that name instead.
 
         :param foreign_cpp_namespace: if set, the class is assumed to
                belong to the given C++ namespace, regardless of the
@@ -42,6 +47,7 @@ class CppException(object):
         self.pytypestruct = None
         self.foreign_cpp_namespace = foreign_cpp_namespace
         self.message_rvalue = message_rvalue
+        self.is_standard_error = is_standard_error
 
         
     def __repr__(self):
@@ -97,7 +103,10 @@ class CppException(object):
         self.mangled_name = flatten(self.name)
         self.mangled_full_name = utils.mangle_name(self.full_name)
 
-        self.pytypestruct = "Py%s%s_Type" % (prefix,  self.mangled_full_name)
+        if self.is_standard_error:
+            self.pytypestruct = "PyExc_%s" % self.python_name
+        else:
+            self.pytypestruct = "Py%s%s_Type" % (prefix,  self.mangled_full_name)
 
     def _get_python_name(self):
         if self.custom_name is None:
@@ -119,6 +128,9 @@ class CppException(object):
 
 
     def generate_forward_declarations(self, code_sink, dummy_module):
+        if self.is_standard_error:
+            return
+
         code_sink.writeln()
         code_sink.writeln('extern PyTypeObject *%s;' % (self.pytypestruct,))
         code_sink.writeln()
@@ -126,6 +138,11 @@ class CppException(object):
 
     def generate(self, code_sink, module, docstring=None):
         """Generates the class to a code sink"""
+
+        # skip generation if translating to a standard Exception
+        if self.is_standard_error:
+            return
+
         code_sink.writeln('PyTypeObject *%s;' % (self.pytypestruct,))
         ## --- register the class type in the module ---
         module.after_init.write_code("/* Register the '%s' exception */" % self.full_name)

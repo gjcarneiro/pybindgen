@@ -168,7 +168,7 @@ public:
     virtual int get_int (int x) {
         return x;
     }
-    
+
     static int instance_count;
 
     virtual ~Zbr () {
@@ -190,7 +190,7 @@ class Foobar
 {
     Foobar (const Foobar &);
     Foobar& operator= (const Foobar &);
-    
+
 public:
     static int instance_count;
 
@@ -205,7 +205,7 @@ class SomeObject
 {
 public:
     std::string m_prefix;
-    
+
     enum {
         TYPE_FOO,
         TYPE_BAR,
@@ -372,7 +372,7 @@ public:
     const Foo * get_foo_shared_ptr () {
         return m_foo_shared_ptr;
     }
-    
+
     // -#- @return(caller_owns_return=true) -#-
     Foo * get_foo_ptr () {
         Foo *foo = m_foo_ptr;
@@ -520,7 +520,7 @@ namespace xpto
 
     std::string get_foo_datum(FooXpto const &foo);
 
-    struct XptoClass 
+    struct XptoClass
     {
         SomeClass* GetSomeClass()
         // -#- @return(caller_owns_return=true) -#-
@@ -764,7 +764,7 @@ namespace TopNs
     };
 
     namespace PrefixBottomNs {
-        class PrefixInner : public OuterBase 
+        class PrefixInner : public OuterBase
         {
         public:
             PrefixInner () {}
@@ -814,7 +814,7 @@ int set_simple_list (SimpleStructList list);
 class TestContainer
 {
 public:
-    
+
     std::set<float> m_floatSet;
 
     TestContainer () : m_vec (NULL) {
@@ -852,7 +852,7 @@ private:
     SimpleStructMap m_simpleMap;
 
     std::vector<std::string> *m_vec;
-    
+
 };
 
 std::map<std::string, int> get_map ();
@@ -981,7 +981,7 @@ private:
 
     // disable the copy constructor
     ManipulatedObject (const ManipulatedObject &ctor_arg);
-    
+
 public:
     ManipulatedObject () : m_value (0) {}
     void SetValue (int value) { m_value = value; }
@@ -992,7 +992,7 @@ public:
 class ReferenceManipulator
 {
     ManipulatedObject m_obj;
-    
+
 public:
     ReferenceManipulator () {}
     virtual ~ReferenceManipulator () {}
@@ -1011,13 +1011,13 @@ public:
 class VectorLike
 {
     std::vector<double> m_vec;
-    
+
 public:
-    VectorLike () 
+    VectorLike ()
         {
         }
     // -#- name=__len__ -#-
-    std::vector<double>::size_type get_len () const 
+    std::vector<double>::size_type get_len () const
         {
             return m_vec.size ();
         }
@@ -1059,8 +1059,8 @@ public:
                 {
                     std::copy(m_vec.begin(), m_vec.begin() + n0, std::back_inserter(m_vec));
                 }
-            } 
-            else 
+            }
+            else
             {
                 *this = VectorLike();
             }
@@ -1080,7 +1080,7 @@ public:
         {
             const int n = this->get_len();
             index = (index < 0 ? (n + 1 + index) : index);
-            try 
+            try
             {
                 return m_vec.at(index);
             }
@@ -1097,7 +1097,7 @@ public:
             index1 = (index1 < 0 ? (n + 1 + index1) : index1);
             index2 = (index2 < 0 ? (n + 1 + index2) : index2);
             if (index1 >= n or index2 > n) return -1;
-            for (int i = index1; i < index2; ++i) 
+            for (int i = index1; i < index2; ++i)
             {
                 if (this->set_item(i, values.get_item(i - index1)) != 0) return -1;
             }
@@ -1110,7 +1110,7 @@ public:
             const int n = this->get_len();
             index1 = (index1 < 0 ? (n + 1 + index1) : index1);
             index2 = (index2 < 0 ? (n + 1 + index2) : index2);
-            for (int i = index1; i < index2; ++i) 
+            for (int i = index1; i < index2; ++i)
             {
                 result.m_vec.push_back(this->get_item(i));
             }
@@ -1139,9 +1139,9 @@ public:
 class VectorLike2
 {
     std::vector<double> m_vec;
-    
+
 public:
-    VectorLike2 () 
+    VectorLike2 ()
         {
         }
 
@@ -1159,7 +1159,7 @@ public:
 class MapLike
 {
     std::map<int, double> m_map;
-    
+
 public:
     MapLike () {}
 
@@ -1180,7 +1180,7 @@ struct Error
 struct DomainError : public Error
 // -#- exception -#-
 {
-};    
+};
 
 
 // returns 1/x, raises DomainError if x == 0
@@ -1188,21 +1188,24 @@ double my_inverse_func (double x) throw (DomainError);
 double my_inverse_func2 (double x) throw (std::exception);
 
 // the following function throws an exception but forgets to declare it
-// -#- throw=std::exception -#- 
+// -#- throw=std::exception -#-
 double my_inverse_func3 (double x);
 
 class ClassThatThrows
 {
 public:
     ClassThatThrows (double x) throw (DomainError);
-    
+
     // returns 1/x, raises DomainError if x == 0
     double my_inverse_method (double x) throw (DomainError);
     double my_inverse_method2 (double x) throw (std::exception);
 
     // the following method throws an exception but forgets to declare it
-    // -#- throw=std::exception -#- 
+    // -#- throw=std::exception -#-
     double my_inverse_method3 (double x);
+
+    // -#- throw=std::out_of_range -#-
+    int throw_out_of_range() throw (std::out_of_range);
 
     virtual int throw_error () const throw (std::exception);
 
@@ -1228,7 +1231,7 @@ class property
 {
 private:
     ValueType m_value;
-    
+
 public:
     property<ValueType> ()
     {
@@ -1271,13 +1274,13 @@ public:
 
     // -#- @return(reference_existing_object=true) -#-
     const Foobar* getFoobarInternalPtr () { return &m_foobar; }
-    
+
     // -#- @return(reference_existing_object=true) -#-
     Foobar& getFoobarInternalRef () { return m_foobar; }
 
     // -#- @return(return_internal_reference=true) -#-
     Foobar* getFoobarInternalPtr2 () { return &m_foobar; }
-    
+
     // -#- @return(return_internal_reference=true) -#-
     Foobar& getFoobarInternalRef2 () { return m_foobar; }
 
@@ -1289,7 +1292,7 @@ class MIRoot
 {
 public:
     MIRoot () {}
-    int root_method () const { return -1; } 
+    int root_method () const { return -1; }
 };
 
 
@@ -1298,7 +1301,7 @@ class MIBase1 : public virtual MIRoot
     int m_value;
 public:
     MIBase1 () : m_value (1) {}
-    int base1_method () const { return m_value; } 
+    int base1_method () const { return m_value; }
 };
 
 class MIBase2 : public virtual MIRoot
@@ -1306,16 +1309,16 @@ class MIBase2 : public virtual MIRoot
     int m_value;
 public:
     MIBase2 ()  : m_value (2) {}
-    int base2_method () const { return m_value; } 
+    int base2_method () const { return m_value; }
 };
 
 class MIMixed : public MIBase1, public MIBase2
 {
 public:
     MIMixed () {}
-    int mixed_method () const { return 3; } 
+    int mixed_method () const { return 3; }
 };
-    
+
 
 Tupl my_throwing_func () throw (std::exception);
 

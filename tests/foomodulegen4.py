@@ -52,6 +52,7 @@ def my_module_gen():
     out = MyMultiSectionFactory(sys.argv[1])
     root_module = foomodulegen_split.module_init()
     root_module.add_exception('exception', foreign_cpp_namespace='std', message_rvalue='%(EXC)s.what()')
+    foomodulegen_common.customize_module_pre(root_module)
 
     foomodulegen_split.register_types(root_module)
     foomodulegen_split.register_methods(root_module)
