@@ -14,6 +14,7 @@ def my_module_gen(out_file):
 
     B = mod.add_class('B')
     B.add_constructor([])
+    B.add_copy_constructor()
     B.add_instance_attribute('b_a', ReturnValue.new('uint32_t'))
     B.add_instance_attribute('b_b', ReturnValue.new('uint32_t'))
 
