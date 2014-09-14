@@ -1,7 +1,7 @@
 import sys
 import os.path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                '..', '..', 'build', 'examples', 'boost_shared_ptr'))
+                                '..', '..', 'build', 'examples', 'std_shared_ptr'))
 
 import sp
 

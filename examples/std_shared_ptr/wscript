@@ -9,9 +9,10 @@ def build(bld):
         command='${PYTHON} ${SRC[0]} > ${TGT[0]}')
 
     if bld.env['CXX']:
-        # TODO() ADD -std=c++11 flag so that <memory> 
+        # TODO() ADD -std=c++11 flag so that <memory>
         # contains std::shared_ptr
         obj = bld(features=['cxx', 'cxxshlib', 'pyext'])
+        obj.env.append_value("CXXFLAGS", "-std=c++11")
         obj.source = [
             'sp.cc',
             'spmodule.cc'
