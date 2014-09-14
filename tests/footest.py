@@ -710,6 +710,9 @@ class TestFoo(unittest.TestCase):
         foo1 = foo.function_that_returns_foo()
         self.assertEqual(foo1.get_datum(), "yellow")
 
+        ## check that the wrapper gets a docstring
+        self.assertEqual(foo.function_that_takes_foo.__doc__, "I'm awake you rascals!")
+
     def test_custom_method_wrapper(self):
         v1 = foo.Bar.Hooray()
         self.assertEqual(v1, "Hooray!")
@@ -719,6 +722,9 @@ class TestFoo(unittest.TestCase):
             self.fail()
         else:
             self.assertEqual(v2, len("Hooray!") + 123)
+
+        ## check that the wrapper gets a docstring
+        self.assertEqual(foo.Bar.Hooray.__doc__, 'Zzzz.... Have good dreams.')
 
     def test_instance_creation_function(self):
         f = foo.Foo()

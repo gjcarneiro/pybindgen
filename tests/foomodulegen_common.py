@@ -83,7 +83,8 @@ _wrap_foofunction_that_takes_foo_from_string(PyObject * PYBINDGEN_UNUSED(dummy),
 '''
     module.add_custom_function_wrapper('function_that_takes_foo',
                                        '_wrap_foofunction_that_takes_foo_from_string',
-                                       wrapper_body)
+                                       wrapper_body,
+                                       docstring="I'm awake you rascals!")
 
 
     ## test a custom method wrapper
@@ -113,7 +114,8 @@ _wrap_PyBar_Hooray_lenx(PyBar *PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject
 '''
     Bar.add_custom_method_wrapper("Hooray", "_wrap_PyBar_Hooray_lenx",
                                   wrapper_body,
-                                  flags=["METH_VARARGS", "METH_KEYWORDS", "METH_STATIC"])
+                                  flags=["METH_VARARGS", "METH_KEYWORDS", "METH_STATIC"],
+                                  docstring='Zzzz.... Have good dreams.')
 
 
     Foo, = [cls for cls in module.classes if cls.name == 'Foo']

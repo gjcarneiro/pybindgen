@@ -1119,8 +1119,8 @@ class CustomCppMethodWrapper(CppMethod):
     NEEDS_OVERLOADING_INTERFACE = True
 
     def __init__(self, method_name, wrapper_name, wrapper_body=None,
-                 flags=('METH_VARARGS', 'METH_KEYWORDS')):
-        super(CustomCppMethodWrapper, self).__init__(method_name, ReturnValue.new('void'), [])
+                 flags=('METH_VARARGS', 'METH_KEYWORDS'), docstring=None):
+        super(CustomCppMethodWrapper, self).__init__(method_name, ReturnValue.new('void'), [], docstring=docstring)
         self.wrapper_base_name = wrapper_name
         self.wrapper_actual_name = wrapper_name
         self.meth_flags = list(flags)

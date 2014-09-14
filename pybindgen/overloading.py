@@ -273,7 +273,13 @@ class OverloadedWrapper(object):
                             CodeGenerationError,
                             NotSupportedError):
                         pass
-            docstring = None # FIXME
+            # check available docstrings for the overloads
+            docstrings_set = {wrap.docstring for wrap in self.all_wrappers if wrap.docstring is not None}
+            docstring = None
+            if len(docstrings_set) is 1:
+                docstring = docstrings_set.pop()
+            elif len(docstrings_set) > 1:
+                raise CodeGenerationError("Overloaded '%s' has conflicting docstrings" % self.wrapper_name)
 
             assert isinstance(self.wrapper_return, string_types)
             assert isinstance(self.wrapper_actual_name, string_types)

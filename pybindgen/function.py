@@ -305,13 +305,13 @@ class CustomFunctionWrapper(Function):
     NEEDS_OVERLOADING_INTERFACE = True
 
     def __init__(self, function_name, wrapper_name, wrapper_body=None,
-                 flags=('METH_VARARGS', 'METH_KEYWORDS')):
+                 flags=('METH_VARARGS', 'METH_KEYWORDS'), docstring=None):
         """
         :param function_name: name for function, Python side
         :param wrapper_name: name of the C wrapper function
         :param wrapper_body: if not None, the function wrapper is generated containing this parameter value as function body
         """
-        super(CustomFunctionWrapper, self).__init__(function_name, ReturnValue.new('void'), [])
+        super(CustomFunctionWrapper, self).__init__(function_name, ReturnValue.new('void'), [], docstring=docstring)
         self.wrapper_base_name = wrapper_name
         self.wrapper_actual_name = wrapper_name
         self.meth_flags = list(flags)
