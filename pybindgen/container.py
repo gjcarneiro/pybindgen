@@ -10,6 +10,7 @@ from .typehandlers.base import ForwardWrapperBase, ReverseWrapperBase, \
 
 from pybindgen.typehandlers import codesink
 from pybindgen.pytypeobject import PyTypeObject
+from .typehandlers.ctypeparser import TypeTraits
 from . import settings
 from . import utils
 
@@ -61,7 +62,7 @@ class IterNextWrapper(ForwardWrapperBase):
         """
         code_sink -- a CodeSink instance that will receive the generated code
         """
-        
+
         tmp_sink = codesink.MemoryCodeSink()
         self.generate_body(tmp_sink)
         code_sink.writeln("static PyObject* %s(%s *self)" % (self.c_function_name,
@@ -167,7 +168,7 @@ class Container(object):
                 container_type = self
             self.ThisContainerRefParameter = ThisContainerRefParameter
             try:
-                param_type_matcher.register(name+'&', self.ThisContainerRefParameter)
+                param_type_matcher.register(name + '&', self.ThisContainerRefParameter)
             except ValueError:
                 pass
 
@@ -177,7 +178,7 @@ class Container(object):
                 container_type = self
             self.ThisContainerPtrParameter = ThisContainerPtrParameter
             try:
-                param_type_matcher.register(name+'*', self.ThisContainerPtrParameter)
+                param_type_matcher.register(name + '*', self.ThisContainerPtrParameter)
             except ValueError:
                 pass
 
@@ -189,13 +190,13 @@ class Container(object):
             self.ThisContainerRefReturn = ThisContainerReturn
             try:
                 return_type_matcher.register(name, self.ThisContainerReturn)
-                return_type_matcher.register(name, self.ThisContainerRefReturn)
+                return_type_matcher.register(name + '&', self.ThisContainerRefReturn)
             except ValueError:
                 pass
 
     def __repr__(self):
         return "<pybindgen.Container %r>" % self.full_name
-    
+
     def get_module(self):
         """Get the Module object this type belongs to"""
         return self._module
@@ -206,7 +207,7 @@ class Container(object):
         self._update_names()
 
     module = property(get_module, set_module)
-    
+
     def get_pystruct(self):
         if self._pystruct is None:
             raise ValueError
@@ -220,7 +221,7 @@ class Container(object):
     iter_pystruct = property(get_iter_pystruct)
 
     def _update_names(self):
-        
+
         prefix = settings.name_prefix.capitalize()
 
         if not self._full_name_is_definitive:
@@ -276,7 +277,7 @@ class Container(object):
         try:
             param_type_matcher.register(alias+'&', self.ThisContainerRefParameter)
         except ValueError: pass
-        
+
         self.ThisContainerReturn.CTYPES.append(alias)
         try:
             return_type_matcher.register(alias, self.ThisContainerReturn)
@@ -371,7 +372,7 @@ typedef struct {
         self._generate_iter_methods(code_sink)
         self._generate_container_constructor(code_sink)
         self._generate_type_structure(code_sink, docstring)
-        
+
     def _generate_type_structure(self, code_sink, docstring):
         """generate the type structure"""
 
@@ -486,7 +487,7 @@ static PyObject*
 ''' % subst_vars)
 
         self.pytype.slots.setdefault("tp_iter", container_tp_iter_function_name)
-        
+
 
         # -- iterator --
         container_tp_iter_function_name = "_wrap_%s__tp_iter" % (self.pystruct,)
@@ -505,7 +506,7 @@ static PyObject*
         iternext = IterNextWrapper(self)
         iternext.generate(code_sink)
         self.iter_pytype.slots.setdefault("tp_iternext", iternext.c_function_name)
-        
+
 
 
     def _generate_container_constructor(self, code_sink):
@@ -661,16 +662,16 @@ class ContainerReturnValueBase(ReturnValue):
         super(ContainerReturnValueBase, self).__init__(ctype)
         ## name of the PyFoo * variable used in return value building
         self.py_name = None
-        
-        
-    
+
+
+
 
 class ContainerParameter(ContainerParameterBase):
     "Container handlers"
     CTYPES = []
     container_type = _get_dummy_container()
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    
+
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
         assert isinstance(wrapper, ForwardWrapperBase)
@@ -704,7 +705,7 @@ class ContainerRefParameter(ContainerParameterBase):
     CTYPES = []
     container_type = _get_dummy_container()
     DIRECTIONS = [Parameter.DIRECTION_IN, Parameter.DIRECTION_OUT, Parameter.DIRECTION_INOUT]
-    
+
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
         assert isinstance(wrapper, ForwardWrapperBase)
@@ -770,7 +771,7 @@ class ContainerPtrParameter(ContainerParameterBase):
             if transfer_ownership is None:
                 raise TypeConfigurationError("transfer_ownership parameter was not given")
             self.transfer_ownership = transfer_ownership
-    
+
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
         assert isinstance(wrapper, ForwardWrapperBase)
@@ -823,6 +824,13 @@ class ContainerReturnValue(ContainerReturnValueBase):
         """override to fix the ctype parameter with namespace information"""
         if ctype == self.container_type.name:
             ctype = self.container_type.full_name
+
+        if not isinstance(ctype, TypeTraits):
+            ctype = TypeTraits(ctype)
+
+        if ctype.type_is_reference:
+            ctype = TypeTraits(str(ctype.target))
+
         super(ContainerReturnValue, self).__init__(ctype)
         self.is_const = is_const
 
