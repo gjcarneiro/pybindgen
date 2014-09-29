@@ -31,10 +31,10 @@ except NameError: # for compatibility with Python < 2.5
             if not element:
                 return False
         return True
-try: 
-    set 
-except NameError: 
-    from sets import Set as set   # Python 2.3 fallback 
+try:
+    set
+except NameError:
+    from sets import Set as set   # Python 2.3 fallback
 
 
 
@@ -111,7 +111,7 @@ class CodeBlock(object):
             "returns the cleanup code relative position"
             return self.position
 
-    
+
     def __init__(self, error_return, declarations, predecessor=None):
         '''
         CodeBlock constructor
@@ -143,7 +143,7 @@ class CodeBlock(object):
                            e.g. return NULL;
         :param predecessor: optional predecessor code block; a
                           predecessor is used to search for additional
-                          cleanup actions.        
+                          cleanup actions.
         '''
         assert isinstance(declarations, DeclarationsScope)
         assert predecessor is None or isinstance(predecessor, CodeBlock)
@@ -156,7 +156,7 @@ class CodeBlock(object):
 
     def clear(self):
         self._cleanup_actions = {}
-        self._last_cleanup_position = 0        
+        self._last_cleanup_position = 0
         self.sink = codesink.MemoryCodeSink()
 
     def declare_variable(self, type_, name, initializer=None, array=None):
@@ -166,7 +166,7 @@ class CodeBlock(object):
         if ':' in name:
             raise ValueError("invalid variable name: %s " % name)
         return self.declarations.declare_variable(type_, name, initializer, array)
-        
+
     def write_code(self, code):
         '''Write out some simple code'''
         self.sink.writeln(code)
@@ -276,7 +276,7 @@ class ParseTupleParameters(object):
 
     def clear(self):
         self._parse_tuple_items = []
-        
+
     def add_parameter(self, param_template, param_values, param_name=None,
                       prepend=False, optional=False):
         """
@@ -326,7 +326,7 @@ class ParseTupleParameters(object):
              dummy, dummy) in self._parse_tuple_items:
             params.extend(param_values)
         return params
-        
+
     def get_keywords(self):
         """
         returns list of keywords (parameter names), or None if none of
@@ -621,7 +621,8 @@ class ReverseWrapperBase(object):
           "generating the same wrapper twice without a reset() in between?"
 
         if self.return_value.ctype != 'void' \
-                and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
+                and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR \
+                and not self.return_value.NO_RETVAL_DECL:
             self.declarations.declare_variable(self.return_value.ctype, 'retval')
 
         ## convert the input parameters
@@ -782,7 +783,7 @@ class ForwardWrapperBase(object):
         self.wrapper_actual_name = None # name of the wrapper function/method
         self.wrapper_return = None # C type expression for the wrapper return
         self.wrapper_args = None # list of arguments to the wrapper function
-        
+
         self._init_code_generation_state()
 
     def _init_code_generation_state(self):
@@ -790,7 +791,8 @@ class ForwardWrapperBase(object):
             self.declarations.declare_variable('PyObject*', 'py_retval')
         if (not self.no_c_retval and (self.return_value is not None or self.HAVE_RETURN_VALUE)
             and self.return_value.ctype != 'void'
-            and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR):
+            and not self.return_value.REQUIRES_ASSIGNMENT_CONSTRUCTOR
+            and not self.return_value.NO_RETVAL_DECL):
             self.declarations.declare_variable(str(self.return_value.type_traits.ctype_no_const_no_ref), 'retval')
 
         self.declarations.reserve_variable('args')
@@ -918,7 +920,7 @@ class ForwardWrapperBase(object):
                 self.meth_flags.append("METH_KEYWORDS")
         else:
             self.meth_flags.append("METH_NOARGS")
-        
+
         ## convert the return value(s)
         if self.return_value is None and not self.HAVE_RETURN_VALUE:
 
@@ -1118,7 +1120,7 @@ class ReturnValueMeta(type):
                 iter(mcs.CTYPES)
             except (TypeError, AttributeError):
                 sys.stderr.write("ERROR: missing CTYPES on class %s.%s\n" % (mcs.__module__, mcs.__name__))
-                
+
         for ctype in mcs.CTYPES:
             return_type_matcher.register(ctype, mcs)
 
@@ -1132,8 +1134,9 @@ class _ReturnValue(TypeHandler):
 
     ## whether it supports type transformations
     SUPPORTS_TRANSFORMATIONS = False
-    
+
     REQUIRES_ASSIGNMENT_CONSTRUCTOR = False
+    NO_RETVAL_DECL = False
 
     #@classmethod
     def new(cls, *args, **kwargs):
@@ -1346,7 +1349,7 @@ class TypeMatcher(object):
     Type matcher object: maps C type names to classes that handle
     those types.
     """
-    
+
     def __init__(self):
         """Constructor"""
         self._types = {}
@@ -1398,7 +1401,7 @@ class TypeMatcher(object):
                 #    print >> sys.stderr, "**** trying name %r in place of %r" % (alias, name)
                 return self._raw_lookup_with_alias_support_recursive(alias, already_tried)
             raise KeyError
-        
+
     def lookup(self, name):
         """
         lookup(name) -> type_handler, type_transformation, type_traits
@@ -1443,7 +1446,7 @@ class TypeMatcher(object):
         else:
             logger.debug("try to lookup type handler for %r => success (%r)", name, rv)
             return rv
-    
+
     def items(self):
         "Returns an iterator over all registered items"
         return iter(self._types.items())

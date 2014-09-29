@@ -818,18 +818,14 @@ class ContainerPtrParameter(ContainerParameterBase):
 class ContainerReturnValue(ContainerReturnValueBase):
     "Container type return handlers"
     CTYPES = []
+
+    NO_RETVAL_DECL = True
     container_type = _get_dummy_container()
 
     def __init__(self, ctype, is_const=False):
         """override to fix the ctype parameter with namespace information"""
         if ctype == self.container_type.name:
             ctype = self.container_type.full_name
-
-        if not isinstance(ctype, TypeTraits):
-            ctype = TypeTraits(ctype)
-
-        if ctype.type_is_reference:
-            ctype = TypeTraits(str(ctype.target))
 
         super(ContainerReturnValue, self).__init__(ctype)
         self.is_const = is_const
@@ -838,11 +834,25 @@ class ContainerReturnValue(ContainerReturnValueBase):
         """See ReturnValue.get_c_error_return"""
         return "return %s();" % (self.container_type.full_name,)
 
+    def _get_noref_ctype(self):
+        # if the type has foo const &, get back foo
+        traits = TypeTraits(str(self.type_traits.ctype_no_const_no_ref))
+        ctype_no_const_no_ref = traits.ctype_no_const_no_ref
+        return ctype_no_const_no_ref
+
     def convert_c_to_python(self, wrapper):
         """see ReturnValue.convert_c_to_python"""
+
+        ctype_no_const_no_ref = self._get_noref_ctype()
+        retval = wrapper.declarations.declare_variable(
+            str(ctype_no_const_no_ref), 'retval')
+        assert retval == 'retval'
+
         py_name = wrapper.declarations.declare_variable(
             self.container_type.pystruct+'*', 'py_'+self.container_type.name)
+
         self.py_name = py_name
+
         wrapper.after_call.write_code(
             "%s = PyObject_New(%s, %s);" %
             (py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
@@ -851,6 +861,10 @@ class ContainerReturnValue(ContainerReturnValueBase):
 
     def convert_python_to_c(self, wrapper):
         """see ReturnValue.convert_python_to_c"""
+        if '&' in self.ctype:
+            raise NotSupportedError("reference return type not supported")
+        retval = wrapper.declarations.declare_variable(self.ctype, 'retval')
+        assert retval == 'retval'
         wrapper.parse_params.add_parameter('O&', [self.container_type.python_to_c_converter, '&'+self.value])
 
 
