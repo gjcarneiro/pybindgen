@@ -688,9 +688,9 @@ class ModuleParser(object):
             assert isinstance(include_paths, list)
             warnings.warn("Parameter include_paths is deprecated, use gccxml_options instead", DeprecationWarning,
                           stacklevel=2)
-            self.gccxml_config = parser.config_t(include_paths=include_paths, **gccxml_options)
+            self.gccxml_config = parser.gccxml_configuration_t(include_paths=include_paths, **gccxml_options)
         else:
-            self.gccxml_config = parser.config_t(**gccxml_options)
+            self.gccxml_config = parser.gccxml_configuration_t(**gccxml_options)
 
         self.declarations = parser.parse(header_files, self.gccxml_config)
         self.global_ns = declarations.get_global_namespace(self.declarations)
