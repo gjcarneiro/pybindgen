@@ -12,6 +12,7 @@ from pybindgen import Module, FileCodeSink, param, retval
 #from pybindgen.function import CustomFunctionWrapper
 #from pybindgen.cppmethod import CustomCppMethodWrapper
 from pybindgen import cppclass
+from pybindgen.typehandlers.smart_ptr import BoostSharedPtr
 
 #from pybindgen import param, retval
 
@@ -25,7 +26,7 @@ def my_module_gen(out_file):
 
     mod.add_include ('"bsp.h"')
 
-    Foo = mod.add_class('Foo', memory_policy=cppclass.BoostSharedPtr('::Foo'))
+    Foo = mod.add_class('Foo', memory_policy=BoostSharedPtr('::Foo'))
 
     Foo.add_constructor([param('std::string', 'datum')])
     Foo.add_constructor([])

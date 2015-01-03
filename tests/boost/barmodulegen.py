@@ -7,6 +7,7 @@ import re
 import pybindgen
 import pybindgen.utils
 from pybindgen.typehandlers import base as typehandlers
+from pybindgen.typehandlers.smart_ptr import BoostSharedPtr
 from pybindgen import ReturnValue, Parameter, Module, Function, FileCodeSink
 from pybindgen import CppMethod, CppConstructor, CppClass, Enum
 from pybindgen.function import CustomFunctionWrapper
@@ -26,7 +27,7 @@ def my_module_gen(out_file):
     mod.add_include ('"bar.h"')
 
     Foo = mod.add_class('Foo', automatic_type_narrowing=True,
-                        memory_policy=cppclass.BoostSharedPtr('::Foo'))
+                        memory_policy=BoostSharedPtr('::Foo'))
 
     Foo.add_static_attribute('instance_count', ReturnValue.new('int'))
     Foo.add_constructor([Parameter.new('std::string', 'datum')])

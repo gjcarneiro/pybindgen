@@ -8,6 +8,7 @@ from pybindgen.typehandlers import booltype
 from pybindgen.typehandlers import doubletype
 from pybindgen.typehandlers import floattype
 from pybindgen.typehandlers import pyobjecttype
+from pybindgen.typehandlers import smart_ptr
 
 
 from pybindgen.typehandlers.base import add_type_alias
