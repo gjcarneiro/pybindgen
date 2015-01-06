@@ -3160,8 +3160,8 @@ class CppClassRefParameter(CppClassParameterBase):
         wrapper.before_call.write_code("%s->flags = PYBINDGEN_WRAPPER_FLAG_NONE;" % (self.py_name,))
 
         if self.direction == Parameter.DIRECTION_IN:
-            if not self.cpp_class.has_copy_constructor:
-                raise CodeGenerationError("Class {0} cannot be copied".format(self.cpp_class.full_name))
+            # if not self.cpp_class.has_copy_constructor:
+            #     raise CodeGenerationError("Class {0} cannot be copied".format(self.cpp_class.full_name))
             self.cpp_class.write_create_instance(wrapper.before_call,
                                                  "%s->obj" % self.py_name,
                                                  self.value)
@@ -3527,8 +3527,8 @@ class CppClassPtrParameter(CppClassParameterBase):
                     ## the object after the call.
 
                     if self.direction == Parameter.DIRECTION_IN:
-                        if not self.cpp_class.has_copy_constructor:
-                            raise CodeGenerationError("Class {0} cannot be copied".format(self.cpp_class.full_name))
+                        # if not self.cpp_class.has_copy_constructor:
+                        #     raise CodeGenerationError("Class {0} cannot be copied".format(self.cpp_class.full_name))
                         self.cpp_class.write_create_instance(wrapper.before_call,
                                                              "%s->obj" % self.py_name,
                                                              '*'+self.value)
