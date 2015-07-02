@@ -17,13 +17,13 @@ else:
     string_types = basestring,
 
 
-try: 
-    set 
-except NameError: 
-    from sets import Set as set   # Python 2.3 fallback 
+try:
+    set
+except NameError:
+    from sets import Set as set   # Python 2.3 fallback
 
 
-def isiterable(obj): 
+def isiterable(obj):
     """Returns True if an object appears to be iterable"""
     return hasattr(obj, '__iter__') or isinstance(obj, string_types)
 
@@ -72,7 +72,7 @@ class OverloadedWrapper(object):
         self.pystruct = 'PyObject'
         #self.static_decl = True ## FIXME: unused?
 #         self.enable_implicit_conversions = True
-        
+
     def add(self, wrapper):
         """
         Add a wrapper to the overloaded wrapper
@@ -94,7 +94,7 @@ class OverloadedWrapper(object):
 
         for wrapper in self.wrappers:
             wrapper.force_parse = ForwardWrapperBase.PARSE_TUPLE_AND_KEYWORDS
-        
+
         # loop that keeps removing wrappers until all remaining wrappers have the same flags
         modified = True
         while modified:
@@ -196,7 +196,7 @@ class OverloadedWrapper(object):
             ## aggregator wrapper should not be generated either..
             if not delegate_wrappers:
                 raise utils.SkipWrapper
-            
+
             ## Generate the 'main wrapper' that calls the other ones
             code_sink.writeln()
             self.wrapper_return = self.RETURN_TYPE
@@ -246,9 +246,9 @@ class OverloadedWrapper(object):
             code_sink.writeln(self.ERROR_RETURN)
             code_sink.unindent()
             code_sink.writeln('}')
-            
+
         return prototype_line
-        
+
     def get_py_method_def(self, name):
         """
         Returns an array element to use in a PyMethodDef table.
@@ -274,7 +274,10 @@ class OverloadedWrapper(object):
                             NotSupportedError):
                         pass
             # check available docstrings for the overloads
-            docstrings_set = {wrap.docstring for wrap in self.all_wrappers if wrap.docstring is not None}
+            docstrings_set = set()
+            for wrap in self.all_wrappers:
+                if wrap.docstring is not None:
+                    docstrings_set.add(wrap.docstring)
             docstring = None
             if len(docstrings_set) is 1:
                 docstring = docstrings_set.pop()
