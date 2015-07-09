@@ -1,8 +1,7 @@
 #!/bin/sh
 
-export BZR_PLUGIN_PATH=$(dirname $0)/bzr-plugins
 ChangeLog=$(dirname $0)/ChangeLog
 	
 chmod u+w $ChangeLog 2> /dev/null
-bzr log -v --log-format 'gnu' > $ChangeLog
+git log > $ChangeLog
 chmod a-w $ChangeLog

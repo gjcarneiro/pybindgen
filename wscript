@@ -33,7 +33,7 @@ if 'PYTHONPATH' in os.environ:
     os.environ['PYTHONPATH'] = os.pathsep.join([os.getcwd(), os.environ['PYTHONPATH']])
 else:
     os.environ['PYTHONPATH'] = os.getcwd()
-    
+
 
 # http://coreygoldberg.blogspot.com/2009/07/python-zip-directories-recursively.html
 def zipper(dir, zip_file, archive_main_folder=None):
@@ -66,10 +66,10 @@ def options(opt):
 
     optgrp = opt.add_option_group("PyBindGen Options")
 
-    if os.path.isdir(".bzr"):
+    if os.path.isdir(".git"):
         optgrp.add_option('--generate-version',
                           help=('Generate a new pybindgen/version.py file from version control'
-                                ' introspection.  Only works from a bzr checkout tree, and is'
+                                ' introspection.  Only works from a git checkout tree, and is'
                                 ' meant to be used by pybindgen developers only.'),
                           action="store_true", default=False,
                           dest='generate_version')
