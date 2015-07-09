@@ -5,3 +5,4 @@ recursive-include include *.h
 recursive-include waf-tools *.py
 recursive-include benchmarks *.py wscript *.i *.sip *.h *.cc
 recursive-include pybindgen *.py wscript
+include README.rst
