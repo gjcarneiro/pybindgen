@@ -11,6 +11,6 @@ install:
   - travis_retry pip install tox
 
 script:
+  - git describe --tags
   - tox
-
 
