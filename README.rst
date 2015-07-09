@@ -136,3 +136,7 @@ The following documentation is available:
  2. Many simple examples in the `examples` directory
  3. Advanced examples in the unit tests (`tests/`)
  4. The source code!
+
+.. image:: https://travis-ci.org/gjcarneiro/pybindgen.svg?branch=master
+    :target: https://travis-ci.org/gjcarneiro/pybindgen
+
