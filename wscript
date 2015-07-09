@@ -172,7 +172,7 @@ def configure(conf):
         conf.check_python_headers()
 
         if not Options.options.disable_pygccxml:
-            gccxml = conf.find_program('gccxml')
+            gccxml = conf.find_program('gccxml', mandatory=False)
             if not gccxml:
                 conf.env['ENABLE_PYGCCXML'] = False
             else:
