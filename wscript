@@ -1,7 +1,7 @@
 ## -*- python -*-
 ## (C) 2007-2014 Gustavo J. A. M. Carneiro
 
-from wutils import get_version, generate_version_py
+from wutils import get_version
 
 from waflib import Options
 from waflib import Build
@@ -65,14 +65,6 @@ def options(opt):
 
 
     optgrp = opt.add_option_group("PyBindGen Options")
-
-    if os.path.isdir(".git"):
-        optgrp.add_option('--generate-version',
-                          help=('Generate a new pybindgen/version.py file from version control'
-                                ' introspection.  Only works from a git checkout tree, and is'
-                                ' meant to be used by pybindgen developers only.'),
-                          action="store_true", default=False,
-                          dest='generate_version')
 
     optgrp.add_option('--examples',
                       help=('Compile the example programs.'),
@@ -154,9 +146,6 @@ def configure(conf):
     conf.check_compilation_flag = types.MethodType(_check_compilation_flag, conf)
     conf.check_nonfatal = types.MethodType(_check_nonfatal, conf)
 
-    ## Write a pybindgen/version.py file containing the project version
-    generate_version_py()
-
     conf.load('command', tooldir="waf-tools")
     conf.load('python_patched', tooldir="waf-tools")
     conf.check_python_version((2,3))
@@ -201,9 +190,6 @@ def configure(conf):
 
 
 def build(bld):
-    if getattr(Options.options, 'generate_version', False):
-        generate_version_py(force=True)
-
     bld.recurse('pybindgen')
 
     if bld.cmd == 'check':
@@ -318,16 +304,13 @@ class DistContext(Scripting.Dist):
     def execute(self):
         blddir = './build'
         srcdir = '.'
+        subprocess.Popen(["python", os.path.join(srcdir, "setup.py"), "clean"]).wait()
         version = get_version(srcdir)
         subprocess.Popen([os.path.join(srcdir, "generate-ChangeLog")],  shell=True).wait()
         try:
             os.chmod(os.path.join(srcdir, "ChangeLog"), 0o644)
         except OSError:
             pass
-
-        ## Write a pybindgen/version.py file containing the project version
-        generate_version_py(force=True, path=srcdir)
-
 
         ## Package the api docs in a separate tarball
 
@@ -357,7 +340,6 @@ class DistContext(Scripting.Dist):
 
 def docs(ctx):
     "generate API documentation, using epydoc"
-    generate_version_py(force=True)
     retval = subprocess.Popen(["make", "html"], cwd='doc').wait()
     if retval:
         Logs.error("make returned with code %i" % retval)
