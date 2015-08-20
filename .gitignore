@@ -1,11 +1,11 @@
-.lock-wscript
+.lock-*
+.waf*
 build
 ChangeLog
 MANIFEST
 pybindgen*.tar.bz2
 pybindgen/version.py
 doc/_build
-.waf-*
 doc/figures/work-flow-basic.png
 doc/figures/work-flow-gccxml-apidefs.png
 doc/figures/work-flow-gccxml.png
