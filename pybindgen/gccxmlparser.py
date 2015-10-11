@@ -351,7 +351,8 @@ class AnnotationsScanner(object):
         try:
             lines = self.files[file_name]
         except KeyError:
-            lines = file(file_name, "rt").readlines()
+            with open(file_name, "rt") as f:
+                lines = f.readlines()
             self.files[file_name] = lines
 
         line_number -= 2
@@ -1061,9 +1062,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     continue
                 typedefs.append(typedef)
 
-        def cls_cmp(a, b):
-            return cmp(a.decl_string, b.decl_string)
-        unregistered_classes.sort(cls_cmp)
+        unregistered_classes.sort(key=lambda c: c.decl_string)
 
         def postpone_class(cls, reason):
             ## detect the case of a class being postponed many times; that
@@ -1410,9 +1409,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     continue
                 nested_namespaces.append(nested_namespace)
 
-            def decl_cmp(a, b):
-                return cmp(a.decl_string, b.decl_string)
-            nested_namespaces.sort(decl_cmp)
+            nested_namespaces.sort(key=lambda c: c.decl_string)
 
             for nested_namespace in nested_namespaces:
                 if pygen_register_function_name:
@@ -1439,9 +1436,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     continue
                 nested_namespaces.append(nested_namespace)
 
-            def decl_cmp(a, b):
-                return cmp(a.decl_string, b.decl_string)
-            nested_namespaces.sort(decl_cmp)
+            nested_namespaces.sort(key=lambda c: c.decl_string)
 
             for nested_namespace in nested_namespaces:
                 if pygen_register_function_name:
@@ -2090,14 +2085,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 continue
             functions_to_scan.append(fun)
 
-        def fun_cmp(a, b):
-            name_cmp = cmp(a.name, b.name)
-            # if function names differ, compare by name, else compare by the full declaration
-            if name_cmp != 0:
-                return name_cmp
-            else:
-                return cmp(a.decl_string, b.decl_string)
-        functions_to_scan.sort(fun_cmp)
+        functions_to_scan.sort(key=lambda c: (c.name, c.decl_string))
 
         for fun in functions_to_scan:
             global_annotations, parameter_annotations = annotations_scanner.get_annotations(fun)
@@ -2270,9 +2258,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 continue
             nested_namespaces.append(nested_namespace)
 
-        def decl_cmp(a, b):
-            return cmp(a.decl_string, b.decl_string)
-        nested_namespaces.sort(decl_cmp)
+        nested_namespaces.sort(key=lambda c: c.decl_string)
 
         for nested_namespace in nested_namespaces:
             nested_module = module.get_submodule(nested_namespace.name)
@@ -2292,9 +2278,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 continue
             nested_namespaces.append(nested_namespace)
 
-        def decl_cmp(a, b):
-            return cmp(a.decl_string, b.decl_string)
-        nested_namespaces.sort(decl_cmp)
+        nested_namespaces.sort(key=lambda c: c.decl_string)
 
         for nested_namespace in nested_namespaces:
             nested_module = module.get_submodule(nested_namespace.name)
