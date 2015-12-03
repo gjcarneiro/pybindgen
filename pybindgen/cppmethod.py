@@ -406,12 +406,23 @@ class CppMethod(ForwardWrapperBase):
     def get_py_method_def(self, method_name):
         "Get the PyMethodDef entry suitable for this method"
         flags = self.get_py_method_def_flags()
+
+        if self.docstring is None:
+            self.docstring = self.generate_docstring(method_name)
+
         return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
                (method_name, self.wrapper_actual_name, '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
 
+    def generate_docstring(self, name):
+        parameters = self.parameters
+        signature = "{0}({1})".format(name, ", ".join([p.name for p in parameters]))
+        params = "\\n".join(["type: {0}: {1}".format(p.name, p.ctype)
+                             for p in parameters])
+        string = signature + "\\n\\n" + params
+        return string
+
     def __str__(self):
-        
         if self.class_ is None:
             cls_name = "???"
         else:
@@ -735,6 +746,9 @@ class CppConstructor(ForwardWrapperBase):
         tmp_sink.flush_to(code_sink)
         code_sink.writeln('return 0;')
         self.write_close_wrapper(code_sink)
+
+    def generate_docstring(self, name):
+        return "{0}({1})".format(name, ', '.join([p.name for p in self.parameters]))
 
     def __str__(self):
         if not hasattr(self, '_class'):
