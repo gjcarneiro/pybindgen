@@ -289,9 +289,21 @@ class Function(ForwardWrapperBase):
         assert isinstance(self.wrapper_return, string_types)
         assert isinstance(self.wrapper_actual_name, string_types)
         assert isinstance(self.wrapper_args, list)
+
+        if self.docstring is None:
+            self.docstring = self.generate_docstring(name)
+
         return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
                (name, self.wrapper_actual_name, '|'.join(flags),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
+
+    def generate_docstring(self, name):
+        parameters = self.parameters
+        signature = "{0}({1})".format(name, ", ".join([p.name for p in parameters]))
+        params = "\\n".join(["type: {0}: {1}".format(p.name, p.ctype)
+                             for p in parameters])
+        string = signature + "\\n\\n" + params
+        return string
 
 
 class CustomFunctionWrapper(Function):

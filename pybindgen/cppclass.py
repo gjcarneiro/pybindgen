@@ -2205,6 +2205,10 @@ typedef struct {
         if self.binary_numeric_operators:
             tp_flags.add("Py_TPFLAGS_CHECKTYPES")            
         self.slots.setdefault("tp_flags", '|'.join(tp_flags))
+
+        if docstring is None:
+            docstring = self.generate_docstring()
+
         self.slots.setdefault("tp_doc", (docstring is None and 'NULL'
                                          or "\"%s\"" % (docstring,)))
         dict_ = self.slots
@@ -2227,6 +2231,10 @@ typedef struct {
 
         self.pytype.generate(code_sink)
 
+    def generate_docstring(self):
+        name = self.get_python_name()
+        return "\\n".join(sorted([c.generate_docstring(name) for c in self.constructors],
+                                 key=len, reverse=True))
 
     def _generate_constructor(self, code_sink):
         """generate the constructor, if any"""
