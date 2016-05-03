@@ -13,5 +13,5 @@ install:
   - travis_retry pip install tox
 
 script:
-  - ./waf configure && ./waf check
+  - python setup.py -V && ./waf configure && ./waf check
 
