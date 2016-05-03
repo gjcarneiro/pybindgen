@@ -8,16 +8,10 @@ python:
 
 
 sudo: false
-env:
-  - TOXENV=py27
-  - TOXENV=py33
-  - TOXENV=py34
-  - TOXENV=py35
 
 install:
   - travis_retry pip install tox
 
 script:
-  - git describe --tags
-  - tox
+  - ./waf configure && ./waf check
 
