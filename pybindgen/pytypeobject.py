@@ -14,7 +14,11 @@ class PyTypeObject(object):
         '    (printfunc)0,                      /* tp_print */\n'
         '    (getattrfunc)%(tp_getattr)s,       /* tp_getattr */\n'
         '    (setattrfunc)%(tp_setattr)s,       /* tp_setattr */\n'
+        '#if PY_MAJOR_VERSION >= 3\n'
+        '    NULL, \n'
+        '#else\n'
         '    (cmpfunc)%(tp_compare)s,           /* tp_compare */\n'
+        '#endif\n'
         '    (reprfunc)%(tp_repr)s,             /* tp_repr */\n'
         '    (PyNumberMethods*)%(tp_as_number)s,     /* tp_as_number */\n'
         '    (PySequenceMethods*)%(tp_as_sequence)s, /* tp_as_sequence */\n'
@@ -98,7 +102,7 @@ class PyTypeObject(object):
         slots.setdefault('tp_new', 'PyType_GenericNew')
         slots.setdefault('tp_free', '0')
         slots.setdefault('tp_is_gc', 'NULL')
-        
+
         code_sink.writeln(self.TEMPLATE % slots)
 
 
@@ -195,7 +199,7 @@ class PyNumberMethods(object):
         '\n'
         '(unaryfunc) %(nb_index)s,\n'
         '#endif\n'
-        
+
         '};\n'
         )
 
