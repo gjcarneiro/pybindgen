@@ -12,7 +12,7 @@ class CStringParam(PointerParameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
     CTYPES = ['char*']
-    
+
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
         wrapper.build_params.add_parameter('s', [self.value])
@@ -33,7 +33,7 @@ class CharParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
     CTYPES = ['char']
-    
+
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
         wrapper.build_params.add_parameter('c', [self.value])
@@ -49,7 +49,7 @@ class StdStringParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
     CTYPES = ['std::string']
-    
+
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
         ptr = wrapper.declarations.declare_variable("const char *", self.name + "_ptr")
@@ -81,14 +81,16 @@ class StdStringRefParam(Parameter):
                   Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
     CTYPES = ['std::string&']
-    
+
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
 
         ptr = None
         if self.direction & Parameter.DIRECTION_IN:
-            ptr = wrapper.declarations.declare_variable("const char *", self.name + "_ptr")
-            len_ = wrapper.declarations.declare_variable("Py_ssize_t", self.name + "_len")
+            ptr = wrapper.declarations.declare_variable(
+                "const char *", self.name + "_ptr")
+            len_ = wrapper.declarations.declare_variable(
+                "Py_ssize_t", self.name + "_len")
             wrapper.before_call.write_code(
                 "%s = (%s).c_str();" % (ptr, self.value))
             wrapper.before_call.write_code(
@@ -105,15 +107,29 @@ class StdStringRefParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable("const char *", self.name)
+        name = wrapper.declarations.declare_variable(
+            "const char *", self.name, "NULL")
         name_len = wrapper.declarations.declare_variable("Py_ssize_t", self.name+'_len')
         name_std = wrapper.declarations.declare_variable("std::string", self.name + '_std')
         wrapper.call_params.append(name_std)
 
         if self.direction & Parameter.DIRECTION_IN:
-            wrapper.parse_params.add_parameter('s#', ['&'+name, '&'+name_len], self.value)
-            wrapper.before_call.write_code('%s = std::string(%s, %s);' %
-                                           (name_std, name, name_len))
+            if self.default_value is None:
+                wrapper.parse_params.add_parameter(
+                    's#', ['&' + name, '&' + name_len], self.value)
+                wrapper.before_call.write_code('%s = std::string(%s, %s);' %
+                                               (name_std, name, name_len))
+            else:
+                wrapper.parse_params.add_parameter(
+                    's#', ['&' + name, '&' + name_len],
+                    self.value, optional=True)
+                wrapper.before_call.write_code(
+                    'if ({name})\n'
+                    '    {name_std} = std::string({name}, {name_len});\n'
+                    'else\n'
+                    '    {name_std} = {default_value};'
+                    .format(name_std=name_std, name=name, name_len=name_len,
+                            default_value=self.default_value))
 
         if self.direction & Parameter.DIRECTION_OUT:
             wrapper.build_params.add_parameter("s#", ['('+name_std+').c_str()', '('+name_std+').size()'])
@@ -125,7 +141,7 @@ class StdStringPtrParam(PointerParameter):
                   Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
     CTYPES = ['std::string*']
-    
+
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
         ptr = None
@@ -147,7 +163,7 @@ class StdStringPtrParam(PointerParameter):
                 "*%s = std::string(%s, %s);" % (self.value, ptr, len_))
         if self.transfer_ownership:
             wrapper.after_call.write_code("delete %s;" % (self.value,))
-            
+
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
@@ -210,7 +226,7 @@ class StdStringReturn(ReturnValue):
 
     def get_c_error_return(self):
         return "return std::string();"
-    
+
     def convert_python_to_c(self, wrapper):
         ptr = wrapper.declarations.declare_variable("const char *", "retval_ptr")
         len_ = wrapper.declarations.declare_variable("Py_ssize_t", "retval_len")
@@ -244,7 +260,7 @@ class GlibStringParam(Parameter):
 
     DIRECTIONS = [Parameter.DIRECTION_IN]
     CTYPES = ['Glib::ustring']
-    
+
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
         ptr = wrapper.declarations.declare_variable("const char *", self.name + "_ptr")
@@ -274,7 +290,7 @@ class GlibStringRefParam(Parameter):
                   Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
     CTYPES = ['Glib::ustring&']
-    
+
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
 
@@ -316,7 +332,7 @@ class GlibStringPtrParam(PointerParameter):
                   Parameter.DIRECTION_OUT,
                   Parameter.DIRECTION_IN|Parameter.DIRECTION_OUT]
     CTYPES = ['Glib::ustring*']
-    
+
     def convert_c_to_python(self, wrapper):
         assert isinstance(wrapper, ReverseWrapperBase)
         ptr = None
@@ -337,7 +353,7 @@ class GlibStringPtrParam(PointerParameter):
                 "*%s = Glib::ustring(%s);" % (self.value, ptr))
         if self.transfer_ownership:
             wrapper.after_call.write_code("delete %s;" % (self.value,))
-            
+
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
@@ -367,7 +383,7 @@ class GlibStringReturn(ReturnValue):
 
     def get_c_error_return(self):
         return "return Glib::ustring();"
-    
+
     def convert_python_to_c(self, wrapper):
         ptr = wrapper.declarations.declare_variable("const char *", "retval_ptr")
         wrapper.parse_params.add_parameter("et", ['"utf-8"', '&'+ptr])
