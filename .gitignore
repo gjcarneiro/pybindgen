@@ -14,3 +14,4 @@ doc/figures/work-flow-gccxml.png
 *~
 *.bak
 .lock-waf_linux2_build
+.eggs/
