@@ -29,13 +29,10 @@ from .typehandlers.base import ReturnValue, Parameter, TypeLookupError, TypeConf
 from pygccxml.declarations.enumeration import enumeration_t
 from .cppclass import CppClass, ReferenceCountingMethodsPolicy, FreeFunctionPolicy, ReferenceCountingFunctionsPolicy
 from .cppexception import CppException
-from pygccxml.declarations import type_traits
-from pygccxml.declarations import cpptypes
-from pygccxml.declarations import calldef
+from pygccxml import declarations
 from pygccxml.declarations import templates
-from pygccxml.declarations import container_traits
-from pygccxml.declarations.declaration import declaration_t
-from pygccxml.declarations.class_declaration import class_declaration_t, class_t
+from pygccxml.declarations import declaration_t
+from pygccxml.declarations import class_declaration_t, class_t
 from . import settings
 from . import utils
 
@@ -55,16 +52,16 @@ def remove_pointer(type):
     """
     #nake_type = remove_alias( type )
     nake_type = type
-    if not type_traits.is_pointer( nake_type ):
+    if not declarations.is_pointer( nake_type ):
         return type
-    elif isinstance( nake_type, cpptypes.volatile_t ) and isinstance( nake_type.base, cpptypes.pointer_t ):
-        return cpptypes.volatile_t( nake_type.base.base )
-    elif isinstance( nake_type, cpptypes.const_t ) and isinstance( nake_type.base, cpptypes.pointer_t ):
-        return cpptypes.const_t( nake_type.base.base )
-    elif isinstance(nake_type, cpptypes.compound_t) and isinstance( nake_type.base, cpptypes.calldef_type_t ):
+    elif isinstance( nake_type, declarations.volatile_t ) and isinstance( nake_type.base, declarations.pointer_t ):
+        return declarations.volatile_t( nake_type.base.base )
+    elif isinstance( nake_type, declarations.const_t ) and isinstance( nake_type.base, declarations.pointer_t ):
+        return declarations.const_t( nake_type.base.base )
+    elif isinstance(nake_type, declarations.compound_t) and isinstance( nake_type.base, declarations.calldef_type_t ):
         return type
     else:
-        if isinstance(nake_type, cpptypes.compound_t):
+        if isinstance(nake_type, declarations.compound_t):
             return nake_type.base
         else:
             return nake_type
@@ -76,10 +73,10 @@ def remove_reference(type):
     """
     #nake_type = remove_alias( type )
     nake_type = type
-    if not type_traits.is_reference( nake_type ):
+    if not declarations.is_reference( nake_type ):
         return type
     else:
-        if isinstance(nake_type, cpptypes.compound_t):
+        if isinstance(nake_type, declarations.compound_t):
             return nake_type.base
         else:
             return nake_type
@@ -92,10 +89,10 @@ def remove_const(type):
 
     #nake_type = remove_alias( type )
     nake_type = type
-    if not type_traits.is_const( nake_type ):
+    if not declarations.is_const( nake_type ):
         return type
     else:
-        if isinstance(nake_type, cpptypes.compound_t):
+        if isinstance(nake_type, declarations.compound_t):
             return nake_type.base
         else:
             return nake_type
@@ -108,7 +105,7 @@ def remove_const(type):
 
 import pygccxml.declarations.type_traits
 def find_declaration_from_name(global_ns, declaration_name):
-    decl = pygccxml.declarations.type_traits.impl_details.find_value_type(global_ns, declaration_name)
+    decl = pygccxml.declarations.declarations.impl_details.find_value_type(global_ns, declaration_name)
     return decl
 
 
@@ -213,7 +210,7 @@ class GccXmlTypeRegistry(object):
         self.ordered_classes.append(cpp_class)
 
 #     def get_type_traits(self, type_info):
-#         #assert isinstance(type_info, cpptypes.type_t)
+#         #assert isinstance(type_info, declarations.type_t)
 
 #         debug = False #('int64_t' in type_info.decl_string)
 #         if debug:
@@ -226,11 +223,11 @@ class GccXmlTypeRegistry(object):
 #         inner_const = False
 #         while 1:
 #             prev_type_info = type_info
-#             if type_traits.is_pointer(type_info):
+#             if declarations.is_pointer(type_info):
 #                 is_pointer += 1
 #                 type_info = remove_pointer(type_info)
 #                 pointer_or_ref_count += 1
-#             elif type_traits.is_const(type_info):
+#             elif declarations.is_const(type_info):
 #                 type_info = remove_const(type_info)
 #                 if pointer_or_ref_count == 0:
 #                     is_const = True
@@ -238,7 +235,7 @@ class GccXmlTypeRegistry(object):
 #                     inner_const = True
 #                 else:
 #                     warnings.warn("multiple consts not handled")
-#             elif type_traits.is_reference(type_info):
+#             elif declarations.is_reference(type_info):
 #                 warnings.warn("multiple &'s not handled")
 #                 is_reference = True
 #                 type_info = remove_reference(type_info)
@@ -340,7 +337,7 @@ class AnnotationsScanner(object):
         """
         assert isinstance(decl, declaration_t)
 
-        if isinstance(decl, calldef.calldef_t) \
+        if isinstance(decl, declarations.calldef_t) \
                 and decl.is_artificial:
             #print >> sys.stderr, "********** ARTIFICIAL:", decl
             return {}, {}
@@ -933,12 +930,12 @@ pybindgen.settings.error_handler = ErrorHandler()
 
     def _get_destructor_visibility(self, cls):
         for member in cls.get_members():
-            if isinstance(member, calldef.destructor_t):
+            if isinstance(member, declarations.destructor_t):
                 return member.access_type
 
     def _has_public_destructor(self, cls):
         for member in cls.get_members():
-            if isinstance(member, calldef.destructor_t):
+            if isinstance(member, declarations.destructor_t):
                 if member.access_type != 'public':
                     return False
         return True
@@ -977,13 +974,13 @@ pybindgen.settings.error_handler = ErrorHandler()
                 continue
             for dependency in fun.i_depend_on_them(recursive=True):
                 type_info = dependency.depend_on_it
-                if type_traits.is_pointer(type_info):
-                    type_info = type_traits.remove_pointer(type_info)
-                elif type_traits.is_reference(type_info):
-                    type_info = type_traits.remove_reference(type_info)
-                if type_traits.is_const(type_info):
-                    type_info = type_traits.remove_const(type_info)
-                traits = container_traits.find_container_traits(type_info)
+                if declarations.is_pointer(type_info):
+                    type_info = declarations.remove_pointer(type_info)
+                elif declarations.is_reference(type_info):
+                    type_info = declarations.remove_reference(type_info)
+                if declarations.is_const(type_info):
+                    type_info = declarations.remove_const(type_info)
+                traits = declarations.find_container_traits(type_info)
                 if traits is None:
                     continue
                 name = normalize_name(type_info.partial_decl_string)
@@ -1110,7 +1107,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 
                 for typedef in module_namespace.typedefs(function=self.location_filter,
                                                          recursive=False, allow_empty=True):
-                    typedef_type = type_traits.remove_declarated(typedef.type)
+                    typedef_type = declarations.remove_declarated(typedef.type)
                     if typedef_type == cls:
                         break
                 else:
@@ -1144,7 +1141,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             ## If this class implicitly converts to another class, but
             ## that other class is not yet registered, postpone.
             for operator in cls.casting_operators(allow_empty=True):
-                target_type = type_traits.remove_declarated(operator.return_type)
+                target_type = declarations.remove_declarated(operator.return_type)
                 if not isinstance(target_type, class_t):
                     continue
                 target_class_name = normalize_class_name(operator.return_type.partial_decl_string, '::')
@@ -1263,13 +1260,13 @@ pybindgen.settings.error_handler = ErrorHandler()
                     continue
                 for dependency in member.i_depend_on_them(recursive=True):
                     type_info = dependency.depend_on_it
-                    if type_traits.is_pointer(type_info):
-                        type_info = type_traits.remove_pointer(type_info)
-                    elif type_traits.is_reference(type_info):
-                        type_info = type_traits.remove_reference(type_info)
-                    if type_traits.is_const(type_info):
-                        type_info = type_traits.remove_const(type_info)
-                    traits = container_traits.find_container_traits(type_info)
+                    if declarations.is_pointer(type_info):
+                        type_info = declarations.remove_pointer(type_info)
+                    elif declarations.is_reference(type_info):
+                        type_info = declarations.remove_reference(type_info)
+                    if declarations.is_const(type_info):
+                        type_info = declarations.remove_const(type_info)
+                    traits = declarations.find_container_traits(type_info)
                     if traits is None:
                         continue
                     name = normalize_name(type_info.partial_decl_string)
@@ -1301,7 +1298,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             # scan for implicit conversion casting operators
             for operator in cls.casting_operators(allow_empty=True):
-                target_type = type_traits.remove_declarated(operator.return_type)
+                target_type = declarations.remove_declarated(operator.return_type)
                 if not isinstance(target_type, class_t):
                     continue
                 other_class_name = normalize_class_name(operator.return_type.partial_decl_string, '::')
@@ -1350,7 +1347,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 ## "typedef struct _Foo Foo"; these are represented in
                 ## pygccxml by a typedef whose .type.declaration is a
                 ## class_declaration_t instead of class_t.
-                if isinstance(alias.type, cpptypes.declarated_t):
+                if isinstance(alias.type, declarations.declarated_t):
                     cls = alias.type.declaration
                     if templates.is_instantiation(cls.decl_string):
                         continue # typedef to template instantiations, must be fully defined
@@ -1459,27 +1456,27 @@ pybindgen.settings.error_handler = ErrorHandler()
         kwargs = {}
         key_type = None
 
-        if traits is container_traits.list_traits:
+        if traits is declarations.list_traits:
             container_type = 'list'
-        elif traits is container_traits.deque_traits:
+        elif traits is declarations.deque_traits:
             container_type = 'dequeue'
-        elif traits is container_traits.queue_traits:
+        elif traits is declarations.queue_traits:
             container_type = 'queue'
-        elif traits is container_traits.priority_queue_traits:
+        elif traits is declarations.priority_queue_traits:
             container_type = 'dequeue'
-        elif traits is container_traits.vector_traits:
+        elif traits is declarations.vector_traits:
             container_type = 'vector'
-        elif traits is container_traits.stack_traits:
+        elif traits is declarations.stack_traits:
             container_type = 'stack'
-        elif traits is container_traits.set_traits:
+        elif traits is declarations.set_traits:
             container_type = 'set'
-        elif traits is container_traits.multiset_traits:
+        elif traits is declarations.multiset_traits:
             container_type = 'multiset'
-        elif traits is container_traits.hash_set_traits:
+        elif traits is declarations.hash_set_traits:
             container_type = 'hash_set'
-        elif traits is container_traits.hash_multiset_traits:
+        elif traits is declarations.hash_multiset_traits:
             container_type = 'hash_multiset'
-        elif traits is container_traits.map_traits:
+        elif traits is declarations.map_traits:
             container_type = 'map'
             if hasattr(traits, "key_type"):
                 key_type = traits.key_type(definition)
@@ -1489,10 +1486,10 @@ pybindgen.settings.error_handler = ErrorHandler()
                               % pygccxml.__version__)
                 return
 
-        elif (traits is container_traits.map_traits
-              or traits is container_traits.multimap_traits
-              or traits is container_traits.hash_map_traits
-              or traits is container_traits.hash_multimap_traits):
+        elif (traits is declarations.map_traits
+              or traits is declarations.multimap_traits
+              or traits is declarations.hash_map_traits
+              or traits is declarations.hash_multimap_traits):
             return # maps not yet implemented
 
         else:
@@ -1517,7 +1514,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             #print >> sys.stderr, "************* register_container %s; element_type=%s, key_type=%s" % \
             #    (name, element_type, key_type.partial_decl_string)
 
-        element_decl = type_traits.remove_declarated(element_type)
+        element_decl = declarations.remove_declarated(element_type)
 
         kwargs['container_type'] = container_type
 
@@ -1559,14 +1556,14 @@ pybindgen.settings.error_handler = ErrorHandler()
     def _class_has_virtual_methods(self, cls):
         """return True if cls has at least one virtual method, else False"""
         for member in cls.get_members():
-            if isinstance(member, calldef.member_function_t):
-                if member.virtuality != calldef.VIRTUALITY_TYPES.NOT_VIRTUAL:
+            if isinstance(member, declarations.member_function_t):
+                if member.virtuality != declarations.VIRTUALITY_TYPES.NOT_VIRTUAL:
                     return True
         return False
 
     def _is_ostream(self, cpp_type):
-        return (isinstance(cpp_type, cpptypes.reference_t)
-                and not isinstance(cpp_type.base, cpptypes.const_t)
+        return (isinstance(cpp_type, declarations.reference_t)
+                and not isinstance(cpp_type.base, declarations.const_t)
                 and str(cpp_type.base) == 'std::ostream')
 
     def _scan_class_operators(self, cls, class_wrapper, pygen_sink):
@@ -1579,7 +1576,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                     and self._is_ostream(op.return_type) \
                     and len(op.arguments) == 2 \
                     and self._is_ostream(argument_types[0]) \
-                    and type_traits.is_convertible(cls, argument_types[1]):
+                    and declarations.is_convertible(cls, argument_types[1]):
                 #print >> sys.stderr, "<<<<<OUTPUT STREAM OP>>>>>  %s: %s " % (op.symbol, cls)
                 class_wrapper.add_output_stream_operator()
                 pygen_sink.writeln("cls.add_output_stream_operator()")
@@ -1587,8 +1584,8 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             if op.symbol in ['==', '!=', '<', '<=', '>', '>='] \
                     and len(argument_types) == 2 \
-                    and type_traits.is_convertible(cls, argument_types[0]) \
-                    and type_traits.is_convertible(cls, argument_types[1]):
+                    and declarations.is_convertible(cls, argument_types[0]) \
+                    and declarations.is_convertible(cls, argument_types[1]):
                 #print >> sys.stderr, "<<<<<BINARY COMPARISON OP>>>>>  %s: %s " % (op.symbol, cls)
                 class_wrapper.add_binary_comparison_operator(op.symbol)
                 pygen_sink.writeln("cls.add_binary_comparison_operator(%r)" % (op.symbol,))
@@ -1604,7 +1601,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 #print >> sys.stderr, "(lookup %r: %r)" % (name, class_wrapper)
                 return class_wrapper
 
-            if not type_traits.is_convertible(cls, argument_types[0]):
+            if not declarations.is_convertible(cls, argument_types[0]):
                 return
 
             ret = get_class_wrapper(op.return_type)
@@ -1692,11 +1689,11 @@ pybindgen.settings.error_handler = ErrorHandler()
         self._scan_class_operators(cls, class_wrapper, pygen_sink)
 
         for member in cls.get_members():
-            if isinstance(member, calldef.member_function_t):
+            if isinstance(member, declarations.member_function_t):
                 if member.access_type not in ['protected', 'private']:
                     continue
 
-            elif isinstance(member, calldef.constructor_t):
+            elif isinstance(member, declarations.constructor_t):
                 if member.access_type not in ['protected', 'private']:
                     continue
 
@@ -1728,9 +1725,9 @@ pybindgen.settings.error_handler = ErrorHandler()
                 continue
 
             ## ------------ method --------------------
-            if isinstance(member, (calldef.member_function_t, calldef.member_operator_t)):
-                is_virtual = (member.virtuality != calldef.VIRTUALITY_TYPES.NOT_VIRTUAL)
-                pure_virtual = (member.virtuality == calldef.VIRTUALITY_TYPES.PURE_VIRTUAL)
+            if isinstance(member, (declarations.member_function_t, declarations.member_operator_t)):
+                is_virtual = (member.virtuality != declarations.VIRTUALITY_TYPES.NOT_VIRTUAL)
+                pure_virtual = (member.virtuality == declarations.VIRTUALITY_TYPES.PURE_VIRTUAL)
 
                 kwargs = {} # kwargs passed into the add_method call
 
@@ -1750,7 +1747,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                         warnings.warn_explicit("Annotation '%s=%s' not used (used in %s)"
                                                % (key, val, member),
                                                AnnotationsWarning, member.location.file_name, member.location.line)
-                if isinstance(member, calldef.member_operator_t):
+                if isinstance(member, declarations.member_operator_t):
                     if member.symbol == '()':
                         kwargs['custom_name'] = '__call__'
                     else:
@@ -1887,7 +1884,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 
 
             ## ------------ constructor --------------------
-            elif isinstance(member, calldef.constructor_t):
+            elif isinstance(member, declarations.constructor_t):
                 if member.access_type not in ['public', 'protected']:
                     continue
 
@@ -1958,7 +1955,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if member.access_type == 'private':
                     continue
 
-                real_type = type_traits.remove_declarated(member.type)
+                real_type = declarations.remove_declarated(member.type)
                 if hasattr(real_type, 'name') and not real_type.name:
                     warnings.warn_explicit("Member variable %s of class %s will not be wrapped, "
                                            "because wrapping member variables of anonymous types "
@@ -1975,11 +1972,11 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if member.type_qualifiers.has_static:
                     pygen_sink.writeln("cls.add_static_attribute(%r, %s, is_const=%r)" %
                                        (member.name, _pygen_retval(*return_type_spec),
-                                        type_traits.is_const(member.type)))
+                                        declarations.is_const(member.type)))
                 else:
                     pygen_sink.writeln("cls.add_instance_attribute(%r, %s, is_const=%r)" %
                                        (member.name, _pygen_retval(*return_type_spec),
-                                        type_traits.is_const(member.type)))
+                                        declarations.is_const(member.type)))
 
                 ## convert the return value
                 try:
@@ -1992,26 +1989,26 @@ pybindgen.settings.error_handler = ErrorHandler()
 
                 if member.type_qualifiers.has_static:
                     class_wrapper.add_static_attribute(member.name, return_type,
-                                                       is_const=type_traits.is_const(member.type))
+                                                       is_const=declarations.is_const(member.type))
                 else:
                     class_wrapper.add_instance_attribute(member.name, return_type,
-                                                         is_const=type_traits.is_const(member.type))
+                                                         is_const=declarations.is_const(member.type))
                 ## TODO: invoke post_scan_hooks
-            elif isinstance(member, calldef.destructor_t):
+            elif isinstance(member, declarations.destructor_t):
                 pass
 
         ## gccxml 0.9, unlike 0.7, does not explicitly report inheritted trivial constructors
         ## thankfully pygccxml comes to the rescue!
         if not have_trivial_constructor:
-            if type_traits.has_trivial_constructor(cls):
+            if declarations.has_trivial_constructor(cls):
                 class_wrapper.add_constructor([])
                 pygen_sink.writeln("cls.add_constructor([])")
 
         if not have_copy_constructor:
             try: # pygccxml > 0.9
-                has_copy_constructor = type_traits.has_copy_constructor(cls)
+                has_copy_constructor = declarations.has_copy_constructor(cls)
             except AttributeError: # pygccxml <= 0.9
-                has_copy_constructor = type_traits.has_trivial_copy(cls)
+                has_copy_constructor = declarations.has_trivial_copy(cls)
             if has_copy_constructor:
                 class_wrapper.add_copy_constructor()
                 pygen_sink.writeln("cls.add_copy_constructor()")
@@ -2148,7 +2145,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             for argnum, arg in enumerate(fun.arguments):
                 annotations = parameter_annotations.get(arg.name, {})
                 if argnum == 0 and as_method is not None \
-                        and isinstance(arg.type, cpptypes.pointer_t):
+                        and isinstance(arg.type, declarations.pointer_t):
                     annotations.setdefault("transfer_ownership", "false")
 
                 spec = self.type_registry.lookup_parameter(arg.type, arg.name,
