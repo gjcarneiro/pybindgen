@@ -111,7 +111,11 @@ typedef intobjargproc ssizeobjargproc;
 
     code_sink.writeln(r'''
 #if PY_VERSION_HEX >= 0x03000000
+#if PY_VERSION_HEX >= 0x03050000
+typedef PyAsyncMethods* cmpfunc;
+#else
 typedef void* cmpfunc;
+#endif
 #define PyCObject_FromVoidPtr(a, b) PyCapsule_New(a, NULL, b)
 #define PyCObject_AsVoidPtr(a) PyCapsule_GetPointer(a, NULL)
 #define PyString_FromString(a) PyBytes_FromString(a)
