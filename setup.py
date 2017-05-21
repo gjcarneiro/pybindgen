@@ -18,4 +18,12 @@ setup(name='PyBindGen',
                 'pybindgen.typehandlers.ctypeparser',
                 ],
       long_description=LONG_DESCRIPTION,
-      )
+      classifiers=[
+          'Development Status :: 4 - Beta',
+          'Intended Audience :: Developers',
+          'Topic :: Software Development :: Build Tools',
+          'License :: OSI Approved :: LGPL',
+          'Programming Language :: Python :: 2',
+          'Programming Language :: Python :: 3',
+      ],
+)
