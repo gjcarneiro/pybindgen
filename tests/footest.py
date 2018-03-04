@@ -51,7 +51,7 @@ class TestFoo(unittest.TestCase):
         del f
         f2 = obj.get_foo_ptr()
         self.assertEqual(f2.get_datum(), "hello")
-        
+
     def test_pass_foo_shared_ptr(self):
         obj = foo.SomeObject("")
         f = foo.Foo("hello")
@@ -59,15 +59,15 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(f.get_datum(), "hello")
         f2 = obj.get_foo_shared_ptr()
         self.assertEqual(f2.get_datum(), "hello")
-    
+
     def test_pass_by_reference(self):
-        obj = foo.SomeObject("")
+        obj = foo.Sotest_bug455689meObject("")
         f = foo.Foo("hello")
         obj.set_foo_by_ref(f)
         self.assertEqual(f.get_datum(), "hello")
         f2 = obj.get_foo_by_ref()
         self.assertEqual(f2.get_datum(), "hello")
-        
+
     def test_refcounting(self):
         obj = foo.SomeObject("")
         z = foo.Zbr("hello")
@@ -93,7 +93,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(zz2.get_datum(), "world")
         zz3 = obj.peek_zbr()
         self.assertEqual(zz3.get_datum(), "world")
-        
+
     def test_instance_get_attribute(self):
         obj = foo.SomeObject("Hello")
         self.assertEqual(obj.m_prefix, "Hello")
@@ -128,7 +128,7 @@ class TestFoo(unittest.TestCase):
 
     def test_overloaded_methods(self):
         obj = foo.SomeObject("zbr")
-        
+
         v1 = obj.get_int(123.0)
         self.assertEqual(v1, 123)
 
@@ -136,7 +136,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(v2, 123)
 
         self.assertRaises(TypeError, obj.get_int, [123])
-        
+
     if which == 1: # there is no gccxml way to do this
         def test_custom_instance_attribute(self):
             obj = foo.Foo()
@@ -158,7 +158,7 @@ class TestFoo(unittest.TestCase):
         obj.set_foo_ptr(foo.Foo())
         foo1 = obj.get_foo_ptr()
         self.assertEqual(type(foo1), foo.Foo)
-        
+
         bar2 = foo.Bar()
         self.assertEqual(type(bar2), foo.Bar)
         obj.set_foo_ptr(bar2)
@@ -265,7 +265,7 @@ class TestFoo(unittest.TestCase):
             pass
         ## check that SomeObject was finally deleted
         self.assertEqual(foo.SomeObject.instance_count, count_before)
-        
+
 
     def test_subclass_with_virtual_transfer_ptr(self):
         class Test(foo.SomeObject):
@@ -296,7 +296,7 @@ class TestFoo(unittest.TestCase):
 
         ## check that SomeObject was finally deleted
         self.assertEqual(foo.SomeObject.instance_count, count_before)
-        
+
 
     def test_subclassed_store_and_take_back(self):
         class Test(foo.SomeObject):
@@ -330,7 +330,7 @@ class TestFoo(unittest.TestCase):
 
     def test_implicit_conversion_method_value(self):
         obj = foo.SomeObject("xxx")
-        
+
         zoo1 = foo.Zoo("zpto")
         try:
             obj.set_foo_value(zoo1)
@@ -339,7 +339,7 @@ class TestFoo(unittest.TestCase):
         foo1 = obj.get_foo_value()
         self.assertEqual(foo1.get_datum(), "zpto")
 
-        
+
     def test_implicit_conversion_function_value(self):
         zoo1 = foo.Zoo("zpto")
         try:
@@ -349,7 +349,7 @@ class TestFoo(unittest.TestCase):
         foo1 = foo.function_that_returns_foo()
         self.assertEqual(foo1.get_datum(), "zpto")
 
-        
+
     def test_implicit_conversion_constructor_value(self):
         zoo1 = foo.Zoo("zpto")
         try:
@@ -625,7 +625,7 @@ class TestFoo(unittest.TestCase):
             def get_something(self, arg=None):
                 self.arg = arg
                 return str(arg)
-            
+
         obj = MyObject("")
         s1 = obj.get_something()
         self.assertEqual(s1, "None")
@@ -678,7 +678,7 @@ class TestFoo(unittest.TestCase):
                 self.y = y
             def get_int(self, x):
                 return getattr(self, 'y', 0) + x
-                
+
         while gc.collect():
             pass
         count_before = foo.Zbr.instance_count
@@ -861,7 +861,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(len(values), 10)
         for i, value in enumerate(values):
             self.assertEqual(value.xpto, i)
-        
+
         rv = foo.set_simple_list(l)
         self.assertEqual(rv, sum(range(10)))
 
@@ -893,7 +893,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(count, 5)
 
 
-        ## set 
+        ## set
         l = []
         for i in range(5):
             simple = foo.simple_struct_t()
@@ -908,7 +908,7 @@ class TestFoo(unittest.TestCase):
             self.assertEqual(simple.xpto, i)
             count += 1
         self.assertEqual(count, 5)
-        
+
 
     def test_container_param_by_ref(self):
         l = []
@@ -971,7 +971,7 @@ class TestFoo(unittest.TestCase):
         s3.xpto = 456
         self.assertEqual(s3.xpto, 456)
         self.assertEqual(s1.xpto, 123)
-        
+
 
     def test_refcounting_v2(self):
         while gc.collect():
@@ -996,14 +996,14 @@ class TestFoo(unittest.TestCase):
 
     def test_refcounting_v3(self):
         zbr_count_before = foo.Zbr.instance_count
-        
+
         class MyZbr(foo.Zbr):
             pass
         z_in = MyZbr()
         obj = foo.SomeObject("")
         obj.set_zbr_transfer(z_in)
         del z_in
-        
+
         z1 = obj.get_zbr()
         z2 = obj.get_zbr()
         self.assertTrue(z1 is z2)
@@ -1018,14 +1018,14 @@ class TestFoo(unittest.TestCase):
 
     def test_refcounting_v4(self): # same as v3 but using peek_zbr instead of get_zbr
         zbr_count_before = foo.Zbr.instance_count
-        
+
         class MyZbr(foo.Zbr):
             pass
         z_in = MyZbr()
         obj = foo.SomeObject("")
         obj.set_zbr_transfer(z_in)
         del z_in
-        
+
         z1 = obj.peek_zbr()
         z2 = obj.peek_zbr()
         self.assertTrue(z1 is z2)
@@ -1084,7 +1084,7 @@ class TestFoo(unittest.TestCase):
         self.assertTrue(t2 < t3)
         self.assertTrue(t2 != t3)
         self.assertTrue(not(t2 == t3))
-        
+
     def test_numeric_operators(self):
         t1 = foo.Tupl()
 
@@ -1181,7 +1181,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(len(vec3), len(vec1) + len(vec2))
         for (x, xcheck) in zip(list(vec3), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 6]):
             self.assertEqual(x, xcheck)
-        
+
         # iadd
         vec2 = foo.VectorLike()
         for i in range(10):
@@ -1190,7 +1190,7 @@ class TestFoo(unittest.TestCase):
         self.assertEqual(len(vec2), 13)
         for (x, xcheck) in zip(list(vec3), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 6]):
             self.assertEqual(x, xcheck)
-        
+
         # mul
         vec2 = 2 * vec1
         self.assertEqual(len(vec2), 2*len(vec1))
@@ -1346,9 +1346,9 @@ class TestFoo(unittest.TestCase):
         f2 = box.getFoobarInternalPtr()
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
         self.assertTrue(f2 is f1)
-        
+
         del f1, f2, box
-        
+
         while gc.collect():
             pass
 
@@ -1366,14 +1366,14 @@ class TestFoo(unittest.TestCase):
         f2 = box.m_internalFoobar
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
         self.assertTrue(f2 is f1)
-        
+
         del f1, f2, box
-        
+
         while gc.collect():
             pass
 
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1)
-        
+
 
     def test_reference_existing_object_ref(self):
         while gc.collect():
@@ -1387,9 +1387,9 @@ class TestFoo(unittest.TestCase):
         f2 = box.getFoobarInternalRef()
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
         self.assertTrue(f2 is f1)
-        
+
         del f1, f2, box
-        
+
         while gc.collect():
             pass
 
@@ -1411,7 +1411,7 @@ class TestFoo(unittest.TestCase):
         f2 = box.getFoobarInternalPtr2()
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
         self.assertTrue(f2 is f1)
-        
+
         del f2, box
         while gc.collect():
             pass
@@ -1427,7 +1427,7 @@ class TestFoo(unittest.TestCase):
 
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1)
         self.assertEqual(foo.Box.instance_count, Box_count1)
-        
+
 
     def test_reference_existing_object_ref2(self):
         while gc.collect():
@@ -1444,7 +1444,7 @@ class TestFoo(unittest.TestCase):
         f2 = box.getFoobarInternalRef2()
         self.assertEqual(foo.Foobar.instance_count, Foobar_count1+1)
         self.assertTrue(f2 is f1)
-        
+
         del f2, box
         while gc.collect():
             pass

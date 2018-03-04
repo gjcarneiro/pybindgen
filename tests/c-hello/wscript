@@ -19,7 +19,7 @@ def build(bld):
         features='command',
         source='hellomodulegen.py hello.h',
         target='hellomodule.c',
-        command='${PYTHON} %s ${SRC[0]} ${SRC[1]} > ${TGT[0]}' % (DEPRECATION_ERRORS,))
+        command='${PYTHON} %s ${SRC[0]} ${PYGCCXML_MODE} ${SRC[1]}  > ${TGT[0]}' % (DEPRECATION_ERRORS,))
 
     os.environ["PYTHONPATH"] = os.pathsep.join([os.environ.get("PYTHONPATH", ''), bindgen.path.get_bld().abspath()])
 

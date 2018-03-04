@@ -17,6 +17,8 @@ else:
 import os.path
 import warnings
 import re
+import logging
+
 import pygccxml
 from pygccxml import parser
 from pygccxml import declarations
@@ -51,6 +53,10 @@ import collections
 
 import subprocess
 from cxxfilt import demangle
+
+
+logger = logging.getLogger(__name__)
+
 
 def check_template (demangled_name, function_name):
     index = demangled_name.find(function_name)
@@ -654,7 +660,8 @@ class ModuleParser(object):
         return False
 
     def parse(self, header_files, include_paths=None, whitelist_paths=None, includes=(),
-              pygen_sink=None, pygen_classifier=None, castxml_options=None):
+              pygen_sink=None, pygen_classifier=None, castxml_options=None,
+              gccxml_options=None):
         """
         parses a set of header files and returns a pybindgen Module instance.
         It is equivalent to calling the following methods:
@@ -666,8 +673,9 @@ class ModuleParser(object):
 
          The documentation for L{ModuleParser.parse_init} explains the parameters.
         """
+        options = castxml_options or gccxml_options
         self.parse_init(header_files, include_paths, whitelist_paths, includes, pygen_sink,
-                        pygen_classifier, castxml_options)
+                        pygen_classifier, options)
         self.scan_types()
         self.scan_methods()
         self.scan_functions()
@@ -676,7 +684,7 @@ class ModuleParser(object):
 
     def parse_init(self, header_files, include_paths=None,
                    whitelist_paths=None, includes=(), pygen_sink=None, pygen_classifier=None,
-                   castxml_options=None):
+                   castxml_options=None, gccxml_options=None):
         """
         Prepares to parse a set of header files.  The following
         methods should then be called in order to finish the rest of
@@ -729,6 +737,7 @@ class ModuleParser(object):
         """
         assert isinstance(header_files, list)
         assert isinstance(includes, (list, tuple))
+        options = castxml_options or gccxml_options
         self._pygen = pygen_sink
         self._pygen_classifier = pygen_classifier
         if isinstance(pygen_sink, list):
@@ -753,16 +762,22 @@ class ModuleParser(object):
             assert isinstance(whitelist_paths, list)
             self.whitelist_paths = [os.path.abspath(p) for p in whitelist_paths]
 
-        if castxml_options is None:
-            castxml_options = {}
+        if options is None:
+            options = {}
+        else:
+            options = dict(options)
         generator_path, generator_name = find_xml_generator()
+        options['xml_generator_path'] = generator_path
+        options['xml_generator'] = generator_name
+
         if include_paths is not None:
             assert isinstance(include_paths, list)
             warnings.warn("Parameter include_paths is deprecated, use castxml_options instead", DeprecationWarning,
                           stacklevel=2)
-            self.castxml_config = parser.xml_generator_configuration_t(include_paths=include_paths, xml_generator_path=generator_path, xml_generator=generator_name, **castxml_options)
-        else:
-            self.castxml_config = parser.xml_generator_configuration_t(xml_generator_path=generator_path, xml_generator=generator_name, **castxml_options)
+            options['include_paths'] = include_paths
+
+        logger.debug("castxml options: %r", options)
+        self.castxml_config = parser.xml_generator_configuration_t(**options)
 
         self.declarations = parser.parse(header_files, self.castxml_config)
         self.global_ns = declarations.get_global_namespace(self.declarations)
@@ -771,7 +786,8 @@ class ModuleParser(object):
         else:
             self.module_namespace = self.global_ns.namespace(self.module_namespace_name)
 
-        self.module = Module(self.module_name, cpp_namespace=self.module_namespace.decl_string)
+        self.module = Module(self.module_name,
+                             cpp_namespace=self.module_namespace.decl_string)
 
         for inc in includes:
             self.module.add_include(inc)
@@ -950,6 +966,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 
     def _apply_class_annotations(self, cls, annotations, kwargs):
         is_exception = False
+        logger.debug("cls %s annotations: %r", cls.name, annotations)
         for name, value in annotations.items():
             if name == 'allow_subclassing':
                 kwargs.setdefault('allow_subclassing', annotations_scanner.parse_boolean(value))
@@ -1015,6 +1032,7 @@ pybindgen.settings.error_handler = ErrorHandler()
         return True
 
     def _scan_namespace_types(self, module, module_namespace, outer_class=None, pygen_register_function_name=None):
+        logger.debug("_scan_namespace_types(%s, %s)", module, module_namespace)
         root_module = module.get_root()
         if pygen_register_function_name:
             for pygen_sink in self._get_all_pygen_sinks():
@@ -1043,6 +1061,7 @@ pybindgen.settings.error_handler = ErrorHandler()
         ## all parameters and return values of all functions in this namespace...
         for fun in module_namespace.free_functions(function=self.location_filter,
                                                    allow_empty=True, recursive=False):
+            # logger.debug("Saw free function: %s", fun)
             if fun.name.startswith('__'):
                 continue
             for dependency in fun.i_depend_on_them(recursive=True):
@@ -1081,6 +1100,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 enums.append(enum)
 
         for enum in enums:
+            # logger.debug("Saw enum: %s", enum)
 
             global_annotations, param_annotations = annotations_scanner.get_annotations(enum)
             for hook in self._pre_scan_hooks:
@@ -1103,7 +1123,6 @@ pybindgen.settings.error_handler = ErrorHandler()
             module.add_enum(utils.ascii(enum.name), [utils.ascii(name) for name, dummy_val in enum.values],
                             outer_class=outer_class)
 
-
         ## scan classes
         if outer_class is None:
             unregistered_classes = [cls for cls in
@@ -1118,7 +1137,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             unregistered_classes = []
             typedefs = []
             for cls in outer_class.castxml_definition.classes(function=self.location_filter,
-                                                             recursive=False, allow_empty=True):
+                                                              recursive=False, allow_empty=True):
                 if outer_class.castxml_definition.find_out_member_access_type(cls) != 'public':
                     continue
                 if cls.name.startswith('__'):
@@ -1126,7 +1145,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 unregistered_classes.append(cls)
 
             for typedef in outer_class.castxml_definition.typedefs(function=self.location_filter,
-                                                                  recursive=False, allow_empty=True):
+                                                                   recursive=False, allow_empty=True):
                 if outer_class.castxml_definition.find_out_member_access_type(typedef) != 'public':
                     continue
                 if typedef.name.startswith('__'):
@@ -1134,7 +1153,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 typedefs.append(typedef)
 
         unregistered_classes.sort(key=lambda c: c.decl_string)
-
+        # logger.debug("unregistered_classes: %r", unregistered_classes)
 
         def postpone_class(cls, reason):
             ## detect the case of a class being postponed many times; that
@@ -1156,8 +1175,7 @@ pybindgen.settings.error_handler = ErrorHandler()
 
         while unregistered_classes:
             cls = unregistered_classes.pop(0)
-            if DEBUG:
-                print(">>> looking at class ", str(cls), file=sys.stderr)
+            # logger.debug("Saw class: %s", cls)
             typedef = None
 
             kwargs = {}
@@ -1277,7 +1295,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             if ignore_class:
                 continue
 
-            if 0: # this is disabled due to ns3
+            if 1: # this is disabled due to ns3
                 ## if any template argument is a class that is not yet
                 ## registered, postpone scanning/registering the template
                 ## instantiation class until the template argument gets

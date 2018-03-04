@@ -17,4 +17,4 @@ doc/figures/work-flow-gccxml.png
 .eggs/
 PyBindGen.egg-info/
 dist/
-
+.venv/

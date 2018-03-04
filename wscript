@@ -161,8 +161,9 @@ def configure(conf):
         conf.check_python_headers()
 
         if not Options.options.disable_pygccxml:
+            castxml = conf.find_program('castxml', mandatory=False)
             gccxml = conf.find_program('gccxml', mandatory=False)
-            if not gccxml:
+            if not (gccxml or castxml):
                 conf.env['ENABLE_PYGCCXML'] = False
             else:
                 try:
@@ -171,6 +172,10 @@ def configure(conf):
                     conf.env['ENABLE_PYGCCXML'] = False
                 else:
                     conf.env['ENABLE_PYGCCXML'] = True
+                    if castxml:
+                        conf.env['PYGCCXML_MODE'] = 'castxml'
+                    else:
+                        conf.env['PYGCCXML_MODE'] = 'gccxml'
 
         # -fvisibility=hidden optimization
         if (conf.env['CXX_NAME'] == 'gcc' and [int(x) for x in conf.env['CC_VERSION']] >= [4,0,0]

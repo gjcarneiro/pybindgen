@@ -5,7 +5,7 @@ import re
 
 import pybindgen
 from pybindgen import FileCodeSink
-from pybindgen.gccxmlparser import ModuleParser
+
 
 constructor_rx = re.compile("hello_foo_new(_.*)?")
 method_rx = re.compile("hello_foo(_.*)?")
@@ -39,13 +39,18 @@ def pre_scan_hook(dummy_module_parser,
 
 
 
-def my_module_gen(out_file):
+def my_module_gen(out_file, pygccxml_mode):
+    if pygccxml_mode == 'castxml':
+        from pybindgen.castxmlparser import ModuleParser
+    else:
+        from pybindgen.gccxmlparser import ModuleParser
+
     out = FileCodeSink(out_file)
     #pybindgen.write_preamble(out)
     out.writeln("#include \"hello.h\"")
     module_parser = ModuleParser('hello')
     module_parser.add_pre_scan_hook(pre_scan_hook)
-    module = module_parser.parse(sys.argv[1:])
+    module = module_parser.parse(sys.argv[2:])
     module.generate(out)
 
 
@@ -53,7 +58,7 @@ if __name__ == '__main__':
     try:
         import cProfile as profile
     except ImportError:
-        my_module_gen(sys.stdout)
+        my_module_gen(sys.stdout, sys.argv[1])
     else:
         sys.stderr.write("** running under profiler\n")
-        profile.run('my_module_gen(sys.stdout)', 'hellomodulegen.pstat')
+        profile.run('my_module_gen(sys.stdout, sys.argv[1])', 'hellomodulegen.pstat')
