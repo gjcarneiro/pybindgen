@@ -1295,7 +1295,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             if ignore_class:
                 continue
 
-            if 1: # this is disabled due to ns3
+            if 0: # this is disabled due to ns3
                 ## if any template argument is a class that is not yet
                 ## registered, postpone scanning/registering the template
                 ## instantiation class until the template argument gets
