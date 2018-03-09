@@ -18,6 +18,7 @@ import os.path
 import warnings
 import re
 import logging
+import time
 
 import pygccxml
 from pygccxml import parser
@@ -1173,17 +1174,33 @@ pybindgen.settings.error_handler = ErrorHandler()
                 print(">>> class %s is being postponed (%s)" % (str(cls), reason), file=sys.stderr)
             unregistered_classes.append(cls)
 
+        timings = []
         while unregistered_classes:
+            timings.append(time.time())
+            if len(timings) > 1 and timings[-1] - timings[0] > 0.1:
+                tl = ["{:.1f}".format((t2 - t1) * 1000)
+                      for t2, t1 in zip(timings[1:], timings[:-1])]
+                logger.debug("timings (total: %.1f ms): %s",
+                             (timings[-1] - timings[0]) * 1000,
+                             " + ".join(tl))
+            del timings[:]
+            timings.append(time.time())
+
             cls = unregistered_classes.pop(0)
-            # logger.debug("Saw class: %s", cls)
+            logger.info("looking at class (%i left): %s",
+                        len(unregistered_classes), cls)
             typedef = None
 
             kwargs = {}
             global_annotations, param_annotations = annotations_scanner.get_annotations(cls)
+            timings.append(time.time())
             for hook in self._pre_scan_hooks:
                 hook(self, cls, global_annotations, param_annotations)
             if 'ignore' in global_annotations:
+                logger.debug("Class %s annotated with 'ignore', skipping",
+                             cls)
                 continue
+            timings.append(time.time())
 
             if not cls.name:
                 if outer_class is None:
@@ -1195,6 +1212,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 self._anonymous_structs.append((cls, outer_class))
                 continue
 
+            timings.append(time.time())
 
             if '<' in cls.name:
 
@@ -1206,6 +1224,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 else:
                     typedef = None
 
+            timings.append(time.time())
             base_class_wrappers = []
             bases_ok = True
             for cls_bases_item in cls.bases:
@@ -1231,6 +1250,8 @@ pybindgen.settings.error_handler = ErrorHandler()
             if not bases_ok:
                 continue
 
+            timings.append(time.time())
+
             ## If this class implicitly converts to another class, but
             ## that other class is not yet registered, postpone.
             for operator in cls.casting_operators(allow_empty=True):
@@ -1255,11 +1276,15 @@ pybindgen.settings.error_handler = ErrorHandler()
 
             is_exception = self._apply_class_annotations(cls, global_annotations, kwargs)
 
+            timings.append(time.time())
+
             custom_template_class_name = None
             template_parameters = ()
             if typedef is None:
                 alias = None
-                if templates.is_instantiation(cls.decl_string):
+                isinst = templates.is_instantiation(cls.decl_string)
+                timings.append(time.time())
+                if isinst:
                     cls_name, template_parameters = templates.split(cls.name)
                     assert template_parameters
                     if '::' in cls_name:
@@ -1275,6 +1300,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                 else:
                     cls_name = cls.name
             else:
+                timings.append(time.time())
                 cls_name = typedef.name
                 alias = '::'.join([module.cpp_namespace_prefix, cls.name])
 
@@ -1294,6 +1320,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     break
             if ignore_class:
                 continue
+
+            timings.append(time.time())
 
             if 0: # this is disabled due to ns3
                 ## if any template argument is a class that is not yet
@@ -1346,6 +1374,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     pygen_sink.writeln("module.add_class(%s)" %
                                        ", ".join([repr(cls_name)] + _pygen_kwargs(kwargs)))
 
+            timings.append(time.time())
+
             ## detect use of unregistered container types: need to look at
             ## all parameters and return values of all functions in this namespace...
             for member in cls.get_members(access='public'):
@@ -1369,6 +1399,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                     # type.
                     self._containers_to_register.append((traits, type_info, None, name))
 
+            timings.append(time.time())
+
             if is_exception:
                 class_wrapper = module.add_exception(cls_name, **kwargs)
             else:
@@ -1381,13 +1413,18 @@ pybindgen.settings.error_handler = ErrorHandler()
                 class_wrapper.register_alias(normalize_name(alias))
             self.type_registry.class_registered(class_wrapper)
 
+            timings.append(time.time())
+
             for hook in self._post_scan_hooks:
                 hook(self, cls, class_wrapper)
+
+            timings.append(time.time())
 
             del cls_name
 
             ## scan for nested classes/enums
             self._scan_namespace_types(module, module_namespace, outer_class=class_wrapper)
+            timings.append(time.time())
 
             # scan for implicit conversion casting operators
             for operator in cls.casting_operators(allow_empty=True):
@@ -1409,6 +1446,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                             pygen_sink.writeln('## ' + global_annotations['pygen_comment'])
                         pygen_sink.writeln("root_module[%r].implicitly_converts_to(root_module[%r])"
                                            % (class_wrapper.full_name, other_class.full_name))
+            timings.append(time.time())
 
         # -- register containers
         if outer_class is None:
