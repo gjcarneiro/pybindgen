@@ -1868,6 +1868,8 @@ pybindgen.settings.error_handler = ErrorHandler()
 
         for member in cls.get_members():
             if member.name in methods_to_ignore:
+                logger.debug("Ignoring method %s of class %s (refcounting)",
+                             member.name, cls)
                 continue
 
             global_annotations, parameter_annotations = annotations_scanner.get_annotations(member)
@@ -1875,7 +1877,12 @@ pybindgen.settings.error_handler = ErrorHandler()
                 hook(self, member, global_annotations, parameter_annotations)
 
             if 'ignore' in global_annotations:
+                logger.debug("Ignoring method %s of class %s (annotation: %s)",
+                             member.name, cls, global_annotations['ignore'])
                 continue
+
+            logger.debug("Looking at method %s of class %s",
+                         member.name, cls)
 
             ## ------------ method --------------------
             if isinstance(member, (calldef_members.member_function_t, calldef_members.member_operator_t)):
@@ -1990,6 +1997,9 @@ pybindgen.settings.error_handler = ErrorHandler()
                 try:
                     return_type = ReturnValue.new(*return_type_spec[0], **return_type_spec[1])
                 except (TypeLookupError, TypeConfigurationError) as ex:
+                    logger.debug("Unable to lookup return type handler: %r %r: %r",
+                                 return_type_spec[0], return_type_spec[1],
+                                 ex)
                     warnings.warn_explicit("Return value '%s' error (used in %s): %r"
                                            % (member.return_type.partial_decl_string, member, ex),
                                            WrapperWarning, member.location.file_name, member.location.line)
