@@ -1529,50 +1529,50 @@ pybindgen.settings.error_handler = ErrorHandler()
                                                (cls_wrapper.full_name, utils.ascii(alias.name)))
 
 
-            ## scan nested namespaces (mapped as python submodules)
-            nested_modules = []
-            nested_namespaces = []
-            for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
-                if nested_namespace.name.startswith('__'):
-                    continue
-                nested_namespaces.append(nested_namespace)
+        ## scan nested namespaces (mapped as python submodules)
+        nested_modules = []
+        nested_namespaces = []
+        for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
+            if nested_namespace.name.startswith('__'):
+                continue
+            nested_namespaces.append(nested_namespace)
 
-            nested_namespaces.sort(key=lambda c: c.decl_string)
+        nested_namespaces.sort(key=lambda c: c.decl_string)
 
-            for nested_namespace in nested_namespaces:
-                if pygen_register_function_name:
-                    nested_module = module.add_cpp_namespace(utils.ascii(nested_namespace.name))
-                    nested_modules.append(nested_module)
-                    for pygen_sink in self._get_all_pygen_sinks():
-                        pygen_sink.writeln()
-                        pygen_sink.writeln("## Register a nested module for the namespace %s" % utils.ascii(nested_namespace.name))
-                        pygen_sink.writeln()
-                        pygen_sink.writeln("nested_module = module.add_cpp_namespace(%r)" % utils.ascii(nested_namespace.name))
-                        nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
-                        pygen_sink.writeln("%s(nested_module)" % nested_module_type_init_func)
-                        pygen_sink.writeln()
-            if not pygen_function_closed:
+        for nested_namespace in nested_namespaces:
+            if pygen_register_function_name:
+                nested_module = module.add_cpp_namespace(utils.ascii(nested_namespace.name))
+                nested_modules.append(nested_module)
                 for pygen_sink in self._get_all_pygen_sinks():
-                    pygen_sink.unindent()
                     pygen_sink.writeln()
-                pygen_function_closed = True
-
-            ## scan nested namespaces (mapped as python submodules)
-            nested_namespaces = []
-            for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
-                if nested_namespace.name.startswith('__'):
-                    continue
-                nested_namespaces.append(nested_namespace)
-
-            nested_namespaces.sort(key=lambda c: c.decl_string)
-
-            for nested_namespace in nested_namespaces:
-                if pygen_register_function_name:
-                    nested_module = nested_modules.pop(0)
+                    pygen_sink.writeln("## Register a nested module for the namespace %s" % utils.ascii(nested_namespace.name))
+                    pygen_sink.writeln()
+                    pygen_sink.writeln("nested_module = module.add_cpp_namespace(%r)" % utils.ascii(nested_namespace.name))
                     nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
-                    self._scan_namespace_types(nested_module, nested_namespace,
-                                               pygen_register_function_name=nested_module_type_init_func)
-            assert not nested_modules # make sure all have been consumed by the second for loop
+                    pygen_sink.writeln("%s(nested_module)" % nested_module_type_init_func)
+                    pygen_sink.writeln()
+        if not pygen_function_closed:
+            for pygen_sink in self._get_all_pygen_sinks():
+                pygen_sink.unindent()
+                pygen_sink.writeln()
+            pygen_function_closed = True
+
+        ## scan nested namespaces (mapped as python submodules)
+        nested_namespaces = []
+        for nested_namespace in module_namespace.namespaces(allow_empty=True, recursive=False):
+            if nested_namespace.name.startswith('__'):
+                continue
+            nested_namespaces.append(nested_namespace)
+
+        nested_namespaces.sort(key=lambda c: c.decl_string)
+
+        for nested_namespace in nested_namespaces:
+            if pygen_register_function_name:
+                nested_module = nested_modules.pop(0)
+                nested_module_type_init_func = "register_types_" + "_".join(nested_module.get_namespace_path())
+                self._scan_namespace_types(nested_module, nested_namespace,
+                                           pygen_register_function_name=nested_module_type_init_func)
+        assert not nested_modules # make sure all have been consumed by the second for loop
         # ^^ CLOSE: if outer_class is None: ^^
 
         if pygen_register_function_name and not pygen_function_closed:
@@ -2427,10 +2427,10 @@ pybindgen.settings.error_handler = ErrorHandler()
         nested_namespaces.sort(key=lambda c: c.decl_string)
 
         for nested_namespace in nested_namespaces:
-            nested_module = module.get_submodule(nested_namespace.name)
+            nested_module = module.add_cpp_namespace(nested_namespace.name)
             nested_module_pygen_func = "register_functions_" + "_".join(nested_module.get_namespace_path())
             for pygen_sink in self._get_all_pygen_sinks():
-                pygen_sink.writeln("%s(module.get_submodule(%r), root_module)" %
+                pygen_sink.writeln("%s(module.add_cpp_namespace(%r), root_module)" %
                                    (nested_module_pygen_func, nested_namespace.name))
 
         for pygen_sink in self._get_all_pygen_sinks():
