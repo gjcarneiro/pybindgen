@@ -135,7 +135,11 @@ typedef struct {
 
         ## --- register the iter type in the module ---
         module.after_init.write_code("/* Register the '%s' class iterator*/" % self.cppclass.full_name)
-        module.after_init.write_error_check('PyType_Ready(&%s)' % (self.iter_pytypestruct,))
+        module.after_init.write_error_check('PyType_Ready(_TYPEREF %s)' % (self.iter_pytypestruct,))
+        module.after_init.write_code('#ifdef Py_LIMITED_API')
+        module.after_init.write_code('%s = (PyTypeObject*)PyType_FromSpec(&%s_spec);\n'
+                                                 % (self.iter_pytypestruct, self.iter_pytypestruct))
+        module.after_init.write_code('#endif')
 
         if self.cppclass.outer_class is None:
             module.after_init.write_code(
@@ -238,7 +242,7 @@ static void
 static PyObject*
 %(CONTAINER_ITER_FUNC)s(%(PYSTRUCT)s *self)
 {
-    %(ITER_PYSTRUCT)s *iter = PyObject_GC_New(%(ITER_PYSTRUCT)s, &%(ITER_PYTYPESTRUCT)s);
+    %(ITER_PYSTRUCT)s *iter = PyObject_GC_New(%(ITER_PYSTRUCT)s, _TYPEREF %(ITER_PYTYPESTRUCT)s);
     Py_INCREF(self);
     iter->container = self;
     iter->iterator = new %(CTYPE)s::%(ITERATOR_TYPE)s(self->obj->%(BEGIN_METHOD)s());

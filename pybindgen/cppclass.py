@@ -1839,7 +1839,7 @@ typedef struct {
             code_sink.writeln('extern PyTypeObject *_%s;' % (self.pytypestruct,))
             code_sink.writeln('#define %s (*_%s)' % (self.pytypestruct, self.pytypestruct))
         else:
-            code_sink.writeln('extern PyTypeObject %s;' % (self.pytypestruct,))
+            code_sink.writeln('extern PyTypeObject _TYPEDEC %s;' % (self.pytypestruct,))
             if not self.static_attributes.empty():
                 code_sink.writeln('extern PyTypeObject Py%s_Type;' % (self.metaclass_name,))
 
@@ -1971,32 +1971,46 @@ typedef struct {
 
         if self.parent is not None:
             assert isinstance(self.parent, CppClass)
-            module.after_init.write_code('%s.tp_base = &%s;' %
-                                         (self.pytypestruct, self.parent.pytypestruct))
+            module.after_init.write_code(
+                '#ifdef Py_LIMITED_API\n'
+                '%s = (PyTypeObject*)PyType_FromSpec(&%s_spec);\n'
+                '#else\n'
+                '%s.tp_base = &%s;\n'
+                '#endif\n' % (self.pytypestruct, self.pytypestruct, self.pytypestruct, self.parent.pytypestruct))
             if len(self.bases) > 1:
                 module.after_init.write_code('%s.tp_bases = PyTuple_New(%i);' % (self.pytypestruct, len(self.bases),))
                 for basenum, base in enumerate(self.bases):
                     module.after_init.write_code('    Py_INCREF((PyObject *) &%s);' % (base.pytypestruct,))
-                    module.after_init.write_code('    PyTuple_SET_ITEM(%s.tp_bases, %i, (PyObject *) &%s);'
-                                                 % (self.pytypestruct, basenum, base.pytypestruct))
+                    module.after_init.write_code('    PyTuple_SetItem(%s.tp_bases, %i, (PyObject *) &%s);'
+                                                         % (self.pytypestruct, basenum, base.pytypestruct))
+        else:
+            module.after_init.write_code(
+                '#ifdef Py_LIMITED_API\n'
+                '%s = (PyTypeObject*)PyType_FromSpec(&%s_spec);\n'
+                '#endif\n' % (self.pytypestruct, self.pytypestruct))
 
         if metaclass is not None:
             module.after_init.write_code('Py_TYPE(&%s) = &%s;' %
                                          (self.pytypestruct, metaclass.pytypestruct))
 
-        module.after_init.write_error_check('PyType_Ready(&%s)'
-                                          % (self.pytypestruct,))
+        # TODO: not needed with Py_LIMITED_API?
+        module.after_init.write_error_check('PyType_Ready(_TYPEREF %s)'
+                                      % (self.pytypestruct,))
 
         class_python_name = self.get_python_name()
 
         if self.outer_class is None:
             module.after_init.write_code(
-                'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) &%s);' % (
+                'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) _TYPEREF %s);' % (
                 class_python_name, self.pytypestruct))
         else:
             module.after_init.write_code(
-                'PyDict_SetItemString((PyObject*) %s.tp_dict, (char *) \"%s\", (PyObject *) &%s);' % (
-                self.outer_class.pytypestruct, class_python_name, self.pytypestruct))
+                '#ifdef Py_LIMITED_API\n'
+                'PyObject_SetAttrString((PyObject*) %s, (char *) \"%s\", (PyObject *) %s);\n'
+                '#else\n'
+                'PyDict_SetItemString((PyObject*) %s.tp_dict, \"%s\", (PyObject *) &%s);\n'
+                '#endif\n' % (self.outer_class.pytypestruct, class_python_name, self.pytypestruct,
+                              self.outer_class.pytypestruct, class_python_name, self.pytypestruct))
 
         have_constructor = self._generate_constructor(code_sink)
 
@@ -2564,7 +2578,12 @@ static void
         else:
             code_block.write_code(self._get_delete_code())
 
-        code_block.write_code('Py_TYPE(self)->tp_free((PyObject*)self);')
+        code_block.write_code(
+            '    #ifdef Py_LIMITED_API\n'
+            '    PyObject_DEL(self);\n'
+            '    #else\n'
+            '    Py_TYPE(self)->tp_free((PyObject*)self);\n'
+            '    #endif\n')
 
         code_block.write_cleanup()
         
@@ -2586,7 +2605,7 @@ static void
         code_sink.indent()
 
         code_sink.writeln("""
-if (!PyObject_IsInstance((PyObject*) other, (PyObject*) &%s)) {
+if (!PyObject_IsInstance((PyObject*) other, (PyObject*) _TYPEREF %s)) {
     Py_INCREF(Py_NotImplemented);
     return Py_NotImplemented;
 }""" % self.pytypestruct)
@@ -2646,7 +2665,7 @@ if (!PyObject_IsInstance((PyObject*) other, (PyObject*) &%s)) {
         else:
             new_func = 'PyObject_New'
         if wrapper_type is None:
-            wrapper_type = '&'+self.pytypestruct
+            wrapper_type = '_TYPEREF ' + self.pytypestruct
         code_block.write_code("%s = %s(%s, %s);" %
                               (lvalue, new_func, self.pystruct, wrapper_type))
         if self.allow_subclassing:
@@ -2700,7 +2719,7 @@ def common_shared_object_return(value, py_name, cpp_class, code_block,
 
         else:
 
-            wrapper_type = '&'+cpp_class.pytypestruct
+            wrapper_type = '_TYPEREF '+cpp_class.pytypestruct
 
         ## Create the Python wrapper object
         cpp_class.write_allocate_pystruct(code_block, py_name, wrapper_type)
@@ -2944,14 +2963,14 @@ class CppClassParameter(CppClassParameterBase):
                     self.py_name = wrapper.declarations.declare_variable(
                         self.cpp_class.pystruct+'*', self.name, 'NULL')
                     wrapper.parse_params.add_parameter(
-                        'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name, optional=True)
+                        'O!', ['_TYPEREF '+self.cpp_class.pytypestruct, '&'+self.py_name], self.name, optional=True)
                     wrapper.call_params.append(
                         '(%s ? (*((%s *) %s)->obj) : %s)' % (self.py_name, self.cpp_class.pystruct, self.py_name, self.default_value))
                 else:
                     self.py_name = wrapper.declarations.declare_variable(
                         self.cpp_class.pystruct+'*', self.name)
                     wrapper.parse_params.add_parameter(
-                        'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
+                        'O!', ['_TYPEREF '+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
                     wrapper.call_params.append(
                         '*((%s *) %s)->obj' % (self.cpp_class.pystruct, self.py_name))
             else:
@@ -2969,7 +2988,7 @@ class CppClassParameter(CppClassParameterBase):
                     wrapper.parse_params.add_parameter('O', ['&'+self.py_name], self.name, optional=True)
 
                 if self.default_value is None:
-                    wrapper.before_call.write_code("if (PyObject_IsInstance(%s, (PyObject*) &%s)) {\n"
+                    wrapper.before_call.write_code("if (PyObject_IsInstance(%s, (PyObject*) _TYPEREF %s)) {\n"
                                                    "    %s = *((%s *) %s)->obj;" %
                                                    (self.py_name, self.cpp_class.pytypestruct,
                                                     tmp_value_variable,
@@ -2980,13 +2999,13 @@ class CppClassParameter(CppClassParameterBase):
                         "    %s = %s;" %
                         (self.py_name, tmp_value_variable, self.default_value))
                     wrapper.before_call.write_code(
-                        "} else if (PyObject_IsInstance(%s, (PyObject*) &%s)) {\n"
+                        "} else if (PyObject_IsInstance(%s, (PyObject*) _TYPEREF %s)) {\n"
                                                    "    %s = *((%s *) %s)->obj;" %
                                                    (self.py_name, self.cpp_class.pytypestruct,
                                                     tmp_value_variable,
                                                     self.cpp_class.pystruct, self.py_name))
                 for conversion_source in implicit_conversion_sources:
-                    wrapper.before_call.write_code("} else if (PyObject_IsInstance(%s, (PyObject*) &%s)) {\n"
+                    wrapper.before_call.write_code("} else if (PyObject_IsInstance(%s, (PyObject*) _TYPEREF %s)) {\n"
                                                    "    %s = *((%s *) %s)->obj;" %
                                                    (self.py_name, conversion_source.pytypestruct,
                                                     tmp_value_variable,
@@ -3063,7 +3082,7 @@ class CppClassRefParameter(CppClassParameterBase):
                             self.cpp_class.pystruct+'*', self.name, 'NULL')
 
                         wrapper.parse_params.add_parameter(
-                            'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name, optional=True)
+                            'O!', ['_TYPEREF '+self.cpp_class.pytypestruct, '&'+self.py_name], self.name, optional=True)
 
                         if self.default_value_type is not None:
                             default_value_name = wrapper.declarations.declare_variable(
@@ -3081,7 +3100,7 @@ class CppClassRefParameter(CppClassParameterBase):
                         self.py_name = wrapper.declarations.declare_variable(
                             self.cpp_class.pystruct+'*', self.name)
                         wrapper.parse_params.add_parameter(
-                            'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
+                            'O!', ['_TYPEREF '+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
                         wrapper.call_params.append(
                             '*((%s *) %s)->obj' % (self.cpp_class.pystruct, self.py_name))
                 else:
@@ -3094,13 +3113,13 @@ class CppClassRefParameter(CppClassParameterBase):
                         self.cpp_class.full_name, self.name)
                     wrapper.parse_params.add_parameter('O', ['&'+self.py_name], self.name)
 
-                    wrapper.before_call.write_code("if (PyObject_IsInstance(%s, (PyObject*) &%s)) {\n"
+                    wrapper.before_call.write_code("if (PyObject_IsInstance(%s, (PyObject*) _TYPEREF %s)) {\n"
                                                    "    %s = *((%s *) %s)->obj;" %
                                                    (self.py_name, self.cpp_class.pytypestruct,
                                                     tmp_value_variable,
                                                     self.cpp_class.pystruct, self.py_name))
                     for conversion_source in implicit_conversion_sources:
-                        wrapper.before_call.write_code("} else if (PyObject_IsInstance(%s, (PyObject*) &%s)) {\n"
+                        wrapper.before_call.write_code("} else if (PyObject_IsInstance(%s, (PyObject*) _TYPEREF %s)) {\n"
                                                        "    %s = *((%s *) %s)->obj;" %
                                                        (self.py_name, conversion_source.pytypestruct,
                                                         tmp_value_variable,
@@ -3151,7 +3170,7 @@ class CppClassRefParameter(CppClassParameterBase):
                 self.cpp_class.pystruct+'*', self.name)
 
             wrapper.parse_params.add_parameter(
-                'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
+                'O!', ['_TYPEREF '+self.cpp_class.pytypestruct, '&'+self.py_name], self.name)
             wrapper.call_params.append(
                 '*%s->obj' % (self.py_name))
 
@@ -3271,7 +3290,7 @@ class CppClassReturnValue(CppClassReturnValueBase):
         name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
         wrapper.parse_params.add_parameter(
-            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name])
+            'O!', ['_TYPEREF '+self.cpp_class.pytypestruct, '&'+name])
         if self.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
             wrapper.after_call.write_code('%s %s = *%s->obj;' %
                                           (self.cpp_class.full_name, self.value, name))
@@ -3346,7 +3365,7 @@ class CppClassRefReturnValue(CppClassReturnValueBase):
         name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
         wrapper.parse_params.add_parameter(
-            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name])
+            'O!', ['_TYPEREF '+self.cpp_class.pytypestruct, '&'+name])
         if self.REQUIRES_ASSIGNMENT_CONSTRUCTOR:
             wrapper.after_call.write_code('%s %s = *%s->obj;' %
                                           (self.cpp_class.full_name, self.value, name))
@@ -3441,7 +3460,7 @@ class CppClassPtrParameter(CppClassParameterBase):
 
                 wrapper.before_call.write_error_check(
 
-                    "%s && ((PyObject *) %s != Py_None) && !PyObject_IsInstance((PyObject *) %s, (PyObject *) &%s)"
+                    "%s && ((PyObject *) %s != Py_None) && !PyObject_IsInstance((PyObject *) %s, (PyObject *) _TYPEREF %s)"
                     % (self.py_name, self.py_name, self.py_name, self.cpp_class.pytypestruct),
 
                     'PyErr_SetString(PyExc_TypeError, "Parameter %i must be of type %s");' % (num, self.cpp_class.name))
@@ -3458,7 +3477,7 @@ class CppClassPtrParameter(CppClassParameterBase):
             else:
 
                 wrapper.parse_params.add_parameter(
-                    'O!', ['&'+self.cpp_class.pytypestruct, '&'+self.py_name], self.name, optional=bool(self.default_value))
+                    'O!', ['_TYPEREF '+self.cpp_class.pytypestruct, '&'+self.py_name], self.name, optional=bool(self.default_value))
                 wrapper.before_call.write_code("%s = (%s ? %s->obj : NULL);" % (value_ptr, self.py_name, self.py_name))
 
         value = self.transformation.transform(self, wrapper.declarations, wrapper.before_call, value_ptr)
@@ -3514,10 +3533,10 @@ class CppClassPtrParameter(CppClassParameterBase):
                 wrapper_type = wrapper.declarations.declare_variable(
                     'PyTypeObject*', 'wrapper_type', '0')
                 wrapper.before_call.write_code(
-                    '%s = %s.lookup_wrapper(typeid(*%s), &%s);'
+                    '%s = %s.lookup_wrapper(typeid(*%s), _TYPEREF %s);'
                     % (wrapper_type, typeid_map_name, value, self.cpp_class.pytypestruct))
             else:
-                wrapper_type = '&'+self.cpp_class.pytypestruct
+                wrapper_type = '_TYPEREF '+self.cpp_class.pytypestruct
 
             ## Create the Python wrapper object
             self.cpp_class.write_allocate_pystruct(wrapper.before_call, py_name, wrapper_type)
@@ -3770,7 +3789,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
         wrapper.parse_params.add_parameter(
-            'O!', ['&'+self.cpp_class.pytypestruct, '&'+name])
+            'O!', ['_TYPEREF '+self.cpp_class.pytypestruct, '&'+name])
 
         value = self.transformation.transform(
             self, wrapper.declarations, wrapper.after_call, "%s->obj" % name)

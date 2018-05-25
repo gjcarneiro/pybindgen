@@ -110,8 +110,26 @@ typedef intobjargproc ssizeobjargproc;
 ''')
 
     code_sink.writeln(r'''
+#ifdef Py_LIMITED_API
+#  define _TYPEDEC *
+#else
+#  define _TYPEDEC 
+#endif
+
+#ifdef Py_LIMITED_API
+# define _TYPEREF
+#else
+# define _TYPEREF &
+#endif
+
+#ifdef Py_LIMITED_API
+# define PBG_SETATTR(_type, _name, _value)  PyObject_SetAttrString((PyObject*) _type, (char *) _name, _value);
+#else
+# define PBG_SETATTR(_type, _name, _value)  PyDict_SetItemString((PyObject*) _type.tp_dict, _name, _value);
+#endif
+
 #if PY_VERSION_HEX >= 0x03000000
-#if PY_VERSION_HEX >= 0x03050000
+#if PY_VERSION_HEX >= 0x03050000 && !defined(Py_LIMITED_API)
 typedef PyAsyncMethods* cmpfunc;
 #else
 typedef void* cmpfunc;
