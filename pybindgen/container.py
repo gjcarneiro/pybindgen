@@ -549,9 +549,12 @@ static PyObject*
             code_sink.writeln(r'''
 int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
 {
+    #ifndef Py_LIMITED_API
     if (PyObject_IsInstance(arg, (PyObject*) &%(PYTYPESTRUCT)s)) {
         *container = *((%(PYSTRUCT)s*)arg)->obj;
-    } else if (PyList_Check(arg)) {
+    } else
+    #endif
+    if (PyList_Check(arg)) {
         container->clear();
         Py_ssize_t size = PyList_Size(arg);
         for (Py_ssize_t i = 0; i < size; i++) {
@@ -581,9 +584,12 @@ int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
             code_sink.writeln(r'''
 int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
 {
+    #ifndef Py_LIMITED_API
     if (PyObject_IsInstance(arg, (PyObject*) &%(PYTYPESTRUCT)s)) {
         *container = *((%(PYSTRUCT)s*)arg)->obj;
-    } else if (PyList_Check(arg)) {
+    } else
+    #endif
+    if (PyList_Check(arg)) {
         container->clear();
         Py_ssize_t size = PyList_Size(arg);
         for (Py_ssize_t i = 0; i < size; i++) {
