@@ -2004,12 +2004,8 @@ typedef struct {
                 'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) _TYPEREF %s);' % (
                 class_python_name, self.pytypestruct))
         else:
-            module.after_init.write_code(
-                '#ifdef Py_LIMITED_API\n'
-                'PyObject_SetAttrString((PyObject*) %s, (char *) \"%s\", (PyObject *) %s);\n'
-                '#else\n'
-                'PyDict_SetItemString((PyObject*) %s.tp_dict, \"%s\", (PyObject *) &%s);\n'
-                '#endif\n' % (self.outer_class.pytypestruct, class_python_name, self.pytypestruct,
+            module.after_init.write_code('PBG_SETATTR(%s, \"%s\", _TYPEREF %s);\n'
+                                         % (
                               self.outer_class.pytypestruct, class_python_name, self.pytypestruct))
 
         have_constructor = self._generate_constructor(code_sink)

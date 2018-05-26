@@ -123,9 +123,9 @@ typedef intobjargproc ssizeobjargproc;
 #endif
 
 #ifdef Py_LIMITED_API
-# define PBG_SETATTR(_type, _name, _value)  PyObject_SetAttrString((PyObject*) _type, (char *) _name, _value);
+# define PBG_SETATTR(_type, _name, _value)  PyObject_SetAttrString((PyObject*) _type, (char *) _name, (PyObject*) _value);
 #else
-# define PBG_SETATTR(_type, _name, _value)  PyDict_SetItemString((PyObject*) _type.tp_dict, _name, _value);
+# define PBG_SETATTR(_type, _name, _value)  PyDict_SetItemString((PyObject*) _type.tp_dict, _name, (PyObject*) _value);
 #endif
 
 #if PY_VERSION_HEX >= 0x03000000

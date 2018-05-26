@@ -169,15 +169,10 @@ class Enum(object):
                 module.after_init.write_code(
                     ' // %s\n'
                     'tmp_value = PyLong_FromLong(%s);\n'
-                    '#ifdef Py_LIMITED_API\n'
-                    'PyObject_SetAttrString((PyObject*) %s, (char *) \"%s\", tmp_value);\n'
-                    '#else\n'
-                    'PyDict_SetItemString((PyObject*) %s.tp_dict, \"%s\", tmp_value);\n'
-                    '#endif\n'
+                    'PBG_SETATTR(%s, \"%s\", tmp_value);\n'
                     'Py_DECREF(tmp_value);'
                     % (
-                      value_str, value_str, self.outer_class.pytypestruct, value_name,
-                      self.outer_class.pytypestruct, value_name))
+                      value_str, value_str, self.outer_class.pytypestruct, value_name))
             module.after_init.unindent()
             module.after_init.write_code("}")
 
