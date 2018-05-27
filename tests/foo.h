@@ -48,8 +48,8 @@ struct PointerHolder
 };
 
 
-class Foo
 // -#- automatic_type_narrowing=True -#-
+class Foo
 {
     std::string m_datum;
     bool m_initialized;
@@ -92,8 +92,8 @@ inline bool is_unique(const Foo& foo)
     return foo.instance_count == 1;
 }
 
-class Zoo
 // -#- automatic_type_narrowing=True -#-
+class Zoo
 {
     std::string m_datum;
 public:
@@ -137,8 +137,8 @@ public:
 // -#- @return(caller_owns_return=true) -#-
 Foo* get_hidden_subclass_pointer ();
 
-class Zbr
 // -#- incref_method=Ref; decref_method=Unref; peekref_method=GetReferenceCount -#-
+class Zbr
 {
     int m_refcount;
     std::string m_datum;
@@ -185,8 +185,8 @@ int invoke_zbr (int x);
 void delete_stored_zbr (void);
 
 
-class Foobar
 // -#- allow_subclassing=true -#-
+class Foobar
 {
     Foobar (const Foobar &);
     Foobar& operator= (const Foobar &);
@@ -215,8 +215,8 @@ public:
 
 
     // A nested class
-    class NestedClass
     // -#- automatic_type_narrowing=True -#-
+    class NestedClass
     {
         std::string m_datum;
     public:
@@ -522,8 +522,8 @@ namespace xpto
 
     struct XptoClass
     {
-        SomeClass* GetSomeClass()
         // -#- @return(caller_owns_return=true) -#-
+        SomeClass* GetSomeClass()
             {
                 return NULL;
             }
@@ -540,8 +540,8 @@ void set_foobar_with_other_as_custodian(Foobar *foobar, SomeObject *other);
 // -#- @foobar(custodian=-1, transfer_ownership=true); @return(caller_owns_return=true) -#-
 SomeObject * set_foobar_with_return_as_custodian(Foobar *foobar);
 
-class SingletonClass
 // -#- is_singleton=true -#-
+class SingletonClass
 {
 private:
     static SingletonClass *m_instance;
@@ -719,8 +719,8 @@ private:
     AbstractBaseClass2 (const AbstractBaseClass2 &other) { other.invoke_protected_virtual(0); }
 };
 
-class AbstractXpto
 // -#- allow_subclassing=true -#-
+class AbstractXpto
 {
 public:
     AbstractXpto () {}
@@ -1171,14 +1171,14 @@ public:
 };
 
 
-struct Error
 // -#- exception -#-
+struct Error
 {
     std::string message;
 };
 
-struct DomainError : public Error
 // -#- exception -#-
+struct DomainError : public Error
 {
 };
 

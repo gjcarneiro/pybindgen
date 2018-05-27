@@ -37,8 +37,8 @@ def build(bld):
             obj.source = 'test.cc'
             if env['CXX_NAME'] == 'gcc':
                 obj.env.append_value('CXXFLAGS', ['-Werror', '-Wno-unused'])
-    
-    ## manual code generation using simple pybindgen API calls
+
+    # manual code generation using simple pybindgen API calls
     bindgen = bld(
         features='command',
         source='foomodulegen.py',
@@ -63,7 +63,7 @@ def build(bld):
             features='command',
             source='foomodulegen-auto.py foo.h',
             target='foomodule2.cc foomodulegen_generated.py',
-            command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[1]} > ${TGT[0]}' % (DEPRECATION_ERRORS,),
+            command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[1]} ${PYGCCXML_MODE} > ${TGT[0]}' % (DEPRECATION_ERRORS,),
             variables=dict(cpp_path_repr=repr(bindgen.env['INCLUDES']+bindgen.env['INCLUDES_PYEXT'])))
 
         obj = bld(features='cxx cxxshlib pyext')
@@ -102,7 +102,7 @@ def build(bld):
             features='command',
             source='foomodulegen-auto-split.py foo.h',
             target='foomodulegen_split.py foomodulegen_module1.py foomodulegen_module2.py',
-            command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[0]} ${TGT[1]} ${TGT[2]}' % (DEPRECATION_ERRORS,),
+            command='${PYTHON} %s ${SRC[0]} ${SRC[1]} ${cpp_path_repr} ${TGT[0]} ${TGT[1]} ${TGT[2]} ${PYGCCXML_MODE}' % (DEPRECATION_ERRORS,),
             variables=dict(cpp_path_repr=repr(bindgen.env['INCLUDES']+bindgen.env['INCLUDES_PYEXT'])))
 
         bld(
@@ -120,7 +120,6 @@ def build(bld):
                 'foomodulegen_module2.cc',
                 ],
             command='${PYTHON} %s ${SRC[0]} ${TGT[0]}' % (DEPRECATION_ERRORS,))
-
 
         obj = bld(features='cxx cxxshlib pyext')
         obj.source = [

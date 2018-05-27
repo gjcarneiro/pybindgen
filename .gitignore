@@ -17,4 +17,8 @@ doc/figures/work-flow-gccxml.png
 .eggs/
 PyBindGen.egg-info/
 dist/
+.venv/
+/foomodulegen3.pstat
+/foomodulegen4.pstat
+/hellomodulegen.pstat
 

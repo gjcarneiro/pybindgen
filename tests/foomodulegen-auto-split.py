@@ -8,22 +8,27 @@ import pybindgen
 from pybindgen.typehandlers import base as typehandlers
 from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
 from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
-from pybindgen.gccxmlparser import ModuleParser, PygenClassifier, PygenSection
 from pybindgen.function import CustomFunctionWrapper
 from pybindgen.cppmethod import CustomCppMethodWrapper
 
 import foomodulegen_common
 
 
-class MyPygenClassifier(PygenClassifier):
-    def classify(self, pygccxml_definition):
-        if pygccxml_definition.name and pygccxml_definition.name.lower() <= 'l':
-            return 'foomodulegen_module1'
-        else:
-            return 'foomodulegen_module2'
 
 
 def my_module_gen():
+    if sys.argv[6] == 'castxml':
+        from pybindgen.castxmlparser import ModuleParser, PygenClassifier, PygenSection
+    else:
+        from pybindgen.gccxmlparser import ModuleParser, PygenClassifier, PygenSection
+
+    class MyPygenClassifier(PygenClassifier):
+        def classify(self, pygccxml_definition):
+            if pygccxml_definition.name and pygccxml_definition.name.lower() <= 'l':
+                return 'foomodulegen_module1'
+            else:
+                return 'foomodulegen_module2'
+
     pygen = [
         PygenSection('__main__', FileCodeSink(open(sys.argv[3], "wt"))),
         PygenSection('foomodulegen_module1', FileCodeSink(open(sys.argv[4], "wt")),

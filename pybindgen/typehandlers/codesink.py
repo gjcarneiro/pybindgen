@@ -33,7 +33,7 @@ class CodeSink(object):
         if (true) {
             bar();
         zbr();
-        
+
         >>> sink = MemoryCodeSink()
         >>> sink.writeln("foo();")
         >>> sink.writeln()
@@ -96,6 +96,10 @@ class FileCodeSink(CodeSink):
         """Write one or more lines of code"""
         self.file.write('\n'.join(self._format_code(line)))
         self.file.write('\n')
+
+    def __lt__(self, other):
+        if isinstance(other, FileCodeSink):
+            return self.file.name < other.file.name
 
 class MemoryCodeSink(CodeSink):
     """A code sink that keeps the code in memory,

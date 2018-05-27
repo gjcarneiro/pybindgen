@@ -3,30 +3,38 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 import sys
 import os
+import logging
 
 import pybindgen
 from pybindgen.typehandlers import base as typehandlers
 from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
 from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
-from pybindgen.gccxmlparser import ModuleParser
 from pybindgen.function import CustomFunctionWrapper
 from pybindgen.cppmethod import CustomCppMethodWrapper
 
 import foomodulegen_common
 
+
 def my_module_gen():
+    pygccxml_mode = sys.argv[4]
+    if pygccxml_mode == 'castxml':
+        from pybindgen.castxmlparser import ModuleParser
+    else:
+        from pybindgen.gccxmlparser import ModuleParser
+
     out = FileCodeSink(sys.stdout)
     pygen_file = open(sys.argv[3], "wt")
     module_parser = ModuleParser('foo2', '::')
     module_parser.enable_anonymous_containers = True
 
     print("PYTHON_INCLUDES:", repr(sys.argv[2]), file=sys.stderr)
-    gccxml_options = dict(
-        include_paths=eval(sys.argv[2]),
-        )
-
+    kwargs = {
+        "{mode}_options".format(mode=pygccxml_mode): dict(
+            include_paths=eval(sys.argv[2]),
+            )
+    }
     module_parser.parse_init([sys.argv[1]], includes=['"foo.h"'], pygen_sink=FileCodeSink(pygen_file),
-                             gccxml_options=gccxml_options)
+                             **kwargs)
     module = module_parser.module
     foomodulegen_common.customize_module_pre(module)
 
@@ -44,6 +52,7 @@ def my_module_gen():
 
 
 def main():
+    logging.basicConfig(level=logging.DEBUG)
     if sys.argv[1] == '-d':
         del sys.argv[1]
         import pdb
