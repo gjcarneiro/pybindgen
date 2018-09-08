@@ -56,7 +56,7 @@ wrapper registries.  A wrapper registry ensures that at most one
 python wrapper exists for each C/C++ object.
 """
 
-deprecated_virtuals = None
+deprecated_virtuals = False
 """
 Prior to PyBindGen version 0.14, the code generated to handle C++
 virtual methods required Python user code to define a _foo method in
