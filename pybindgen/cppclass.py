@@ -622,7 +622,7 @@ class CppClass(object):
         self.is_singleton = is_singleton
         self.foreign_cpp_namespace = foreign_cpp_namespace
         self.full_name = None # full name with C++ namespaces attached and template parameters
-        self.methods = {} # name => OverloadedMethod
+        self.methods = collections.OrderedDict() # name => OverloadedMethod
         self._dummy_methods = [] # methods that have parameter/retval binding problems
         self.nonpublic_methods = []
         self.constructors = [] # (name, wrapper) pairs
@@ -1707,7 +1707,7 @@ public:
             setter.stack_where_defined = traceback.extract_stack()
         self.static_attributes.add_attribute(name, getter, setter)
 
-    def add_custom_instance_attribute(self, name, value_type, getter, is_const=False, setter=None,
+    def add_custom_instance_attribute(self, name, value_type, getter, is_const=False, setter=None, custom_name=None,
                                       getter_template_parameters=[],
                                       setter_template_parameters=[]):
         """
@@ -1742,10 +1742,10 @@ public:
             setter_wrapper = CppCustomInstanceAttributeSetter(value_type, self, name, setter=setter,
                                                               template_parameters = setter_template_parameters)
             setter_wrapper.stack_where_defined = traceback.extract_stack()
-        self.instance_attributes.add_attribute(name, getter_wrapper, setter_wrapper)
+        self.instance_attributes.add_attribute(name, getter_wrapper, setter_wrapper, custom_name)
 
     def add_instance_attribute(self, name, value_type, is_const=False,
-                               getter=None, setter=None):
+                               getter=None, setter=None, custom_name=None):
         """
         :param value_type: a ReturnValue object
         :param name: attribute name (i.e. the name of the class member variable)
@@ -1774,7 +1774,7 @@ public:
         else:
             setter_wrapper = CppInstanceAttributeSetter(value_type, self, name, setter=setter)
             setter_wrapper.stack_where_defined = traceback.extract_stack()
-        self.instance_attributes.add_attribute(name, getter_wrapper, setter_wrapper)
+        self.instance_attributes.add_attribute(name, getter_wrapper, setter_wrapper, custom_name)
 
 
     def _inherit_helper_class_parent_virtuals(self):
@@ -2016,7 +2016,7 @@ typedef struct {
         #if self.slots.get("tp_hash", "NULL") == "NULL":
         #    self.slots["tp_hash"] = self._generate_tp_hash(code_sink)
 
-        if self.slots.get("tp_richcompare", "NULL") == "NULL":
+        if self.slots.get("tp_richcompare", "NULL") == "NULL" and self.binary_comparison_operators:
             self.slots["tp_richcompare"] = self._generate_tp_richcompare(code_sink)
 
         if self.binary_numeric_operators or self.inplace_numeric_operators:
@@ -2580,7 +2580,7 @@ static void
     def _generate_tp_richcompare(self, code_sink):
         tp_richcompare_function_name = "_wrap_%s__tp_richcompare" % (self.pystruct,)
 
-        code_sink.writeln("static PyObject*\n%s (%s *PYBINDGEN_UNUSED(self), %s *other, int opid)"
+        code_sink.writeln("static PyObject*\n%s (%s *self, %s *other, int opid)"
                           % (tp_richcompare_function_name, self.pystruct, self.pystruct))
         code_sink.writeln("{")
         code_sink.indent()

@@ -56,7 +56,7 @@ from pybindgen.converter_functions import PythonToCConverter, CToPythonConverter
 from pybindgen import utils
 import warnings
 import traceback
-
+import collections
 
 class MultiSectionFactory(object):
     """
@@ -248,7 +248,7 @@ class ModuleBase(dict):
         self.cpp_namespace_prefix = '::'.join(path)
 
         self.declarations = DeclarationsScope()
-        self.functions = {} # name => OverloadedFunction
+        self.functions = collections.OrderedDict() # name => OverloadedFunction
         self.classes = []
         self.containers = []
         self.exceptions = []
