@@ -3,6 +3,7 @@ Wraps C++ class instance/static attributes.
 """
 
 import sys
+import collections
 
 PY3 = (sys.version_info[0] >= 3)
 if PY3:
@@ -354,7 +355,7 @@ class PyGetSetDef(object):
     def empty(self):
         return len(self.attributes) == 0
 
-    def add_attribute(self, name, getter, setter):
+    def add_attribute(self, name, getter, setter, custom_name=None):
         """
         Add a new attribute
         :param name: attribute name
@@ -363,7 +364,7 @@ class PyGetSetDef(object):
         """
         assert getter is None or isinstance(getter, PyGetter)
         assert setter is None or isinstance(setter, PySetter)
-        self.attributes.append((name, getter, setter))
+        self.attributes.append((name, getter, setter, custom_name))
 
     def generate(self, code_sink):
         """
@@ -373,8 +374,8 @@ class PyGetSetDef(object):
         if not self.attributes:
             return '0'
 
-        getsets = {} # attrname -> (getter, setter)
-        for name, getter, setter in self.attributes:
+        getsets = collections.OrderedDict() # attrname -> (getter, setter)
+        for name, getter, setter, custom_name in self.attributes:
 
             getter_name = 'NULL'
             if getter is not None:
@@ -396,14 +397,14 @@ class PyGetSetDef(object):
                 else:
                     setter_name = setter.c_function_name
             assert name not in getsets
-            getsets[name] = (getter_name, setter_name)
+            getsets[name] = (getter_name, setter_name, custom_name)
         
         code_sink.writeln("static PyGetSetDef %s[] = {" % self.cname)
         code_sink.indent()
-        for name, (getter_c_name, setter_c_name) in getsets.items():
+        for name, (getter_c_name, setter_c_name, custom_name) in getsets.items():
             code_sink.writeln('{')
             code_sink.indent()
-            code_sink.writeln('(char*) "%s", /* attribute name */' % name)
+            code_sink.writeln('(char*) "%s", /* attribute name */' % (custom_name or name))
 
             ## getter
             code_sink.writeln(
