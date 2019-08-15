@@ -99,7 +99,7 @@ container_traits_list = {
 container_traits_list['dequeue'] = container_traits_list['deque']
 
 class Container(object):
-    def __init__(self, name, value_type, container_type, outer_class=None, custom_name=None):
+    def __init__(self, name, value_type, container_type, outer_class=None, custom_name=None, auto_convert=None):
         """
         :param name: C++ type name of the container, e.g. std::vector<int> or MyIntList
 
@@ -116,6 +116,7 @@ class Container(object):
         :type outer_class: None or L{CppClass}
 
         :param custom_name: alternative name to register with in the Python module
+        :param auto_convert: Python type ("PyList_Type", "PyDict_Type", etc.) to convert the result to get richer methods
 
         """
         if '<' in name or '::' in name:
@@ -139,6 +140,7 @@ class Container(object):
         self.iter_pytypestruct = "***GIVE ME A NAME***"
         self.iter_pytype = PyTypeObject()
         self._iter_pystruct = None
+        self.auto_convert = auto_convert
 
         if self.container_traits.is_mapping:
             (key_type, value_type) = value_type
@@ -731,6 +733,8 @@ class ContainerRefParameter(ContainerParameterBase):
                 (py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
             wrapper.after_call.write_code("%s->obj = new %s(%s);" % (py_name, self.container_type.full_name, container_tmp_var))
             wrapper.build_params.add_parameter("N", [py_name])
+            if self.container_type.auto_convert:
+                wrapper.after_call.write_code("%s = TypeObject_Type.tp_call((PythonObject*)&%s,Py_BuildValue(\"(O)\",%s),Py_BuildValue(\"{}\"));" % (py_name,  self.container_type.auto_convert, py_name))
 
     def convert_c_to_python(self, wrapper):
         '''Write some code before calling the Python method.'''
