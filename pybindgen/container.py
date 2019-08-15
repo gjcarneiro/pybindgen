@@ -733,8 +733,6 @@ class ContainerRefParameter(ContainerParameterBase):
                 (py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
             wrapper.after_call.write_code("%s->obj = new %s(%s);" % (py_name, self.container_type.full_name, container_tmp_var))
             wrapper.build_params.add_parameter("N", [py_name])
-            if self.container_type.auto_convert:
-                wrapper.after_call.write_code("%s = TypeObject_Type.tp_call((PythonObject*)&%s,Py_BuildValue(\"(O)\",%s),Py_BuildValue(\"{}\"));" % (py_name,  self.container_type.auto_convert, py_name))
 
     def convert_c_to_python(self, wrapper):
         '''Write some code before calling the Python method.'''
@@ -861,6 +859,9 @@ class ContainerReturnValue(ContainerReturnValueBase):
             "%s = PyObject_New(%s, %s);" %
             (py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
         wrapper.after_call.write_code("%s->obj = new %s(%s);" % (self.py_name, self.container_type.full_name, self.value))
+        if self.container_type.auto_convert:
+            wrapper.after_call.add_cleanup_code("py_retval = PyType_Type.tp_call((PyObject*)&%s,Py_BuildValue(\"(O)\",py_retval),Py_BuildValue(\"{}\"));" % ( self.container_type.auto_convert))
+
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 
     def convert_python_to_c(self, wrapper):
