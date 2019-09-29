@@ -282,7 +282,7 @@ class CppHelperClass(object):
         for existing in self.virtual_methods:
             if method.matches_signature(existing):
                 return # don't re-add already existing method
-        
+
         if isinstance(method, CppDummyMethod):
             if method.is_pure_virtual:
                 self.cannot_be_constructed = True
@@ -303,8 +303,8 @@ class CppHelperClass(object):
             proxy = CppVirtualMethodProxy(method)
             proxy.main_wrapper = method # XXX: need to explain this
             self.add_virtual_proxy(proxy)
-        
-        
+
+
     def add_virtual_parent_caller(self, parent_caller):
         """Add a new CppVirtualMethodParentCaller object to this helper class"""
         assert isinstance(parent_caller, CppVirtualMethodParentCaller)
@@ -409,7 +409,7 @@ void set_pyobj(PyObject *pyobj)
         code_sink.writeln("Py_CLEAR(m_pyself);")
         code_sink.unindent()
         code_sink.writeln("}\n")
-            
+
         if not self.class_.import_from_module:
             ## write the parent callers (_name)
             for parent_caller in self.virtual_parent_callers.values():
@@ -495,7 +495,7 @@ void set_pyobj(PyObject *pyobj)
             else:
                 parent_caller_name = name
             method_defs.append(parent_caller.get_py_method_def(parent_caller_name))
-                
+
         ## write the virtual proxies
         for virtual_proxy in self.virtual_proxies:
             #virtual_proxy.class_ = self.class_
@@ -513,7 +513,7 @@ void set_pyobj(PyObject *pyobj)
         for dummy, custom_body in self.custom_methods:
             if custom_body:
                 code_sink.writeln(custom_body)
-        
+
         return method_defs
 
 
@@ -576,7 +576,7 @@ class CppClass(object):
             inherits from the parent class.  Only root classes can have a
             memory policy defined.
         :type memory_policy: L{MemoryPolicy}
-        
+
         :param foreign_cpp_namespace: if set, the class is assumed to
             belong to the given C++ namespace, regardless of the C++
             namespace of the python module it will be added to.  For
@@ -817,7 +817,7 @@ class CppClass(object):
 
         The binary operator is assumed to operate with both operands
         of the type of the class, either by reference or by value.
-        
+
         :param operator: string indicating the name of the operator to
             support, e.g. '=='
         """
@@ -1018,7 +1018,7 @@ class CppClass(object):
                         self._have_pure_virtual_methods = True
 
         return self._have_pure_virtual_methods
-                            
+
     have_pure_virtual_methods = property(get_have_pure_virtual_methods)
 
 
@@ -1039,7 +1039,7 @@ class CppClass(object):
         if not isinstance(hook, collections.Callable):
             raise TypeError("hook function must be callable")
         self.helper_class_hooks.append(hook)
-        
+
     def _get_all_helper_class_hooks(self):
         """
         Returns a list of all helper class hook functions, including
@@ -1113,7 +1113,7 @@ class CppClass(object):
             raise CodeGenerationError("%s cannot be constructed (class has pure virtual methods)" % self.full_name)
         else:
             return self.full_name
-        
+
 
     def implicitly_converts_to(self, other):
         """
@@ -1151,7 +1151,7 @@ class CppClass(object):
 #         return classes
 
     def _update_names(self):
-        
+
         prefix = settings.name_prefix.capitalize()
 
         if self.outer_class is None:
@@ -1177,7 +1177,7 @@ class CppClass(object):
 
         def mangle(name):
             return mangle_name(name)
-        
+
         def flatten(name):
             "make a name like::This look LikeThis"
             return ''.join([make_upper(mangle(s)) for s in name.split('::')])
@@ -1216,12 +1216,12 @@ class CppClass(object):
         try:
             param_type_matcher.register(alias, self.ThisClassParameter)
         except ValueError: pass
-        
+
         self.ThisClassRefParameter.CTYPES.append(alias+'&')
         try:
             param_type_matcher.register(alias+'&', self.ThisClassRefParameter)
         except ValueError: pass
-        
+
         self.ThisClassReturn.CTYPES.append(alias)
         try:
             return_type_matcher.register(alias, self.ThisClassReturn)
@@ -1245,7 +1245,7 @@ class CppClass(object):
             return_type_matcher.register(alias+'&', self.ThisClassRefReturn)
         except ValueError: pass
 
-        
+
     def get_module(self):
         """Get the Module object this class belongs to"""
         return self._module
@@ -1285,7 +1285,7 @@ class CppClass(object):
                 self.helper_class = CppHelperClass(self)
                 self.module.add_include('<typeinfo>')
         return self.helper_class
-    
+
     def get_type_narrowing_root(self):
         """Find the root CppClass along the subtree of all parent classes that
         have automatic_type_narrowing=True Note: multiple inheritance
@@ -1409,7 +1409,7 @@ public:
 
 }
 ''')
-        
+
 
         if self.import_from_module:
             code_sink.writeln("\nextern pybindgen::TypeMap *_%s;\n" % self.typeid_map_name)
@@ -1440,7 +1440,7 @@ public:
             method.force_parse = method.PARSE_TUPLE_AND_KEYWORDS
         else:
             raise TypeError
-        
+
         method.class_ = self
 
         if method.visibility == 'protected' and not method.is_virtual:
@@ -1499,7 +1499,7 @@ public:
                                 new_method = parent_method.clone()
                                 new_method.class_ = self
                                 overload.add(new_method)
-            
+
         else:
             self.nonpublic_methods.append(method)
         if method.is_virtual:
@@ -1883,7 +1883,7 @@ typedef struct {
             error_retcode = "MOD_ERROR"
         else:
             error_retcode = "NULL"
-        
+
         # TODO: skip this step if the requested typestructure is never used
         if ' named ' in self.import_from_module:
             module_name, type_name = self.import_from_module.split(" named ")
@@ -1914,7 +1914,7 @@ typedef struct {
                                          "    _%s = reinterpret_cast<pybindgen::TypeMap*> (PyCObject_AsVoidPtr (_cobj));\n"
                                          "    Py_DECREF(_cobj);\n"
                                          "}"
-                                         % (self.typeid_map_name, self.typeid_map_name))        
+                                         % (self.typeid_map_name, self.typeid_map_name))
 
         if self.parent is None:
             self.wrapper_registry.generate_import(code_sink, module.after_init, "module")
@@ -2009,7 +2009,7 @@ typedef struct {
 
         if self.has_output_stream_operator:
             self._generate_str(code_sink)
-        
+
         #self._generate_tp_hash(code_sink)
         #self._generate_tp_compare(code_sink)
 
@@ -2079,10 +2079,10 @@ typedef struct {
 
                 code_sink.writeln("{")
                 code_sink.indent()
-                
+
                 code_sink.writeln("%s left;" % left_name)
                 code_sink.writeln("%s right;" % right_name)
-                
+
                 code_sink.writeln("if (%s(py_left, &left) && %s(py_right, &right)) {" % (left_converter, right_converter))
                 code_sink.indent()
                 code_sink.writeln("%s result = (left %s right);" % (retval_name, op_symbol))
@@ -2093,7 +2093,7 @@ typedef struct {
 
                 code_sink.unindent()
                 code_sink.writeln("}")
-                
+
             code_sink.writeln("Py_INCREF(Py_NotImplemented);")
             code_sink.writeln("return Py_NotImplemented;")
             code_sink.unindent()
@@ -2117,9 +2117,9 @@ typedef struct {
 
                 code_sink.writeln("{")
                 code_sink.indent()
-                
+
                 code_sink.writeln("%s self;" % left_name)
-                
+
                 code_sink.writeln("if (%s(py_self, &self)) {" % (left_converter))
                 code_sink.indent()
                 code_sink.writeln("%s result = %s(self);" % (retval_name, op_symbol))
@@ -2130,7 +2130,7 @@ typedef struct {
 
                 code_sink.unindent()
                 code_sink.writeln("}")
-                
+
             code_sink.writeln("Py_INCREF(Py_NotImplemented);")
             code_sink.writeln("return Py_NotImplemented;")
             code_sink.unindent()
@@ -2140,7 +2140,7 @@ typedef struct {
         try_wrap_operator('-', 'nb_subtract')
         try_wrap_operator('*', 'nb_multiply')
         try_wrap_operator('/', 'nb_divide')
-        
+
         try_wrap_operator('+=', 'nb_inplace_add')
         try_wrap_operator('-=', 'nb_inplace_subtract')
         try_wrap_operator('*=', 'nb_inplace_multiply')
@@ -2150,7 +2150,7 @@ typedef struct {
 
         pynumbermethods.generate(code_sink)
         return '&' + number_methods_var_name
-        
+
     def _generate_sequence_methods(self, code_sink):
         sequence_methods_var_name = "%s__py_sequence_methods" % (self.mangled_full_name,)
 
@@ -2182,7 +2182,7 @@ typedef struct {
 
         pysequencemethods.generate(code_sink)
         return '&' + sequence_methods_var_name
-        
+
     def have_sequence_methods(self):
         """Determine if this object has sequence methods registered."""
         for x in self.valid_sequence_methods:
@@ -2203,7 +2203,7 @@ typedef struct {
         else:
             self.slots.setdefault("tp_dictoffset", "0")
         if self.binary_numeric_operators:
-            tp_flags.add("Py_TPFLAGS_CHECKTYPES")            
+            tp_flags.add("Py_TPFLAGS_CHECKTYPES")
         self.slots.setdefault("tp_flags", '|'.join(tp_flags))
 
         if docstring is None:
@@ -2269,7 +2269,7 @@ typedef struct {
             ## tp_init to prevent this type from inheriting a
             ## tp_init that will allocate an instance of the
             ## parent class instead of this class.
-            code_sink.writeln()            
+            code_sink.writeln()
             wrapper = CppNoConstructor(self.cannot_be_constructed)
             wrapper.generate(code_sink, self)
             constructor = wrapper.wrapper_actual_name
@@ -2536,7 +2536,7 @@ static int
 }
 
 ''' % (tp_compare_function_name, self.pystruct, self.pystruct))
-        
+
 
     def _generate_destructor(self, code_sink, have_constructor):
         """Generate a tp_dealloc function and register it in the type"""
@@ -2567,7 +2567,7 @@ static void
         code_block.write_code('Py_TYPE(self)->tp_free((PyObject*)self);')
 
         code_block.write_cleanup()
-        
+
         code_block.declarations.get_code_sink().flush_to(code_sink)
         code_block.sink.flush_to(code_sink)
 
@@ -2608,7 +2608,7 @@ if (!PyObject_IsInstance((PyObject*) other, (PyObject*) &%s)) {
                 code_sink.writeln("Py_INCREF(Py_NotImplemented);\n"
                                   "return Py_NotImplemented;")
             code_sink.unindent()
-        
+
         wrap_operator('<', 'Py_LT')
         wrap_operator('<=', 'Py_LE')
         wrap_operator('==', 'Py_EQ')
@@ -2634,7 +2634,7 @@ if (!PyObject_IsInstance((PyObject*) other, (PyObject*) &%s)) {
         module.after_init.write_code(
             'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) &%s);' % (
                 alias, self.pytypestruct))
-        
+
     def write_allocate_pystruct(self, code_block, lvalue, wrapper_type=None):
         """
         Generates code to allocate a python wrapper structure, using
@@ -2654,7 +2654,7 @@ if (!PyObject_IsInstance((PyObject*) other, (PyObject*) &%s)) {
                 "%s->inst_dict = NULL;" % (lvalue,))
         if self.memory_policy is not None:
             code_block.write_code(self.memory_policy.get_pystruct_init_code(self, lvalue))
-        
+
 
 # from pybindgen.cppclass_typehandlers import CppClassParameter, CppClassRefParameter, \
 #     CppClassReturnValue, CppClassRefReturnValue, CppClassPtrParameter, CppClassPtrReturnValue, CppClassParameterBase, \
@@ -2805,7 +2805,7 @@ def common_shared_object_return(value, py_name, cpp_class, code_block,
                 code_block.unindent()
                 code_block.write_code("}")
             else:
-                code_block.write_code("}")            
+                code_block.write_code("}")
     else:
         # since there is a helper class, check if this C++ object is an instance of that class
         # http://stackoverflow.com/questions/579887/how-expensive-is-rtti/1468564#1468564
@@ -2876,7 +2876,7 @@ def common_shared_object_return(value, py_name, cpp_class, code_block,
                 code_block.unindent()
                 code_block.write_code("}")
             else:
-                code_block.write_code("}")            
+                code_block.write_code("}")
 
         code_block.unindent()
         code_block.write_code("}") # closes: if (typeid(*(%s)) == typeid(%s)) { ... } else { ...
@@ -2926,7 +2926,7 @@ class CppClassParameter(CppClassParameterBase):
     CTYPES = []
     cpp_class = None #cppclass.CppClass('dummy') # CppClass instance
     DIRECTIONS = [Parameter.DIRECTION_IN]
-    
+
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
         #assert isinstance(wrapper, ForwardWrapperBase)
@@ -3044,7 +3044,7 @@ class CppClassRefParameter(CppClassParameterBase):
         super(CppClassRefParameter, self).__init__(
             ctype, name, direction, is_const, default_value)
         self.default_value_type = default_value_type
-    
+
     def convert_python_to_c(self, wrapper):
         "parses python args to get C++ value"
         #assert isinstance(wrapper, ForwardWrapperBase)
@@ -3303,9 +3303,12 @@ class CppClassRefReturnValue(CppClassReturnValueBase):
 
     def get_c_error_return(self): # only used in reverse wrappers
         """See ReturnValue.get_c_error_return"""
-        if self.type_traits.type_is_reference:
-            raise NotSupportedError
-        return "return %s();" % (self.cpp_class.full_name,)
+        if (
+            self.type_traits.type_is_reference
+            and not self.type_traits.target_is_const
+        ):
+            raise NotSupportedError("non-const reference return not supported")
+        return "{static %s __err; return __err;}" % (self.cpp_class.full_name,)
 
     def convert_c_to_python(self, wrapper):
         """see ReturnValue.convert_c_to_python"""
@@ -3341,8 +3344,11 @@ class CppClassRefReturnValue(CppClassReturnValueBase):
 
     def convert_python_to_c(self, wrapper):
         """see ReturnValue.convert_python_to_c"""
-        if self.type_traits.type_is_reference:
-            raise NotSupportedError
+        if (
+            self.type_traits.type_is_reference
+            and not self.type_traits.target_is_const
+        ):
+            raise NotSupportedError("non-const reference return not supported")
         name = wrapper.declarations.declare_variable(
             self.cpp_class.pystruct+'*', "tmp_%s" % self.cpp_class.name)
         wrapper.parse_params.add_parameter(
@@ -3353,7 +3359,7 @@ class CppClassRefReturnValue(CppClassReturnValueBase):
         else:
             wrapper.after_call.write_code('%s = *%s->obj;' % (self.value, name))
 
-    
+
 class CppClassPtrParameter(CppClassParameterBase):
     "Class* handlers"
     CTYPES = []
@@ -3463,7 +3469,7 @@ class CppClassPtrParameter(CppClassParameterBase):
 
         value = self.transformation.transform(self, wrapper.declarations, wrapper.before_call, value_ptr)
         wrapper.call_params.append(value)
-        
+
         if self.transfer_ownership:
             if not isinstance(self.cpp_class.memory_policy, ReferenceCountingPolicy):
                 # if we transfer ownership, in the end we no longer own the object, so clear our pointer
@@ -3659,7 +3665,7 @@ class CppClassPtrParameter(CppClassParameterBase):
             wrapper.before_call.unindent()
             wrapper.before_call.write_code("}") # closes if (typeid(*(%s)) == typeid(%s))\n{
             wrapper.build_params.add_parameter("N", [py_name])
-            
+
 
 
 class CppClassPtrReturnValue(CppClassReturnValueBase):
@@ -3698,7 +3704,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                   to an object that may have been deallocated in the
                   mean time.  Calling methods on such an object would
                   lead to a memory error.
-                  
+
         :param return_internal_reference: like
             reference_existing_object, but additionally adds
             custodian/ward to bind the lifetime of the 'self' object
@@ -3743,7 +3749,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         ## Value transformations
         value = self.transformation.untransform(
             self, wrapper.declarations, wrapper.after_call, self.value)
-        
+
         # if value is NULL, return None
         wrapper.after_call.write_code("if (!(%s)) {\n"
                                       "    Py_INCREF(Py_None);\n"
@@ -3763,7 +3769,7 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
 
         # return the value
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
-    
+
 
     def convert_python_to_c(self, wrapper):
         """See ReturnValue.convert_python_to_c"""
@@ -3863,7 +3869,7 @@ def _add_ward(code_block, custodian, ward):
         "if (%(ward)s && !PySequence_Contains(%(wards)s, %(ward)s))\n"
         "    PyList_Append(%(wards)s, %(ward)s);" % dict(wards=wards, ward=ward))
     code_block.add_cleanup_code("Py_DECREF(%s);" % wards)
-            
+
 
 def _get_custodian_or_ward(wrapper, num):
     if num == -1:

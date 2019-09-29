@@ -1512,6 +1512,10 @@ class TestFoo(unittest.TestCase):
         while gc.collect():
             pass
 
+    def test_issue21_const_return(self):
+        x = foo.RAReturnConstRef(123)
+        value = x.ReturnMyAStruct()
+        self.assertEqual(value.a, 123)
 
 
 if __name__ == '__main__':

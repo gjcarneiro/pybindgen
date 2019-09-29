@@ -612,6 +612,30 @@ int %s::custom_method_added_by_a_hook(int x)
 
     mod.add_function("test_args_kwargs", "int", [param("const char *", "args"), param("const char *", "kwargs")])
 
+    # https://github.com/gjcarneiro/pybindgen/issues/21
+    cls = mod.add_class('RAStruct')
+    cls.add_constructor([])
+    cls.add_constructor([param('RAStruct const &', 'arg0')])
+    cls.add_instance_attribute('a', 'int', is_const=False)
+
+    cls = mod.add_class('ReturnConstRef', allow_subclassing=True)
+    cls.add_constructor([])
+    cls.add_constructor([param('ReturnConstRef const &', 'arg0')])
+    cls.add_method('ReturnMyAStruct',
+                   'RAStruct const &',
+                   [],
+                   is_pure_virtual=True, is_virtual=True)
+
+    cls = mod.add_class('RAReturnConstRef', parent=mod['ReturnConstRef'])
+    cls.add_constructor([])
+    cls.add_constructor([param('int', 'value')])
+    cls.add_constructor([param('RAReturnConstRef const &', 'arg0')])
+    cls.add_method('ReturnMyAStruct',
+                   'RAStruct const &',
+                   [],
+                   is_virtual=True)
+
+
 
     #### --- error handler ---
     class MyErrorHandler(pybindgen.settings.ErrorHandler):

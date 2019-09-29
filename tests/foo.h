@@ -1342,4 +1342,32 @@ public:
 
 int test_args_kwargs(const char *args, const char *kwargs);
 
+
+struct RAStruct
+{
+  int a;
+};
+
+
+class ReturnConstRef
+{
+public:
+  virtual const RAStruct & ReturnMyAStruct (void) = 0;
+  virtual ~ReturnConstRef() {}
+};
+
+
+class RAReturnConstRef : public ReturnConstRef
+{
+public:
+  RAReturnConstRef(int value) { m_astruct.a = value; }
+  RAReturnConstRef() { m_astruct.a = 0; }
+  const RAStruct & ReturnMyAStruct (void) { return m_astruct; }
+  virtual ~RAReturnConstRef() {}
+
+private:
+  RAStruct m_astruct;
+};
+
+
 #endif 	    /* !FOO_H_ */
