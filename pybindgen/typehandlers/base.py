@@ -948,9 +948,38 @@ class ForwardWrapperBase(object):
                     self.after_call.write_code('py_retval = Py_None;')
                 else:
                     assert params[0][0] == '"'
+                    # If the return type is pointer, we should free it after we have turned it into a
+                    # python object because the underlying data buffer is copied.
+                    #
+                    # https://docs.python.org/2/c-api/arg.html
+                    # Excerpt is from python2 doco, the same applies for python 3
+                    #
+                    # When memory buffers are passed as parameters to supply data to build objects, as for the s and
+                    # s# formats, # the required data is copied. Buffers provided by the caller are never referenced
+                    # by the objects created by Py_BuildValue(). In other words, if your code invokes malloc() and
+                    # passes the allocated memory to Py_BuildValue(), your code is responsible for calling free() for
+                    # that memory once Py_BuildValue() returns.
+                    if '*' in self.return_value.ctype:
+                        free_retval = 'free(retval);'
+                    else:
+                        free_retval = ''
+
                     params[0] = "(char *) " + params[0]
-                    self.after_call.write_code('py_retval = Py_BuildValue(%s);' %
-                                               (', '.join(params),))
+                    py_build_value_params = ', '.join(params)
+
+                    # The check for PyErr_Occured here is to catch the case where the bound c code sets a
+                    # python exception. If this happens this binding code should return NULL which allows
+                    # the python runtime to properly process the exception. If NULL is not returned and
+                    # there are many exceptions occuring in a row, a massive memory leak occurs
+                    create_py_retval = '''if (PyErr_Occurred() != NULL) {
+    py_retval = NULL;
+} else {
+    py_retval = Py_BuildValue(%s);
+}
+%s
+                    ''' % (py_build_value_params, free_retval)
+
+                    self.after_call.write_code(create_py_retval)
 
             ## cleanup and return
             self.after_call.write_cleanup()
