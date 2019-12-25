@@ -60,13 +60,13 @@ class Function(ForwardWrapperBase):
 
         if unblock_threads is None:
             unblock_threads = settings.unblock_threads
-        
+
         ## backward compatibility check
         if isinstance(return_value, string_types) and isinstance(function_name, ReturnValue):
             warnings.warn("Function has changed API; see the API documentation (but trying to correct...)",
                           DeprecationWarning, stacklevel=2)
             function_name, return_value = return_value, function_name
-            
+
         if return_value is None:
             return_value = ReturnValue.new('void')
 
@@ -175,7 +175,7 @@ class Function(ForwardWrapperBase):
         self.wrapper_base_name = "_wrap_%s_%s" % (
             module.prefix, self.mangled_name)
     module = property(get_module, set_module)
-    
+
     def generate_call(self):
         "virtual method implementation; do not call"
         if self.foreign_cpp_namespace:
@@ -189,7 +189,7 @@ class Function(ForwardWrapperBase):
             template_params = '< %s >' % ', '.join(self.template_parameters)
         else:
             template_params = ''
- 
+
         if self.throw:
             self.before_call.write_code('try\n{')
             self.before_call.indent()
@@ -260,12 +260,17 @@ class Function(ForwardWrapperBase):
             self.wrapper_args.append("PyObject *args")
             if 'METH_KEYWORDS' in flags:
                 self.wrapper_args.append("PyObject *kwargs")
+            else:
+                self.wrapper_args.append("PyObject *PYBINDGEN_UNUSED(_kwargs)")
+        else:
+                self.wrapper_args.append("PyObject *PYBINDGEN_UNUSED(_args)")
+                self.wrapper_args.append("PyObject *PYBINDGEN_UNUSED(_kwargs)")
         self.wrapper_args.extend(extra_wrapper_params)
         self.wrapper_return = "PyObject *"
         self.write_open_wrapper(code_sink)
         tmp_sink.flush_to(code_sink)
         self.write_close_wrapper(code_sink)
-        
+
 
     def generate_declaration(self, code_sink, extra_wrapper_parameters=()):
         ## We need to fake generate the code (and throw away the

@@ -2284,7 +2284,7 @@ typedef struct {
         construct_name = self.get_construct_name()
         copy_wrapper_name = '_wrap_%s__copy__' % self.pystruct
         code_sink.writeln('''
-static PyObject*\n%s(%s *self)
+static PyObject*\n%s(%s *self, PyObject *PYBINDGEN_UNUSED(_args))
 {
 ''' % (copy_wrapper_name, self.pystruct))
         code_sink.indent()

@@ -291,7 +291,7 @@ static Py_ssize_t
     PyObject *py_result;
     Py_ssize_t result;
 
-    py_result = %(method_name)s(py_self);
+    py_result = %(method_name)s(py_self, NULL, NULL);
     if (py_result == NULL) {
         PyErr_SetString(PyExc_RuntimeError, "Unknown error in attempting to determine __len__.");
         Py_XDECREF(py_result);

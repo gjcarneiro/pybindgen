@@ -84,7 +84,7 @@ class CppMethod(ForwardWrapperBase):
         # bug 399870
         if is_virtual is None:
             is_virtual = is_pure_virtual
-            
+
         if return_value is None:
             return_value = ReturnValue.new('void')
 
@@ -291,7 +291,7 @@ class CppMethod(ForwardWrapperBase):
 
                            self.method_name, template_params,
                            ", ".join(self.call_params),
-                           
+
                            class_.full_name, self.method_name, template_params,
                            ", ".join(self.call_params)
                            )))
@@ -354,14 +354,23 @@ class CppMethod(ForwardWrapperBase):
                     "extra_wrapper_params can only be used with"\
                     " full varargs/kwargs wrappers"
                 self.wrapper_args = ["%s *%s" % (self._get_pystruct(), _self_name),
-                                     "PyObject *args"]
+                                     "PyObject *args",
+                                     "PyObject *PYBINDGEN_UNUSED(_kwargs)"]
         else:
             assert not extra_wrapper_params, \
                 "extra_wrapper_params can only be used with full varargs/kwargs wrappers"
             if 'METH_STATIC' in flags:
-                self.wrapper_args = ['void']
+                self.wrapper_args = [
+                    'PyObject *PYBINDGEN_UNUSED(_self)',
+                    "PyObject *PYBINDGEN_UNUSED(_args)",
+                    "PyObject *PYBINDGEN_UNUSED(_kwargs)",
+                ]
             else:
-                self.wrapper_args = ["%s *%s" % (self._get_pystruct(), _self_name)]
+                self.wrapper_args = [
+                    "%s *%s" % (self._get_pystruct(), _self_name),
+                    "PyObject *PYBINDGEN_UNUSED(_args)",
+                    "PyObject *PYBINDGEN_UNUSED(_kwargs)",
+                ]
         self.wrapper_args.extend(extra_wrapper_params)
 
         return self.wrapper_return, "%s(%s)" % (self.wrapper_actual_name, ', '.join(self.wrapper_args))
@@ -439,7 +448,7 @@ class CppMethod(ForwardWrapperBase):
             pure_virtual = " = 0"
         else:
             pure_virtual = ''
-        
+
         if self.return_value is None:
             retval = "retval?"
         else:
@@ -631,7 +640,7 @@ class CppConstructor(ForwardWrapperBase):
         "Get the class wrapper object (CppClass)"
         return self._class
     class_ = property(get_class, set_class)
-    
+
     def generate_call(self, class_=None):
         "virtual method implementation; do not call"
         if class_ is None:
@@ -758,7 +767,7 @@ class CppConstructor(ForwardWrapperBase):
             cls_name = "???"
         else:
             cls_name = self._class.full_name
-        
+
         if self.return_value is None:
             retval = "retval?"
         else:
@@ -839,7 +848,7 @@ class CppNoConstructor(ForwardWrapperBase):
     def generate_call(self):
         "dummy method, not really called"
         pass
-    
+
     def generate(self, code_sink, class_):
         """
         Generates the wrapper code
@@ -922,7 +931,7 @@ class CppVirtualMethodParentCaller(CppMethod):
                                                    ', '.join([param.name for param in self.parameters])))
         else:
             code_sink.writeln('{ return %s::%s(%s); }' % (self.method.class_.full_name, self.method_name,
-                                                          ', '.join([param.name for param in self.parameters])))        
+                                                          ', '.join([param.name for param in self.parameters])))
 
 
     def generate_call(self, class_=None):
@@ -937,7 +946,7 @@ class CppVirtualMethodParentCaller(CppMethod):
             "%s == NULL" % helper,
             'PyErr_SetString(PyExc_TypeError, "Method %s of class %s is protected and can only be called by a subclass");'
             % (self.method_name, self.class_.name))
-        
+
         if self.return_value.ctype == 'void':
             self.before_call.write_code(
                 '%s(%s);' %
@@ -1066,7 +1075,7 @@ class CppVirtualMethodProxy(ReverseWrapperBase):
             self.before_call.write_code('%s = PyObject_GetAttrString(m_pyself, (char *) "%s"); PyErr_Clear();'
                                         % (py_method, self.method_name))
         self.before_call.add_cleanup_code('Py_XDECREF(%s);' % py_method)
-        
+
         self.before_call.write_code(
             r'if (%s == NULL || Py_TYPE(%s) == &PyCFunction_Type) {' % (py_method, py_method))
         if self.return_value.ctype == 'void':
@@ -1111,7 +1120,7 @@ Py_FatalError("Error detected, but parent virtual is pure virtual or private vir
                                     (self.class_.pystruct, this_expression))
         self.before_call.add_cleanup_code("reinterpret_cast< %s* >(m_pyself)->obj = %s;" %
                                           (self.class_.pystruct, self_obj_before))
-        
+
         super(CppVirtualMethodProxy, self).generate(
             code_sink, '::'.join((self._helper_class.name, self.method_name)),
             decl_modifiers=[],
