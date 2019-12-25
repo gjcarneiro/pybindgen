@@ -3478,7 +3478,7 @@ class CppClassPtrParameter(CppClassParameterBase):
                 if self.cpp_class.memory_policy is not None:
                     self.cpp_class.wrapper_registry.write_unregister_wrapper(wrapper.after_call,
                                                                             '%s' % self.py_name,
-                                                                            self.memory_policy.get_pointer_to_void_name('%s->obj' % self.py_name))
+                                                                            self.cpp_class.memory_policy.get_pointer_to_void_name('%s->obj' % self.py_name))
                 else:
                     self.cpp_class.wrapper_registry.write_unregister_wrapper(wrapper.after_call,
                                                                             '%s' % self.py_name,
