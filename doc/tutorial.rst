@@ -640,6 +640,17 @@ case too::
 Which instructs PyBindGen that DoSomething is not to be trusted and that it should
 acquire ownership of the returned pointer if it needs to keep track of it.
 
+A Copied Object or String
+-------------------------
+
+Some C/C++ functions, and in particular those generated as bindings to other
+languages allocate storage in the C/C++ heap purely for transferring data
+to the python C bindings (consider python calling golang via C wrappers for
+example). In these cases, there is no language level mechanism to track and free
+this storage. The 'free_on_copy' parameter can be used to request that the
+python generated bindings free this storage after Py_BuildValue has been
+used to take a copy of it. This is most often needed for C strings (char *)
+but is also available for C++ classes using 'delete' rather than 'free'.
 
 A STL container
 ---------------

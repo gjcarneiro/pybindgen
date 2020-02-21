@@ -13,6 +13,8 @@ from waflib import Configure
 
 from waflib import Logs
 
+from waflib.Tools import c_config
+
 import os
 import subprocess
 import shutil
@@ -58,7 +60,7 @@ def zipper(dir, zip_file, archive_main_folder=None):
 
 def options(opt):
     opt.load('python_patched', tooldir="waf-tools")
-    opt.load('compiler_cc')
+    opt.load('compiler_c')
     opt.load('compiler_cxx')
     opt.load('cflags', tooldir="waf-tools")
     opt.recurse('examples')
@@ -120,12 +122,19 @@ def _check_compilation_flag(conf, flag, mode='cxx', linkflags=None):
         env.append_value("LINKFLAGS", linkflags)
 
     try:
-        retval = conf.run_c_code(code='#include <stdio.h>\nint main() { return 0; }\n',
-                                 env=env, compile_filename=fname,
+        print("HERE")
+        retval = conf.run_build(code='#include <stdio.h>\nint main() { return 0; }\n',
+                                 env=env, compile_filename=fname, 
+                                 build_fun=c_config.build_fun,
                                  features=[mode, mode+'program'], execute=False)
+        print("WRF... ",retval)
     except conf.errors.ConfigurationError:
         ok = False
+    except:
+        print(":FAILED")
+        raise
     else:
+        print(":WORKED")
         ok = (retval == 0)
     conf.end_msg(ok)
     return ok
@@ -151,7 +160,7 @@ def configure(conf):
     conf.check_python_version((2,3))
 
     try:
-        conf.load('compiler_cc')
+        conf.load('compiler_c')
         conf.load('compiler_cxx')
     except conf.errors.ConfigurationError:
         Logs.warn("C/C++ compiler not detected.  Unit tests and examples will not be compiled.")

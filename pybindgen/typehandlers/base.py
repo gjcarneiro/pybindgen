@@ -1155,6 +1155,7 @@ class _ReturnValue(TypeHandler):
                 args[0] = type_traits
                 args = tuple(args)
                 try:
+                    print(type_handler_class)
                     return type_handler_class(*args, **kwargs)
                 except TypeError:
                     ex = sys.exc_info()[1]
@@ -1212,9 +1213,10 @@ ReturnValue.CTYPES = NotImplemented
 class PointerReturnValue(ReturnValue):
     """Base class for all pointer-to-something handlers"""
     CTYPES = []
-    def __init__(self, ctype, is_const=False, caller_owns_return=None):
+    def __init__(self, ctype, is_const=False, caller_owns_return=None, free_after_copy=False):
         super(PointerReturnValue, self).__init__(ctype, is_const)
         self.call_owns_return = caller_owns_return
+        self.free_after_copy = free_after_copy
 
 PointerReturnValue.CTYPES = NotImplemented
 
