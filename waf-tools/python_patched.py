@@ -22,7 +22,6 @@ import os, sys
 from waflib import Utils, Options, Errors, Logs
 from waflib.TaskGen import extension, before_method, after_method, feature
 from waflib.Configure import conf
-import waflib
 
 FRAG = '''
 #include <Python.h>
@@ -319,7 +318,7 @@ def check_python_headers(conf):
 
 	includes = []
 	if conf.env.PYTHON_CONFIG:
-		for incstr in conf.cmd_and_log([ conf.env.PYTHON_CONFIG[0], '--includes']).strip().split():
+		for incstr in conf.cmd_and_log([ conf.env.PYTHON_CONFIG, '--includes']).strip().split():
 			# strip the -I or /I
 			if (incstr.startswith('-I') or incstr.startswith('/I')):
 				incstr = incstr[2:]
@@ -334,7 +333,6 @@ def check_python_headers(conf):
 			       "(found via distutils module): %r\n" % (dct['INCLUDEPY'],))
 		env['INCLUDES_PYEXT'] = [dct['INCLUDEPY']]
 		env['INCLUDES_PYEMBED'] = [dct['INCLUDEPY']]
-
 
 	# Code using the Python API needs to be compiled with -fno-strict-aliasing
 	if env['CC_NAME'] == 'gcc':
