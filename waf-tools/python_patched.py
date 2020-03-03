@@ -22,6 +22,7 @@ import os, sys
 from waflib import Utils, Options, Errors, Logs
 from waflib.TaskGen import extension, before_method, after_method, feature
 from waflib.Configure import conf
+import waflib
 
 FRAG = '''
 #include <Python.h>
@@ -241,7 +242,12 @@ def check_python_headers(conf):
 	if not pybin:
 		conf.fatal('Could not find the python executable')
 
-	v = 'prefix SO LDFLAGS LIBDIR LIBPL INCLUDEPY Py_ENABLE_SHARED MACOSX_DEPLOYMENT_TARGET LDSHARED CFLAGS LDVERSION'.split()
+	extsuffix = "SO"
+	if '.'.join(env.PYTHON_VERSION.split('.')[:1]) == "3":
+		extsuffix = "EXT_SUFFIX"
+
+	v = 'prefix LDFLAGS LIBDIR LIBPL INCLUDEPY Py_ENABLE_SHARED MACOSX_DEPLOYMENT_TARGET LDSHARED CFLAGS LDVERSION'.split()
+	v.append(extsuffix)
 	try:
 		lst = conf.get_python_variables(["get_config_var('%s') or ''" % x for x in v])
 	except RuntimeError:
@@ -255,7 +261,7 @@ def check_python_headers(conf):
 	if dct[x]:
 		conf.env[x] = conf.environ[x] = dct[x]
 
-	env['pyext_PATTERN'] = '%s' + dct['SO'] # not a mistake
+	env['pyext_PATTERN'] = '%s' + dct[extsuffix] # not a mistake
 
 	# Check for python libraries for embedding
 
@@ -316,9 +322,12 @@ def check_python_headers(conf):
 	num = '.'.join(env['PYTHON_VERSION'].split('.')[:2])
 	conf.find_program([''.join(pybin) + '-config', 'python%s-config' % num, 'python-config-%s' % num, 'python%sm-config' % num], var='PYTHON_CONFIG', mandatory=False)
 
+	if len(conf.env.PYTHON_CONFIG) != 1:
+		raise conf.errors.ConfigurationError("failed to find exactly one python config script")
+
 	includes = []
 	if conf.env.PYTHON_CONFIG:
-		for incstr in conf.cmd_and_log([ conf.env.PYTHON_CONFIG, '--includes']).strip().split():
+		for incstr in conf.cmd_and_log([conf.env.PYTHON_CONFIG[0], '--includes']).strip().split():
 			# strip the -I or /I
 			if (incstr.startswith('-I') or incstr.startswith('/I')):
 				incstr = incstr[2:]
