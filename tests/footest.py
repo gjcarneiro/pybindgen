@@ -24,6 +24,11 @@ else:
 gccxml_mode = sys.argv.pop(1)
 print("gccxml_mode:", gccxml_mode)
 
+cc_name = sys.argv.pop(1)
+cc_version  = sys.argv.pop(1)
+
+print("Compiler Command and Version:", cc_name, cc_version)
+
 import unittest
 
 
@@ -170,6 +175,10 @@ class TestFoo(unittest.TestCase):
 
     def test_type_narrowing_hidden_subclass(self):
         """This test only works with GCC >= 3.0 (and not with other compilers)"""
+        if "gcc" not in cc_name:
+            return
+        if int(cc_version) < 3:
+            return
         obj = foo.get_hidden_subclass_pointer()
         self.assertEqual(type(obj), foo.Bar)
 

@@ -84,6 +84,12 @@ _wrap_foofunction_that_takes_foo_from_string(PyObject * PYBINDGEN_UNUSED(dummy),
     return py_retval;
 }
 '''
+
+    if len(module.classes) == 0:
+        # Some tests, eg. foomodulegen4.py, don't have Bar and Foo classes
+        # defined.
+        return
+
     module.add_custom_function_wrapper('function_that_takes_foo',
                                        '_wrap_foofunction_that_takes_foo_from_string',
                                        wrapper_body,
