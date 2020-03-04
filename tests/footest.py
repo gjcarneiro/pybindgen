@@ -21,13 +21,12 @@ elif which == 4:
 else:
     raise AssertionError("bad command line arguments")
 
-gccxml_mode = sys.argv.pop(1)
-print("gccxml_mode:", gccxml_mode)
-
 cc_name = sys.argv.pop(1)
 cc_version  = sys.argv.pop(1)
+print("compiler command and version:", cc_name, cc_version)
 
-print("Compiler Command and Version:", cc_name, cc_version)
+gccxml_mode = sys.argv.pop(1)
+print("gccxml_mode:", gccxml_mode)
 
 import unittest
 
