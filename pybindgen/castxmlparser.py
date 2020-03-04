@@ -657,7 +657,7 @@ class ModuleParser(object):
         abspath = os.path.abspath(decl.location.file_name)
         if abspath in self.header_files:
             return True
-         for incdir in self.whitelist_paths:
+        for incdir in self.whitelist_paths:
             if os.path.abspath(decl.location.file_name).startswith(incdir):
                 return True
         return False
