@@ -16,16 +16,18 @@ import re
 
 arg_rx = re.compile(r"(?P<dollar>\$\$)|(?P<subst>\$\{(?P<var>\w+)(?P<code>.*?)\})", re.M)
 
-class command_task(Task.Task):
+def nice_path(input):
+	return input.path_from(input.ctx.launch_node())
+
+class command(Task.Task):
 	color = "BLUE"
 	def __init__(self, env, generator):
 		Task.Task.__init__(self, env=env, normal=1, generator=generator)
 
 	def __str__(self):
 		"string to display to the user"
-		env = self.env
-		src_str = ' '.join([a.nice_path(env) for a in self.inputs])
-		tgt_str = ' '.join([a.nice_path(env) for a in self.outputs])
+		src_str = ' '.join([nice_path(a) for a in self.inputs])
+		tgt_str = ' '.join([nice_path(a) for a in self.outputs])
 		if self.outputs:
 			sep = ' -> '
 		else:
@@ -151,5 +153,3 @@ def process_rule(self):
 		cls.scan = scan
 
 	setattr(tsk, "dep_vars", getattr(self, "dep_vars", None))
-
-

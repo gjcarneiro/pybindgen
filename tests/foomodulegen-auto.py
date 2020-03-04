@@ -50,7 +50,6 @@ def my_module_gen():
 
     module.generate(out)
 
-
 def main():
     logging.basicConfig(level=logging.DEBUG)
     if sys.argv[1] == '-d':
