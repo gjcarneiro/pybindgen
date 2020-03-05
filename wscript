@@ -59,7 +59,7 @@ def zipper(dir, zip_file, archive_main_folder=None):
 
 
 def options(opt):
-    opt.load('python_patched', tooldir="waf-tools")
+    opt.load('python')
     opt.load('compiler_c')
     opt.load('compiler_cxx')
     opt.load('cflags', tooldir="waf-tools")
@@ -144,13 +144,24 @@ def _check_nonfatal(conf, *args, **kwargs):
         return None
 
 
+# treat -iwithsysroot as if it were -I
+def extract_withsysroot_includes(lst):
+    inc = []
+    while lst:
+        x = lst.pop(0)
+        if x.startswith(('-iwithsysroot')):
+            dir = lst.pop(0)
+            if os.path.isdir(dir):
+                inc.append(dir)
+    return inc
+
 def configure(conf):
 
     conf.check_compilation_flag = types.MethodType(_check_compilation_flag, conf)
     conf.check_nonfatal = types.MethodType(_check_nonfatal, conf)
 
     conf.load('command', tooldir="waf-tools")
-    conf.load('python_patched', tooldir="waf-tools")
+    conf.load('python')
     conf.check_python_version((2,3))
 
     try:
@@ -161,7 +172,7 @@ def configure(conf):
         conf.env['CXX'] = ''
     else:
         conf.load('cflags')
-        conf.check_python_headers()
+        conf.check_python_headers(features='pyembed pyext')
 
         if not Options.options.disable_pygccxml:
             castxml = conf.find_program('castxml', mandatory=False)
@@ -187,8 +198,29 @@ def configure(conf):
         if not conf.check_nonfatal(header_name='stdint.h'):
             conf.env.append_value('CPPPATH', os.path.join(conf.curdir, 'include'))
 
-    if conf.check_nonfatal(header_name='boost/shared_ptr.hpp'):
+        if "INCLUDES_PYEXT" not in conf.env:
+            # On macos catalina there are no -I's in the system python2.7-config
+            # output, so extract them from CFLAGS and make sure that Python.h
+            # can be located.
+            conf.env["INCLUDES_PYEXT"] = extract_withsysroot_includes(conf.env["CFLAGS_PYEXT"])
+            conf.check_nonfatal(header_name='Python.h')
+
+    conf.env.stash()
+    try:
+        # Make sure that boost is available when compiling an extension
+        # rather than just natively.
+        conf.env.append_value("CXXFLAGS", conf.env["CXXFLAGS_PYEXT"])
+        conf.env.append_value("INCLUDES", conf.env["INCLUDES_PYEXT"])
+        have_boost_extension = conf.check_nonfatal(header_name='boost/shared_ptr.hpp')
+    finally:
+        conf.env.revert()
+
+    if have_boost_extension:
         conf.env['ENABLE_BOOST_SHARED_PTR'] = True
+    else:
+        Logs.warn("Boost is not available as a python extension, trying native compilation.")
+        if conf.check_nonfatal(header_name='boost/shared_ptr.hpp'):
+            Logs.warn("Boost is, however, available natively. The python extension configuration is most likely using --sysroot")
 
     conf.recurse('benchmarks')
     conf.recurse('examples')
