@@ -2210,7 +2210,7 @@ typedef struct {
             self.slots.setdefault("tp_dictoffset", "0")
         if self.binary_numeric_operators:
             tp_flags.add("Py_TPFLAGS_CHECKTYPES")
-        self.slots.setdefault("tp_flags", '|'.join(tp_flags))
+        self.slots.setdefault("tp_flags", '|'.join(sorted(tp_flags)))
 
         if docstring is None:
             docstring = self.generate_docstring()

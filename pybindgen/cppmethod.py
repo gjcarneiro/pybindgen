@@ -420,7 +420,7 @@ class CppMethod(ForwardWrapperBase):
             self.docstring = self.generate_docstring(method_name)
 
         return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
-               (method_name, self.wrapper_actual_name, '|'.join(flags),
+               (method_name, self.wrapper_actual_name, '|'.join(sorted(flags)),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
 
     def generate_docstring(self, name):
@@ -974,7 +974,7 @@ class CppVirtualMethodParentCaller(CppMethod):
         return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
                (method_name,
                 self.wrapper_actual_name,#'::'.join((self._helper_class.name, self.wrapper_actual_name)),
-                '|'.join(flags),
+                '|'.join(sorted(flags)),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
 
     def clone(self):
