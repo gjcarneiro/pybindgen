@@ -220,6 +220,7 @@ class CStringReturn(PointerReturnValue):
         wrapper.build_params.add_parameter("s", [self.value])
         if self.free_after_copy:
             wrapper.after_call.add_cleanup_code("free(retval);")
+            wrapper.after_call.add_cleanup_code("// free_after_copy for %s %s()" % (self.ctype, wrapper.function_name))
 
 
 class StdStringReturn(ReturnValue):

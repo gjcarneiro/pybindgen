@@ -114,7 +114,16 @@ int %s::custom_method_added_by_a_hook(int x)
                       Parameter.new('int', 'multiplier', default_value='1')],
                      custom_name="get_int")
 
+    ## test free_after_copy.
+    mod.add_function('return_c_string_to_be_freed',
+                     ReturnValue.new('char *', free_after_copy=True ),
+                     [])
 
+    ToBeFreed = mod.add_class('ToBeFreed')
+    ToBeFreed.add_copy_constructor()
+    mod.add_function('return_class_to_be_freed',
+                     ReturnValue.new('ToBeFreed *', free_after_copy=True),
+                     [])
 
     SomeObject = mod.add_class('SomeObject', allow_subclassing=True)
 

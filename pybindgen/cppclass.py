@@ -2679,7 +2679,8 @@ from pybindgen.cppmethod import CppMethod, CppConstructor, CppNoConstructor, Cpp
 
 def common_shared_object_return(value, py_name, cpp_class, code_block,
                                 type_traits, caller_owns_return,
-                                reference_existing_object, type_is_pointer, caller_manages_return=True):
+                                reference_existing_object, type_is_pointer, caller_manages_return=True,
+                                free_after_copy=False):
 
     if type_is_pointer:
         value_value = '(*%s)' % value
@@ -3687,9 +3688,8 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
         :param ctype: C type, normally 'MyClass*'
         :param caller_owns_return: if true, ownership of the object pointer
                               is transferred to the caller
-        :param free_after_copy: if true, the python wrapper must call free on
-                               the returned pointer once it has taken a (shallow)
-                               copy of it.
+        :param free_after_copy: if true, the python wrapper must call delete on
+                              the returned pointer once it has taken a copy.
 
         :param custodian: bind the life cycle of the python wrapper
                for the return value object (ward) to that
@@ -3744,7 +3744,11 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
             self.reference_existing_object = True
         self.custodian = custodian
 
+        if self.caller_owns_return and self.free_after_copy:
+            raise TypeConfigurationError("only one of caller_owns_return or free_after_copy can be given")
+
         if self.caller_owns_return is None\
+                and self.free_after_copy is None \
                 and self.reference_existing_object is None:
             raise TypeConfigurationError("Either caller_owns_return or self.reference_existing_object must be given")
 
@@ -3775,12 +3779,15 @@ class CppClassPtrReturnValue(CppClassReturnValueBase):
                                     self.type_traits, self.caller_owns_return,
                                     self.reference_existing_object,
                                     type_is_pointer=True,
-                                    caller_manages_return=self.caller_manages_return)
+                                    caller_manages_return=self.caller_manages_return,
+                                    free_after_copy=self.free_after_copy)
 
         # return the value
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
         if self.free_after_copy:
             wrapper.after_call.add_cleanup_code("delete retval;")
+            wrapper.after_call.add_cleanup_code("// free_after_copy for %s* %ss" % (self.cpp_class.name,wrapper.function_name))
+
 
     def convert_python_to_c(self, wrapper):
         """See ReturnValue.convert_python_to_c"""

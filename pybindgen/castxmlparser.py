@@ -346,6 +346,8 @@ class GccXmlTypeRegistry(object):
         for name, value in annotations.items():
             if name == 'caller_owns_return':
                 kwargs['caller_owns_return'] = annotations_scanner.parse_boolean(value)
+            if name == 'free_after_copy':
+                kwargs['free_after_copy'] = annotations_scanner.parse_boolean(value)
             elif name == 'reference_existing_object':
                 kwargs['reference_existing_object'] = annotations_scanner.parse_boolean(value)
             elif name == 'return_internal_reference':
@@ -2318,6 +2320,8 @@ pybindgen.settings.error_handler = ErrorHandler()
                 if argnum == 0 and as_method is not None \
                         and isinstance(arg.decl_type, cpptypes.pointer_t):
                     annotations.setdefault("transfer_ownership", "false")
+                    annotations.setdefault("free_after_copy", "false")
+
 
                 spec = self.type_registry.lookup_parameter(arg.decl_type, arg.name,
                                                            annotations,

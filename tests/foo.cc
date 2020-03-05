@@ -26,6 +26,17 @@ int get_int_from_float(double from_float, int multiplier)
     return (int) from_float*multiplier;
 }
 
+char *return_c_string_to_be_freed()
+{
+    char *test = (char *)malloc(12 * sizeof(char));
+    strcpy(test, "testingonly");
+    return test;
+}
+
+ToBeFreed *return_class_to_be_freed()
+{
+   return new ToBeFreed();
+}
 
 std::string SomeObject::staticData = std::string("Hello Static World!");
 

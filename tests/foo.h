@@ -1369,5 +1369,21 @@ private:
   RAStruct m_astruct;
 };
 
+// -#- name=return_c_string_to_be_freed; @return(free_after_copy=true) -#-
+char *return_c_string_to_be_freed();
+
+class ToBeFreed
+{
+public:
+    ToBeFreed() { m = return_c_string_to_be_freed(); }
+    ~ToBeFreed() { free(m); }
+
+private:
+    char *m;
+};
+
+// -#- name=return_class_to_be_freed; @return(free_after_copy=true) -#-
+ToBeFreed *return_class_to_be_freed();
+
 
 #endif 	    /* !FOO_H_ */
