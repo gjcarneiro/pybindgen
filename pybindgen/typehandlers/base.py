@@ -1155,7 +1155,6 @@ class _ReturnValue(TypeHandler):
                 args[0] = type_traits
                 args = tuple(args)
                 try:
-                    print(type_handler_class)
                     return type_handler_class(*args, **kwargs)
                 except TypeError:
                     ex = sys.exc_info()[1]
