@@ -146,9 +146,9 @@ def _check_nonfatal(conf, *args, **kwargs):
 
 # treat -iwithsysroot as if it were -I
 def extract_withsysroot_includes(lst):
-    inc=[]
+    inc = []
     while lst:
-        x=lst.pop(0)
+        x = lst.pop(0)
         if x.startswith(('-iwithsysroot')):
             dir = lst.pop(0)
             if os.path.isdir(dir):
