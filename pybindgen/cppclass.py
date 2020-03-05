@@ -35,6 +35,12 @@ from . import function
 
 import collections
 
+# Prepare for python 3.9
+try:
+    collectionsCallable = collections.Callable
+except AttributeError:
+    collectionsCallable = collections
+
 try:
     set
 except NameError:
@@ -1036,7 +1042,7 @@ class CppClass(object):
         all subclasses.  The hook function is called like this::
           hook_function(helper_class)
         """
-        if not isinstance(hook, collections.Callable):
+        if not isinstance(hook, collectionsCallable):
             raise TypeError("hook function must be callable")
         self.helper_class_hooks.append(hook)
 

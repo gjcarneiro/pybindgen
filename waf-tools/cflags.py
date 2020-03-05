@@ -49,7 +49,7 @@ class GccTraits(CompilerTraits):
 			return (['-g'], [])
 		elif level >= 2:
 			return (['-ggdb', '-g3'], ['_DEBUG'])
-		
+
 
 class IccTraits(CompilerTraits):
 	def __init__(self):
@@ -119,7 +119,6 @@ class MsvcTraits(CompilerTraits):
 			return (['/ZI', '/RTC1'], [])
 		elif level >= 2:
 			return (['/ZI', '/RTC1'], ['_DEBUG'])
-
 
 
 gcc = GccTraits()

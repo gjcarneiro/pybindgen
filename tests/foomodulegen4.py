@@ -9,16 +9,18 @@ from pybindgen.module import MultiSectionFactory
 from pybindgen import (FileCodeSink)
 
 import foomodulegen_split
+import foomodulegen_module1, foomodulegen_module2
 import foomodulegen_common
 
+# TODO(cnicolaou): get the multi section tests working
 
 class MyMultiSectionFactory(MultiSectionFactory):
 
-    def __init__(self, main_file_name):
-        self.main_file_name = main_file_name
-        self.main_sink = FileCodeSink(open(main_file_name, "wt"))
+    def __init__(self, dir):
+        self.main_file_name = os.path.join(dir, "foomodule4.cc")
+        self.main_sink = FileCodeSink(open(self.main_file_name, "wt"))
         self.header_name = "foomodule4.h"
-        header_file_name = os.path.join(os.path.dirname(self.main_file_name), self.header_name)
+        header_file_name = os.path.join(dir, self.header_name)
         self.header_sink = FileCodeSink(open(header_file_name, "wt"))
         self.section_sinks = {}
 
@@ -49,7 +51,7 @@ class MyMultiSectionFactory(MultiSectionFactory):
             sink.file.close()
 
 def my_module_gen():
-    out = MyMultiSectionFactory(sys.argv[1])
+    out = MyMultiSectionFactory(os.path.dirname(sys.argv[1]))
     root_module = foomodulegen_split.module_init()
     root_module.add_exception('exception', foreign_cpp_namespace='std', message_rvalue='%(EXC)s.what()')
     foomodulegen_common.customize_module_pre(root_module)
