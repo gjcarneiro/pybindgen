@@ -4,6 +4,8 @@ import weakref
 import gc
 import os.path
 import copy
+import resource
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '..', 'build', 'tests'))
 
@@ -1536,7 +1538,7 @@ class TestFoo(unittest.TestCase):
         value = x.ReturnMyAStruct()
         self.assertEqual(value.a, 123)
 
-    def test_free_after_copy_string(self):
+    def test_free_after_copy_string_examine_code(self):
         seen_free_comment = False
         seen_free = False
         seen_delete_comment = False
@@ -1555,6 +1557,43 @@ class TestFoo(unittest.TestCase):
         file.close()
         self.assertTrue(seen_free)
         self.assertTrue(seen_delete)
+
+    def test_free_after_copy(self):
+        v = foo.return_c_string_to_be_freed(20)
+        self.assertEqual(v, "testingonly")
+        c = foo.return_class_to_be_freed(20)
+        self.assertEqual(c.value(), "testingonly")
+
+
+    def _runner(self, n, size, fn):
+        while gc.collect():
+            pass
+        before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        for i in range(n):
+           fn(size)
+
+        while gc.collect():
+            pass
+        after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        # maxrss is in kB.
+        return (after - before) * 1024
+
+    def test_free_after_copy_leak(self):
+        n = 200
+        size = 1024*32
+        # run once to bump up overall maxrss if's going to be bumped up.
+        self._runner(n, size, foo.return_c_string_to_be_freed)
+        diff = self._runner(n, size, foo.return_c_string_to_be_freed)
+        #diff += self._runner(n, size, foo.return_class_to_be_freed)
+        # maxrss should only grow marginally here.
+        self.assertTrue(diff < (size*2))
+
+        leaky = self._runner(n, size, foo.return_c_string_to_not_be_freed)
+        leaky += self._runner(n, size, foo.return_class_to_not_be_freed)
+        # maxrss should have grown significantly
+        self.assertTrue(diff < leaky)
+        self.assertTrue(leaky > size * 10)
+
 
 if __name__ == '__main__':
     unittest.main()

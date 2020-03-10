@@ -26,18 +26,6 @@ int get_int_from_float(double from_float, int multiplier)
     return (int) from_float*multiplier;
 }
 
-char *return_c_string_to_be_freed()
-{
-    char *test = (char *)malloc(12 * sizeof(char));
-    strcpy(test, "testingonly");
-    return test;
-}
-
-ToBeFreed *return_class_to_be_freed()
-{
-   return new ToBeFreed();
-}
-
 std::string SomeObject::staticData = std::string("Hello Static World!");
 
 SomeObject::~SomeObject ()
@@ -568,3 +556,46 @@ test_args_kwargs(const char *args, const char *kwargs)
     return (int) (kwargs - args);
 }
 
+ToBeFreed::ToBeFreed(int size) {
+    m_size = size;
+    m = return_c_string_to_be_freed(size);
+}
+
+ToBeFreed::~ToBeFreed() {
+    free(m);
+    m = nullptr;
+}
+
+ ToBeFreed::ToBeFreed(const ToBeFreed& from) {
+     m_size = from.m_size;
+     m = return_c_string_to_be_freed(m_size);
+ }
+
+char *ToBeFreed::value()  {
+        return m;
+}
+
+char *return_c_string_to_be_freed(int size)
+{
+    char *test = (char *)malloc(size * sizeof(char));
+    strcpy(test, "testingonly");
+    return test;
+}
+
+ToBeFreed *
+return_class_to_be_freed(int size)
+{
+   return new ToBeFreed(size);
+}
+
+char *
+return_c_string_to_not_be_freed(int size)
+{
+   return return_c_string_to_be_freed(size);
+}
+
+ToBeFreed *
+return_class_to_not_be_freed(int size)
+{
+   return new ToBeFreed(size);
+}

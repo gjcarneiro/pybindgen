@@ -116,14 +116,22 @@ int %s::custom_method_added_by_a_hook(int x)
 
     ## test free_after_copy.
     mod.add_function('return_c_string_to_be_freed',
-                     ReturnValue.new('char *', free_after_copy=True ),
-                     [])
+                     ReturnValue.new('char *', free_after_copy=True),
+                     [Parameter.new('int', 'size')])
+    mod.add_function('return_c_string_to_not_be_freed',
+                     ReturnValue.new('char *', free_after_copy=False),
+                     [Parameter.new('int', 'size')])
 
     ToBeFreed = mod.add_class('ToBeFreed')
+    ToBeFreed.add_constructor([Parameter.new('int', 'size')])
     ToBeFreed.add_copy_constructor()
+    ToBeFreed.add_method('value', ReturnValue.new('char *'), [])
     mod.add_function('return_class_to_be_freed',
                      ReturnValue.new('ToBeFreed *', free_after_copy=True),
-                     [])
+                     [Parameter.new('int', 'size')])
+    mod.add_function('return_class_to_not_be_freed',
+                     ReturnValue.new('ToBeFreed *', free_after_copy=False),
+                     [Parameter.new('int', 'size')])
 
     SomeObject = mod.add_class('SomeObject', allow_subclassing=True)
 
