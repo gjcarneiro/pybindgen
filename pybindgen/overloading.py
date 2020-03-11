@@ -289,7 +289,7 @@ class OverloadedWrapper(object):
             assert isinstance(self.wrapper_args, list)
 
             return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
-                (name, self.wrapper_actual_name, '|'.join(flags),
+                (name, self.wrapper_actual_name, '|'.join(sorted(flags)),
                  (docstring is None and "NULL" or ('"'+docstring+'"')))
 
     def generate_declaration(self, code_sink):

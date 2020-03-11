@@ -1369,5 +1369,28 @@ private:
   RAStruct m_astruct;
 };
 
+// -#- name=return_c_string_to_be_freed; @return(free_after_copy=true) -#-
+char *return_c_string_to_be_freed(int size);
+
+// -#- name=return_c_string_to_not_be_freed; @return(free_after_copy=false) -#-
+char *return_c_string_to_not_be_freed(int size);
+
+class ToBeFreed
+{
+public:
+    ToBeFreed(int size);
+    ~ToBeFreed();
+    ToBeFreed(const ToBeFreed&);
+    char *value();
+private:
+    char *m;
+    int m_size;
+};
+
+// -#- name=return_class_to_be_freed; @return(free_after_copy=true) -#-
+ToBeFreed *return_class_to_be_freed(int size);
+
+// -#- name=return_class_to_not_be_freed; @return(free_after_copy=false) -#-
+ToBeFreed *return_class_to_not_be_freed(int size);
 
 #endif 	    /* !FOO_H_ */

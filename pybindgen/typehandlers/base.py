@@ -1212,9 +1212,10 @@ ReturnValue.CTYPES = NotImplemented
 class PointerReturnValue(ReturnValue):
     """Base class for all pointer-to-something handlers"""
     CTYPES = []
-    def __init__(self, ctype, is_const=False, caller_owns_return=None):
+    def __init__(self, ctype, is_const=False, caller_owns_return=None, free_after_copy=None):
         super(PointerReturnValue, self).__init__(ctype, is_const)
         self.call_owns_return = caller_owns_return
+        self.free_after_copy = free_after_copy
 
 PointerReturnValue.CTYPES = NotImplemented
 
@@ -1337,9 +1338,10 @@ class PointerParameter(Parameter):
     CTYPES = []
 
     def __init__(self, ctype, name, direction=Parameter.DIRECTION_IN, is_const=False, default_value=None,
-                 transfer_ownership=False):
+                 transfer_ownership=False, free_after_copy=False):
         super(PointerParameter, self).__init__(ctype, name, direction, is_const, default_value)
         self.transfer_ownership = transfer_ownership
+        self.free_after_copy = free_after_copy
 
 PointerParameter.CTYPES = NotImplemented
 

@@ -299,7 +299,7 @@ class Function(ForwardWrapperBase):
             self.docstring = self.generate_docstring(name)
 
         return "{(char *) \"%s\", (PyCFunction) %s, %s, %s }," % \
-               (name, self.wrapper_actual_name, '|'.join(flags),
+               (name, self.wrapper_actual_name, '|'.join(sorted(flags)),
                 (self.docstring is None and "NULL" or ('"'+self.docstring+'"')))
 
     def generate_docstring(self, name):
