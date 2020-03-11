@@ -1578,7 +1578,7 @@ class TestFoo(unittest.TestCase):
         # maxrss is in kB.
         return (after - before) * 1024
 
-    @unittest.expectedFailure
+    @unittest.skip("flaky test")
     def test_free_after_copy_leak(self):
         n = 200
         size = 1024*32
