@@ -446,7 +446,7 @@ get_set ()
 }
 
 namespace xpto
-{    
+{
     FlowId
     get_flow_id (FlowId flowId)
     {
@@ -563,7 +563,7 @@ ToBeFreed::ToBeFreed(int size) {
 
 ToBeFreed::~ToBeFreed() {
     free(m);
-    m = nullptr;
+    m = NULL;
 }
 
  ToBeFreed::ToBeFreed(const ToBeFreed& from) {
