@@ -2233,7 +2233,8 @@ typedef struct {
         except KeyError:
             pass
         else:
-            dict_.setdefault("tp_call", call_method.wrapper_actual_name)
+            if call_method.wrapper_actual_name:
+                dict_.setdefault("tp_call", call_method.wrapper_actual_name)
 
         self.pytype.generate(code_sink)
 
