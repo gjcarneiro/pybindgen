@@ -18,6 +18,8 @@ import os.path
 import warnings
 import re
 import pygccxml
+from operator import itemgetter
+
 from pygccxml import parser
 from pygccxml import declarations
 from .module import Module
@@ -167,7 +169,7 @@ def normalize_class_name(class_name, module_namespace):
 
 def _pygen_kwargs(kwargs):
     l = []
-    for key, val in kwargs.items():
+    for key, val in sorted(kwargs.items(), key=itemgetter(0)):
         if isinstance(val, (CppClass, CppException)):
             l.append("%s=root_module[%r]" % (key, utils.ascii(val.full_name)))
         else:
