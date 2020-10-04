@@ -3,7 +3,7 @@
 import sys
 
 from pybindgen import FileCodeSink
-from pybindgen.gccxmlparser import ModuleParser
+from pybindgen.castxmlparser import ModuleParser
 
 def my_module_gen():
     module_parser = ModuleParser('a2', '::')
