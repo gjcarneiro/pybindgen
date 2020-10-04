@@ -188,6 +188,12 @@ def configure(conf):
                     if castxml:
                         conf.env['PYGCCXML_MODE'] = 'castxml'
 
+                if conf.env['ENABLE_PYGCCXML']:
+                    try:
+                        conf.check_python_module('cxxfilt')
+                    except conf.errors.ConfigurationError:
+                        conf.env['ENABLE_PYGCCXML'] = False
+
         # -fvisibility=hidden optimization
         if (conf.env['CXX_NAME'] == 'gcc' and [int(x) for x in conf.env['CC_VERSION']] >= [4,0,0]
             and conf.check_compilation_flag('-fvisibility=hidden')):
