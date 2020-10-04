@@ -12,6 +12,7 @@ from pybindgen import Module, FileCodeSink, param, retval
 #from pybindgen.function import CustomFunctionWrapper
 #from pybindgen.cppmethod import CustomCppMethodWrapper
 from pybindgen import cppclass
+from pybindgen.typehandlers.smart_ptr import StdSharedPtr
 
 #from pybindgen import param, retval
 
@@ -25,7 +26,7 @@ def my_module_gen(out_file):
 
     mod.add_include ('"sp.h"')
 
-    Foo = mod.add_class('Foo', memory_policy=cppclass.SharedPtr('::Foo'))
+    Foo = mod.add_class('Foo', memory_policy=StdSharedPtr('::Foo'))
 
     Foo.add_constructor([param('std::string', 'datum')])
     Foo.add_constructor([])
@@ -37,7 +38,7 @@ def my_module_gen(out_file):
                      [param('std::shared_ptr<Foo>', 'foo')])
 
     mod.add_function('function_that_returns_foo', retval('std::shared_ptr<Foo>'), [])
-    
+
     ## ---- finally, generate the whole thing ----
     mod.generate(FileCodeSink(out_file))
 
