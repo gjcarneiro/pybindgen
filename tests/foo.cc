@@ -406,6 +406,29 @@ TestContainer::set_simple_map (SimpleStructMap map)
     return count;
 }
 
+SimpleStructUnorderedMap
+TestContainer::get_simple_unordered_map ()
+{
+    SimpleStructUnorderedMap retval;
+    for (int i = 0; i < 10; i++)
+    {
+        simple_struct_t val = {i};
+        std::ostringstream os;
+        os << i;
+        retval[os.str()] = val;
+    }
+    return retval;
+}
+
+int
+TestContainer::set_simple_unordered_map (SimpleStructUnorderedMap map)
+{
+    int count = 0;
+    m_simpleUnorderedMap = map;
+    for (SimpleStructUnorderedMap::iterator iter = m_simpleUnorderedMap.begin(); iter != m_simpleUnorderedMap.end(); iter++)
+        count += iter->second.xpto;
+    return count;
+}
 
 void
 TestContainer::get_vec (std::vector<std::string> &outVec)

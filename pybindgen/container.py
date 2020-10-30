@@ -91,6 +91,7 @@ container_traits_list = {
     'hash_set':		ContainerTraits(add_value_method='insert'),
     'hash_multiset':	ContainerTraits(add_value_method='insert'),
     'map':		ContainerTraits(add_value_method='insert', is_mapping=True),
+    'unordered_map':	ContainerTraits(add_value_method='insert', is_mapping=True),
 }
 
 # from wikipedia: """Deque is sometimes written dequeue, but this use
@@ -110,7 +111,7 @@ class Container(object):
         :param container_type: a string with the type of container,
             one of 'list', 'deque', 'queue', 'priority_queue',
             'vector', 'stack', 'set', 'multiset', 'hash_set',
-            'hash_multiset', 'map'
+            'hash_multiset', 'map', 'unordered_map'
 
         :param outer_class: if the type is defined inside a class, must be a reference to the outer class
         :type outer_class: None or L{CppClass}

@@ -8,6 +8,7 @@
 #include <sstream>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <set>
 #include <exception>
 #include <algorithm>
@@ -806,6 +807,7 @@ struct simple_struct_t
 typedef std::vector<simple_struct_t> SimpleStructList;
 typedef std::vector<simple_struct_t> SimpleStructVec;
 typedef std::map<std::string, simple_struct_t> SimpleStructMap;
+typedef std::unordered_map<std::string, simple_struct_t> SimpleStructUnorderedMap;
 
 
 SimpleStructList get_simple_list ();
@@ -838,6 +840,9 @@ public:
     virtual SimpleStructMap get_simple_map ();
     virtual int set_simple_map (SimpleStructMap map);
 
+    virtual SimpleStructUnorderedMap get_simple_unordered_map ();
+    virtual int set_simple_unordered_map (SimpleStructUnorderedMap map);
+
     // -#- @outVec(direction=out) -#-
     void get_vec (std::vector<std::string> &outVec);
 
@@ -850,6 +855,7 @@ public:
 private:
     SimpleStructList m_simpleList;
     SimpleStructMap m_simpleMap;
+    SimpleStructUnorderedMap m_simpleUnorderedMap;
 
     std::vector<std::string> *m_vec;
 
