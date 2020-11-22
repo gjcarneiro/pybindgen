@@ -486,6 +486,14 @@ int %s::custom_method_added_by_a_hook(int x)
     TestContainer.add_method('get_simple_map', ReturnValue.new('std::map<std::string, simple_struct_t>'), [], is_virtual=True)
     TestContainer.add_method('set_simple_map', 'int', [Parameter.new('std::map<std::string, simple_struct_t>', 'map')], is_virtual=True)
 
+    mod.add_container('SimpleStructUnorderedMap', ('std::string', 'simple_struct_t'), container_type='map')
+    typehandlers.add_type_alias('std::unordered_map< std::string, simple_struct_t >', 'SimpleStructUnorderedMap')
+    typehandlers.add_type_alias('std::unordered_map< std::string, simple_struct_t >*', 'SimpleStructUnorderedMap*')
+    typehandlers.add_type_alias('std::unordered_map< std::string, simple_struct_t >&', 'SimpleStructUnorderedMap&')
+
+    TestContainer.add_method('get_simple_unordered_map', ReturnValue.new('std::unordered_map<std::string, simple_struct_t>'), [], is_virtual=True)
+    TestContainer.add_method('set_simple_unordered_map', 'int', [Parameter.new('std::unordered_map<std::string, simple_struct_t>', 'map')], is_virtual=True)
+
 
     Tupl = mod.add_class('Tupl')
     Tupl.add_binary_comparison_operator('<')

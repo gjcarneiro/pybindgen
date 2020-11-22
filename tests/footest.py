@@ -978,6 +978,18 @@ class TestFoo(unittest.TestCase):
         rv = test.set_simple_map(container)
         self.assertEqual(rv, sum(range(10)))
 
+    def test_unordered_map_container(self):
+        test = foo.TestContainer()
+        container = test.get_simple_unordered_map()
+        count = 0
+        as_dict = {
+            simple_key: simple_val.xpto
+            for (simple_key, simple_val) in container
+        }
+        assert as_dict == {str(i): i for i in range(10)}
+        rv = test.set_simple_unordered_map(container)
+        self.assertEqual(rv, sum(range(10)))
+
     def test_copy(self):
         s1 = foo.simple_struct_t()
         s1.xpto = 123
