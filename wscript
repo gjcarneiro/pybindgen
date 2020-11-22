@@ -200,6 +200,10 @@ def configure(conf):
             conf.env.append_value('CXXFLAGS_PYEXT', '-fvisibility=hidden')
             conf.env.append_value('CCFLAGS_PYEXT', '-fvisibility=hidden')
 
+        # use -std=c++11 for gcc version < 7 (for unordered_map support)
+        if (conf.env['CXX_NAME'] == 'gcc' and [int(x) for x in conf.env['CC_VERSION']] < [7,0,0]):
+            conf.env.append_value('CXXFLAGS', '-std=c++11')
+
         # Add include path for our stdint.h replacement, if needed (pstdint.h)
         if not conf.check_nonfatal(header_name='stdint.h'):
             conf.env.append_value('CPPPATH', os.path.join(conf.curdir, 'include'))

@@ -1612,7 +1612,8 @@ pybindgen.settings.error_handler = ErrorHandler()
             container_type = 'hash_set'
         elif traits is container_traits.hash_multiset_traits:
             container_type = 'hash_multiset'
-        elif traits is container_traits.map_traits:
+        elif (traits is container_traits.map_traits
+              or traits is container_traits.unordered_map_traits):
             container_type = 'map'
             if hasattr(traits, "key_type"):
                 key_type = traits.key_type(definition)
@@ -1621,9 +1622,7 @@ pybindgen.settings.error_handler = ErrorHandler()
                               "so we don't support mapping types with this  pygccxml version (%r)"
                               % pygccxml.__version__)
                 return
-
-        elif (traits is container_traits.map_traits
-              or traits is container_traits.multimap_traits
+        elif (traits is container_traits.multimap_traits
               or traits is container_traits.hash_map_traits
               or traits is container_traits.hash_multimap_traits):
             return # maps not yet implemented
