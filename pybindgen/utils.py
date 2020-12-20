@@ -141,9 +141,13 @@ typedef enum _PyBindGenWrapperFlags {
 } PyBindGenWrapperFlags;
 #endif
 
+#if PY_VERSION_HEX >= 0x03070000 && !defined(PyEval_ThreadsInitialized)
+#define PyEval_ThreadsInitialized() 1
+#endif
+
 ''')
 
-    
+
 
 def mangle_name(name):
     """make a name Like<This,and,That> look Like__lt__This_and_That__gt__"""
@@ -214,7 +218,7 @@ def ascii(value):
 def param(*args, **kwargs):
     """
     Simplified syntax for representing a parameter with delayed lookup.
-    
+
     Parameters are the same as L{Parameter.new}.
     """
     return (args + (kwargs,))
@@ -223,7 +227,7 @@ def param(*args, **kwargs):
 def retval(*args, **kwargs):
     """
     Simplified syntax for representing a return value with delayed lookup.
-    
+
     Parameters are the same as L{ReturnValue.new}.
     """
     return (args + (kwargs,))
