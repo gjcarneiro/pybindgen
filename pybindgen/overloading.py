@@ -279,7 +279,7 @@ class OverloadedWrapper(object):
                 if wrap.docstring is not None:
                     docstrings_set.add(wrap.docstring)
             docstring = None
-            if len(docstrings_set) is 1:
+            if len(docstrings_set) == 1:
                 docstring = docstrings_set.pop()
             elif len(docstrings_set) > 1:
                 raise CodeGenerationError("Overloaded '%s' has conflicting docstrings" % self.wrapper_name)
