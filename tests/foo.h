@@ -1399,4 +1399,10 @@ ToBeFreed *return_class_to_be_freed(int size);
 // -#- name=return_class_to_not_be_freed; @return(free_after_copy=false) -#-
 ToBeFreed *return_class_to_not_be_freed(int size);
 
+
+void Add (const std::string filePath,
+          double defaultZ = 0,
+          char delimiter = ',');
+
+
 #endif 	    /* !FOO_H_ */

@@ -40,8 +40,11 @@ class CharParam(Parameter):
 
     def convert_python_to_c(self, wrapper):
         assert isinstance(wrapper, ForwardWrapperBase)
-        name = wrapper.declarations.declare_variable(self.ctype_no_const, self.name)
-        wrapper.parse_params.add_parameter('c', ['&'+name], self.value)
+        name = wrapper.declarations.declare_variable(
+            self.ctype_no_const, self.name, self.default_value
+        )
+        wrapper.parse_params.add_parameter('c', ['&'+name], self.value,
+                                           optional=(self.default_value is not None))
         wrapper.call_params.append(name)
 
 

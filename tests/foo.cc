@@ -622,3 +622,9 @@ return_class_to_not_be_freed(int size)
 {
    return new ToBeFreed(size);
 }
+
+void Add (const std::string filePath,
+          double defaultZ,
+          char delimiter)
+{
+}
