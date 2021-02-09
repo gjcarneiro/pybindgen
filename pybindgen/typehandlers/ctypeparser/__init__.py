@@ -133,6 +133,10 @@ def _parse_type_recursive(tokens):
         if token.name.startswith('::'):
             token.name = token.name[2:]
         if token.token_type == tokenizer.SYNTAX:
+            if token.name in [ '>>' ]:
+                tokens.insert(0, tokenizer.Token(tokenizer.SYNTAX, token.name[0], None, None))
+                tokens.insert(0, tokenizer.Token(tokenizer.SYNTAX, token.name[0], None, None))
+                continue
             if token.name in [',', '>', ')']:
                 ctype.reorder_modifiers()
                 return ctype, token
