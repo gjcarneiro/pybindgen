@@ -46,7 +46,7 @@ class CType(object):
                     ## we'll break the for unconditionally next.
 
                     self.tokens.pop(token_i)
-                    
+
                     for new_pos in range(token_i, len(self.tokens)):
                         other_token = self.tokens[new_pos]
                         if isinstance(other_token, CType):
@@ -221,9 +221,9 @@ class TypeTraits(object):
     reference, it is None.
 
     >>> t = TypeTraits("int")
-    >>> print repr(str(t.ctype))
+    >>> print(repr(str(t.ctype)))
     'int'
-    >>> print repr(str(t.ctype_no_modifiers))
+    >>> print(repr(str(t.ctype_no_modifiers)))
     'int'
     >>> t.type_is_const
     False
@@ -235,11 +235,11 @@ class TypeTraits(object):
     True
 
     >>> t = TypeTraits("const int * const")
-    >>> print repr(str(t.ctype))
+    >>> print(repr(str(t.ctype)))
     'int const * const'
-    >>> print repr(str(t.ctype_no_modifiers))
+    >>> print(repr(str(t.ctype_no_modifiers)))
     'int *'
-    >>> print repr(str(t.ctype_no_const))
+    >>> print(repr(str(t.ctype_no_const)))
     'int const *'
     >>> t.type_is_const
     True
@@ -249,17 +249,17 @@ class TypeTraits(object):
     False
     >>> t.target is None
     False
-    >>> print repr(str(t.target))
+    >>> print(repr(str(t.target)))
     'int'
     >>> t.target_is_const
     True
 
     >>> t = TypeTraits("int * const")
-    >>> print repr(str(t.ctype))
+    >>> print(repr(str(t.ctype)))
     'int * const'
-    >>> print repr(str(t.ctype_no_modifiers))
+    >>> print(repr(str(t.ctype_no_modifiers)))
     'int *'
-    >>> print repr(str(t.ctype_no_const))
+    >>> print(repr(str(t.ctype_no_const)))
     'int *'
     >>> t.type_is_const
     True
@@ -269,17 +269,17 @@ class TypeTraits(object):
     False
     >>> t.target is None
     False
-    >>> print repr(str(t.target))
+    >>> print(repr(str(t.target)))
     'int'
     >>> t.target_is_const
     False
 
     >>> t = TypeTraits("const char *")
-    >>> print repr(str(t.ctype))
+    >>> print(repr(str(t.ctype)))
     'char const *'
-    >>> print repr(str(t.ctype_no_modifiers))
+    >>> print(repr(str(t.ctype_no_modifiers)))
     'char *'
-    >>> print repr(str(t.ctype_no_const))
+    >>> print(repr(str(t.ctype_no_const)))
     'char const *'
     >>> t.type_is_const
     False
@@ -289,20 +289,23 @@ class TypeTraits(object):
     False
     >>> t.target is None
     False
-    >>> print repr(str(t.target))
+    >>> print(repr(str(t.target)))
     'char'
     >>> t.target_is_const
     True
 
     >>> t = TypeTraits("char *")
-    >>> print repr(str(t.ctype))
+    >>> str(t.ctype)
     'char *'
     >>> t.make_const()
-    >>> print repr(str(t.ctype))
+    >>> print(repr(str(t.ctype)))
     'char * const'
     >>> t.make_target_const()
-    >>> print repr(str(t.ctype))
+    >>> print(repr(str(t.ctype)))
     'char const * const'
+
+    >>> str(TypeTraits("T<X<int>>").ctype)
+    'T< X< int > >'
 
     """
 

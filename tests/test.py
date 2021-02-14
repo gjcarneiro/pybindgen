@@ -3,7 +3,7 @@ import pybindgen.typehandlers.base as typehandlers
 from pybindgen.typehandlers import stringtype, ctypeparser
 import pybindgen.typehandlers.codesink as codesink
 from pybindgen import module, cppclass, overloading, utils
-    
+
 
 import unittest
 import doctest
@@ -60,7 +60,7 @@ class ParamLookupTests(unittest.TestCase):
         transformed = typehandlers.Parameter.new('MySmartPointer<testtype>', 'name')
         self.assertTrue(isinstance(transformed, TestParam))
         self.assertTrue(transformed.has_been_transformed)
-        
+
 
 
 if __name__ == '__main__':
@@ -82,6 +82,7 @@ if __name__ == '__main__':
             ]:
             suite.addTest(doctest.DocTestSuite(mod))
 
+    suite.addTest(doctest.DocTestSuite(ctypeparser))
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(ParamLookupTests))
     runner = unittest.TextTestRunner()
     runner.run(suite)
