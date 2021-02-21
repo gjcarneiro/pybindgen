@@ -10,6 +10,7 @@ from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
 from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
 from pybindgen.function import CustomFunctionWrapper
 from pybindgen.cppmethod import CustomCppMethodWrapper
+from pybindgen.castxmlparser import ModuleParser, PygenClassifier, PygenSection
 
 import foomodulegen_common
 
@@ -17,10 +18,6 @@ import foomodulegen_common
 
 
 def my_module_gen():
-    if sys.argv[6] == 'castxml':
-        from pybindgen.castxmlparser import ModuleParser, PygenClassifier, PygenSection
-    else:
-        from pybindgen.gccxmlparser import ModuleParser, PygenClassifier, PygenSection
 
     class MyPygenClassifier(PygenClassifier):
         def classify(self, pygccxml_definition):

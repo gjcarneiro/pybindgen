@@ -11,16 +11,13 @@ from pybindgen import (ReturnValue, Parameter, Module, Function, FileCodeSink)
 from pybindgen import (CppMethod, CppConstructor, CppClass, Enum)
 from pybindgen.function import CustomFunctionWrapper
 from pybindgen.cppmethod import CustomCppMethodWrapper
+from pybindgen.castxmlparser import ModuleParser
 
 import foomodulegen_common
 
 
 def my_module_gen():
     pygccxml_mode = sys.argv[4]
-    if pygccxml_mode == 'castxml':
-        from pybindgen.castxmlparser import ModuleParser
-    else:
-        from pybindgen.gccxmlparser import ModuleParser
 
     out = FileCodeSink(sys.stdout)
     pygen_file = open(sys.argv[3], "wt")

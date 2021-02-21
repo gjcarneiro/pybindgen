@@ -1,10 +1,10 @@
 
 ==========================================================
-gccxmlparser: scan header files to extract API definitions
+castxmlparser: scan header files to extract API definitions
 ==========================================================
 
 
-.. automodule:: pybindgen.gccxmlparser
+.. automodule:: pybindgen.castxmlparser
     :members:
     :undoc-members:
     :show-inheritance:

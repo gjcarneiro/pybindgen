@@ -652,7 +652,7 @@ public:
             return new AbstractBaseClassImpl;
         }
 
-    // This method will be scanned by gccxmlparser and generate an error
+    // This method will be scanned by castxmlparser and generate an error
     // that is only detected in code generation time.
     // -#- @return(caller_owns_return=false) -#-
     static AbstractBaseClass* get_abstract_base_class_ptr2 ()
@@ -676,7 +676,7 @@ inline AbstractBaseClass* get_abstract_base_class_ptr1 ()
     return AbstractBaseClassImpl::get_abstract_base_class_ptr1 ();
 }
 
-// This function will be scanned by gccxmlparser and generate an error
+// This function will be scanned by castxmlparser and generate an error
 // that is only detected in code generation time.
 // -#- @return(caller_owns_return=false) -#-
 inline AbstractBaseClass* get_abstract_base_class_ptr2 ()

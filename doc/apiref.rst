@@ -18,10 +18,10 @@ Higher layers
    cppexception
    container
 
-   gccxmlparser
+   castxmlparser
    settings
-   
-   
+
+
 Lower layers
 -----------------------
 .. toctree::

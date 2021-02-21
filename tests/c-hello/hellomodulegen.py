@@ -5,6 +5,7 @@ import re
 
 import pybindgen
 from pybindgen import FileCodeSink
+from pybindgen.castxmlparser import ModuleParser
 
 
 constructor_rx = re.compile("hello_foo_new(_.*)?")
@@ -40,11 +41,6 @@ def pre_scan_hook(dummy_module_parser,
 
 
 def my_module_gen(out_file, pygccxml_mode):
-    if pygccxml_mode == 'castxml':
-        from pybindgen.castxmlparser import ModuleParser
-    else:
-        from pybindgen.gccxmlparser import ModuleParser
-
     out = FileCodeSink(out_file)
     #pybindgen.write_preamble(out)
     out.writeln("#include \"hello.h\"")
