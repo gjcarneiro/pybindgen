@@ -44,6 +44,7 @@ from pygccxml.declarations import templates
 from pygccxml.declarations import container_traits, class_declaration
 from pygccxml.declarations.declaration import declaration_t
 from pygccxml.declarations.class_declaration import class_declaration_t, class_t
+from pygccxml.declarations import get_dependencies_from_decl
 from . import settings
 from . import utils
 from pygccxml.utils import find_xml_generator
@@ -1070,7 +1071,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             # logger.debug("Saw free function: %s", fun)
             if fun.name.startswith('__'):
                 continue
-            for dependency in fun.i_depend_on_them(recursive=True):
+            for dependency in get_dependencies_from_decl(fun,recursive=True):
                 type_info = dependency.depend_on_it
                 if type_traits.is_pointer(type_info):
                     type_info = type_traits.remove_pointer(type_info)
@@ -1386,7 +1387,7 @@ pybindgen.settings.error_handler = ErrorHandler()
             for member in cls.get_members(access='public'):
                 if member.name.startswith('__'):
                     continue
-                for dependency in member.i_depend_on_them(recursive=True):
+                for dependency in get_dependencies_from_decl(member,recursive=True):
                     type_info = dependency.depend_on_it
                     if type_traits.is_pointer(type_info):
                         type_info = type_traits.remove_pointer(type_info)
