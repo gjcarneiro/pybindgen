@@ -423,7 +423,7 @@ Then, bind its inner enum::
 
 and, finally, bind its inner class::
 
-  mod.add_class('Inner', outer_class=outer)
+  inner = mod.add_class('Inner', outer_class=outer)
   inner.add_constructor([])
 
 The only slightly tricky part is binding the Do method of the Inner
