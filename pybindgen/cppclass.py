@@ -39,7 +39,8 @@ import collections
 try:
     collectionsCallable = collections.Callable
 except AttributeError:
-    collectionsCallable = collections
+    import collections.abc
+    collectionsCallable = collections.abc.Callable
 
 try:
     set
