@@ -2,7 +2,31 @@
 The class PyTypeObject generates a PyTypeObject structure contents.
 """
 
+
 class PyTypeObject(object):
+    LIMITED_API_TEMPLATE = (
+        'static PyType_Slot %(typestruct)s_slots[] = {\n'
+        '    {Py_tp_dealloc, (void*)%(tp_dealloc)s},\n'
+        '    {Py_tp_richcompare, (void*)%(tp_richcompare)s},\n'
+        '    {Py_tp_traverse, (void*)%(tp_traverse)s},\n'
+        '    {Py_tp_clear, (void*)%(tp_clear)s},\n'
+        '    {Py_tp_iter, (void*)%(tp_iter)s},\n'
+        '    {Py_tp_iternext, (void*)%(tp_iternext)s},\n'
+        '    {Py_tp_methods, (struct PyMethodDef*)%(tp_methods)s},\n'
+        '    {Py_tp_init, (void*)%(tp_init)s},\n'
+        '    {Py_tp_alloc, (void*)PyType_GenericAlloc},\n'
+        '    {Py_tp_new, (void*)PyType_GenericNew},\n'
+        '    {0, 0}\n'
+        '};\n'
+        'static PyType_Spec %(typestruct)s_spec = {\n'
+        '    (char *) "%(tp_name)s",\n'
+        '    %(tp_basicsize)s,\n'
+        '    0,\n'
+        '    %(tp_flags)s,\n'
+        '    %(typestruct)s_slots,\n'
+        '};\n\n'
+        'PyTypeObject *%(typestruct)s;\n'
+        )
     TEMPLATE = (
         'PyTypeObject %(typestruct)s = {\n'
         '    PyVarObject_HEAD_INIT(NULL, 0)\n'
@@ -103,7 +127,11 @@ class PyTypeObject(object):
         slots.setdefault('tp_free', '0')
         slots.setdefault('tp_is_gc', 'NULL')
 
+        code_sink.writeln('#ifdef Py_LIMITED_API')
+        code_sink.writeln(self.LIMITED_API_TEMPLATE % slots)
+        code_sink.writeln('#else')
         code_sink.writeln(self.TEMPLATE % slots)
+        code_sink.writeln('#endif')
 
 
 class PyNumberMethods(object):

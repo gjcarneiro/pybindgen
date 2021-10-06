@@ -309,8 +309,8 @@ typedef struct {
     ''' % (self.pystruct, self.full_name, self.iter_pystruct))
 
         code_sink.writeln()
-        code_sink.writeln('extern PyTypeObject %s;' % (self.pytypestruct,))
-        code_sink.writeln('extern PyTypeObject %s;' % (self.iter_pytypestruct,))
+        code_sink.writeln('extern PyTypeObject _TYPEDEC %s;' % (self.pytypestruct,))
+        code_sink.writeln('extern PyTypeObject _TYPEDEC %s;' % (self.iter_pytypestruct,))
         code_sink.writeln()
 
         this_type_converter = self.module.get_root().get_python_to_c_type_converter_function_name(
@@ -347,18 +347,25 @@ typedef struct {
 
         ## --- register the class type in the module ---
         module.after_init.write_code("/* Register the '%s' class */" % self.full_name)
+        #import traceback; module.after_init.write_code(repr(traceback.format_stack()))
 
-        module.after_init.write_error_check('PyType_Ready(&%s)' % (self.pytypestruct,))
-        module.after_init.write_error_check('PyType_Ready(&%s)' % (self.iter_pytypestruct,))
+        module.after_init.write_code('#ifdef Py_LIMITED_API\n'
+                                     '%s = (PyTypeObject*)PyType_FromSpec(&%s_spec);\n'
+                                     '%s = (PyTypeObject*)PyType_FromSpec(&%s_spec);\n'
+                                     '#endif' % (self.pytypestruct, self.pytypestruct,
+                                                 self.iter_pytypestruct, self.iter_pytypestruct))
+
+        module.after_init.write_error_check('PyType_Ready(_TYPEREF %s)' % (self.pytypestruct,))
+        module.after_init.write_error_check('PyType_Ready(_TYPEREF %s)' % (self.iter_pytypestruct,))
 
         class_python_name = self.python_name
 
         if self.outer_class is None:
             module.after_init.write_code(
-                'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) &%s);' % (
+                'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) _TYPEREF %s);' % (
                 class_python_name, self.pytypestruct))
             module.after_init.write_code(
-                'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) &%s);' % (
+                'PyModule_AddObject(m, (char *) \"%s\", (PyObject *) _TYPEREF %s);' % (
                 class_python_name+'Iter', self.iter_pytypestruct))
         else:
             module.after_init.write_code(
@@ -439,10 +446,13 @@ static void
 %s(%s *self)
 {
     %s
+    #ifdef Py_LIMITED_API
+    PyObject_DEL(self);
+    #else
     Py_TYPE(self)->tp_free((PyObject*)self);
+    #endif
 }
-''' % (container_tp_dealloc_function_name, self.pystruct,
-       self._get_container_delete_code()))
+''' % (container_tp_dealloc_function_name, self.pystruct, self._get_container_delete_code()))
 
         self.pytype.slots.setdefault("tp_dealloc", container_tp_dealloc_function_name )
 
@@ -455,7 +465,11 @@ static void
 {
     Py_CLEAR(self->container);
     %s
+    #ifdef Py_LIMITED_API
+    PyObject_DEL(self);
+    #else
     Py_TYPE(self)->tp_free((PyObject*)self);
+    #endif
 }
 ''' % (iter_tp_dealloc_function_name, self.iter_pystruct, self._get_iter_delete_code()))
 
@@ -479,7 +493,7 @@ static void
 static PyObject*
 %(CONTAINER_ITER_FUNC)s(%(PYSTRUCT)s *self)
 {
-    %(ITER_PYSTRUCT)s *iter = PyObject_GC_New(%(ITER_PYSTRUCT)s, &%(ITER_PYTYPESTRUCT)s);
+    %(ITER_PYSTRUCT)s *iter = PyObject_GC_New(%(ITER_PYSTRUCT)s, _TYPEREF %(ITER_PYTYPESTRUCT)s);
     Py_INCREF(self);
     iter->container = self;
     iter->iterator = new %(CTYPE)s::iterator(self->obj->begin());
@@ -536,14 +550,17 @@ static PyObject*
             code_sink.writeln(r'''
 int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
 {
+    #ifndef Py_LIMITED_API
     if (PyObject_IsInstance(arg, (PyObject*) &%(PYTYPESTRUCT)s)) {
         *container = *((%(PYSTRUCT)s*)arg)->obj;
-    } else if (PyList_Check(arg)) {
+    } else
+    #endif
+    if (PyList_Check(arg)) {
         container->clear();
         Py_ssize_t size = PyList_Size(arg);
         for (Py_ssize_t i = 0; i < size; i++) {
             %(ITEM_CTYPE)s item;
-            if (!%(ITEM_CONVERTER)s(PyList_GET_ITEM(arg, i), &item)) {
+            if (!%(ITEM_CONVERTER)s(PyList_GetItem(arg, i), &item)) {
                 return 0;
             }
             container->%(ADD_VALUE)s(item);
@@ -568,22 +585,25 @@ int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
             code_sink.writeln(r'''
 int %(CONTAINER_CONVERTER_FUNC_NAME)s(PyObject *arg, %(CTYPE)s *container)
 {
+    #ifndef Py_LIMITED_API
     if (PyObject_IsInstance(arg, (PyObject*) &%(PYTYPESTRUCT)s)) {
         *container = *((%(PYSTRUCT)s*)arg)->obj;
-    } else if (PyList_Check(arg)) {
+    } else
+    #endif
+    if (PyList_Check(arg)) {
         container->clear();
         Py_ssize_t size = PyList_Size(arg);
         for (Py_ssize_t i = 0; i < size; i++) {
-            PyObject *tup = PyList_GET_ITEM(arg, i);
+            PyObject *tup = PyList_GetItem(arg, i);
             if (!PyTuple_Check(tup) || PyTuple_Size(tup) != 2) {
                 PyErr_SetString(PyExc_TypeError, "items must be tuples with two elements");
                 return 0;
             }
             std::pair< %(KEY_CTYPE)s, %(ITEM_CTYPE)s > item;
-            if (!%(KEY_CONVERTER)s(PyTuple_GET_ITEM(tup, 0), &item.first)) {
+            if (!%(KEY_CONVERTER)s(PyTuple_GetItem(tup, 0), &item.first)) {
                 return 0;
             }
-            if (!%(ITEM_CONVERTER)s(PyTuple_GET_ITEM(tup, 1), &item.second)) {
+            if (!%(ITEM_CONVERTER)s(PyTuple_GetItem(tup, 1), &item.second)) {
                 return 0;
             }
             container->%(ADD_VALUE)s(item);
@@ -694,7 +714,7 @@ class ContainerParameter(ContainerParameterBase):
             self.container_type.pystruct+'*', 'py_'+self.container_type.name)
         wrapper.before_call.write_code(
             "%s = PyObject_New(%s, %s);" %
-            (self.py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
+            (self.py_name, self.container_type.pystruct, '_TYPEREF '+self.container_type.pytypestruct))
 
         wrapper.before_call.write_code("%s->obj = new %s(%s);" % (self.py_name, self.container_type.full_name, self.value))
 
@@ -729,7 +749,7 @@ class ContainerRefParameter(ContainerParameterBase):
                 self.container_type.pystruct+'*', 'py_'+self.container_type.name)
             wrapper.after_call.write_code(
                 "%s = PyObject_New(%s, %s);" %
-                (py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
+                (py_name, self.container_type.pystruct, '_TYPEREF '+self.container_type.pytypestruct))
             wrapper.after_call.write_code("%s->obj = new %s(%s);" % (py_name, self.container_type.full_name, container_tmp_var))
             wrapper.build_params.add_parameter("N", [py_name])
 
@@ -741,7 +761,7 @@ class ContainerRefParameter(ContainerParameterBase):
             self.container_type.pystruct+'*', 'py_'+self.container_type.name)
         wrapper.before_call.write_code(
             "%s = PyObject_New(%s, %s);" %
-            (self.py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
+            (self.py_name, self.container_type.pystruct, '_TYPEREF '+self.container_type.pytypestruct))
 
         if self.direction & Parameter.DIRECTION_IN:
             wrapper.before_call.write_code("%s->obj = new %s(%s);" % (self.py_name, self.container_type.full_name, self.name))
@@ -801,7 +821,7 @@ class ContainerPtrParameter(ContainerParameterBase):
 
             wrapper.after_call.write_code(
                 "%s = PyObject_New(%s, %s);" %
-                (py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
+                (py_name, self.container_type.pystruct, '_TYPEREF '+self.container_type.pytypestruct))
 
             wrapper.after_call.write_code("%s->obj = %s;" % (py_name, container_tmp_var))
 
@@ -856,7 +876,7 @@ class ContainerReturnValue(ContainerReturnValueBase):
 
         wrapper.after_call.write_code(
             "%s = PyObject_New(%s, %s);" %
-            (py_name, self.container_type.pystruct, '&'+self.container_type.pytypestruct))
+            (py_name, self.container_type.pystruct, '_TYPEREF '+self.container_type.pytypestruct))
         wrapper.after_call.write_code("%s->obj = new %s(%s);" % (self.py_name, self.container_type.full_name, self.value))
         wrapper.build_params.add_parameter("N", [py_name], prepend=True)
 

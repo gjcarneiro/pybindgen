@@ -238,7 +238,7 @@ class OverloadedWrapper(object):
             code_sink.writeln('error_list = PyList_New(%i);' % len(delegate_wrappers))
             for i in range(len(delegate_wrappers)):
                 code_sink.writeln(
-                    'PyList_SET_ITEM(error_list, %i, PyObject_Str(exceptions[%i]));'
+                    'PyList_SetItem(error_list, %i, PyObject_Str(exceptions[%i]));'
                     % (i, i))
                 code_sink.writeln("Py_DECREF(exceptions[%i]);" % i)
             code_sink.writeln('PyErr_SetObject(PyExc_TypeError, error_list);')
