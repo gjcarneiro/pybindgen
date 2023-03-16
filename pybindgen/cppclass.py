@@ -1988,7 +1988,7 @@ typedef struct {
                                                  % (self.pytypestruct, basenum, base.pytypestruct))
 
         if metaclass is not None:
-            module.after_init.write_code('Py_TYPE(&%s) = &%s;' %
+            module.after_init.write_code('Py_SET_TYPE(&%s, &%s);' %
                                          (self.pytypestruct, metaclass.pytypestruct))
 
         module.after_init.write_error_check('PyType_Ready(&%s)'
